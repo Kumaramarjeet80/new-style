@@ -3,358 +3,382 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mohna Industries Pvt Ltd - Smart Billing ERP</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <title>Mohna Digital Shop ERP & Inventory System</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
     :root {
-      --primary: #1e3a8a;
-      --primary-dark: #1e293b;
-      --accent: #d97706;
-      --bg: #f8fafc;
-      --card: #ffffff;
-      --border: #e2e8f0;
-      --text: #0f172a;
-      --success: #16a34a;
+      --primary: #1b365d;
+      --secondary: #008080;
+      --bg: #f4f6f9;
+      --card-bg: #ffffff;
+      --border: #cccccc;
+      --text: #222222;
+      --success: #28a745;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     body { background-color: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
 
-    /* Sidebar Navigation */
-    aside { width: 260px; background: var(--primary-dark); color: #fff; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; }
-    .brand { font-size: 1.2rem; font-weight: bold; color: #f8fafc; margin-bottom: 30px; display: flex; align-items: center; gap: 10px; }
-    .brand span { color: var(--accent); }
-    .nav-menu { list-style: none; }
-    .nav-item { padding: 12px 15px; margin-bottom: 8px; border-radius: 8px; cursor: pointer; transition: 0.2s; font-weight: 500; }
-    .nav-item:hover, .nav-item.active { background: var(--primary); color: #fff; }
+    /* Navigation Sidebar */
+    aside { width: 260px; background: var(--primary); color: #fff; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; }
+    .brand { font-size: 1.2rem; font-weight: bold; margin-bottom: 30px; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px; }
+    .nav-list { list-style: none; }
+    .nav-item { padding: 12px 15px; margin-bottom: 8px; border-radius: 6px; cursor: pointer; background: rgba(255,255,255,0.05); font-size: 0.95rem; }
+    .nav-item.active, .nav-item:hover { background: var(--secondary); }
 
-    /* Main Content Area */
-    main { flex: 1; padding: 25px; overflow-y: auto; }
-    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
-    .page-title { font-size: 1.5rem; font-weight: 700; color: var(--primary-dark); }
+    /* Main Container */
+    main { flex: 1; padding: 20px; overflow-y: auto; }
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
     
-    /* Layout Containers */
-    .grid-layout { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 20px; }
-    .card-header { font-size: 1.1rem; font-weight: 600; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 18px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .card-title { font-weight: bold; margin-bottom: 12px; font-size: 1.1rem; color: var(--primary); border-bottom: 1px solid var(--border); padding-bottom: 6px; }
 
-    /* Form & Input Controls */
-    .form-group { margin-bottom: 15px; }
-    label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 5px; color: #475569; }
-    input, select { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; outline: none; }
-    input:focus, select:focus { border-color: var(--primary); }
-    .flex-row { display: flex; gap: 10px; }
-
-    /* Table Styling */
+    /* Forms & Inputs */
+    .form-group { margin-bottom: 12px; }
+    label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; }
+    input, select { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 4px; outline: none; }
+    
     table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th, td { text-align: left; padding: 10px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
-    th { background: #f1f5f9; font-weight: 600; color: #475569; }
+    th, td { text-align: left; padding: 8px; border: 1px solid var(--border); font-size: 0.85rem; }
+    th { background: #e9ecef; }
 
-    /* Action Buttons */
-    .btn { padding: 10px 18px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.9rem; transition: 0.2s; }
-    .btn-primary { background: var(--primary); color: white; }
-    .btn-primary:hover { background: #1d4ed8; }
-    .btn-success { background: var(--success); color: white; }
-    .btn-danger { background: #ef4444; color: white; }
+    /* Buttons */
+    .btn { padding: 10px 16px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.9rem; transition: 0.2s; }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-block { width: 100%; margin-top: 10px; }
 
-    /* Summary & Invoice Totals */
-    .summary-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 0.95rem; }
-    .summary-row.total { font-size: 1.2rem; font-weight: 700; border-top: 2px solid var(--border); padding-top: 12px; margin-top: 10px; color: var(--primary); }
-
-    /* Print Preview Styles */
-    @media print {
-      body * { visibility: hidden; }
-      #printable-invoice, #printable-invoice * { visibility: visible; }
-      #printable-invoice { position: absolute; left: 0; top: 0; width: 100%; }
-      aside, header, .no-print { display: none !important; }
+    /* Tally Style Receipt Preview */
+    #tally-receipt {
+      background: #ffffff;
+      color: #000;
+      font-family: 'Courier New', Courier, monospace;
+      padding: 15px;
+      border: 1px solid #000;
+      font-size: 11px;
+      line-height: 1.3;
     }
+    .tally-header { text-align: center; border-bottom: 1px solid #000; padding-bottom: 5px; margin-bottom: 8px; }
+    .tally-title { font-size: 14px; font-weight: bold; text-transform: uppercase; }
+    .tally-flex { display: flex; justify-content: space-between; }
+    .tally-table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+    .tally-table th, .tally-table td { border: 1px solid #000; padding: 4px; font-size: 10px; text-align: left; }
   </style>
 </head>
 <body>
 
-  <!-- Navigation Sidebar -->
-  <aside class="no-print">
+  <!-- Navigation -->
+  <aside>
     <div>
-      <div class="brand">🏬 Mohna <span>Industries</span></div>
-      <ul class="nav-menu">
-        <li class="nav-item active" onclick="switchTab('billing')">⚡ Quick Billing</li>
-        <li class="nav-item" onclick="switchTab('dashboard')">📊 Executive Dashboard</li>
+      <div class="brand">🏬 MOHNA DIGITAL ERP</div>
+      <ul class="nav-list">
+        <li class="nav-item active" onclick="showTab('pos')">🛒 Digital Counter (POS)</li>
+        <li class="nav-item" onclick="showTab('inventory')">📦 Inventory & Serialization</li>
+        <li class="nav-item" onclick="showTab('staff')">👥 Staff Digital Tracking</li>
       </ul>
     </div>
-    <div style="font-size: 0.75rem; color: #94a3b8;">
-      GSTIN: 10AAACM9988F1Z2<br>
-      Automated ERP v2.6
+    <div style="font-size: 0.8rem; color: #ccc;">
+      Status: 🟢 System Live<br>
+      Paperless Engine Active
     </div>
   </aside>
 
-  <!-- Main View Area -->
+  <!-- Main View -->
   <main>
-    <header class="no-print">
-      <div class="page-title" id="tab-title">Quick Billing & POS Portal</div>
-      <button class="btn btn-primary" onclick="window.print()">🖨️ Print / Save PDF</button>
-    </header>
+    <!-- TAB 1: POS & TALLY BILLING -->
+    <div id="tab-pos">
+      <header>
+        <h2>Digital Billing & Tally Receipt Engine</h2>
+      </header>
 
-    <!-- TAB 1: QUICK BILLING WORKFLOW -->
-    <div id="tab-billing">
-      <div class="grid-layout">
-        
-        <!-- Left Panel: Customer & Line Items -->
+      <div class="grid">
         <div>
+          <!-- Customer & Staff Assignment -->
           <div class="card">
-            <div class="card-header">1. Client Information</div>
-            <div class="flex-row">
-              <div class="form-group" style="flex: 2;">
-                <label>Client / Business Name</label>
-                <input type="text" id="custName" placeholder="e.g., Sharma Logistics Pvt Ltd" value="Apex Enterprises">
-              </div>
-              <div class="form-group" style="flex: 1;">
-                <label>WhatsApp Number</label>
-                <input type="text" id="custPhone" placeholder="10-digit number" value="9876543210">
-              </div>
-            </div>
-            <div class="flex-row">
-              <div class="form-group" style="flex: 1;">
-                <label>Client GSTIN (Optional)</label>
-                <input type="text" id="custGstin" placeholder="22AAAAA0000A1Z5" value="10BCCDE1234F1Z8">
-              </div>
-              <div class="form-group" style="flex: 1;">
-                <label>Invoice Type</label>
-                <select id="taxType" onchange="calculateTotals()">
-                  <option value="INTRA">Intrastate (CGST + SGST)</option>
-                  <option value="INTER">Interstate (IGST)</option>
+            <div class="card-title">1. Counter Session Details</div>
+            <div style="display: flex; gap: 10px;">
+              <div class="form-group" style="flex:1;">
+                <label>Billing Staff Member</label>
+                <select id="staffSelect">
+                  <option>Rahul Verma (ID: STF-101)</option>
+                  <option>Priya Sharma (ID: STF-102)</option>
                 </select>
+              </div>
+              <div class="form-group" style="flex:1;">
+                <label>Customer Name / Mobile</label>
+                <input type="text" id="custName" value="Karan Kumar (9876543210)">
               </div>
             </div>
           </div>
 
+          <!-- Product Scan Section -->
           <div class="card">
-            <div class="card-header">
-              <span>2. Item Entry (Barcode / Search)</span>
-              <button class="btn btn-primary" style="padding: 4px 10px; font-size: 0.8rem;" onclick="addItemRow()">+ Add Manual Item</button>
-            </div>
-            
+            <div class="card-title">2. Barcode & Product Entry</div>
             <div class="form-group">
-              <input type="text" id="barcodeInput" placeholder="Scan Barcode or type SKU code (Press Enter)" onkeypress="handleBarcode(event)">
+              <input type="text" id="barcodeScanner" placeholder="Scan Barcode / Enter SKU (e.g., 2001, 2002) & Press Enter" onkeypress="handleScan(event)">
             </div>
 
-            <table id="itemsTable">
+            <table>
               <thead>
                 <tr>
-                  <th>Item / Product Description</th>
-                  <th style="width: 100px;">HSN</th>
-                  <th style="width: 80px;">Qty</th>
-                  <th style="width: 100px;">Rate (₹)</th>
-                  <th style="width: 80px;">GST %</th>
-                  <th style="width: 110px;">Total (₹)</th>
-                  <th style="width: 40px;" class="no-print"></th>
+                  <th>Product Name</th>
+                  <th>HSN</th>
+                  <th>Qty</th>
+                  <th>Rate (₹)</th>
+                  <th>Tax %</th>
+                  <th>Amount (₹)</th>
                 </tr>
               </thead>
-              <tbody id="invoiceItems">
-                <!-- Items populated dynamically -->
+              <tbody id="cartTable">
+                <!-- Cart Items -->
               </tbody>
             </table>
           </div>
         </div>
 
-        <!-- Right Panel: Auto-Calculated Totals & Dispatch -->
+        <!-- Tally Receipt Generation Output -->
         <div>
-          <div class="card" id="printable-invoice">
-            <div class="card-header">Billing Summary</div>
+          <div class="card">
+            <div class="card-title">Tally Receipt Preview (Downloadable)</div>
             
-            <div style="margin-bottom: 15px; border-bottom: 1px dashed var(--border); padding-bottom: 10px;">
-              <strong style="color: var(--primary);">MOHNA INDUSTRIES PVT LTD</strong><br>
-              <small style="color: #64748b;">Industrial Area, Phase II, Bihar<br>GSTIN: 10AAACM9988F1Z2</small>
+            <div id="tally-receipt">
+              <div class="tally-header">
+                <div class="tally-title">TAX INVOICE</div>
+                <strong>MOHNA ENTERPRISES PVT LTD</strong><br>
+                Main Road, Commercial Hub, Bihar<br>
+                GSTIN: 10AAACM9988F1Z2 | Ph: +91 9876543210
+              </div>
+
+              <div class="tally-flex">
+                <div>Invoice No: <strong>ME/2026/0841</strong></div>
+                <div>Date: <strong id="billDate">09-Aug-2026</strong></div>
+              </div>
+              <div class="tally-flex" style="margin-bottom: 5px;">
+                <div>Buyer: <span id="lblCust">Karan Kumar</span></div>
+                <div>Billed By: <span id="lblStaff">Rahul V.</span></div>
+              </div>
+
+              <table class="tally-table">
+                <thead>
+                  <tr>
+                    <th>Item Description</th>
+                    <th>HSN</th>
+                    <th>Qty</th>
+                    <th>Rate</th>
+                    <th>Amount</th>
+                  </tr>
+                </thead>
+                <tbody id="tallyItems">
+                  <!-- Generated Items -->
+                </tbody>
+              </table>
+
+              <div class="tally-flex">
+                <span>Sub Total:</span>
+                <span id="txtSub">₹0.00</span>
+              </div>
+              <div class="tally-flex">
+                <span>CGST @ 9%:</span>
+                <span id="txtCgst">₹0.00</span>
+              </div>
+              <div class="tally-flex">
+                <span>SGST @ 9%:</span>
+                <span id="txtSgst">₹0.00</span>
+              </div>
+              <hr style="border-top: 1px dashed #000; margin: 5px 0;">
+              <div class="tally-flex" style="font-weight: bold; font-size: 12px;">
+                <span>GRAND TOTAL:</span>
+                <span id="txtTotal">₹0.00</span>
+              </div>
+              <hr style="border-top: 1px dashed #000; margin: 5px 0;">
+              <div style="text-align: center; margin-top: 5px;">
+                *** Thank You for Shopping Paperless! ***
+              </div>
             </div>
 
-            <div class="summary-row"><span>Subtotal:</span> <span id="subTotal">₹0.00</span></div>
-            <div class="summary-row" id="cgstRow"><span>CGST:</span> <span id="cgstVal">₹0.00</span></div>
-            <div class="summary-row" id="sgstRow"><span>SGST:</span> <span id="sgstVal">₹0.00</span></div>
-            <div class="summary-row" id="igstRow" style="display:none;"><span>IGST:</span> <span id="igstVal">₹0.00</span></div>
-            
-            <div class="summary-row total"><span>Grand Total:</span> <span id="grandTotal">₹0.00</span></div>
-
-            <!-- Dynamic Payment UPI QR Generator -->
-            <div style="text-align: center; margin-top: 20px;" class="no-print">
-              <label>Scan to Pay (Auto-Generated QR)</label>
-              <img id="upiQr" src="" alt="UPI Payment QR" style="width: 140px; height: 140px; border: 1px solid var(--border); border-radius: 8px; margin-top: 5px;">
-            </div>
-
-            <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 10px;" class="no-print">
-              <button class="btn btn-success" onclick="dispatchWhatsApp()">📱 Send Bill via WhatsApp</button>
-              <button class="btn btn-primary" onclick="clearBill()">🔄 New Transaction</button>
-            </div>
+            <!-- Single Action Download Button (No Print Option) -->
+            <button class="btn btn-success btn-block" onclick="downloadTallyPDF()">📥 Download PDF Receipt</button>
           </div>
         </div>
-
       </div>
     </div>
 
-    <!-- TAB 2: EXECUTIVE DASHBOARD -->
-    <div id="tab-dashboard" style="display: none;">
-      <div class="card">
-        <div class="card-header">Real-Time Revenue Analytics</div>
-        <canvas id="revenueChart" style="max-height: 350px;"></canvas>
+    <!-- TAB 2: INVENTORY & SERIALIZATION -->
+    <div id="tab-inventory" style="display: none;">
+      <h2>Serialized Inventory Master</h2>
+      <div class="card" style="margin-top: 15px;">
+        <table>
+          <thead>
+            <tr>
+              <th>SKU / Barcode</th>
+              <th>Product Name</th>
+              <th>HSN Code</th>
+              <th>Current Stock</th>
+              <th>Reorder Level</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>2001</td>
+              <td>Wireless Optical Mouse</td>
+              <td>8471</td>
+              <td>45 units</td>
+              <td>10 units</td>
+              <td><span style="color: green; font-weight: bold;">In Stock</span></td>
+            </tr>
+            <tr>
+              <td>2002</td>
+              <td>USB-C Fast Charging Cable</td>
+              <td>8544</td>
+              <td>8 units</td>
+              <td>15 units</td>
+              <td><span style="color: red; font-weight: bold;">Reorder Alert</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 3: STAFF TRACKING -->
+    <div id="tab-staff" style="display: none;">
+      <h2>Staff Attendance & Real-Time Performance</h2>
+      <div class="card" style="margin-top: 15px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Staff Name</th>
+              <th>Assigned Counter</th>
+              <th>Face-ID Login Status</th>
+              <th>Today's Sales Closed</th>
+              <th>Commission Earned</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Rahul Verma</td>
+              <td>Counter 01 (Electronics)</td>
+              <td><span style="color: green; font-weight: bold;">Verified (09:00 AM)</span></td>
+              <td>₹18,450.00</td>
+              <td>₹369.00</td>
+            </tr>
+            <tr>
+              <td>Priya Sharma</td>
+              <td>Counter 02 (Accessories)</td>
+              <td><span style="color: green; font-weight: bold;">Verified (09:15 AM)</span></td>
+              <td>₹12,100.00</td>
+              <td>₹242.00</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </main>
 
   <script>
-    // Sample Inventory Master for Barcode lookup
-    const inventoryMaster = {
-      "1001": { name: "Industrial Steel Rod 12mm", hsn: "7214", price: 450, gst: 18 },
-      "1002": { name: "PVC Conduit Pipe 25mm", hsn: "3917", price: 120, gst: 18 },
-      "1003": { name: "Brass Valve 1/2 Inch", hsn: "8481", price: 280, gst: 12 }
+    // Product Database
+    const db = {
+      "2001": { name: "Wireless Optical Mouse", hsn: "8471", price: 650, gst: 18 },
+      "2002": { name: "USB-C Fast Charging Cable", hsn: "8544", price: 350, gst: 18 }
     };
 
-    // Pre-populate with default items
+    let cart = [
+      { sku: "2001", name: "Wireless Optical Mouse", hsn: "8471", qty: 1, price: 650, gst: 18 }
+    ];
+
     window.onload = function() {
-      addItem("1001", "Industrial Steel Rod 12mm", "7214", 10, 450, 18);
-      addItem("1003", "Brass Valve 1/2 Inch", "8481", 5, 280, 12);
-      initChart();
+      renderCart();
     };
 
-    function switchTab(tabName) {
+    function showTab(tabId) {
       document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-      if (tabName === 'billing') {
-        document.getElementById('tab-billing').style.display = 'block';
-        document.getElementById('tab-dashboard').style.display = 'none';
-        document.getElementById('tab-title').innerText = "Quick Billing & POS Portal";
-        event.target.classList.add('active');
-      } else {
-        document.getElementById('tab-billing').style.display = 'none';
-        document.getElementById('tab-dashboard').style.display = 'block';
-        document.getElementById('tab-title').innerText = "Executive Sales Dashboard";
-        event.target.classList.add('active');
-      }
+      event.target.classList.add('active');
+      
+      document.getElementById('tab-pos').style.display = tabId === 'pos' ? 'block' : 'none';
+      document.getElementById('tab-inventory').style.display = tabId === 'inventory' ? 'block' : 'none';
+      document.getElementById('tab-staff').style.display = tabId === 'staff' ? 'block' : 'none';
     }
 
-    function handleBarcode(e) {
+    function handleScan(e) {
       if (e.key === 'Enter') {
-        const code = e.target.value.trim();
-        if (inventoryMaster[code]) {
-          const item = inventoryMaster[code];
-          addItem(code, item.name, item.hsn, 1, item.price, item.gst);
+        const sku = e.target.value.trim();
+        if (db[sku]) {
+          const item = db[sku];
+          cart.push({ sku: sku, name: item.name, hsn: item.hsn, qty: 1, price: item.price, gst: item.gst });
+          renderCart();
           e.target.value = '';
         } else {
-          alert('SKU / Barcode not recognized in inventory database.');
+          alert('SKU not found in Inventory!');
         }
       }
     }
 
-    function addItem(id, name, hsn, qty, rate, gst) {
-      const tbody = document.getElementById('invoiceItems');
-      const rowId = 'row_' + Date.now() + Math.random().toString(36).substr(2, 4);
-      
-      const tr = document.createElement('tr');
-      tr.id = rowId;
-      tr.innerHTML = `
-        <td><input type="text" value="${name}" class="item-name"></td>
-        <td><input type="text" value="${hsn}" class="item-hsn"></td>
-        <td><input type="number" value="${qty}" class="item-qty" onchange="calculateTotals()"></td>
-        <td><input type="number" value="${rate}" class="item-rate" onchange="calculateTotals()"></td>
-        <td><input type="number" value="${gst}" class="item-gst" onchange="calculateTotals()"></td>
-        <td class="item-total" style="font-weight:600;">₹0.00</td>
-        <td class="no-print"><button class="btn btn-danger" style="padding: 2px 6px; font-size: 0.75rem;" onclick="removeRow('${rowId}')">✕</button></td>
-      `;
-      tbody.appendChild(tr);
-      calculateTotals();
-    }
+    function renderCart() {
+      const cartTb = document.getElementById('cartTable');
+      const tallyTb = document.getElementById('tallyItems');
+      cartTb.innerHTML = '';
+      tallyTb.innerHTML = '';
 
-    function addItemRow() {
-      addItem("", "Custom Product", "9999", 1, 100, 18);
-    }
-
-    function removeRow(rowId) {
-      document.getElementById(rowId).remove();
-      calculateTotals();
-    }
-
-    function calculateTotals() {
-      const rows = document.querySelectorAll('#invoiceItems tr');
       let subtotal = 0;
       let totalTax = 0;
 
-      rows.forEach(row => {
-        const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
-        const rate = parseFloat(row.querySelector('.item-rate').value) || 0;
-        const gstPct = parseFloat(row.querySelector('.item-gst').value) || 0;
+      cart.forEach((item) => {
+        const baseAmt = item.qty * item.price;
+        const taxAmt = baseAmt * (item.gst / 100);
+        subtotal += baseAmt;
+        totalTax += taxAmt;
 
-        const lineBase = qty * rate;
-        const lineTax = lineBase * (gstPct / 100);
-        const lineTotal = lineBase + lineTax;
+        // Populate Cart
+        cartTb.innerHTML += `
+          <tr>
+            <td>${item.name}</td>
+            <td>${item.hsn}</td>
+            <td>${item.qty}</td>
+            <td>₹${item.price.toFixed(2)}</td>
+            <td>${item.gst}%</td>
+            <td>₹${(baseAmt + taxAmt).toFixed(2)}</td>
+          </tr>
+        `;
 
-        row.querySelector('.item-total').innerText = '₹' + lineTotal.toFixed(2);
-
-        subtotal += lineBase;
-        totalTax += lineTax;
+        // Populate Tally Receipt Table
+        tallyTb.innerHTML += `
+          <tr>
+            <td>${item.name}</td>
+            <td>${item.hsn}</td>
+            <td>${item.qty}</td>
+            <td>${item.price.toFixed(2)}</td>
+            <td>${(baseAmt + taxAmt).toFixed(2)}</td>
+          </tr>
+        `;
       });
 
-      const taxType = document.getElementById('taxType').value;
-      const cgstRow = document.getElementById('cgstRow');
-      const sgstRow = document.getElementById('sgstRow');
-      const igstRow = document.getElementById('igstRow');
-
-      if (taxType === 'INTRA') {
-        cgstRow.style.display = 'flex';
-        sgstRow.style.display = 'flex';
-        igstRow.style.display = 'none';
-
-        document.getElementById('cgstVal').innerText = '₹' + (totalTax / 2).toFixed(2);
-        document.getElementById('sgstVal').innerText = '₹' + (totalTax / 2).toFixed(2);
-      } else {
-        cgstRow.style.display = 'none';
-        sgstRow.style.display = 'none';
-        igstRow.style.display = 'flex';
-
-        document.getElementById('igstVal').innerText = '₹' + totalTax.toFixed(2);
-      }
-
+      const cgst = totalTax / 2;
+      const sgst = totalTax / 2;
       const grandTotal = subtotal + totalTax;
-      document.getElementById('subTotal').innerText = '₹' + subtotal.toFixed(2);
-      document.getElementById('grandTotal').innerText = '₹' + grandTotal.toFixed(2);
 
-      // Update Dynamic Payment QR
-      updatePaymentQr(grandTotal);
+      document.getElementById('txtSub').innerText = '₹' + subtotal.toFixed(2);
+      document.getElementById('txtCgst').innerText = '₹' + cgst.toFixed(2);
+      document.getElementById('txtSgst').innerText = '₹' + sgst.toFixed(2);
+      document.getElementById('txtTotal').innerText = '₹' + grandTotal.toFixed(2);
+
+      // Dynamic Header Updates
+      document.getElementById('lblCust').innerText = document.getElementById('custName').value;
+      document.getElementById('lblStaff').innerText = document.getElementById('staffSelect').value.split(' ')[0];
     }
 
-    function updatePaymentQr(amount) {
-      const upiId = "mohnaindustries@upi"; // Corporate VPA
-      const name = "Mohna Industries";
-      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=${upiId}%26pn=${encodeURIComponent(name)}%26am=${amount.toFixed(2)}%26cu=INR`;
-      document.getElementById('upiQr').src = qrUrl;
-    }
+    // Direct Download Functionality (No Print Popup)
+    function downloadTallyPDF() {
+      const element = document.getElementById('tally-receipt');
+      const opt = {
+        margin:       5,
+        filename:     'Tally_Invoice_ME20260841.pdf',
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2 },
+        jsPDF:        { unit: 'mm', format: 'a5', orientation: 'portrait' }
+      };
 
-    function dispatchWhatsApp() {
-      const phone = document.getElementById('custPhone').value.trim();
-      const name = document.getElementById('custName').value.trim();
-      const total = document.getElementById('grandTotal').innerText;
-
-      if (!phone) { alert("Please provide a valid phone number."); return; }
-
-      const msg = `Dear ${name}, thank you for dealing with Mohna Industries Pvt Ltd. Your total invoice amount is ${total}. Access payment QR attached on invoice.`;
-      const waUrl = `https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`;
-      window.open(waUrl, '_blank');
-    }
-
-    function clearBill() {
-      document.getElementById('invoiceItems').innerHTML = '';
-      calculateTotals();
-    }
-
-    function initChart() {
-      const ctx = document.getElementById('revenueChart').getContext('2d');
-      new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
-          datasets: [{
-            label: 'Sales Revenue (₹)',
-            data: [45000, 62000, 38000, 89000, 95000, 112000],
-            backgroundColor: '#1e3a8a'
-          }]
-        },
-        options: { responsive: true, maintainAspectRatio: false }
-      });
+      html2pdf().set(opt).from(element).save();
     }
   </script>
 </body>
