@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mohna Industries Pvt Ltd - Smart Billing ERP</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --primary: #1e3a8a;
+      --primary-dark: #1e293b;
+      --accent: #d97706;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --success: #16a34a;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
+
+    /* Sidebar Navigation */
+    aside { width: 260px; background: var(--primary-dark); color: #fff; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; }
+    .brand { font-size: 1.2rem; font-weight: bold; color: #f8fafc; margin-bottom: 30px; display: flex; align-items: center; gap: 10px; }
+    .brand span { color: var(--accent); }
+    .nav-menu { list-style: none; }
+    .nav-item { padding: 12px 15px; margin-bottom: 8px; border-radius: 8px; cursor: pointer; transition: 0.2s; font-weight: 500; }
+    .nav-item:hover, .nav-item.active { background: var(--primary); color: #fff; }
+
+    /* Main Content Area */
+    main { flex: 1; padding: 25px; overflow-y: auto; }
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+    .page-title { font-size: 1.5rem; font-weight: 700; color: var(--primary-dark); }
+    
+    /* Layout Containers */
+    .grid-layout { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 20px; }
+    .card-header { font-size: 1.1rem; font-weight: 600; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+
+    /* Form & Input Controls */
+    .form-group { margin-bottom: 15px; }
+    label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 5px; color: #475569; }
+    input, select { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; outline: none; }
+    input:focus, select:focus { border-color: var(--primary); }
+    .flex-row { display: flex; gap: 10px; }
+
+    /* Table Styling */
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { text-align: left; padding: 10px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+    th { background: #f1f5f9; font-weight: 600; color: #475569; }
+
+    /* Action Buttons */
+    .btn { padding: 10px 18px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.9rem; transition: 0.2s; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-success { background: var(--success); color: white; }
+    .btn-danger { background: #ef4444; color: white; }
+
+    /* Summary & Invoice Totals */
+    .summary-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 0.95rem; }
+    .summary-row.total { font-size: 1.2rem; font-weight: 700; border-top: 2px solid var(--border); padding-top: 12px; margin-top: 10px; color: var(--primary); }
+
+    /* Print Preview Styles */
+    @media print {
+      body * { visibility: hidden; }
+      #printable-invoice, #printable-invoice * { visibility: visible; }
+      #printable-invoice { position: absolute; left: 0; top: 0; width: 100%; }
+      aside, header, .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation Sidebar -->
+  <aside class="no-print">
+    <div>
+      <div class="brand">🏬 Mohna <span>Industries</span></div>
+      <ul class="nav-menu">
+        <li class="nav-item active" onclick="switchTab('billing')">⚡ Quick Billing</li>
+        <li class="nav-item" onclick="switchTab('dashboard')">📊 Executive Dashboard</li>
+      </ul>
+    </div>
+    <div style="font-size: 0.75rem; color: #94a3b8;">
+      GSTIN: 10AAACM9988F1Z2<br>
+      Automated ERP v2.6
+    </div>
+  </aside>
+
+  <!-- Main View Area -->
+  <main>
+    <header class="no-print">
+      <div class="page-title" id="tab-title">Quick Billing & POS Portal</div>
+      <button class="btn btn-primary" onclick="window.print()">🖨️ Print / Save PDF</button>
+    </header>
+
+    <!-- TAB 1: QUICK BILLING WORKFLOW -->
+    <div id="tab-billing">
+      <div class="grid-layout">
+        
+        <!-- Left Panel: Customer & Line Items -->
+        <div>
+          <div class="card">
+            <div class="card-header">1. Client Information</div>
+            <div class="flex-row">
+              <div class="form-group" style="flex: 2;">
+                <label>Client / Business Name</label>
+                <input type="text" id="custName" placeholder="e.g., Sharma Logistics Pvt Ltd" value="Apex Enterprises">
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label>WhatsApp Number</label>
+                <input type="text" id="custPhone" placeholder="10-digit number" value="9876543210">
+              </div>
+            </div>
+            <div class="flex-row">
+              <div class="form-group" style="flex: 1;">
+                <label>Client GSTIN (Optional)</label>
+                <input type="text" id="custGstin" placeholder="22AAAAA0000A1Z5" value="10BCCDE1234F1Z8">
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label>Invoice Type</label>
+                <select id="taxType" onchange="calculateTotals()">
+                  <option value="INTRA">Intrastate (CGST + SGST)</option>
+                  <option value="INTER">Interstate (IGST)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <span>2. Item Entry (Barcode / Search)</span>
+              <button class="btn btn-primary" style="padding: 4px 10px; font-size: 0.8rem;" onclick="addItemRow()">+ Add Manual Item</button>
+            </div>
+            
+            <div class="form-group">
+              <input type="text" id="barcodeInput" placeholder="Scan Barcode or type SKU code (Press Enter)" onkeypress="handleBarcode(event)">
+            </div>
+
+            <table id="itemsTable">
+              <thead>
+                <tr>
+                  <th>Item / Product Description</th>
+                  <th style="width: 100px;">HSN</th>
+                  <th style="width: 80px;">Qty</th>
+                  <th style="width: 100px;">Rate (₹)</th>
+                  <th style="width: 80px;">GST %</th>
+                  <th style="width: 110px;">Total (₹)</th>
+                  <th style="width: 40px;" class="no-print"></th>
+                </tr>
+              </thead>
+              <tbody id="invoiceItems">
+                <!-- Items populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Right Panel: Auto-Calculated Totals & Dispatch -->
+        <div>
+          <div class="card" id="printable-invoice">
+            <div class="card-header">Billing Summary</div>
+            
+            <div style="margin-bottom: 15px; border-bottom: 1px dashed var(--border); padding-bottom: 10px;">
+              <strong style="color: var(--primary);">MOHNA INDUSTRIES PVT LTD</strong><br>
+              <small style="color: #64748b;">Industrial Area, Phase II, Bihar<br>GSTIN: 10AAACM9988F1Z2</small>
+            </div>
+
+            <div class="summary-row"><span>Subtotal:</span> <span id="subTotal">₹0.00</span></div>
+            <div class="summary-row" id="cgstRow"><span>CGST:</span> <span id="cgstVal">₹0.00</span></div>
+            <div class="summary-row" id="sgstRow"><span>SGST:</span> <span id="sgstVal">₹0.00</span></div>
+            <div class="summary-row" id="igstRow" style="display:none;"><span>IGST:</span> <span id="igstVal">₹0.00</span></div>
+            
+            <div class="summary-row total"><span>Grand Total:</span> <span id="grandTotal">₹0.00</span></div>
+
+            <!-- Dynamic Payment UPI QR Generator -->
+            <div style="text-align: center; margin-top: 20px;" class="no-print">
+              <label>Scan to Pay (Auto-Generated QR)</label>
+              <img id="upiQr" src="" alt="UPI Payment QR" style="width: 140px; height: 140px; border: 1px solid var(--border); border-radius: 8px; margin-top: 5px;">
+            </div>
+
+            <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 10px;" class="no-print">
+              <button class="btn btn-success" onclick="dispatchWhatsApp()">📱 Send Bill via WhatsApp</button>
+              <button class="btn btn-primary" onclick="clearBill()">🔄 New Transaction</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- TAB 2: EXECUTIVE DASHBOARD -->
+    <div id="tab-dashboard" style="display: none;">
+      <div class="card">
+        <div class="card-header">Real-Time Revenue Analytics</div>
+        <canvas id="revenueChart" style="max-height: 350px;"></canvas>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Sample Inventory Master for Barcode lookup
+    const inventoryMaster = {
+      "1001": { name: "Industrial Steel Rod 12mm", hsn: "7214", price: 450, gst: 18 },
+      "1002": { name: "PVC Conduit Pipe 25mm", hsn: "3917", price: 120, gst: 18 },
+      "1003": { name: "Brass Valve 1/2 Inch", hsn: "8481", price: 280, gst: 12 }
+    };
+
+    // Pre-populate with default items
+    window.onload = function() {
+      addItem("1001", "Industrial Steel Rod 12mm", "7214", 10, 450, 18);
+      addItem("1003", "Brass Valve 1/2 Inch", "8481", 5, 280, 12);
+      initChart();
+    };
+
+    function switchTab(tabName) {
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+      if (tabName === 'billing') {
+        document.getElementById('tab-billing').style.display = 'block';
+        document.getElementById('tab-dashboard').style.display = 'none';
+        document.getElementById('tab-title').innerText = "Quick Billing & POS Portal";
+        event.target.classList.add('active');
+      } else {
+        document.getElementById('tab-billing').style.display = 'none';
+        document.getElementById('tab-dashboard').style.display = 'block';
+        document.getElementById('tab-title').innerText = "Executive Sales Dashboard";
+        event.target.classList.add('active');
+      }
+    }
+
+    function handleBarcode(e) {
+      if (e.key === 'Enter') {
+        const code = e.target.value.trim();
+        if (inventoryMaster[code]) {
+          const item = inventoryMaster[code];
+          addItem(code, item.name, item.hsn, 1, item.price, item.gst);
+          e.target.value = '';
+        } else {
+          alert('SKU / Barcode not recognized in inventory database.');
+        }
+      }
+    }
+
+    function addItem(id, name, hsn, qty, rate, gst) {
+      const tbody = document.getElementById('invoiceItems');
+      const rowId = 'row_' + Date.now() + Math.random().toString(36).substr(2, 4);
+      
+      const tr = document.createElement('tr');
+      tr.id = rowId;
+      tr.innerHTML = `
+        <td><input type="text" value="${name}" class="item-name"></td>
+        <td><input type="text" value="${hsn}" class="item-hsn"></td>
+        <td><input type="number" value="${qty}" class="item-qty" onchange="calculateTotals()"></td>
+        <td><input type="number" value="${rate}" class="item-rate" onchange="calculateTotals()"></td>
+        <td><input type="number" value="${gst}" class="item-gst" onchange="calculateTotals()"></td>
+        <td class="item-total" style="font-weight:600;">₹0.00</td>
+        <td class="no-print"><button class="btn btn-danger" style="padding: 2px 6px; font-size: 0.75rem;" onclick="removeRow('${rowId}')">✕</button></td>
+      `;
+      tbody.appendChild(tr);
+      calculateTotals();
+    }
+
+    function addItemRow() {
+      addItem("", "Custom Product", "9999", 1, 100, 18);
+    }
+
+    function removeRow(rowId) {
+      document.getElementById(rowId).remove();
+      calculateTotals();
+    }
+
+    function calculateTotals() {
+      const rows = document.querySelectorAll('#invoiceItems tr');
+      let subtotal = 0;
+      let totalTax = 0;
+
+      rows.forEach(row => {
+        const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+        const rate = parseFloat(row.querySelector('.item-rate').value) || 0;
+        const gstPct = parseFloat(row.querySelector('.item-gst').value) || 0;
+
+        const lineBase = qty * rate;
+        const lineTax = lineBase * (gstPct / 100);
+        const lineTotal = lineBase + lineTax;
+
+        row.querySelector('.item-total').innerText = '₹' + lineTotal.toFixed(2);
+
+        subtotal += lineBase;
+        totalTax += lineTax;
+      });
+
+      const taxType = document.getElementById('taxType').value;
+      const cgstRow = document.getElementById('cgstRow');
+      const sgstRow = document.getElementById('sgstRow');
+      const igstRow = document.getElementById('igstRow');
+
+      if (taxType === 'INTRA') {
+        cgstRow.style.display = 'flex';
+        sgstRow.style.display = 'flex';
+        igstRow.style.display = 'none';
+
+        document.getElementById('cgstVal').innerText = '₹' + (totalTax / 2).toFixed(2);
+        document.getElementById('sgstVal').innerText = '₹' + (totalTax / 2).toFixed(2);
+      } else {
+        cgstRow.style.display = 'none';
+        sgstRow.style.display = 'none';
+        igstRow.style.display = 'flex';
+
+        document.getElementById('igstVal').innerText = '₹' + totalTax.toFixed(2);
+      }
+
+      const grandTotal = subtotal + totalTax;
+      document.getElementById('subTotal').innerText = '₹' + subtotal.toFixed(2);
+      document.getElementById('grandTotal').innerText = '₹' + grandTotal.toFixed(2);
+
+      // Update Dynamic Payment QR
+      updatePaymentQr(grandTotal);
+    }
+
+    function updatePaymentQr(amount) {
+      const upiId = "mohnaindustries@upi"; // Corporate VPA
+      const name = "Mohna Industries";
+      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=${upiId}%26pn=${encodeURIComponent(name)}%26am=${amount.toFixed(2)}%26cu=INR`;
+      document.getElementById('upiQr').src = qrUrl;
+    }
+
+    function dispatchWhatsApp() {
+      const phone = document.getElementById('custPhone').value.trim();
+      const name = document.getElementById('custName').value.trim();
+      const total = document.getElementById('grandTotal').innerText;
+
+      if (!phone) { alert("Please provide a valid phone number."); return; }
+
+      const msg = `Dear ${name}, thank you for dealing with Mohna Industries Pvt Ltd. Your total invoice amount is ${total}. Access payment QR attached on invoice.`;
+      const waUrl = `https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`;
+      window.open(waUrl, '_blank');
+    }
+
+    function clearBill() {
+      document.getElementById('invoiceItems').innerHTML = '';
+      calculateTotals();
+    }
+
+    function initChart() {
+      const ctx = document.getElementById('revenueChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+          datasets: [{
+            label: 'Sales Revenue (₹)',
+            data: [45000, 62000, 38000, 89000, 95000, 112000],
+            backgroundColor: '#1e3a8a'
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+    }
+  </script>
+</body>
+</html>
