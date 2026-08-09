@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video Call - Receiver</title>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+    body { background: #0f0f0f; color: #fff; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    header { background: #1a1a1a; padding: 15px; text-align: center; border-bottom: 1px solid #333; }
+    .status { font-size: 14px; margin-top: 5px; color: #ffc107; font-weight: bold; }
+    .main-container { display: flex; flex: 1; height: calc(100vh - 70px); }
+    .video-section { flex: 2; display: flex; flex-direction: column; padding: 15px; background: #000; align-items: center; justify-content: center; }
+    .video-grid { display: flex; gap: 15px; width: 100%; max-width: 900px; height: 70%; justify-content: center; }
+    video { width: 48%; background: #222; border-radius: 8px; object-fit: cover; border: 2px solid #333; }
+    .controls { margin-top: 15px; display: flex; gap: 10px; }
+    button { padding: 10px 20px; border: none; border-radius: 5px; background: #dc3545; color: white; font-weight: bold; cursor: pointer; }
+    .chat-section { flex: 1; display: flex; flex-direction: column; background: #1e1e1e; border-left: 1px solid #333; }
+    .chat-header { padding: 15px; background: #252525; font-weight: bold; border-bottom: 1px solid #333; }
+    .messages-box { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+    .message { max-width: 80%; padding: 8px 12px; border-radius: 6px; font-size: 14px; word-wrap: break-word; }
+    .message.sent { align-self: flex-end; background: #28a745; }
+    .message.received { align-self: flex-start; background: #333; }
+    .chat-input-container { display: flex; padding: 10px; background: #252525; gap: 5px; }
+    .chat-input-container input { flex: 1; padding: 10px; border-radius: 5px; border: 1px solid #444; background: #222; color: #fff; outline: none; }
+    .chat-input-container button { background: #28a745; }
+    @media (max-width: 768px) { .main-container { flex-direction: column; } .video-grid { height: 50%; } video { width: 100%; } }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h2>🎧 Receiver Portal</h2>
+    <div id="statusText" class="status">Status: Waiting for incoming call...</div>
+  </header>
+
+  <div class="main-container">
+    <div class="video-section">
+      <div class="video-grid">
+        <video id="localVideo" autoplay muted playsinline></video>
+        <video id="remoteVideo" autoplay playsinline></video>
+      </div>
+
+      <div class="controls">
+        <button id="endBtn" onclick="endCall()" style="display: none;">⏹️ Leave Call</button>
+      </div>
+    </div>
+
+    <div class="chat-section">
+      <div class="chat-header">💬 Chat with Sender</div>
+      <div class="messages-box" id="messagesBox"></div>
+      <div class="chat-input-container">
+        <input type="text" id="chatInput" placeholder="Type a message..." onkeypress="if(event.key==='Enter') sendMessage()">
+        <button onclick="sendMessage()">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const RECEIVER_ID = "temple-video-chat-session-2026";
+
+    let peer = null;
+    let localStream = null;
+    let dataConnection = null;
+    let mediaCall = null;
+
+    const statusText = document.getElementById('statusText');
+    const localVideo = document.getElementById('localVideo');
+    const remoteVideo = document.getElementById('remoteVideo');
+    const messagesBox = document.getElementById('messagesBox');
+    const chatInput = document.getElementById('chatInput');
+    const endBtn = document.getElementById('endBtn');
+
+    async function init() {
+      try {
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        localVideo.srcObject = localStream;
+      } catch (err) {
+        statusText.innerText = "❌ Camera permission required.";
+        return;
+      }
+
+      // Register fixed ID so Sender can dial directly
+      peer = new Peer(RECEIVER_ID, {
+        config: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+          ]
+        }
+      });
+
+      peer.on('open', () => {
+        statusText.innerText = "🟢 Online! Waiting for Sender to call...";
+      });
+
+      // Handle incoming video call from Sender
+      peer.on('call', (call) => {
+        mediaCall = call;
+        call.answer(localStream);
+
+        call.on('stream', (remoteStream) => {
+          remoteVideo.srcObject = remoteStream;
+          statusText.innerText = "🔴 IN A CALL WITH SENDER";
+          statusText.style.color = "#28a745";
+          endBtn.style.display = 'inline-block';
+        });
+      });
+
+      // Handle incoming text chat connection
+      peer.on('connection', (conn) => {
+        dataConnection = conn;
+        dataConnection.on('data', (data) => {
+          appendMessage(data, 'received');
+        });
+      });
+
+      peer.on('error', (err) => {
+        if (err.type === 'unavailable-id') {
+          statusText.innerText = "⚠️ ID already active in another tab. Please close other receiver tabs.";
+        } else {
+          statusText.innerText = `❌ Error: ${err.type}`;
+        }
+      });
+    }
+
+    function sendMessage() {
+      const text = chatInput.value.trim();
+      if (!text || !dataConnection) return;
+
+      dataConnection.send(text);
+      appendMessage(text, 'sent');
+      chatInput.value = '';
+    }
+
+    function appendMessage(text, type) {
+      const msgDiv = document.createElement('div');
+      msgDiv.classList.add('message', type);
+      msgDiv.innerText = text;
+      messagesBox.appendChild(msgDiv);
+      messagesBox.scrollTop = messagesBox.scrollHeight;
+    }
+
+    function endCall() {
+      if (mediaCall) mediaCall.close();
+      if (dataConnection) dataConnection.close();
+      remoteVideo.srcObject = null;
+      endBtn.style.display = 'none';
+      statusText.innerText = "Call ended. Waiting for new call...";
+      statusText.style.color = "#ffc107";
+      appendMessage("--- Call Ended ---", 'received');
+    }
+
+    init();
+  </script>
+</body>
+</html>
