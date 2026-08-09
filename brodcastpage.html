@@ -6,73 +6,13 @@
   <title>Temple Broadcaster Portal</title>
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #0f0f0f;
-      color: #ffffff;
-      text-align: center;
-      margin: 0;
-      padding: 20px;
-    }
-    .container {
-      max-width: 600px;
-      margin: 30px auto;
-      background: #1a1a1a;
-      padding: 25px;
-      border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-    }
-    .option-group {
-      margin: 20px 0;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      justify-content: center;
-    }
-    .btn {
-      padding: 12px 20px;
-      font-size: 15px;
-      background: #d4af37;
-      color: #000;
-      border: none;
-      font-weight: bold;
-      cursor: pointer;
-      border-radius: 6px;
-      transition: 0.2s;
-    }
-    .btn:hover {
-      background: #f1c40f;
-    }
-    .btn-stop {
-      background: #dc3545;
-      color: #fff;
-    }
-    .btn-stop:hover {
-      background: #bd2130;
-    }
-    .message-card {
-      display: none;
-      background: #2a2a2a;
-      border-left: 4px solid #d4af37;
-      padding: 20px;
-      border-radius: 8px;
-      margin-top: 20px;
-      font-size: 1.2rem;
-      line-height: 1.5;
-      color: #fff8dc;
-    }
-    .log {
-      background: #111;
-      padding: 10px;
-      border-radius: 6px;
-      font-family: monospace;
-      font-size: 12px;
-      margin-top: 20px;
-      text-align: left;
-      height: 130px;
-      overflow-y: auto;
-      color: #aaa;
-    }
+    body { font-family: Arial, sans-serif; background: #0f0f0f; color: #fff; text-align: center; margin: 0; padding: 20px; }
+    .container { max-width: 600px; margin: 30px auto; background: #1a1a1a; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+    .option-group { margin: 20px 0; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+    .btn { padding: 12px 20px; font-size: 15px; background: #d4af37; color: #000; border: none; font-weight: bold; cursor: pointer; border-radius: 6px; }
+    .btn-stop { background: #dc3545; color: #fff; }
+    .message-card { display: none; background: #2a2a2a; border-left: 4px solid #d4af37; padding: 20px; border-radius: 8px; margin-top: 20px; font-size: 1.2rem; color: #fff8dc; }
+    .log { background: #111; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 12px; margin-top: 20px; text-align: left; height: 130px; overflow-y: auto; color: #aaa; }
   </style>
 </head>
 <body>
@@ -80,7 +20,6 @@
   <div class="container">
     <h2>📡 Live Broadcast Controls</h2>
     
-    <!-- Source Controls -->
     <div id="controls" class="option-group">
       <button class="btn" onclick="startBroadcast('user')">🤳 Front Camera</button>
       <button class="btn" onclick="startBroadcast('environment')">📷 Back Camera</button>
@@ -89,7 +28,6 @@
 
     <button id="stopBtn" class="btn btn-stop" onclick="stopBroadcast()" style="display: none;">⏹️ Stop & Save Recording</button>
 
-    <!-- Custom Display Message -->
     <div id="customMessage" class="message-card">
       Hi cutiee you can tell me any thing now <br>
       I'm here to listen
@@ -99,7 +37,6 @@
   </div>
 
   <script>
-    // BRAND NEW UNUSED PEER KEY
     const FRESH_STREAM_KEY = "temple-hd-live-stream-v3-2026"; 
 
     const logBox = document.getElementById('logBox');
@@ -119,40 +56,27 @@
 
     async function startBroadcast(sourceType) {
       try {
-        if (peer) {
-          peer.destroy();
-          peer = null;
-        }
+        if (peer) { peer.destroy(); peer = null; }
 
         log(`Initializing media source: ${sourceType}...`);
 
         if (sourceType === 'screen') {
-          localStream = await navigator.mediaDevices.getDisplayMedia({ 
-            video: true, 
-            audio: true 
-          });
-
-          localStream.getVideoTracks()[0].onended = () => {
-            stopBroadcast();
-          };
+          localStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+          localStream.getVideoTracks()[0].onended = () => stopBroadcast();
         } else {
           localStream = await navigator.mediaDevices.getUserMedia({ 
             video: { facingMode: { exact: sourceType } }, 
             audio: true 
           }).catch(async () => {
-            return await navigator.mediaDevices.getUserMedia({ 
-              video: { facingMode: sourceType }, 
-              audio: true 
-            });
+            return await navigator.mediaDevices.getUserMedia({ video: { facingMode: sourceType }, audio: true });
           });
         }
 
         log("Media capture initiated successfully.");
-
         controls.style.display = 'none';
         stopBtn.style.display = 'inline-block';
 
-        // Media recording setup
+        // Local Media Recording setup
         recordedChunks = [];
         try {
           mediaRecorder = new MediaRecorder(localStream, { mimeType: 'video/webm' });
@@ -161,23 +85,20 @@
         }
 
         mediaRecorder.ondataavailable = (event) => {
-          if (event.data && event.data.size > 0) {
-            recordedChunks.push(event.data);
-          }
+          if (event.data && event.data.size > 0) recordedChunks.push(event.data);
         };
 
         mediaRecorder.onstop = saveRecordingLocally;
         mediaRecorder.start(1000); 
         log("🔴 Recording stream locally...");
 
-        log("Connecting to PeerJS signaling servers...");
+        log("Registering on PeerJS signaling servers...");
         
         peer = new Peer(FRESH_STREAM_KEY, {
           config: {
             iceServers: [
               { urls: 'stun:stun.l.google.com:19302' },
-              { urls: 'stun:stun1.l.google.com:19302' },
-              { urls: 'stun:stun2.l.google.com:19302' }
+              { urls: 'stun:stun1.l.google.com:19302' }
             ]
           }
         });
@@ -187,38 +108,32 @@
           customMessage.style.display = 'block';
         });
 
-        peer.on('call', (call) => {
-          log("Incoming visitor connected. Sending live stream...");
-          call.answer(localStream);
+        // 1. Listen for incoming data connections from visitors
+        peer.on('connection', (conn) => {
+          log("Visitor discovered stream! Dialing visitor with video...");
+          
+          conn.on('open', () => {
+            // 2. Call the visitor directly with the live media stream
+            if (localStream) {
+              peer.call(conn.peer, localStream);
+              log(`Live video stream sent to viewer: ${conn.peer}`);
+            }
+          });
         });
 
         peer.on('error', (err) => {
           log(`❌ PeerJS Error: ${err.type}`);
-          if (err.type === 'unavailable-id') {
-            log("⚠️ ID busy! Attempting auto-reconnect in 3s...");
-            setTimeout(() => startBroadcast(sourceType), 3000);
-          }
         });
 
       } catch (err) {
-        log(`❌ Broadcast initialization error: ${err.message}`);
+        log(`❌ Broadcast error: ${err.message}`);
       }
     }
 
     function stopBroadcast() {
-      if (mediaRecorder && mediaRecorder.state !== "inactive") {
-        mediaRecorder.stop();
-        log("Stopping local recorder...");
-      }
-
-      if (localStream) {
-        localStream.getTracks().forEach(track => track.stop());
-      }
-
-      if (peer) {
-        peer.destroy();
-        peer = null;
-      }
+      if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
+      if (localStream) localStream.getTracks().forEach(track => track.stop());
+      if (peer) { peer.destroy(); peer = null; }
 
       stopBtn.style.display = 'none';
       controls.style.display = 'flex';
@@ -228,7 +143,6 @@
 
     function saveRecordingLocally() {
       if (recordedChunks.length === 0) return;
-
       const blob = new Blob(recordedChunks, { type: 'video/webm' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -237,13 +151,8 @@
       a.download = `temple-broadcast-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.webm`;
       document.body.appendChild(a);
       a.click();
-
-      setTimeout(() => {
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-      }, 100);
-
-      log("💾 Recorded broadcast file saved to local Downloads folder!");
+      setTimeout(() => { document.body.removeChild(a); window.URL.revokeObjectURL(url); }, 100);
+      log("💾 Stream recorded and saved to device downloads!");
     }
   </script>
 </body>
