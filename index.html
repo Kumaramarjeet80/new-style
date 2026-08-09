@@ -24,15 +24,13 @@
   </header>
 
   <div class="video-card">
-    <!-- muted and playsinline are required for browser autoplay policies -->
     <video id="remoteVideo" autoplay playsinline muted controls></video>
     <br>
     <button id="connectBtn" class="btn" onclick="connectToStream()">Tap to Load / Unmute Stream</button>
   </div>
 
   <script>
-    // EXACT SAME KEY AS BROADCAST PAGE
-    const STREAM_KEY = "shree-temple-main-camera-2026"; 
+    const HOST_ID = "shree-temple-main-camera-2026"; 
 
     const videoElement = document.getElementById('remoteVideo');
     const badge = document.getElementById('badge');
@@ -44,7 +42,6 @@
 
       if (peer) { peer.destroy(); }
 
-      // STUN configuration ensures connection across different Wi-Fi/Mobile networks
       peer = new Peer({
         config: {
           iceServers: [
@@ -54,31 +51,40 @@
         }
       });
 
-      peer.on('open', () => {
-        const call = peer.call(STREAM_KEY, null);
+      peer.on('open', (myViewerId) => {
+        // Send a message to the broadcaster declaring our presence
+        const conn = peer.connect(HOST_ID);
 
-        call.on('stream', (remoteStream) => {
-          badge.innerText = "🔴 LIVE DARSHAN";
-          badge.className = "status-badge online";
-          videoElement.srcObject = remoteStream;
-          
-          // Play video programmatically
-          videoElement.play().catch(e => console.log("Autoplay blocked:", e));
+        conn.on('open', () => {
+          conn.send({ type: 'JOIN', viewerId: myViewerId });
         });
 
-        call.on('error', (err) => {
-          badge.innerText = "⚪ Temple Camera is Currently Offline";
-          badge.className = "status-badge offline";
+        // Receive the incoming video stream from broadcaster
+        peer.on('call', (call) => {
+          call.answer(); // Accept broadcaster stream
+          call.on('stream', (remoteStream) => {
+            badge.innerText = "🔴 LIVE DARSHAN";
+            badge.className = "status-badge online";
+            videoElement.srcObject = remoteStream;
+            videoElement.play().catch(e => console.log("Autoplay issue:", e));
+          });
+        });
+
+        conn.on('error', () => {
+          markOffline();
         });
       });
 
       peer.on('error', (err) => {
-        badge.innerText = "⚪ Temple Camera is Currently Offline";
-        badge.className = "status-badge offline";
+        markOffline();
       });
     }
 
-    // Attempt automatic connection on page load
+    function markOffline() {
+      badge.innerText = "⚪ Temple Camera is Currently Offline";
+      badge.className = "status-badge offline";
+    }
+
     window.addEventListener('load', connectToStream);
   </script>
 </body>
