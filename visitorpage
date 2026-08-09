@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shree Mandir - Live Darshan</title>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <style>
+    body { 
+      font-family: Arial, sans-serif; 
+      background: #0f0f0f; 
+      color: #fff; 
+      text-align: center; 
+      margin: 0; 
+      padding: 20px; 
+    }
+    .video-card { 
+      max-width: 800px; 
+      margin: 20px auto; 
+      background: #1a1a1a; 
+      padding: 15px; 
+      border-radius: 12px; 
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5); 
+    }
+    video { 
+      width: 100%; 
+      height: auto; 
+      background: #000; 
+      border-radius: 8px; 
+    }
+    .btn { 
+      padding: 12px 24px; 
+      font-size: 16px; 
+      background: #d4af37; 
+      border: none; 
+      font-weight: bold; 
+      cursor: pointer; 
+      border-radius: 5px; 
+      margin: 10px 5px; 
+      color: #000; 
+    }
+    .btn-danger {
+      background: #dc3545;
+      color: #fff;
+    }
+    .status { 
+      font-weight: bold; 
+      margin-bottom: 10px; 
+      color: #ffc107; 
+    }
+    /* Permission Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-box {
+      background: #222;
+      padding: 25px;
+      border-radius: 10px;
+      max-width: 400px;
+      border: 1px solid #d4af37;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🛕 Live Temple Darshan</h1>
+  <div id="statusText" class="status">Status: Click 'Watch Live' to connect</div>
+
+  <div class="video-card">
+    <video id="remoteVideo" autoplay playsinline controls muted></video>
+    <br>
+    <button id="watchBtn" class="btn" onclick="promptSavePermission()">▶️ Watch Live Darshan</button>
+    <button id="stopBtn" class="btn btn-danger" onclick="stopWatchingAndSave()" style="display: none;">⏹️ Leave & Save Recording</button>
+  </div>
+
+  <!-- Permission Modal -->
+  <div id="permissionModal" class="modal-overlay">
+    <div class="modal-box">
+      <h3>📥 Save Local Copy Permission</h3>
+      <p>Would you like to automatically download a recorded video copy of this Live Darshan to your device when you leave?</p>
+      <button class="btn" onclick="startStream(true)">Yes, Record & Save</button>
+      <button class="btn btn-danger" onclick="startStream(false)">No, Just Watch</button>
+    </div>
+  </div>
+
+  <script>
+    // MATCHES THE NEW KEY IN BROADCAST.HTML
+    const FRESH_STREAM_KEY = "temple-hd-live-stream-v3-2026"; 
+    
+    const videoElement = document.getElementById('remoteVideo');
+    const statusText = document.getElementById('statusText');
+    const modal = document.getElementById('permissionModal');
+    const watchBtn = document.getElementById('watchBtn');
+    const stopBtn = document.getElementById('stopBtn');
+
+    let peer = null;
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let allowRecording = false;
+
+    function promptSavePermission() {
+      modal.style.display = 'flex';
+    }
+
+    function startStream(userPermission) {
+      modal.style.display = 'none';
+      allowRecording = userPermission;
+      statusText.innerText = "Connecting to signaling server...";
+
+      if (peer) { peer.destroy(); }
+
+      peer = new Peer({
+        config: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' }
+          ]
+        }
+      });
+
+      peer.on('open', () => {
+        statusText.innerText = "Calling broadcaster camera...";
+        const call = peer.call(FRESH_STREAM_KEY, null);
+
+        if (!call) {
+          statusText.innerText = "❌ Broadcaster is currently offline.";
+          return;
+        }
+
+        call.on('stream', (remoteStream) => {
+          statusText.innerText = "🔴 LIVE DARSHAN CONNECTED!";
+          statusText.style.color = "#28a745";
+          videoElement.srcObject = remoteStream;
+          videoElement.play();
+
+          watchBtn.style.display = 'none';
+          stopBtn.style.display = 'inline-block';
+
+          if (allowRecording) {
+            setupMediaRecorder(remoteStream);
+          }
+        });
+      });
+
+      peer.on('error', (err) => {
+        statusText.innerText = `❌ Broadcaster offline or unavailable. (${err.type})`;
+        statusText.style.color = "#dc3545";
+      });
+    }
+
+    function setupMediaRecorder(stream) {
+      recordedChunks = [];
+      try {
+        mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+      } catch (e) {
+        mediaRecorder = new MediaRecorder(stream);
+      }
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          recordedChunks.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = triggerAutoDownload;
+      mediaRecorder.start(1000); 
+      statusText.innerText += " (Recording copy...)";
+    }
+
+    function triggerAutoDownload() {
+      if (!allowRecording || recordedChunks.length === 0) return;
+
+      const blob = new Blob(recordedChunks, { type: 'video/webm' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `darshan-live-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.webm`;
+      document.body.appendChild(a);
+      a.click();
+      
+      setTimeout(() => {
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      }, 100);
+    }
+
+    function stopWatchingAndSave() {
+      if (mediaRecorder && mediaRecorder.state !== "inactive") {
+        mediaRecorder.stop();
+      }
+      if (peer) {
+        peer.destroy();
+      }
+      if (videoElement.srcObject) {
+        videoElement.srcObject = null;
+      }
+
+      watchBtn.style.display = 'inline-block';
+      stopBtn.style.display = 'none';
+      statusText.innerText = "Stream ended.";
+      statusText.style.color = "#ffc107";
+    }
+
+    window.addEventListener('beforeunload', () => {
+      if (mediaRecorder && mediaRecorder.state !== "inactive") {
+        mediaRecorder.stop();
+      }
+    });
+  </script>
+</body>
+</html>
