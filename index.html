@@ -13,35 +13,46 @@
     .status-badge { display: inline-block; padding: 6px 16px; border-radius: 20px; font-weight: bold; margin-top: 15px; background: #333; }
     .online { background: #28a745; color: #fff; }
     .offline { background: #dc3545; color: #fff; }
-    .retry-btn { margin-top: 15px; padding: 8px 16px; background: #d4af37; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; display: none; }
+    .btn { margin-top: 15px; padding: 10px 20px; background: #d4af37; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; color: #000; }
   </style>
 </head>
 <body>
 
   <header>
     <h1>🛕 Live Temple Darshan</h1>
-    <div id="badge" class="status-badge">Connecting...</div>
+    <div id="badge" class="status-badge">Connecting to live feed...</div>
   </header>
 
   <div class="video-card">
-    <video id="remoteVideo" autoplay playsinline controls></video>
-    <button id="retryBtn" class="retry-btn" onclick="connectToStream()">Retry Connection</button>
+    <!-- muted and playsinline are required for browser autoplay policies -->
+    <video id="remoteVideo" autoplay playsinline muted controls></video>
+    <br>
+    <button id="connectBtn" class="btn" onclick="connectToStream()">Tap to Load / Unmute Stream</button>
   </div>
 
   <script>
-    // MUST match STREAM_KEY in broadcast.html exactly
+    // EXACT SAME KEY AS BROADCAST PAGE
     const STREAM_KEY = "shree-temple-main-camera-2026"; 
 
     const videoElement = document.getElementById('remoteVideo');
     const badge = document.getElementById('badge');
-    const retryBtn = document.getElementById('retryBtn');
+    let peer = null;
 
     function connectToStream() {
-      badge.innerText = "Connecting to live feed...";
+      badge.innerText = "Connecting to broadcaster...";
       badge.className = "status-badge";
-      retryBtn.style.display = "none";
 
-      const peer = new Peer(); // Create temporary random ID for viewer
+      if (peer) { peer.destroy(); }
+
+      // STUN configuration ensures connection across different Wi-Fi/Mobile networks
+      peer = new Peer({
+        config: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+          ]
+        }
+      });
 
       peer.on('open', () => {
         const call = peer.call(STREAM_KEY, null);
@@ -50,26 +61,24 @@
           badge.innerText = "🔴 LIVE DARSHAN";
           badge.className = "status-badge online";
           videoElement.srcObject = remoteStream;
+          
+          // Play video programmatically
+          videoElement.play().catch(e => console.log("Autoplay blocked:", e));
         });
 
-        // Handle offline camera or dropped connection
-        setTimeout(() => {
-          if (!videoElement.srcObject) {
-            badge.innerText = "⚪ Temple Camera is Currently Offline";
-            badge.className = "status-badge offline";
-            retryBtn.style.display = "inline-block";
-          }
-        }, 3000);
+        call.on('error', (err) => {
+          badge.innerText = "⚪ Temple Camera is Currently Offline";
+          badge.className = "status-badge offline";
+        });
       });
 
-      peer.on('error', () => {
+      peer.on('error', (err) => {
         badge.innerText = "⚪ Temple Camera is Currently Offline";
         badge.className = "status-badge offline";
-        retryBtn.style.display = "inline-block";
       });
     }
 
-    // Connect automatically when page loads
+    // Attempt automatic connection on page load
     window.addEventListener('load', connectToStream);
   </script>
 </body>
