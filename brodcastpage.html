@@ -65,10 +65,8 @@
           localStream.getVideoTracks()[0].onended = () => stopBroadcast();
         } else {
           localStream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: { exact: sourceType } }, 
+            video: { facingMode: sourceType }, 
             audio: true 
-          }).catch(async () => {
-            return await navigator.mediaDevices.getUserMedia({ video: { facingMode: sourceType }, audio: true });
           });
         }
 
@@ -94,11 +92,16 @@
 
         log("Registering on PeerJS signaling servers...");
         
+        // Extended STUN/TURN list to fix same-device and cross-network blocking
         peer = new Peer(FRESH_STREAM_KEY, {
           config: {
             iceServers: [
               { urls: 'stun:stun.l.google.com:19302' },
-              { urls: 'stun:stun1.l.google.com:19302' }
+              { urls: 'stun:stun1.l.google.com:19302' },
+              { urls: 'stun:stun2.l.google.com:19302' },
+              { urls: 'stun:stun3.l.google.com:19302' },
+              { urls: 'stun:stun4.l.google.com:19302' },
+              { urls: 'stun:stun.services.mozilla.com' }
             ]
           }
         });
@@ -108,15 +111,19 @@
           customMessage.style.display = 'block';
         });
 
-        // 1. Listen for incoming data connections from visitors
+        // Answer incoming media calls directly from viewers
+        peer.on('call', (call) => {
+          log("Incoming visitor call received. Answering with media stream...");
+          call.answer(localStream);
+        });
+
+        // Answer data connections
         peer.on('connection', (conn) => {
-          log("Visitor discovered stream! Dialing visitor with video...");
-          
-          conn.on('open', () => {
-            // 2. Call the visitor directly with the live media stream
-            if (localStream) {
+          log("Viewer data channel opened.");
+          conn.on('data', (data) => {
+            if (data === 'REQUEST_STREAM' && localStream) {
+              log(`Viewer requested stream! Dialing viewer ID: ${conn.peer}`);
               peer.call(conn.peer, localStream);
-              log(`Live video stream sent to viewer: ${conn.peer}`);
             }
           });
         });
