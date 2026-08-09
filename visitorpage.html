@@ -58,7 +58,7 @@
     function startStream(userPermission) {
       modal.style.display = 'none';
       allowRecording = userPermission;
-      statusText.innerText = "Connecting to broadcaster...";
+      statusText.innerText = "Connecting to signaling server...";
 
       if (peer) { peer.destroy(); }
 
@@ -66,29 +66,39 @@
         config: {
           iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' }
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' },
+            { urls: 'stun:stun3.l.google.com:19302' },
+            { urls: 'stun:stun4.l.google.com:19302' },
+            { urls: 'stun:stun.services.mozilla.com' }
           ]
         }
       });
 
-      peer.on('open', () => {
-        // 1. Connect to the broadcaster host ID
+      peer.on('open', (myViewerId) => {
+        statusText.innerText = "Connecting to broadcaster...";
+
+        // 1. Establish data channel connection
         const conn = peer.connect(FRESH_STREAM_KEY);
 
-        conn.on('error', () => {
-          statusText.innerText = "❌ Broadcaster is currently offline.";
-          statusText.style.color = "#dc3545";
+        conn.on('open', () => {
+          statusText.innerText = "Broadcaster found! Requesting video feed...";
+          conn.send('REQUEST_STREAM');
         });
 
-        // 2. Listen for the incoming video call initiated by the broadcaster
+        conn.on('error', () => {
+          showOffline();
+        });
+
+        // 2. Accept incoming media stream from broadcaster
         peer.on('call', (call) => {
-          call.answer(); // Accept broadcaster stream
+          call.answer(); // Answer incoming stream call
           
           call.on('stream', (remoteStream) => {
             statusText.innerText = "🔴 LIVE DARSHAN CONNECTED!";
             statusText.style.color = "#28a745";
             videoElement.srcObject = remoteStream;
-            videoElement.play().catch(e => console.log("Autoplay handled:", e));
+            videoElement.play().catch(e => console.log("Autoplay:", e));
 
             watchBtn.style.display = 'none';
             stopBtn.style.display = 'inline-block';
@@ -99,19 +109,21 @@
           });
         });
 
-        // Fallback timeout if broadcaster is off
         setTimeout(() => {
           if (!videoElement.srcObject) {
-            statusText.innerText = "❌ Broadcaster is currently offline.";
-            statusText.style.color = "#dc3545";
+            showOffline();
           }
-        }, 5000);
+        }, 6000);
       });
 
       peer.on('error', (err) => {
-        statusText.innerText = "❌ Broadcaster is currently offline.";
-        statusText.style.color = "#dc3545";
+        showOffline();
       });
+    }
+
+    function showOffline() {
+      statusText.innerText = "❌ Broadcaster is currently offline.";
+      statusText.style.color = "#dc3545";
     }
 
     function setupMediaRecorder(stream) {
