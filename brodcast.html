@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Camera Operator Portal</title>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background: #111; color: #fff; text-align: center; padding: 20px; }
+    video { width: 100%; max-width: 600px; background: #000; border-radius: 8px; margin-top: 15px; transform: scaleX(-1); }
+    .btn { padding: 12px 24px; font-size: 16px; background: #28a745; color: white; border: none; font-weight: bold; cursor: pointer; border-radius: 5px; }
+    .btn-danger { background: #dc3545; }
+    #status { margin: 15px 0; font-weight: bold; color: #ffc107; }
+    #viewerCount { font-size: 1.2rem; margin-top: 10px; color: #17a2b8; }
+  </style>
+</head>
+<body>
+
+  <h1>📷 Camera Broadcast Portal</h1>
+  <p id="status">Status: Camera Off</p>
+  <p id="viewerCount">Active Viewers: 0</p>
+
+  <button id="startBtn" class="btn" onclick="startCamera()">Start Live Stream</button>
+
+  <br>
+  <video id="preview" autoplay playsinline muted></video>
+
+  <script>
+    // UNIQUE KEY: Make this unique so nobody else can hijack your stream ID
+    const STREAM_KEY = "shree-temple-main-camera-2026"; 
+
+    const preview = document.getElementById('preview');
+    const statusText = document.getElementById('status');
+    const viewerCountText = document.getElementById('viewerCount');
+    let activeConnections = [];
+
+    async function startCamera() {
+      try {
+        statusText.innerText = "Requesting camera permissions...";
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "environment" }, 
+          audio: true 
+        });
+
+        preview.srcObject = stream;
+
+        // Register fixed ID on PeerJS signaling network
+        const peer = new Peer(STREAM_KEY);
+
+        peer.on('open', () => {
+          statusText.innerText = "🔴 LIVE: Streaming camera feed to website!";
+          statusText.style.color = "#28a745";
+          document.getElementById('startBtn').style.display = 'none';
+        });
+
+        // Listen for visiting devotees connecting to the site
+        peer.on('call', (call) => {
+          call.answer(stream); // Send camera stream to viewer
+          
+          activeConnections.push(call);
+          updateViewerCount();
+
+          call.on('close', () => {
+            activeConnections = activeConnections.filter(c => c !== call);
+            updateViewerCount();
+          });
+        });
+
+        peer.on('error', (err) => {
+          if (err.type === 'unavailable-id') {
+            statusText.innerText = "Error: Camera already active in another browser window.";
+            statusText.style.color = "#dc3545";
+          }
+        });
+
+      } catch (err) {
+        statusText.innerText = "Failed to access camera/microphone.";
+        statusText.style.color = "#dc3545";
+      }
+    }
+
+    function updateViewerCount() {
+      viewerCountText.innerText = `Active Viewers: ${activeConnections.length}`;
+    }
+  </script>
+</body>
+</html>

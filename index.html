@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shree Mandir - Live Darshan</title>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background: #0f0f0f; color: #fff; text-align: center; margin: 0; padding: 20px; }
+    header { margin-bottom: 20px; }
+    .video-card { max-width: 900px; margin: 0 auto; background: #1a1a1a; padding: 15px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+    video { width: 100%; height: auto; background: #000; border-radius: 8px; display: block; }
+    .status-badge { display: inline-block; padding: 6px 16px; border-radius: 20px; font-weight: bold; margin-top: 15px; background: #333; }
+    .online { background: #28a745; color: #fff; }
+    .offline { background: #dc3545; color: #fff; }
+    .retry-btn { margin-top: 15px; padding: 8px 16px; background: #d4af37; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; display: none; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>🛕 Live Temple Darshan</h1>
+    <div id="badge" class="status-badge">Connecting...</div>
+  </header>
+
+  <div class="video-card">
+    <video id="remoteVideo" autoplay playsinline controls></video>
+    <button id="retryBtn" class="retry-btn" onclick="connectToStream()">Retry Connection</button>
+  </div>
+
+  <script>
+    // MUST match STREAM_KEY in broadcast.html exactly
+    const STREAM_KEY = "shree-temple-main-camera-2026"; 
+
+    const videoElement = document.getElementById('remoteVideo');
+    const badge = document.getElementById('badge');
+    const retryBtn = document.getElementById('retryBtn');
+
+    function connectToStream() {
+      badge.innerText = "Connecting to live feed...";
+      badge.className = "status-badge";
+      retryBtn.style.display = "none";
+
+      const peer = new Peer(); // Create temporary random ID for viewer
+
+      peer.on('open', () => {
+        const call = peer.call(STREAM_KEY, null);
+
+        call.on('stream', (remoteStream) => {
+          badge.innerText = "🔴 LIVE DARSHAN";
+          badge.className = "status-badge online";
+          videoElement.srcObject = remoteStream;
+        });
+
+        // Handle offline camera or dropped connection
+        setTimeout(() => {
+          if (!videoElement.srcObject) {
+            badge.innerText = "⚪ Temple Camera is Currently Offline";
+            badge.className = "status-badge offline";
+            retryBtn.style.display = "inline-block";
+          }
+        }, 3000);
+      });
+
+      peer.on('error', () => {
+        badge.innerText = "⚪ Temple Camera is Currently Offline";
+        badge.className = "status-badge offline";
+        retryBtn.style.display = "inline-block";
+      });
+    }
+
+    // Connect automatically when page loads
+    window.addEventListener('load', connectToStream);
+  </script>
+</body>
+</html>
