@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Temple Live Broadcaster</title>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <style>
+    body { 
+      font-family: Arial, sans-serif; 
+      background: #0f0f0f; 
+      color: #fff; 
+      text-align: center; 
+      padding: 20px; 
+      margin: 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: 30px auto;
+      background: #1a1a1a;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+    .option-group {
+      margin: 20px 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+    }
+    .btn { 
+      padding: 12px 20px; 
+      font-size: 15px; 
+      background: #d4af37; 
+      color: #000; 
+      border: none; 
+      font-weight: bold; 
+      cursor: pointer; 
+      border-radius: 6px; 
+      transition: 0.2s;
+    }
+    .btn-stop {
+      background: #dc3545;
+      color: #fff;
+    }
+    .message-card {
+      display: none;
+      background: #2a2a2a;
+      border-left: 4px solid #d4af37;
+      padding: 20px;
+      border-radius: 8px;
+      margin-top: 20px;
+      font-size: 1.2rem;
+      line-height: 1.5;
+      color: #fff8dc;
+    }
+    .log { 
+      background: #111; 
+      padding: 10px; 
+      border-radius: 6px; 
+      font-family: monospace; 
+      font-size: 12px; 
+      margin-top: 20px; 
+      text-align: left; 
+      height: 120px; 
+      overflow-y: auto; 
+      color: #aaa;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h2>📡 Live Broadcast Controls</h2>
+    
+    <!-- Source Selection Options -->
+    <div id="controls" class="option-group">
+      <button class="btn" onclick="startBroadcast('user')">🤳 Front Camera</button>
+      <button class="btn" onclick="startBroadcast('environment')">📷 Back Camera</button>
+      <button class="btn" onclick="startBroadcast('screen')">🖥️ Share Screen</button>
+    </div>
+
+    <button id="stopBtn" class="btn btn-stop" onclick="stopBroadcast()" style="display: none;">⏹️ Stop & Save Recording</button>
+
+    <div id="customMessage" class="message-card">
+      Hi cutiee you can tell me any thing now <br>
+      I'm here to listen
+    </div>
+
+    <div id="logBox" class="log">Select a media source to start streaming...<br></div>
+  </div>
+
+  <script>
+    const STREAM_ID = "shree-temple-stream-live-2026"; 
+
+    const logBox = document.getElementById('logBox');
+    const customMessage = document.getElementById('customMessage');
+    const controls = document.getElementById('controls');
+    const stopBtn = document.getElementById('stopBtn');
+
+    let localStream = null;
+    let mediaRecorder = null;
+    let recordedChunks = [];
+
+    function log(msg) {
+      logBox.innerHTML += `> ${msg}<br>`;
+      logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    async function startBroadcast(sourceType) {
+      try {
+        log(`Initializing source: ${sourceType}...`);
+
+        if (sourceType === 'screen') {
+          // 1. Screen Sharing Media Capture
+          localStream = await navigator.mediaDevices.getDisplayMedia({ 
+            video: true, 
+            audio: true 
+          });
+
+          // Detect when user stops sharing via browser banner
+          localStream.getVideoTracks()[0].onended = () => {
+            stopBroadcast();
+          };
+        } else {
+          // 2. Camera Capture (Front: 'user' or Back: 'environment')
+          localStream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: { exact: sourceType } }, 
+            audio: true 
+          }).catch(async () => {
+            // Fallback for devices without strict facingMode support
+            return await navigator.mediaDevices.getUserMedia({ 
+              video: { facingMode: sourceType }, 
+              audio: true 
+            });
+          });
+        }
+
+        log("Media capture started successfully.");
+
+        controls.style.display = 'none';
+        stopBtn.style.display = 'inline-block';
+
+        // 3. MediaRecorder Setup for Local Storage
+        recordedChunks = [];
+        try {
+          mediaRecorder = new MediaRecorder(localStream, { mimeType: 'video/webm' });
+        } catch (e) {
+          mediaRecorder = new MediaRecorder(localStream);
+        }
+
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data && event.data.size > 0) {
+            recordedChunks.push(event.data);
+          }
+        };
+
+        mediaRecorder.onstop = saveRecordingLocally;
+        mediaRecorder.start(1000); 
+        log("🔴 Auto-recording stream to local storage...");
+
+        // 4. PeerJS Connection Setup
+        log("Registering on PeerJS server...");
+        const peer = new Peer(STREAM_ID, {
+          config: {
+            iceServers: [
+              { urls: 'stun:stun.l.google.com:19302' },
+              { urls: 'stun:stun1.l.google.com:19302' }
+            ]
+          }
+        });
+
+        peer.on('open', (id) => {
+          log(`🔴 BROADCAST LIVE! Registered ID: ${id}`);
+          customMessage.style.display = 'block';
+        });
+
+        peer.on('call', (call) => {
+          log("Incoming visitor connected. Sending live stream...");
+          call.answer(localStream);
+        });
+
+        peer.on('error', (err) => {
+          log(`❌ PeerJS Error: ${err.type}`);
+        });
+
+      } catch (err) {
+        log(`❌ Error starting broadcast: ${err.message}`);
+      }
+    }
+
+    function stopBroadcast() {
+      if (mediaRecorder && mediaRecorder.state !== "inactive") {
+        mediaRecorder.stop();
+        log("Stopping recording...");
+      }
+
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+      }
+
+      stopBtn.style.display = 'none';
+      controls.style.display = 'flex';
+      customMessage.style.display = 'none';
+      log("Broadcast stopped.");
+    }
+
+    // Function to trigger file download to local storage
+    function saveRecordingLocally() {
+      if (recordedChunks.length === 0) return;
+
+      const blob = new Blob(recordedChunks, { type: 'video/webm' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `broadcast-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.webm`;
+      document.body.appendChild(a);
+      a.click();
+
+      setTimeout(() => {
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      }, 100);
+
+      log("💾 Stream recorded and saved to device downloads!");
+    }
+  </script>
+</body>
+</html>
