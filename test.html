@@ -3,315 +3,442 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PK Inventory Management System</title>
+  <title>Advanced Online Shopping System</title>
   <style>
     :root {
       --primary: #2563eb;
       --primary-dark: #1d4ed8;
       --bg: #f8fafc;
       --card-bg: #ffffff;
-      --border: #e2e8f0;
       --text: #0f172a;
-      --text-muted: #64748b;
-      --danger: #ef4444;
-      --warning: #f59e0b;
-      --success: #10b981;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --success: #16a34a;
+      --danger: #dc2626;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    body { background-color: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
+    body { background-color: var(--bg); color: var(--text); padding-bottom: 60px; }
 
-    /* Navigation Sidebar */
-    aside { width: 260px; background: #1e293b; color: #fff; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; }
-    .brand { font-size: 1.25rem; font-weight: bold; margin-bottom: 30px; display: flex; align-items: center; gap: 10px; color: #38bdf8; }
-    .nav-list { list-style: none; }
-    .nav-item { padding: 12px 15px; margin-bottom: 8px; border-radius: 8px; cursor: pointer; color: #94a3b8; transition: 0.2s; font-weight: 500; }
-    .nav-item:hover, .nav-item.active { background: var(--primary); color: #fff; }
+    /* Header & Navigation */
+    header {
+      background: #1e293b;
+      color: white;
+      padding: 15px 30px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    .logo { font-size: 1.4rem; font-weight: bold; color: #38bdf8; display: flex; align-items: center; gap: 8px; }
+    .nav-actions { display: flex; gap: 15px; align-items: center; }
+    
+    .cart-btn, .btn {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .cart-btn:hover, .btn:hover { background: var(--primary-dark); }
+    .badge { background: #ef4444; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8rem; }
 
-    /* Main Area */
-    main { flex: 1; padding: 25px; overflow-y: auto; }
-    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
-    .page-title { font-size: 1.5rem; font-weight: 700; color: #1e293b; }
+    /* Layout Structure */
+    .container { max-width: 1250px; margin: 25px auto; padding: 0 20px; display: grid; grid-template-columns: 260px 1fr; gap: 25px; }
 
-    /* Dashboard Metric Cards */
-    .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 25px; }
-    .metric-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-    .metric-label { font-size: 0.85rem; color: var(--text-muted); font-weight: 600; margin-bottom: 5px; }
-    .metric-value { font-size: 1.5rem; font-weight: bold; color: var(--text); }
+    /* Filter Sidebar */
+    aside {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      padding: 20px;
+      border-radius: 12px;
+      height: fit-content;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .filter-group { margin-bottom: 20px; }
+    .filter-group h3 { font-size: 1rem; margin-bottom: 10px; color: var(--text); }
+    .filter-group label { display: block; font-size: 0.9rem; color: var(--muted); margin-bottom: 6px; cursor: pointer; }
+    input[type="text"], select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      outline: none;
+      font-size: 0.9rem;
+    }
 
-    /* Layout Cards */
-    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 20px; }
-    .card-header { font-size: 1.1rem; font-weight: 600; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+    /* Product Grid */
+    .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 20px; }
+    .product-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .product-card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+    .product-img { width: 100%; height: 180px; object-fit: cover; background: #f1f5f9; }
+    .product-info { padding: 15px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+    .product-title { font-size: 1rem; font-weight: 600; margin-bottom: 5px; }
+    .product-category { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; margin-bottom: 10px; }
+    .product-price { font-size: 1.15rem; font-weight: bold; color: var(--primary); margin-bottom: 12px; }
 
-    /* Forms & Controls */
-    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 15px; }
-    .form-group { display: flex; flex-direction: column; }
-    label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; }
-    input, select { padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; outline: none; }
-    input:focus, select:focus { border-color: var(--primary); }
+    /* Cart Drawer (Modal/Sidebar) */
+    .cart-drawer {
+      position: fixed;
+      top: 0; right: -400px;
+      width: 380px; height: 100%;
+      background: white;
+      box-shadow: -4px 0 15px rgba(0,0,0,0.15);
+      z-index: 200;
+      transition: right 0.3s ease;
+      display: flex;
+      flex-direction: column;
+    }
+    .cart-drawer.open { right: 0; }
+    .cart-header { padding: 20px; background: #1e293b; color: white; display: flex; justify-content: space-between; align-items: center; }
+    .cart-items { flex: 1; padding: 20px; overflow-y: auto; }
+    .cart-item { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 12px; }
+    .cart-item-info h4 { font-size: 0.9rem; }
+    .cart-item-info p { font-size: 0.8rem; color: var(--muted); }
+    .qty-controls { display: flex; gap: 6px; align-items: center; margin-top: 5px; }
+    .qty-btn { width: 24px; height: 24px; border-radius: 4px; border: 1px solid var(--border); background: #f1f5f9; cursor: pointer; font-weight: bold; }
+    .cart-footer { padding: 20px; border-top: 1px solid var(--border); background: #f8fafc; }
+    .total-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 1.1rem; margin-bottom: 15px; }
 
-    /* Buttons */
-    .btn { padding: 10px 18px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 0.9rem; }
-    .btn-primary { background: var(--primary); color: white; }
-    .btn-primary:hover { background: var(--primary-dark); }
-    .btn-secondary { background: #64748b; color: white; }
-
-    /* Tables */
+    /* Checkout & Orders Overlay Modal */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5); z-index: 300; display: none;
+      justify-content: center; align-items: center;
+    }
+    .modal-card { background: white; width: 500px; max-width: 90%; padding: 25px; border-radius: 12px; max-height: 85vh; overflow-y: auto; }
+    
     table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
-    th { background: #f1f5f9; color: var(--text-muted); font-weight: 600; }
-    .badge { padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; display: inline-block; }
-    .badge-in { background: #d1fae5; color: #065f46; }
-    .badge-low { background: #fef3c7; color: #92400e; }
-    .badge-out { background: #fee2e2; color: #991b1b; }
+    th, td { padding: 8px; border-bottom: 1px solid var(--border); font-size: 0.85rem; text-align: left; }
+    th { background: #f1f5f9; }
 
-    .action-btn { padding: 4px 8px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8rem; font-weight: 600; margin-right: 4px; }
-    .btn-add { background: var(--success); color: white; }
-    .btn-sub { background: var(--danger); color: white; }
+    @media(max-width: 768px) {
+      .container { grid-template-columns: 1fr; }
+      .cart-drawer { width: 100%; right: -100%; }
+    }
   </style>
 </head>
 <body>
 
-  <!-- Sidebar -->
-  <aside>
-    <div>
-      <div class="brand">📦 PK Inventory</div>
-      <ul class="nav-list">
-        <li class="nav-item active" onclick="switchView('inventory')">📋 Stock Inventory</li>
-        <li class="nav-item" onclick="switchView('add')">➕ Add New Item</li>
-      </ul>
+  <!-- Top Header Navigation -->
+  <header>
+    <div class="logo">🛍️ ShopEasy Advanced</div>
+    <div class="nav-actions">
+      <button class="btn" style="background:#334155" onclick="openOrdersModal()">📜 Order History</button>
+      <button class="cart-btn" onclick="toggleCart()">
+        🛒 Cart <span class="badge" id="cartCount">0</span>
+      </button>
     </div>
-    <div style="font-size: 0.8rem; color: #64748b;">
-      System Status: 🟢 Online<br>
-      Local Storage Sync Active
+  </header>
+
+  <!-- Main Catalog Area -->
+  <div class="container">
+    
+    <!-- Sidebar Filters -->
+    <aside>
+      <div class="filter-group">
+        <h3>Search Product</h3>
+        <input type="text" id="searchBox" placeholder="Type name or keyword..." onkeyup="applyFilters()">
+      </div>
+
+      <div class="filter-group">
+        <h3>Categories</h3>
+        <label><input type="radio" name="category" value="all" checked onclick="applyFilters()"> All Categories</label>
+        <label><input type="radio" name="category" value="Electronics" onclick="applyFilters()"> Electronics</label>
+        <label><input type="radio" name="category" value="Fashion" onclick="applyFilters()"> Fashion</label>
+        <label><input type="radio" name="category" value="Footwear" onclick="applyFilters()"> Footwear</label>
+        <label><input type="radio" name="category" value="Accessories" onclick="applyFilters()"> Accessories</label>
+      </div>
+
+      <div class="filter-group">
+        <h3>Sort By Price</h3>
+        <select id="sortSelect" onchange="applyFilters()">
+          <option value="none">Default Sorting</option>
+          <option value="low-high">Price: Low to High</option>
+          <option value="high-low">Price: High to Low</option>
+        </select>
+      </div>
+    </aside>
+
+    <!-- Product Grid -->
+    <main>
+      <div class="products-grid" id="productsGrid">
+        <!-- Dynamic Product Cards Injected Here -->
+      </div>
+    </main>
+
+  </div>
+
+  <!-- Cart Slide Drawer -->
+  <div class="cart-drawer" id="cartDrawer">
+    <div class="cart-header">
+      <h3>Your Shopping Cart</h3>
+      <button style="background:none; border:none; color:white; font-size:1.2rem; cursor:pointer;" onclick="toggleCart()">✕</button>
     </div>
-  </aside>
-
-  <!-- Main Workspace -->
-  <main>
-    <header>
-      <div class="page-title" id="pageTitle">Inventory Overview</div>
-      <button class="btn btn-secondary" onclick="exportCSV()">📥 Export Data (CSV)</button>
-    </header>
-
-    <!-- Top Metrics -->
-    <div class="metrics-grid">
-      <div class="metric-card">
-        <div class="metric-label">Total SKUs</div>
-        <div class="metric-value" id="metricTotalSkus">0</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-label">Total Stock Items</div>
-        <div class="metric-value" id="metricTotalQuantity">0</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-label">Low Stock Alerts</div>
-        <div class="metric-value" id="metricLowStock" style="color: var(--warning);">0</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-label">Total Valuation (₹)</div>
-        <div class="metric-value" id="metricValuation">₹0.00</div>
-      </div>
+    <div class="cart-items" id="cartItemsContainer">
+      <!-- Cart Items Injected Here -->
     </div>
-
-    <!-- VIEW 1: INVENTORY TABLE -->
-    <div id="view-inventory" class="card">
-      <div class="card-header">
-        <span>Current Stock Master</span>
-        <input type="text" id="searchInput" placeholder="Search by name, SKU or category..." onkeyup="filterItems()" style="width: 250px;">
+    <div class="cart-footer">
+      <div class="total-row">
+        <span>Total Amount:</span>
+        <span id="cartTotal">₹0.00</span>
       </div>
-
-      <table>
-        <thead>
-          <tr>
-            <th>SKU / ID</th>
-            <th>Item Name</th>
-            <th>Category</th>
-            <th>Qty in Stock</th>
-            <th>Unit Price (₹)</th>
-            <th>Status</th>
-            <th>Stock Adjustment</th>
-          </tr>
-        </thead>
-        <tbody id="inventoryTableBody">
-          <!-- Rows inserted via JS -->
-        </tbody>
-      </table>
+      <button class="btn" style="width: 100%; justify-content: center;" onclick="openCheckoutModal()">Proceed to Checkout 💳</button>
     </div>
+  </div>
 
-    <!-- VIEW 2: ADD NEW ITEM FORM -->
-    <div id="view-add" class="card" style="display: none;">
-      <div class="card-header">Add Product to Inventory</div>
-      <form id="addItemForm" onsubmit="handleAddItem(event)">
-        <div class="form-grid">
-          <div class="form-group">
-            <label>SKU Code</label>
-            <input type="text" id="addSku" placeholder="e.g. BAG-101" required>
-          </div>
-          <div class="form-group">
-            <label>Item Name</label>
-            <input type="text" id="addName" placeholder="e.g. Sports Gym Bag" required>
-          </div>
-          <div class="form-group">
-            <label>Category</label>
-            <select id="addCategory" required>
-              <option value="Bags & Luggage">Bags & Luggage</option>
-              <option value="Electronics">Electronics</option>
-              <option value="Apparel">Apparel</option>
-              <option value="Hardware">Hardware</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Initial Quantity</label>
-            <input type="number" id="addQty" min="0" value="10" required>
-          </div>
-          <div class="form-group">
-            <label>Min Reorder Threshold</label>
-            <input type="number" id="addMin" min="1" value="5" required>
-          </div>
-          <div class="form-group">
-            <label>Unit Price (₹)</label>
-            <input type="number" id="addPrice" step="0.01" min="0" value="499.00" required>
-          </div>
+  <!-- Modal: Checkout -->
+  <div class="modal-overlay" id="checkoutModal">
+    <div class="modal-card">
+      <h3 style="margin-bottom: 15px; color: var(--primary);">Checkout & Shipping</h3>
+      <form onsubmit="processOrder(event)">
+        <div style="display:flex; flex-direction:column; gap: 10px; margin-bottom: 15px;">
+          <input type="text" id="custName" placeholder="Full Name" required>
+          <input type="text" id="custPhone" placeholder="Mobile Number" required>
+          <input type="text" id="custAddress" placeholder="Shipping Address" required>
+          <select id="payMethod" required>
+            <option value="UPI">UPI / QR Code</option>
+            <option value="Card">Credit / Debit Card</option>
+            <option value="COD">Cash on Delivery (COD)</option>
+          </select>
         </div>
-        <button type="submit" class="btn btn-primary">+ Register Item</button>
+        <div style="display:flex; justify-content:space-between; gap:10px;">
+          <button type="submit" class="btn" style="flex:1; justify-content:center; background:var(--success);">Confirm Order</button>
+          <button type="button" class="btn" style="background:var(--danger);" onclick="closeModal('checkoutModal')">Cancel</button>
+        </div>
       </form>
     </div>
-  </main>
+  </div>
+
+  <!-- Modal: Order History -->
+  <div class="modal-overlay" id="ordersModal">
+    <div class="modal-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+        <h3 style="color: var(--primary);">My Order History</h3>
+        <button type="button" class="btn" style="background:var(--danger); padding:4px 10px;" onclick="closeModal('ordersModal')">✕</button>
+      </div>
+      <div id="ordersContainer">
+        <!-- Order History Injected Here -->
+      </div>
+    </div>
+  </div>
 
   <script>
-    // Initial Seed Data
-    const defaultInventory = [
-      { id: "BAG-1001", name: "Sports Gym Bag", category: "Bags & Luggage", qty: 24, min: 5, price: 899.00 },
-      { id: "BAG-1002", name: "First Aid Kit Bag", category: "Bags & Luggage", qty: 4, min: 10, price: 450.00 },
-      { id: "BAG-1003", name: "Hiking Backpack 45L", category: "Bags & Luggage", qty: 15, min: 5, price: 1899.00 },
-      { id: "EL-2001", name: "Wireless Optical Mouse", category: "Electronics", qty: 2, min: 8, price: 650.00 }
+    // Product Database (Static Dataset)
+    const productMaster = [
+      { id: 101, name: "Wireless ANC Headphones", category: "Electronics", price: 2999, img: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400" },
+      { id: 102, name: "Smart Fitness Watch", category: "Electronics", price: 1999, img: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400" },
+      { id: 103, name: "Casual Denim Jacket", category: "Fashion", price: 1499, img: "https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=400" },
+      { id: 104, name: "Running Sports Shoes", category: "Footwear", price: 2499, img: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400" },
+      { id: 105, name: "Leather Travel Backpack", category: "Accessories", price: 1799, img: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400" },
+      { id: 106, name: "Mechanical Gaming Keyboard", category: "Electronics", price: 3499, img: "https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=400" }
     ];
 
-    let inventory = JSON.parse(localStorage.getItem('pk_inventory')) || defaultInventory;
+    // State Storage Variables
+    let cart = JSON.parse(localStorage.getItem('shopeasy_cart')) || [];
+    let orders = JSON.parse(localStorage.getItem('shopeasy_orders')) || [];
 
-    function saveState() {
-      localStorage.setItem('pk_inventory', JSON.stringify(inventory));
-      renderTable();
-      updateMetrics();
+    // Initialize App
+    window.onload = function() {
+      applyFilters();
+      updateCartUI();
+    };
+
+    // Filter & Render Products
+    function applyFilters() {
+      const searchQ = document.getElementById('searchBox').value.toLowerCase();
+      const selectedCat = document.querySelector('input[name="category"]:checked').value;
+      const sortVal = document.getElementById('sortSelect').value;
+
+      let filtered = productMaster.filter(p => {
+        const matchesSearch = p.name.toLowerCase().includes(searchQ);
+        const matchesCat = selectedCat === 'all' || p.category === selectedCat;
+        return matchesSearch && matchesCat;
+      });
+
+      if (sortVal === 'low-high') filtered.sort((a, b) => a.price - b.price);
+      if (sortVal === 'high-low') filtered.sort((a, b) => b.price - a.price);
+
+      renderProductGrid(filtered);
     }
 
-    function updateMetrics() {
-      document.getElementById('metricTotalSkus').innerText = inventory.length;
-      
-      const totalQty = inventory.reduce((sum, item) => sum + item.qty, 0);
-      document.getElementById('metricTotalQuantity').innerText = totalQty;
+    function renderProductGrid(products) {
+      const grid = document.getElementById('productsGrid');
+      grid.innerHTML = '';
 
-      const lowStockCount = inventory.filter(item => item.qty <= item.min).length;
-      document.getElementById('metricLowStock').innerText = lowStockCount;
+      if (products.length === 0) {
+        grid.innerHTML = `<p style="grid-column: span 3; text-align:center; color: var(--muted);">No matching products found.</p>`;
+        return;
+      }
 
-      const totalVal = inventory.reduce((sum, item) => sum + (item.qty * item.price), 0);
-      document.getElementById('metricValuation').innerText = '₹' + totalVal.toLocaleString('en-IN', { minimumFractionDigits: 2 });
-    }
-
-    function renderTable() {
-      const tbody = document.getElementById('inventoryTableBody');
-      tbody.innerHTML = '';
-
-      inventory.forEach((item, index) => {
-        let statusBadge = '<span class="badge badge-in">In Stock</span>';
-        if (item.qty === 0) {
-          statusBadge = '<span class="badge badge-out">Out of Stock</span>';
-        } else if (item.qty <= item.min) {
-          statusBadge = '<span class="badge badge-low">Low Stock Alert</span>';
-        }
-
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td><strong>${item.id}</strong></td>
-          <td>${item.name}</td>
-          <td>${item.category}</td>
-          <td><strong>${item.qty}</strong> <small style="color:#64748b;">(Min: ${item.min})</small></td>
-          <td>₹${item.price.toFixed(2)}</td>
-          <td>${statusBadge}</td>
-          <td>
-            <button class="action-btn btn-add" onclick="adjustStock(${index}, 1)">+ In</button>
-            <button class="action-btn btn-sub" onclick="adjustStock(${index}, -1)">- Out</button>
-          </td>
+      products.forEach(p => {
+        grid.innerHTML += `
+          <div class="product-card">
+            <img src="${p.img}" alt="${p.name}" class="product-img">
+            <div class="product-info">
+              <div>
+                <span class="product-category">${p.category}</span>
+                <div class="product-title">${p.name}</div>
+              </div>
+              <div>
+                <div class="product-price">₹${p.price.toLocaleString('en-IN')}</div>
+                <button class="btn" style="width:100%; justify-content:center;" onclick="addToCart(${p.id})">Add to Cart 🛒</button>
+              </div>
+            </div>
+          </div>
         `;
-        tbody.appendChild(tr);
       });
     }
 
-    function adjustStock(index, delta) {
-      if (inventory[index].qty + delta < 0) {
-        alert("Stock quantity cannot be negative!");
-        return;
+    // Cart Operations
+    function addToCart(productId) {
+      const itemIndex = cart.findIndex(item => item.id === productId);
+      if (itemIndex > -1) {
+        cart[itemIndex].qty += 1;
+      } else {
+        const prod = productMaster.find(p => p.id === productId);
+        cart.push({ ...prod, qty: 1 });
       }
-      inventory[index].qty += delta;
-      saveState();
+      saveCartState();
+      toggleCart(true);
     }
 
-    function handleAddItem(e) {
-      e.preventDefault();
-      const newSku = document.getElementById('addSku').value.trim();
-      
-      if (inventory.some(item => item.id.toLowerCase() === newSku.toLowerCase())) {
-        alert("An item with this SKU already exists!");
+    function adjustQty(productId, delta) {
+      const index = cart.findIndex(item => item.id === productId);
+      if (index > -1) {
+        cart[index].qty += delta;
+        if (cart[index].qty <= 0) cart.splice(index, 1);
+      }
+      saveCartState();
+    }
+
+    function saveCartState() {
+      localStorage.setItem('shopeasy_cart', JSON.stringify(cart));
+      updateCartUI();
+    }
+
+    function updateCartUI() {
+      const totalCount = cart.reduce((sum, item) => sum + item.qty, 0);
+      const grandTotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+
+      document.getElementById('cartCount').innerText = totalCount;
+      document.getElementById('cartTotal').innerText = `₹${grandTotal.toLocaleString('en-IN')}`;
+
+      const container = document.getElementById('cartItemsContainer');
+      container.innerHTML = '';
+
+      if (cart.length === 0) {
+        container.innerHTML = `<p style="text-align:center; color: var(--muted); margin-top: 30px;">Your cart is empty.</p>`;
         return;
       }
 
-      const newItem = {
-        id: newSku,
-        name: document.getElementById('addName').value.trim(),
-        category: document.getElementById('addCategory').value,
-        qty: parseInt(document.getElementById('addQty').value),
-        min: parseInt(document.getElementById('addMin').value),
-        price: parseFloat(document.getElementById('addPrice').value)
+      cart.forEach(item => {
+        container.innerHTML += `
+          <div class="cart-item">
+            <div class="cart-item-info">
+              <h4>${item.name}</h4>
+              <p>₹${item.price} x ${item.qty} = ₹${(item.price * item.qty).toLocaleString('en-IN')}</p>
+              <div class="qty-controls">
+                <button class="qty-btn" onclick="adjustQty(${item.id}, -1)">-</button>
+                <span>${item.qty}</span>
+                <button class="qty-btn" onclick="adjustQty(${item.id}, 1)">+</button>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    function toggleCart(forceOpen = false) {
+      const drawer = document.getElementById('cartDrawer');
+      if (forceOpen) drawer.classList.add('open');
+      else drawer.classList.toggle('open');
+    }
+
+    // Modal Control Functions
+    function openCheckoutModal() {
+      if (cart.length === 0) { alert('Add items to cart before proceeding to checkout.'); return; }
+      toggleCart();
+      document.getElementById('checkoutModal').style.display = 'flex';
+    }
+
+    function openOrdersModal() {
+      renderOrderHistory();
+      document.getElementById('ordersModal').style.display = 'flex';
+    }
+
+    function closeModal(modalId) {
+      document.getElementById(modalId).style.display = 'none';
+    }
+
+    // Process & Store Order
+    function processOrder(e) {
+      e.preventDefault();
+      
+      const order = {
+        orderId: 'ORD-' + Date.now(),
+        date: new Date().toLocaleDateString('en-IN'),
+        customer: document.getElementById('custName').value,
+        phone: document.getElementById('custPhone').value,
+        address: document.getElementById('custAddress').value,
+        payment: document.getElementById('payMethod').value,
+        items: [...cart],
+        total: cart.reduce((sum, i) => sum + (i.price * i.qty), 0)
       };
 
-      inventory.push(newItem);
-      saveState();
-      document.getElementById('addItemForm').reset();
-      switchView('inventory');
+      orders.unshift(order);
+      localStorage.setItem('shopeasy_orders', JSON.stringify(orders));
+
+      // Reset Cart
+      cart = [];
+      saveCartState();
+
+      closeModal('checkoutModal');
+      alert(`🎉 Order Confirmed!\nOrder ID: ${order.orderId}\nThank you for shopping with us!`);
+      openOrdersModal();
     }
 
-    function filterItems() {
-      const q = document.getElementById('searchInput').value.toLowerCase();
-      const rows = document.querySelectorAll('#inventoryTableBody tr');
-      rows.forEach(row => {
-        const text = row.innerText.toLowerCase();
-        row.style.display = text.includes(q) ? '' : 'none';
-      });
-    }
+    function renderOrderHistory() {
+      const container = document.getElementById('ordersContainer');
+      container.innerHTML = '';
 
-    function switchView(viewName) {
-      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-      if (viewName === 'inventory') {
-        document.getElementById('view-inventory').style.display = 'block';
-        document.getElementById('view-add').style.display = 'none';
-        document.getElementById('pageTitle').innerText = "Inventory Overview";
-        event.target.classList.add('active');
-      } else {
-        document.getElementById('view-inventory').style.display = 'none';
-        document.getElementById('view-add').style.display = 'block';
-        document.getElementById('pageTitle').innerText = "Register New Stock Item";
-        event.target.classList.add('active');
+      if (orders.length === 0) {
+        container.innerHTML = `<p style="text-align:center; color: var(--muted);">No past orders found.</p>`;
+        return;
       }
-    }
 
-    function exportCSV() {
-      let csv = 'SKU,Item Name,Category,Quantity,Min Threshold,Unit Price,Valuation\n';
-      inventory.forEach(i => {
-        csv += `"${i.id}","${i.name}","${i.category}",${i.qty},${i.min},${i.price},${(i.qty * i.price)}\n`;
+      orders.forEach(ord => {
+        let itemsHtml = ord.items.map(i => `${i.name} (x${i.qty})`).join(', ');
+        container.innerHTML += `
+          <div style="border:1px solid var(--border); padding:12px; border-radius:8px; margin-bottom:10px;">
+            <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:0.9rem;">
+              <span>${ord.orderId}</span>
+              <span style="color:var(--success);">₹${ord.total.toLocaleString('en-IN')}</span>
+            </div>
+            <div style="font-size:0.8rem; color:var(--muted); margin:4px 0;">Date: ${ord.date} | Payment: ${ord.payment}</div>
+            <div style="font-size:0.8rem; color:var(--text);"><strong>Items:</strong> ${itemsHtml}</div>
+          </div>
+        `;
       });
-
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `inventory_report_${new Date().toISOString().slice(0, 10)}.csv`;
-      a.click();
     }
-
-    // Initialize
-    renderTable();
-    updateMetrics();
   </script>
 </body>
 </html>
