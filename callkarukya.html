@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video Call - Sender</title>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+    body { background: #0f172a; color: #fff; height: 100vh; display: flex; flex-direction: column; }
+    header { background: #1e293b; padding: 15px; text-align: center; border-bottom: 1px solid #334155; }
+    .status { font-size: 14px; margin-top: 5px; color: #f59e0b; font-weight: bold; }
+    
+    .stage { flex: 1; position: relative; background: #000; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+    video.main-video { width: 100%; height: 100%; object-fit: contain; }
+    
+    /* Floating Circular Camera Overlay for Screen Share Mode */
+    .pip-circle {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      border: 3px solid #38bdf8;
+      overflow: hidden;
+      display: none;
+      z-index: 10;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+    .pip-circle video { width: 100%; height: 100%; object-fit: cover; }
+
+    .controls { background: #1e293b; padding: 15px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+    .btn { padding: 12px 18px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; background: #38bdf8; color: #0f172a; transition: 0.2s; }
+    .btn:hover { background: #0284c7; color: #fff; }
+    .btn-danger { background: #ef4444; color: #fff; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h2>📱 Sender Side</h2>
+    <div id="statusText" class="status">Status: Initializing media...</div>
+  </header>
+
+  <div class="stage">
+    <!-- Sender only sees the Receiver's incoming video -->
+    <video id="remoteVideo" class="main-video" autoplay playsinline></video>
+    
+    <!-- Local Circular Camera Overlay when sharing screen -->
+    <div id="pipContainer" class="pip-circle">
+      <video id="pipCameraVideo" autoplay muted playsinline></video>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button id="callBtn" class="btn" onclick="startCall()">📞 Call Receiver</button>
+    <button class="btn" onclick="switchCamera('user')">🤳 Front Camera</button>
+    <button class="btn" onclick="switchCamera('environment')">📷 Back Camera</button>
+    <button class="btn" onclick="startScreenShareWithCircle()">🖥️ Share Screen + Circle Cam</button>
+    <button id="endBtn" class="btn btn-danger" onclick="endCall()" style="display: none;">⏹️ End Call & Save Video</button>
+  </div>
+
+  <script>
+    const ROOM_KEY = "vcall-room-session-2026";
+
+    let peer = null;
+    let localStream = null;
+    let cameraStream = null;
+    let mediaCall = null;
+    
+    // Recording vars
+    let mediaRecorder = null;
+    let recordedChunks = [];
+
+    const statusText = document.getElementById('statusText');
+    const remoteVideo = document.getElementById('remoteVideo');
+    const pipCameraVideo = document.getElementById('pipCameraVideo');
+    const pipContainer = document.getElementById('pipContainer');
+    const callBtn = document.getElementById('callBtn');
+    const endBtn = document.getElementById('endBtn');
+
+    async function init() {
+      try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: true });
+        localStream = cameraStream;
+        statusText.innerText = "Status: Local media ready. Click 'Call Receiver'.";
+      } catch (err) {
+        statusText.innerText = "❌ Camera/Microphone access error.";
+        return;
+      }
+
+      peer = new Peer({
+        config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }
+      });
+
+      peer.on('open', () => {
+        statusText.innerText = "Status: Ready to connect.";
+      });
+    }
+
+    function startCall() {
+      statusText.innerText = "Calling Receiver...";
+      mediaCall = peer.call(ROOM_KEY, localStream);
+
+      mediaCall.on('stream', (remoteStream) => {
+        remoteVideo.srcObject = remoteStream;
+        statusText.innerText = "🔴 CONNECTED! Recording call on Sender side...";
+        statusText.style.color = "#22c55e";
+        callBtn.style.display = "none";
+        endBtn.style.display = "inline-block";
+
+        startRecording(remoteStream);
+      });
+    }
+
+    async function switchCamera(facingMode) {
+      try {
+        hideCircleCam();
+        const newStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facingMode }, audio: true });
+        replaceSenderTrack(newStream);
+        statusText.innerText = `Switched to ${facingMode === 'user' ? 'Front' : 'Back'} Camera`;
+      } catch (e) {
+        alert("Camera type not supported or accessible on this device.");
+      }
+    }
+
+    async function startScreenShareWithCircle() {
+      try {
+        let displayStream;
+        try {
+          displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+        } catch (e) {
+          displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+        }
+
+        // Keep front camera active for circular PiP
+        cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: true });
+        pipCameraVideo.srcObject = cameraStream;
+        pipContainer.style.display = "block";
+
+        replaceSenderTrack(displayStream);
+        statusText.innerText = "Sharing Screen with Front Camera Overlay";
+
+        displayStream.getVideoTracks()[0].onended = () => {
+          switchCamera('user');
+        };
+      } catch (e) {
+        alert("Screen sharing not supported on this browser.");
+      }
+    }
+
+    function replaceSenderTrack(newStream) {
+      localStream = newStream;
+      if (mediaCall && mediaCall.peerConnection) {
+        const videoTrack = newStream.getVideoTracks()[0];
+        const sender = mediaCall.peerConnection.getSenders().find(s => s.track.kind === 'video');
+        if (sender) sender.replaceTrack(videoTrack);
+      }
+    }
+
+    function hideCircleCam() {
+      pipContainer.style.display = "none";
+      pipCameraVideo.srcObject = null;
+    }
+
+    /* Sender Recording Logic */
+    function startRecording(streamToRecord) {
+      recordedChunks = [];
+      try {
+        mediaRecorder = new MediaRecorder(streamToRecord, { mimeType: 'video/webm;codecs=vp9,opus' });
+      } catch (e) {
+        mediaRecorder = new MediaRecorder(streamToRecord);
+      }
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) recordedChunks.push(event.data);
+      };
+
+      mediaRecorder.onstop = downloadRecording;
+      mediaRecorder.start(1000);
+    }
+
+    function downloadRecording() {
+      if (recordedChunks.length === 0) return;
+      const blob = new Blob(recordedChunks, { type: 'video/webm' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `Sender_Call_Recording_${new Date().toISOString().slice(0, 19)}.webm`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { document.body.removeChild(a); window.URL.revokeObjectURL(url); }, 100);
+      statusText.innerText = "💾 Recording downloaded to device!";
+    }
+
+    function endCall() {
+      if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
+      if (mediaCall) mediaCall.close();
+      remoteVideo.srcObject = null;
+      hideCircleCam();
+      callBtn.style.display = "inline-block";
+      endBtn.style.display = "none";
+      statusText.innerText = "Call ended.";
+      statusText.style.color = "#f59e0b";
+    }
+
+    init();
+  </script>
+</body>
+</html>

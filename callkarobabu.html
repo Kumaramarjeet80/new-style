@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video Call - Receiver</title>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+    body { background: #0f172a; color: #fff; height: 100vh; display: flex; flex-direction: column; }
+    header { background: #1e293b; padding: 15px; text-align: center; border-bottom: 1px solid #334155; }
+    .status { font-size: 14px; margin-top: 5px; color: #f59e0b; font-weight: bold; }
+    
+    .stage { flex: 1; position: relative; background: #000; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+    video.main-video { width: 100%; height: 100%; object-fit: contain; }
+    
+    .pip-circle {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      border: 3px solid #38bdf8;
+      overflow: hidden;
+      display: none;
+      z-index: 10;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+    .pip-circle video { width: 100%; height: 100%; object-fit: cover; }
+
+    .controls { background: #1e293b; padding: 15px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+    .btn { padding: 12px 18px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; background: #38bdf8; color: #0f172a; transition: 0.2s; }
+    .btn:hover { background: #0284c7; color: #fff; }
+    .btn-danger { background: #ef4444; color: #fff; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h2>🎧 Receiver Side</h2>
+    <div id="statusText" class="status">Status: Waiting for Sender...</div>
+  </header>
+
+  <div class="stage">
+    <!-- Receiver only sees Sender's video -->
+    <video id="remoteVideo" class="main-video" autoplay playsinline></video>
+    
+    <!-- Circular Overlay for Screen Share Mode -->
+    <div id="pipContainer" class="pip-circle">
+      <video id="pipCameraVideo" autoplay muted playsinline></video>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="btn" onclick="switchCamera('user')">🤳 Front Camera</button>
+    <button class="btn" onclick="switchCamera('environment')">📷 Back Camera</button>
+    <button class="btn" onclick="startScreenShareWithCircle()">🖥️ Share Screen + Circle Cam</button>
+    <button id="endBtn" class="btn btn-danger" onclick="leaveCall()" style="display: none;">⏹️ Leave Call</button>
+  </div>
+
+  <script>
+    const ROOM_KEY = "vcall-room-session-2026";
+
+    let peer = null;
+    let localStream = null;
+    let cameraStream = null;
+    let activeCall = null;
+
+    const statusText = document.getElementById('statusText');
+    const remoteVideo = document.getElementById('remoteVideo');
+    const pipCameraVideo = document.getElementById('pipCameraVideo');
+    const pipContainer = document.getElementById('pipContainer');
+    const endBtn = document.getElementById('endBtn');
+
+    async function init() {
+      try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: true });
+        localStream = cameraStream;
+      } catch (err) {
+        statusText.innerText = "❌ Camera permission required.";
+        return;
+      }
+
+      peer = new Peer(ROOM_KEY, {
+        config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }
+      });
+
+      peer.on('open', () => {
+        statusText.innerText = "🟢 Online! Waiting for Sender to call...";
+      });
+
+      peer.on('call', (call) => {
+        activeCall = call;
+        call.answer(localStream);
+
+        call.on('stream', (remoteStream) => {
+          remoteVideo.srcObject = remoteStream;
+          statusText.innerText = "🔴 IN CALL WITH SENDER";
+          statusText.style.color = "#22c55e";
+          endBtn.style.display = "inline-block";
+        });
+      });
+    }
+
+    async function switchCamera(facingMode) {
+      try {
+        hideCircleCam();
+        const newStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facingMode }, audio: true });
+        replaceReceiverTrack(newStream);
+        statusText.innerText = `Switched to ${facingMode === 'user' ? 'Front' : 'Back'} Camera`;
+      } catch (e) {
+        alert("Camera option unavailable.");
+      }
+    }
+
+    async function startScreenShareWithCircle() {
+      try {
+        let displayStream;
+        try {
+          displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+        } catch (e) {
+          displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+        }
+
+        cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: true });
+        pipCameraVideo.srcObject = cameraStream;
+        pipContainer.style.display = "block";
+
+        replaceReceiverTrack(displayStream);
+        statusText.innerText = "Sharing Screen with Front Camera Overlay";
+
+        displayStream.getVideoTracks()[0].onended = () => {
+          switchCamera('user');
+        };
+      } catch (e) {
+        alert("Screen sharing not supported on this device.");
+      }
+    }
+
+    function replaceReceiverTrack(newStream) {
+      localStream = newStream;
+      if (activeCall && activeCall.peerConnection) {
+        const videoTrack = newStream.getVideoTracks()[0];
+        const sender = activeCall.peerConnection.getSenders().find(s => s.track.kind === 'video');
+        if (sender) sender.replaceTrack(videoTrack);
+      }
+    }
+
+    function hideCircleCam() {
+      pipContainer.style.display = "none";
+      pipCameraVideo.srcObject = null;
+    }
+
+    function leaveCall() {
+      if (activeCall) activeCall.close();
+      remoteVideo.srcObject = null;
+      hideCircleCam();
+      endBtn.style.display = "none";
+      statusText.innerText = "Call ended. Waiting for new call...";
+      statusText.style.color = "#f59e0b";
+    }
+
+    init();
+  </script>
+</body>
+</html>
