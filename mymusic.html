@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cloud Music Ecosystem</title>
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <title>Cloud Music Portal</title>
   <style>
     :root {
       --primary: #10b981;
@@ -15,7 +14,7 @@
       --border: #334155;
       --danger: #ef4444;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     body { background: var(--bg); color: var(--text); padding-bottom: 120px; }
 
     nav { background: #1e293b; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
@@ -54,19 +53,19 @@
 </head>
 <body>
 
+  <!-- Navigation -->
   <nav>
     <h2>🎧 Cloud Music Portal</h2>
     <div class="nav-btns">
-      <button class="btn" onclick="showView('viewer')">🎵 Viewer Panel</button>
-      <button class="btn btn-secondary" id="adminNavBtn" onclick="showView('admin')">🔐 Admin Panel</button>
-      <span id="userBadge" style="font-size: 0.85rem; font-weight: bold; color: var(--primary);"></span>
-      <button class="btn btn-danger" id="logoutBtn" style="display:none;" onclick="logout()">Logout</button>
+      <button class="btn" id="navViewerBtn" onclick="showView('viewer')">🎵 Viewer Panel</button>
+      <button class="btn btn-secondary" id="navAdminBtn" onclick="showView('admin')">🔐 Admin Panel</button>
+      <button class="btn btn-danger" id="adminLogoutBtn" style="display:none;" onclick="logoutAdmin()">Logout Admin</button>
     </div>
   </nav>
 
   <div class="container">
 
-    <!-- VIEWER PANEL -->
+    <!-- VIEWER PANEL (Public Access - No Login Required) -->
     <div id="viewViewer">
       <!-- Search & Filters -->
       <div class="card">
@@ -109,11 +108,11 @@
 
     <!-- ADMIN PANEL -->
     <div id="viewAdmin" style="display: none;">
-      <!-- Admin Login -->
+      <!-- Admin Login Box -->
       <div id="adminLoginBox" class="card" style="max-width: 400px; margin: 40px auto;">
         <div class="card-title">Admin Authentication</div>
-        <div class="form-group"><label>Admin User</label><input type="text" id="adminUser" value="admin"></div>
-        <div class="form-group"><label>Admin Password</label><input type="password" id="adminPass" value="admin123"></div>
+        <div class="form-group"><label>Admin Username</label><input type="text" id="adminUser" placeholder="Username"></div>
+        <div class="form-group"><label>Admin Password</label><input type="password" id="adminPass" placeholder="Password"></div>
         <button class="btn" style="width: 100%;" onclick="loginAdmin()">Login to Admin Dashboard</button>
       </div>
 
@@ -153,31 +152,6 @@
       </div>
     </div>
 
-  </div>
-
-  <!-- AUTHENTICATION MODALS -->
-  <div class="modal" id="authModal">
-    <div class="modal-card">
-      <div class="card-title">Sign In / Register</div>
-      <div id="googleBtnContainer" style="margin-bottom: 15px; text-align: center;"></div>
-      <p style="text-align: center; color: var(--muted); font-size: 0.8rem; margin-bottom: 15px;">OR Sign In with Username/Email</p>
-      <form onsubmit="handleCredentialsLogin(event)">
-        <div class="form-group"><label>Username or Email</label><input type="text" id="loginId" required></div>
-        <div class="form-group"><label>Password</label><input type="password" id="loginPass" required></div>
-        <button type="submit" class="btn" style="width: 100%;">Login</button>
-      </form>
-    </div>
-  </div>
-
-  <div class="modal" id="passwordModal">
-    <div class="modal-card">
-      <div class="card-title">Set Password</div>
-      <p style="font-size: 0.8rem; color: var(--muted); margin-bottom: 10px;">Mandatory: Set a password for your account to enable Username/Password login.</p>
-      <form onsubmit="handleSetPassword(event)">
-        <div class="form-group"><label>New Password</label><input type="password" id="newPass" required></div>
-        <button type="submit" class="btn" style="width: 100%;">Save Password</button>
-      </form>
-    </div>
   </div>
 
   <!-- EDIT SONG MODAL (ADMIN) -->
@@ -236,14 +210,12 @@
   </div>
 
   <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbyHH-cp_38fIfGLiIWQCxrUOWrGDkCEVLxsbRUC0r9lcNKhaIm1K2e9A5uBV8p8TsJT/execL";
-    const GOOGLE_CLIENT_ID = "142207577364-pl7bjrc5bjk1qcop3700ujm5rdmm2qbv.apps.googleusercontent.com";
+    const API_URL = "https://script.google.com/macros/s/AKfycbyHH-cp_38fIfGLiIWQCxrUOWrGDkCEVLxsbRUC0r9lcNKhaIm1K2e9A5uBV8p8TsJT/exec";
 
     let masterSongs = [];
     let currentPlaylist = [];
     let currentTrackIndex = 0;
     let isPlaying = false;
-    let currentUser = JSON.parse(localStorage.getItem("app_user")) || null;
     let isAdminLoggedIn = false;
     let playlists = JSON.parse(localStorage.getItem("app_playlists")) || {};
 
@@ -253,95 +225,37 @@
 
     window.onload = function() {
       fetchSongs();
-      checkUserSession();
-      initGoogleAuth();
     };
-
-    function checkUserSession() {
-      if (currentUser) {
-        document.getElementById('userBadge').innerText = `@${currentUser.username}`;
-        document.getElementById('logoutBtn').style.display = 'inline-block';
-        if (!currentUser.hasPassword) {
-          openModal('passwordModal');
-        }
-      } else {
-        openModal('authModal');
-      }
-    }
-
-    function initGoogleAuth() {
-      if (window.google) {
-        google.accounts.id.initialize({
-          client_id: GOOGLE_CLIENT_ID,
-          callback: handleGoogleResponse
-        });
-        google.accounts.id.renderButton(
-          document.getElementById("googleBtnContainer"),
-          { theme: "outline", size: "large" }
-        );
-      }
-    }
-
-    async function handleGoogleResponse(res) {
-      const payload = JSON.parse(atob(res.credential.split('.')[1]));
-      const response = await apiPost({ action: "googleLogin", email: payload.email });
-      if (response.status === "success") {
-        currentUser = response.user;
-        localStorage.setItem("app_user", JSON.stringify(currentUser));
-        closeModal('authModal');
-        checkUserSession();
-      }
-    }
-
-    async function handleSetPassword(e) {
-      e.preventDefault();
-      const pass = document.getElementById('newPass').value.trim();
-      const res = await apiPost({ action: "setPassword", userId: currentUser.userId, password: pass });
-      if (res.status === "success") {
-        currentUser.hasPassword = true;
-        localStorage.setItem("app_user", JSON.stringify(currentUser));
-        closeModal('passwordModal');
-        alert("Password set successfully!");
-      }
-    }
-
-    async function handleCredentialsLogin(e) {
-      e.preventDefault();
-      const res = await apiPost({
-        action: "credentialsLogin",
-        identifier: document.getElementById('loginId').value.trim(),
-        password: document.getElementById('loginPass').value.trim()
-      });
-      if (res.status === "success") {
-        currentUser = res.user;
-        localStorage.setItem("app_user", JSON.stringify(currentUser));
-        closeModal('authModal');
-        checkUserSession();
-      } else {
-        alert(res.message);
-      }
-    }
-
-    function logout() {
-      localStorage.removeItem("app_user");
-      currentUser = null;
-      location.reload();
-    }
 
     function showView(v) {
       document.getElementById('viewViewer').style.display = v === 'viewer' ? 'block' : 'none';
       document.getElementById('viewAdmin').style.display = v === 'admin' ? 'block' : 'none';
     }
 
+    // ADMIN CREDENTIAL VERIFICATION
     function loginAdmin() {
-      if (document.getElementById('adminUser').value === 'admin' && document.getElementById('adminPass').value === 'admin123') {
+      const u = document.getElementById('adminUser').value.trim();
+      const p = document.getElementById('adminPass').value.trim();
+
+      if (u === 'kumaramarjeet' && p === 'hehe') {
         isAdminLoggedIn = true;
         document.getElementById('adminLoginBox').style.display = 'none';
         document.getElementById('adminDashboard').style.display = 'block';
+        document.getElementById('adminLogoutBtn').style.display = 'inline-block';
         renderAdminSongs();
       } else {
-        alert("Invalid Admin Credentials!");
+        alert("Invalid Admin Username or Password!");
       }
+    }
+
+    function logoutAdmin() {
+      isAdminLoggedIn = false;
+      document.getElementById('adminUser').value = '';
+      document.getElementById('adminPass').value = '';
+      document.getElementById('adminLoginBox').style.display = 'block';
+      document.getElementById('adminDashboard').style.display = 'none';
+      document.getElementById('adminLogoutBtn').style.display = 'none';
+      showView('viewer');
     }
 
     async function fetchSongs() {
