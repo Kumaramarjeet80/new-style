@@ -236,39 +236,69 @@
       renderSongLibrary(filtered);
     }
 
-    // Audio Playback
-   function getDirectAudioUrl(url) {
-  // Extract Google Drive File ID from any Drive URL
+ // Smart Multi-Endpoint Google Drive Audio Stream Resolver
+function getDriveStreamUrls(url) {
+  if (!url) return [];
+  
+  // Extract 33-character Google Drive File ID
   const match = url.match(/[-\w]{25,}/);
   if (match) {
-    // Use Google's high-speed CDN endpoint which bypasses audio player CORS restrictions
-    return `https://lh3.googleusercontent.com/d/${match[0]}`;
+    const id = match[0];
+    return [
+      `https://lh3.googleusercontent.com/d/${id}`,              // Primary: High-speed Google CDN
+      `https://drive.google.com/uc?export=download&id=${id}`,     // Fallback 1: UC Download
+      `https://docs.google.com/uc?export=open&id=${id}`          // Fallback 2: UC Open
+    ];
   }
-  return url;
+  return [url];
 }
 
 function playSongIndex(idx) {
+  if (!masterSongs || masterSongs.length === 0) return;
+
   currentTrackIndex = idx;
   const track = masterSongs[currentTrackIndex];
   
-  // Convert Drive URL into a playable audio stream URL
-  const playableUrl = getDirectAudioUrl(track.streamUrl || track.driveUrl);
-  
-  audio.src = playableUrl;
+  const rawUrl = track.streamUrl || track.driveUrl || '';
+  const candidateUrls = getDriveStreamUrls(rawUrl);
 
-  document.getElementById('playerTitle').innerText = track.title;
-  document.getElementById('playerArtist').innerText = track.artist;
+  document.getElementById('playerTitle').innerText = track.title || 'Loading...';
+  document.getElementById('playerArtist').innerText = track.artist || 'Please wait';
 
-  audio.play().then(() => {
-    isPlaying = true;
-    playPauseBtn.innerText = "⏸️";
-    setupMediaSession(track);
-  }).catch(err => {
-    console.error("Playback error:", err);
-    alert("Unable to stream this audio file. Please ensure the file in Google Drive has permissions set to 'Anyone with the link can view'.");
-  });
+  // Try candidate endpoints sequentially if streaming fails
+  tryStreamCandidates(candidateUrls, 0, track);
 }
 
+function tryStreamCandidates(urls, index, track) {
+  if (index >= urls.length) {
+    alert("Unable to stream this audio file.\n\nPlease check:\n1. Make sure the 'My_Music_Files' folder in Google Drive has General Access set to 'Anyone with the link can view'.\n2. Ensure the uploaded file is an MP3 file smaller than 15MB.");
+    return;
+  }
+
+  const currentUrl = urls[index];
+  console.log(`Attempting stream attempt ${index + 1}/${urls.length}:`, currentUrl);
+
+  audio.src = currentUrl;
+  audio.load();
+
+  const playPromise = audio.play();
+
+  if (playPromise !== undefined) {
+    playPromise.then(() => {
+      isPlaying = true;
+      if (document.getElementById('playPauseBtn')) {
+        document.getElementById('playPauseBtn').innerText = "⏸️";
+      }
+      document.getElementById('playerTitle').innerText = track.title;
+      document.getElementById('playerArtist').innerText = track.artist;
+      setupMediaSession(track);
+    }).catch(err => {
+      console.warn(`Stream candidate ${index + 1} failed (${err.message}). Trying fallback endpoint...`);
+      // Try next candidate URL
+      tryStreamCandidates(urls, index + 1, track);
+    });
+  }
+}
     function togglePlayPause() {
       if (!audio.src) return;
       if (isPlaying) {
