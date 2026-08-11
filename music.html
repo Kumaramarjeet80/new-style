@@ -237,20 +237,37 @@
     }
 
     // Audio Playback
-    function playSongIndex(idx) {
-      currentTrackIndex = idx;
-      const track = masterSongs[currentTrackIndex];
-      audio.src = track.streamUrl;
+   function getDirectAudioUrl(url) {
+  // Extract Google Drive File ID from any Drive URL
+  const match = url.match(/[-\w]{25,}/);
+  if (match) {
+    // Use Google's high-speed CDN endpoint which bypasses audio player CORS restrictions
+    return `https://lh3.googleusercontent.com/d/${match[0]}`;
+  }
+  return url;
+}
 
-      document.getElementById('playerTitle').innerText = track.title;
-      document.getElementById('playerArtist').innerText = track.artist;
+function playSongIndex(idx) {
+  currentTrackIndex = idx;
+  const track = masterSongs[currentTrackIndex];
+  
+  // Convert Drive URL into a playable audio stream URL
+  const playableUrl = getDirectAudioUrl(track.streamUrl || track.driveUrl);
+  
+  audio.src = playableUrl;
 
-      audio.play().then(() => {
-        isPlaying = true;
-        playPauseBtn.innerText = "⏸️";
-        setupMediaSession(track);
-      });
-    }
+  document.getElementById('playerTitle').innerText = track.title;
+  document.getElementById('playerArtist').innerText = track.artist;
+
+  audio.play().then(() => {
+    isPlaying = true;
+    playPauseBtn.innerText = "⏸️";
+    setupMediaSession(track);
+  }).catch(err => {
+    console.error("Playback error:", err);
+    alert("Unable to stream this audio file. Please ensure the file in Google Drive has permissions set to 'Anyone with the link can view'.");
+  });
+}
 
     function togglePlayPause() {
       if (!audio.src) return;
