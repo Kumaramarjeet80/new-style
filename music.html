@@ -236,47 +236,54 @@
       renderSongLibrary(filtered);
     }
 
- // Smart Multi-Endpoint Google Drive Audio Stream Resolver
-function getDriveStreamUrls(url) {
-  if (!url) return [];
-  
-  // Extract 33-character Google Drive File ID
+// Extract Google Drive File ID
+function extractDriveId(url) {
+  if (!url) return null;
   const match = url.match(/[-\w]{25,}/);
-  if (match) {
-    const id = match[0];
-    return [
-      `https://lh3.googleusercontent.com/d/${id}`,              // Primary: High-speed Google CDN
-      `https://drive.google.com/uc?export=download&id=${id}`,     // Fallback 1: UC Download
-      `https://docs.google.com/uc?export=open&id=${id}`          // Fallback 2: UC Open
-    ];
-  }
-  return [url];
+  return match ? match[0] : null;
 }
 
-function playSongIndex(idx) {
+async function playSongIndex(idx) {
   if (!masterSongs || masterSongs.length === 0) return;
 
   currentTrackIndex = idx;
   const track = masterSongs[currentTrackIndex];
-  
-  const rawUrl = track.streamUrl || track.driveUrl || '';
-  const candidateUrls = getDriveStreamUrls(rawUrl);
+  const fileId = track.fileId || extractDriveId(track.streamUrl || track.driveUrl);
 
   document.getElementById('playerTitle').innerText = track.title || 'Loading...';
   document.getElementById('playerArtist').innerText = track.artist || 'Please wait';
 
-  // Try candidate endpoints sequentially if streaming fails
-  tryStreamCandidates(candidateUrls, 0, track);
+  // Define streaming URLs in priority order
+  const streamCandidates = [];
+
+  if (fileId) {
+    // Priority 1: High-Speed Google CDN
+    streamCandidates.push(`https://lh3.googleusercontent.com/d/${fileId}`);
+    // Priority 2: Direct UC Stream
+    streamCandidates.push(`https://docs.google.com/uc?export=download&id=${fileId}`);
+  } else if (track.streamUrl || track.driveUrl) {
+    streamCandidates.push(track.streamUrl || track.driveUrl);
+  }
+
+  // Attempt playback with fallback
+  playWithFallback(streamCandidates, 0, track, fileId);
 }
 
-function tryStreamCandidates(urls, index, track) {
-  if (index >= urls.length) {
-    alert("Unable to stream this audio file.\n\nPlease check:\n1. Make sure the 'My_Music_Files' folder in Google Drive has General Access set to 'Anyone with the link can view'.\n2. Ensure the uploaded file is an MP3 file smaller than 15MB.");
+function playWithFallback(urls, candidateIndex, track, fileId) {
+  // If standard CDN links fail, use Apps Script Proxy Stream as the ultimate backup
+  if (candidateIndex >= urls.length) {
+    if (fileId) {
+      console.log("Standard URLs blocked by CORS. Using Apps Script Proxy Stream...");
+      fetchAudioViaProxy(fileId, track);
+      return;
+    }
+    
+    alert("Unable to stream this audio file.\n\nPlease check:\n1. Make sure your Google Drive folder is shared with 'Anyone with the link can view'.\n2. Ensure the uploaded file is a valid MP3 file under 15MB.");
     return;
   }
 
-  const currentUrl = urls[index];
-  console.log(`Attempting stream attempt ${index + 1}/${urls.length}:`, currentUrl);
+  const currentUrl = urls[candidateIndex];
+  console.log(`Trying stream candidate ${candidateIndex + 1}: ${currentUrl}`);
 
   audio.src = currentUrl;
   audio.load();
@@ -293,11 +300,37 @@ function tryStreamCandidates(urls, index, track) {
       document.getElementById('playerArtist').innerText = track.artist;
       setupMediaSession(track);
     }).catch(err => {
-      console.warn(`Stream candidate ${index + 1} failed (${err.message}). Trying fallback endpoint...`);
-      // Try next candidate URL
-      tryStreamCandidates(urls, index + 1, track);
+      console.warn(`Candidate ${candidateIndex + 1} failed: ${err.message}. Trying next candidate...`);
+      playWithFallback(urls, candidateIndex + 1, track, fileId);
     });
   }
+}
+
+// Backup: Fetches base64 audio stream directly from Apps Script, bypassing all CORS
+async function fetchAudioViaProxy(fileId, track) {
+  try {
+    const res = await fetch(`${API_URL}?action=stream&id=${fileId}`);
+    const base64Data = await res.text();
+
+    if (base64Data.startsWith("Error")) {
+      throw new Error(base64Data);
+    }
+
+    audio.src = "data:audio/mpeg;base64," + base64Data;
+    audio.load();
+    audio.play();
+
+    isPlaying = true;
+    if (document.getElementById('playPauseBtn')) {
+      document.getElementById('playPauseBtn').innerText = "⏸️";
+    }
+    document.getElementById('playerTitle').innerText = track.title;
+    document.getElementById('playerArtist').innerText = track.artist;
+    setupMediaSession(track);
+  } catch (e) {
+    alert("Audio Playback Error: " + e.message + "\n\nPlease ensure your Google Drive folder has general access set to 'Anyone with the link can view'.");
+  }
+}
 }
     function togglePlayPause() {
       if (!audio.src) return;
