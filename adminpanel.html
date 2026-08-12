@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Control Panel</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+    body { background: #f1f5f9; }
+    header { background: #0f172a; color: white; padding: 15px; text-align: center; }
+    .wrapper { max-width: 1100px; margin: 20px auto; padding: 0 15px; }
+    .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); margin-bottom: 25px; }
+    h3 { margin-bottom: 15px; color: #1e293b; }
+    input, select, textarea { width: 100%; padding: 10px; margin-bottom: 12px; border: 1px solid #cbd5e1; border-radius: 4px; }
+    .btn { background: #0284c7; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { padding: 10px; border: 1px solid #e2e8f0; text-align: left; font-size: 14px; }
+    th { background: #f8fafc; }
+    .badge-blocked { background: #ef4444; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px; }
+    .badge-active { background: #22c55e; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h2>⚙️ Superstore Admin Dashboard</h2>
+  </header>
+
+  <div class="wrapper">
+    <!-- Add Category -->
+    <div class="card">
+      <h3>Add New Product Type / Category</h3>
+      <div style="display:flex; gap:10px;">
+        <input type="text" id="cat-name" placeholder="Category Name (e.g. Electronics, Clothing)">
+        <button class="btn" style="height:42px;" onclick="addCategory()">Add Category</button>
+      </div>
+    </div>
+
+    <!-- Upload Product -->
+    <div class="card">
+      <h3>Upload New Product</h3>
+      <input type="text" id="prod-name" placeholder="Product Title">
+      <select id="prod-type"><option value="">Select Category</option></select>
+      <input type="number" id="prod-price" placeholder="Price (INR)">
+      <textarea id="prod-desc" placeholder="Product Description"></textarea>
+      <label style="font-size: 12px;">Product Image (Auto-saved to Google Drive):</label>
+      <input type="file" id="prod-file" accept="image/*">
+      <button class="btn" onclick="uploadProduct()">Upload Product</button>
+    </div>
+
+    <!-- View & Manage Products -->
+    <div class="card">
+      <h3>Manage Products</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Image</th>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Price</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="admin-product-list"></tbody>
+      </table>
+    </div>
+
+    <!-- View & Block Users -->
+    <div class="card">
+      <h3>Manage Registered Customers</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Full Name</th>
+            <th>Username</th>
+            <th>Mobile</th>
+            <th>Email</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="admin-user-list"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxVo2WyQ1qjN87BYpAYm5LnGjp3MnShabMoNW6UHWxraOjA8zh63pzDDSMrGwg48EAH/exec"; // Paste your deployed Apps Script URL here
+
+    window.onload = () => {
+      loadCategories();
+      loadProducts();
+      loadUsers();
+    };
+
+    async function loadCategories() {
+      const res = await fetch(`${SCRIPT_URL}?action=getCategories`);
+      const data = await res.json();
+      const select = document.getElementById('prod-type');
+      select.innerHTML = '<option value="">Select Category</option>';
+      data.categories.forEach(c => select.innerHTML += `<option value="${c}">${c}</option>`);
+    }
+
+    async function addCategory() {
+      const cat = document.getElementById('cat-name').value;
+      if(!cat) return alert("Enter category name");
+      await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify({ action: "addCategory", categoryName: cat }) });
+      alert("Category Added!");
+      document.getElementById('cat-name').value = '';
+      loadCategories();
+    }
+
+    async function uploadProduct() {
+      const fileInput = document.getElementById('prod-file').files[0];
+      let base64 = "", mime = "", name = "";
+
+      if(fileInput) {
+        base64 = await toBase64(fileInput);
+        base64 = base64.split(',')[1];
+        mime = fileInput.type;
+        name = fileInput.name;
+      }
+
+      const payload = {
+        action: "addProduct",
+        name: document.getElementById('prod-name').value,
+        type: document.getElementById('prod-type').value,
+        price: parseFloat(document.getElementById('prod-price').value),
+        description: document.getElementById('prod-desc').value,
+        imageBase64: base64,
+        imageMime: mime,
+        imageName: name
+      };
+
+      alert("Uploading Product & Image to Drive...");
+      await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
+      alert("Product Uploaded Successfully!");
+      loadProducts();
+    }
+
+    async function loadProducts() {
+      const res = await fetch(`${SCRIPT_URL}?action=getProducts`);
+      const data = await res.json();
+      const tbody = document.getElementById('admin-product-list');
+      tbody.innerHTML = data.products.map(p => `
+        <tr>
+          <td><img src="${p.imageUrl}" width="40" height="40" style="object-fit:cover;"></td>
+          <td>${p.name}</td>
+          <td>${p.type}</td>
+          <td>₹${p.price}</td>
+          <td><button style="background:#dc2626; color:white; border:none; padding:5px 10px; cursor:pointer;" onclick="deleteProduct('${p.id}')">Delete</button></td>
+        </tr>
+      `).join('');
+    }
+
+    async function deleteProduct(id) {
+      if(confirm("Delete this product?")) {
+        await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify({ action: "deleteProduct", id: id }) });
+        loadProducts();
+      }
+    }
+
+    async function loadUsers() {
+      const res = await fetch(`${SCRIPT_URL}?action=getUsers`);
+      const data = await res.json();
+      const tbody = document.getElementById('admin-user-list');
+      tbody.innerHTML = data.users.map(u => `
+        <tr>
+          <td>${u.fullname}</td>
+          <td>${u.username}</td>
+          <td>${u.mobile}</td>
+          <td>${u.email}</td>
+          <td><span class="${u.status === 'Blocked' ? 'badge-blocked' : 'badge-active'}">${u.status}</span></td>
+          <td>
+            <button onclick="toggleUser('${u.username}', '${u.status === 'Blocked' ? 'Active' : 'Blocked'}')">
+              ${u.status === 'Blocked' ? 'Unblock' : 'Block'}
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function toggleUser(username, newStatus) {
+      await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify({ action: "toggleUserStatus", username: username, newStatus: newStatus }) });
+      loadUsers();
+    }
+
+    const toBase64 = file => new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = error => reject(error);
+    });
+  </script>
+</body>
+</html>
