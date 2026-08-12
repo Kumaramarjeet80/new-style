@@ -3,40 +3,34 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>P2P Music & Chat Room</title>
+  <title>P2P Music & Chat Sync</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
     body { display: flex; height: 100vh; background: #0f172a; color: #f8fafc; }
 
-    /* Layout */
     #left-panel { flex: 1.2; display: flex; flex-direction: column; border-right: 1px solid #334155; padding: 20px; gap: 15px; }
     #right-panel { flex: 1; display: flex; flex-direction: column; background: #1e293b; }
 
-    /* YouTube Container */
     .player-container { position: relative; width: 100%; height: 280px; background: #000; border-radius: 12px; overflow: hidden; }
     iframe#youtube-player { width: 100%; height: 100%; border: none; }
 
-    /* Controls */
     .control-card { background: #334155; padding: 15px; border-radius: 10px; display: flex; flex-direction: column; gap: 10px; }
     .input-group { display: flex; gap: 8px; }
     input[type="text"] { flex: 1; padding: 10px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: white; outline: none; }
     button { padding: 10px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
     button:hover { background: #2563eb; }
 
-    /* Sync Activation Overlay */
     #sync-overlay {
       position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(15, 23, 42, 0.85); display: flex; justify-content: center;
-      align-items: center; z-index: 10; border-radius: 12px;
+      background: rgba(15, 23, 42, 0.92); display: flex; flex-direction: column;
+      justify-content: center; align-items: center; z-index: 10; gap: 12px; text-align: center; padding: 20px;
     }
 
-    /* Connection Bar */
     .connection-box { background: #1e293b; padding: 12px; border-radius: 8px; border: 1px solid #475569; display: flex; flex-direction: column; gap: 8px; }
     .status-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
     .dot { width: 8px; height: 8px; border-radius: 50%; background: #ef4444; }
     .dot.connected { background: #22c55e; }
 
-    /* Chat Area */
     .chat-header { padding: 15px 20px; background: #0f172a; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
     #chat-messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
     .msg { max-width: 75%; padding: 10px 14px; border-radius: 8px; font-size: 14px; line-height: 1.4; }
@@ -47,17 +41,13 @@
 
     .chat-input-area { padding: 15px; background: #0f172a; display: flex; gap: 10px; border-top: 1px solid #334155; }
   </style>
-
-  <!-- PeerJS Library for P2P WebRTC connection -->
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 </head>
 <body>
 
-  <!-- Left: Synchronized YouTube Player -->
   <div id="left-panel">
     <h2>Synchronized Player</h2>
 
-    <!-- Connection Setup -->
     <div class="connection-box">
       <div class="status-badge">
         <div id="status-dot" class="dot"></div>
@@ -73,29 +63,28 @@
       </div>
     </div>
 
-    <!-- YouTube Frame -->
     <div class="player-container">
       <div id="sync-overlay">
-        <button onclick="enableAudioSync()" style="background: #22c55e; padding: 12px 24px; font-size: 15px;">Click Once to Enable Music Sync</button>
+        <h3>Sync Permission Required</h3>
+        <p style="font-size: 13px; color: #94a3b8;">Browsers block remote audio playback until you click unlock.</p>
+        <button onclick="unlockAudio()" style="background: #22c55e; padding: 12px 24px; font-size: 15px;">Unlock Audio Sync</button>
       </div>
       <div id="youtube-player"></div>
     </div>
 
-    <!-- Music Sync Controls -->
     <div class="control-card">
-      <label style="font-size: 12px; font-weight: bold; color: #94a3b8;">SYNC MUSIC CONTROLS</label>
+      <label style="font-size: 12px; font-weight: bold; color: #94a3b8;">MUSIC CONTROLS</label>
       <div class="input-group">
         <input type="text" id="yt-url" placeholder="Paste YouTube link or Video ID">
         <button onclick="changeSong()">Load Track</button>
       </div>
       <div class="input-group" style="justify-content: space-between;">
         <button onclick="togglePlayPause()" style="flex: 1;">Play / Pause</button>
-        <button onclick="forceResync()" style="background: #475569;">Sync to Partner</button>
+        <button onclick="forceSyncWithPartner()" style="background: #475569;">Resync</button>
       </div>
     </div>
   </div>
 
-  <!-- Right: Real-time Chat (Saved to LocalStorage) -->
   <div id="right-panel">
     <div class="chat-header">
       <h3>Chat Room</h3>
@@ -110,11 +99,9 @@
     </div>
   </div>
 
-  <!-- YouTube IFrame API -->
   <script src="https://www.youtube.com/iframe_api"></script>
 
   <script>
-    // --- 1. LOCAL STORAGE & CHAT HISTORY ---
     const LOCAL_STORAGE_KEY = 'p2p_sync_chat_history';
     let chatHistory = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
 
@@ -139,7 +126,7 @@
       }
     }
 
-    // --- 2. PEERJS DIRECT P2P CONNECTION ---
+    // P2P Setup
     let peer = new Peer();
     let conn = null;
 
@@ -163,7 +150,7 @@
       conn.on('open', () => {
         document.getElementById('status-dot').classList.add('connected');
         document.getElementById('status-text').innerText = 'Connected';
-        addMessageToHistory({ type: 'system', text: 'Peer connected directly!' });
+        addMessageToHistory({ type: 'system', text: 'Connected to partner.' });
       });
 
       conn.on('data', (data) => {
@@ -190,7 +177,7 @@
       }
     }
 
-    // --- 3. CHAT LOGIC ---
+    // Chat Functions
     function sendChatMessage() {
       const input = document.getElementById('chat-input');
       const text = input.value.trim();
@@ -227,25 +214,27 @@
       return text.replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]));
     }
 
-    // --- 4. YOUTUBE SYNCHRONIZATION ENGINE ---
+    // Player Engine & Auto-Sync Fixes
     let player;
-    let isInternalChange = false;
-    let audioActivated = false;
+    let isRemoteAction = false;
+    let audioUnlocked = false;
 
     function onYouTubeIframeAPIReady() {
       player = new YT.Player('youtube-player', {
         videoId: 'M7lc1UVf-VE',
-        playerVars: { 'autoplay': 0, 'controls': 1 },
-        events: { 'onStateChange': onPlayerStateChange }
+        playerVars: { 'autoplay': 0, 'controls': 1, 'enablejsapi': 1 },
+        events: {
+          'onStateChange': onPlayerStateChange
+        }
       });
     }
 
-    function enableAudioSync() {
-      audioActivated = true;
+    function unlockAudio() {
+      audioUnlocked = true;
       document.getElementById('sync-overlay').style.display = 'none';
       if (player && typeof player.playVideo === 'function') {
         player.playVideo();
-        setTimeout(() => player.pauseVideo(), 100);
+        setTimeout(() => player.pauseVideo(), 200);
       }
     }
 
@@ -259,15 +248,16 @@
       const videoId = extractVideoId(url);
       if (!videoId) return;
 
-      isInternalChange = true;
+      isRemoteAction = true;
       player.loadVideoById(videoId, 0);
       
       sendP2PData({ type: 'music_sync', action: 'load', videoId: videoId, time: 0 });
-      addMessageToHistory({ type: 'system', text: `Track loaded: ${videoId}` });
-      setTimeout(() => { isInternalChange = false; }, 800);
+      addMessageToHistory({ type: 'system', text: `Track changed: ${videoId}` });
+      setTimeout(() => { isRemoteAction = false; }, 1000);
     }
 
     function togglePlayPause() {
+      if (!player) return;
       const state = player.getPlayerState();
       const time = player.getCurrentTime();
 
@@ -281,7 +271,7 @@
     }
 
     function onPlayerStateChange(event) {
-      if (isInternalChange) return;
+      if (isRemoteAction) return;
       const time = player.getCurrentTime();
 
       if (event.data === YT.PlayerState.PLAYING) {
@@ -292,7 +282,9 @@
     }
 
     function applyRemotePlayerState(data) {
-      isInternalChange = true;
+      if (!audioUnlocked) return;
+
+      isRemoteAction = true;
 
       if (data.action === 'load') {
         player.loadVideoById(data.videoId, data.time);
@@ -306,17 +298,15 @@
         player.seekTo(data.time, true);
       }
 
-      setTimeout(() => { isInternalChange = false; }, 800);
+      setTimeout(() => { isRemoteAction = false; }, 1000);
     }
 
-    function forceResync() {
+    function forceSyncWithPartner() {
       if (player) {
-        const time = player.getCurrentTime();
-        const state = player.getPlayerState();
-        sendP2PData({ 
-          type: 'music_sync', 
-          action: state === YT.PlayerState.PLAYING ? 'play' : 'pause', 
-          time: time 
+        sendP2PData({
+          type: 'music_sync',
+          action: player.getPlayerState() === YT.PlayerState.PLAYING ? 'play' : 'pause',
+          time: player.getCurrentTime()
         });
       }
     }
