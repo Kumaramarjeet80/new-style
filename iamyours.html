@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Yours Room</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { display: flex; flex-direction: row; height: 100vh; background: #0f172a; color: #f8fafc; overflow: hidden; }
+
+    #left-panel { flex: 1.4; display: flex; flex-direction: column; border-right: 1px solid #334155; padding: 15px; gap: 12px; overflow-y: auto; }
+    #right-panel { flex: 1; display: flex; flex-direction: column; background: #1e293b; height: 100%; }
+
+    @media (max-width: 768px) {
+      body { flex-direction: column; overflow-y: auto; height: auto; }
+      #left-panel { width: 100%; border-right: none; border-bottom: 1px solid #334155; padding: 12px; }
+      #right-panel { width: 100%; height: 500px; }
+      .player-container { height: 210px !important; }
+    }
+
+    .card { background: #1e293b; padding: 12px; border-radius: 10px; border: 1px solid #334155; display: flex; flex-direction: column; gap: 8px; }
+    .input-group { display: flex; gap: 8px; }
+    input[type="text"] { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: white; outline: none; font-size: 14px; }
+    button { padding: 12px 16px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; transition: 0.2s; }
+    button:active { transform: scale(0.97); }
+
+    .status-badge { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: #ef4444; }
+    .dot.connected { background: #22c55e; box-shadow: 0 0 8px #22c55e; }
+
+    .player-container { position: relative; width: 100%; height: 260px; background: #000; border-radius: 12px; overflow: hidden; }
+    iframe#youtube-player { width: 100%; height: 100%; border: none; }
+    #sync-overlay {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(15, 23, 42, 0.95); display: flex; flex-direction: column;
+      justify-content: center; align-items: center; z-index: 10; gap: 10px; text-align: center; padding: 20px;
+    }
+
+    #yt-results-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; max-height: 280px; overflow-y: auto; margin-top: 8px; padding-right: 4px; }
+    .yt-card { background: #0f172a; border-radius: 8px; overflow: hidden; border: 1px solid #334155; cursor: pointer; display: flex; flex-direction: column; transition: transform 0.15s; }
+    .yt-card:hover, .yt-card:active { transform: translateY(-2px); border-color: #3b82f6; }
+    .yt-card img { width: 100%; height: 105px; object-fit: cover; }
+    .yt-card-body { padding: 8px; display: flex; flex-direction: column; gap: 4px; }
+    .yt-card-title { font-size: 12px; font-weight: bold; line-height: 1.3; height: 32px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .yt-card-channel { font-size: 10px; color: #94a3b8; }
+
+    .chat-header { padding: 12px 16px; background: #0f172a; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
+    #chat-messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+    .msg { max-width: 82%; padding: 10px 14px; border-radius: 10px; font-size: 14px; line-height: 1.4; }
+    .msg.mine { align-self: flex-end; background: #2563eb; color: white; }
+    .msg.partner { align-self: flex-start; background: #334155; color: white; }
+    .msg.system { align-self: center; background: #3b82f6; color: #ffffff; font-weight: bold; font-size: 12px; text-align: center; max-width: 90%; border-radius: 12px; padding: 6px 12px; }
+    .msg-meta { font-size: 10px; opacity: 0.7; margin-top: 4px; text-align: right; }
+    .chat-input-area { padding: 12px; background: #0f172a; display: flex; gap: 8px; border-top: 1px solid #334155; }
+  </style>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+</head>
+<body>
+
+  <div id="left-panel">
+    <h2 style="font-size: 18px;">Yours Room</h2>
+
+    <div class="card">
+      <div class="status-badge">
+        <div id="status-dot" class="dot"></div>
+        <span id="status-text">Waiting for Mine...</span>
+      </div>
+    </div>
+
+    <div class="player-container">
+      <div id="sync-overlay">
+        <h3>Sync Audio Permission</h3>
+        <button onclick="unlockAudioSync()" style="background: #22c55e;">Enable Music Sync</button>
+      </div>
+      <div id="youtube-player"></div>
+    </div>
+
+    <div class="card">
+      <label style="font-size: 11px; font-weight: bold; color: #94a3b8;">YOUTUBE SONG SEARCH</label>
+      <div class="input-group">
+        <input type="text" id="yt-search-query" placeholder="Search songs, artists, playlists, or paste URL..." onkeydown="if(event.key==='Enter') executeYouTubeSearch()">
+        <button onclick="executeYouTubeSearch()">Search YouTube</button>
+      </div>
+      <div id="yt-results-grid"></div>
+    </div>
+
+    <div class="card" style="flex-direction: row;">
+      <button onclick="togglePlayPause()" style="flex: 1;">Play / Pause</button>
+    </div>
+  </div>
+
+  <div id="right-panel">
+    <div class="chat-header">
+      <h3>Chat with Mine</h3>
+      <button onclick="exportChatTranscript()" style="background: #22c55e; font-size: 12px; padding: 8px 12px;">Export Chat 📥</button>
+    </div>
+    <div id="chat-messages"></div>
+    <div class="chat-input-area">
+      <input type="text" id="chat-input" placeholder="Type a message..." onkeydown="if(event.key==='Enter') sendChatMessage()">
+      <button onclick="sendChatMessage()">Send</button>
+    </div>
+  </div>
+
+  <script src="https://www.youtube.com/iframe_api"></script>
+
+  <script>
+    const USER_NAME = "Yours";
+    const MY_ID = 'dual-sync-yours-key-9988';
+    let conn = null;
+    let chatLogHistory = [];
+
+    let peer = new Peer(MY_ID);
+
+    peer.on('connection', (incoming) => {
+      conn = incoming;
+      bindEvents();
+    });
+
+    function bindEvents() {
+      if (!conn) return;
+
+      conn.on('open', () => {
+        document.getElementById('status-text').innerText = "Connected to Mine!";
+        document.getElementById('status-dot').classList.add('connected');
+      });
+
+      conn.on('data', (data) => {
+        if (data.type === 'chat') renderMessageUI(data.text, 'partner', data.time, 'Mine');
+        else if (data.type === 'system') renderMessageUI(data.text, 'system', data.time, 'System');
+        else if (data.type === 'music') handleRemoteMusic(data);
+      });
+
+      conn.on('close', () => {
+        document.getElementById('status-text').innerText = "Waiting for Mine...";
+        document.getElementById('status-dot').classList.remove('connected');
+      });
+    }
+
+    function sendChatMessage() {
+      const input = document.getElementById('chat-input');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      renderMessageUI(text, 'mine', time, 'Yours');
+
+      if (conn && conn.open) conn.send({ type: 'chat', text: text, time: time });
+      input.value = '';
+    }
+
+    function renderMessageUI(text, sender, time, displayName = 'Yours') {
+      const container = document.getElementById('chat-messages');
+      const div = document.createElement('div');
+      div.className = `msg ${sender}`;
+      div.innerHTML = `<div>${text}</div><div class="msg-meta">${time}</div>`;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+
+      chatLogHistory.push(`[${time}] ${displayName}: ${text}`);
+    }
+
+    function exportChatTranscript() {
+      if (chatLogHistory.length === 0) {
+        alert("No chat messages to export yet.");
+        return;
+      }
+      const fileContent = "--- Shared Music Room Chat Log ---\n\n" + chatLogHistory.join("\n");
+      const blob = new Blob([fileContent], { type: "text/plain;charset=utf-8" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `Chat_Export_${new Date().toISOString().slice(0,10)}.txt`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }
+
+    // YouTube Synchronized Engine & Full Video Search Grid
+    let player;
+    let isRemote = false;
+
+    function onYouTubeIframeAPIReady() {
+      player = new YT.Player('youtube-player', {
+        videoId: 'M7lc1UVf-VE',
+        playerVars: { 'autoplay': 0, 'controls': 1 },
+        events: { 'onStateChange': onPlayerStateChange }
+      });
+    }
+
+    function unlockAudioSync() {
+      document.getElementById('sync-overlay').style.display = 'none';
+      if (player) { player.playVideo(); setTimeout(() => player.pauseVideo(), 200); }
+    }
+
+    function extractVideoId(url) {
+      const reg = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+      const match = url.match(reg);
+      if (match && match[2].length === 11) return match[2];
+      return url.length === 11 ? url : null;
+    }
+
+    function executeYouTubeSearch() {
+      const query = document.getElementById('yt-search-query').value.trim();
+      if (!query) return;
+
+      const directId = extractVideoId(query);
+      if (directId) {
+        playSong(directId, "Direct Loaded Track");
+        return;
+      }
+
+      const grid = document.getElementById('yt-results-grid');
+      grid.innerHTML = '<small style="color: #94a3b8; grid-column: 1/-1;">Searching YouTube...</small>';
+
+      fetch(`https://pipedapi.kavin.rocks/search?q=${encodeURIComponent(query)}&filter=music_songs`)
+        .then(res => res.json())
+        .then(data => renderVideoGrid(data.items))
+        .catch(() => {
+          fetch(`https://invidious.io.lol/api/v1/search?q=${encodeURIComponent(query)}&type=video`)
+            .then(res => res.json())
+            .then(data => renderVideoGrid(data))
+            .catch(() => {
+              grid.innerHTML = '<small style="color: #ef4444; grid-column: 1/-1;">Search failed. Paste YouTube URL directly.</small>';
+            });
+        });
+    }
+
+    function renderVideoGrid(items) {
+      const grid = document.getElementById('yt-results-grid');
+      grid.innerHTML = '';
+
+      if (!items || items.length === 0) {
+        grid.innerHTML = '<small style="color: #ef4444; grid-column: 1/-1;">No results found.</small>';
+        return;
+      }
+
+      items.slice(0, 8).forEach(item => {
+        const vId = item.videoId || (item.url ? item.url.split('v=')[1] : null);
+        const title = item.title || "Selected Track";
+        const channel = item.uploaderName || item.author || "YouTube Artist";
+        const thumb = item.thumbnail || (item.videoThumbnails ? item.videoThumbnails[0].url : `https://img.youtube.com/vi/${vId}/hqdefault.jpg`);
+
+        if (vId) {
+          const card = document.createElement('div');
+          card.className = 'yt-card';
+          card.onclick = () => playSong(vId, title);
+          card.innerHTML = `
+            <img src="${thumb}" alt="thumb">
+            <div class="yt-card-body">
+              <div class="yt-card-title">${title}</div>
+              <div class="yt-card-channel">${channel}</div>
+            </div>
+          `;
+          grid.appendChild(card);
+        }
+      });
+    }
+
+    function playSong(videoId, songTitle) {
+      isRemote = true;
+      player.loadVideoById(videoId, 0);
+
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const announcement = `🎵 ${USER_NAME} started playing: "${songTitle}"`;
+
+      renderMessageUI(announcement, 'system', time, 'System');
+
+      if (conn && conn.open) {
+        conn.send({ type: 'music', action: 'load', videoId: videoId, time: 0 });
+        conn.send({ type: 'system', text: announcement, time: time });
+      }
+
+      document.getElementById('yt-results-grid').innerHTML = '';
+      document.getElementById('yt-search-query').value = '';
+      setTimeout(() => isRemote = false, 800);
+    }
+
+    function togglePlayPause() {
+      const state = player.getPlayerState();
+      const time = player.getCurrentTime();
+      if (state === YT.PlayerState.PLAYING) {
+        player.pauseVideo();
+        if (conn && conn.open) conn.send({ type: 'music', action: 'pause', time: time });
+      } else {
+        player.playVideo();
+        if (conn && conn.open) conn.send({ type: 'music', action: 'play', time: time });
+      }
+    }
+
+    function onPlayerStateChange(event) {
+      if (isRemote) return;
+      const time = player.getCurrentTime();
+      if (event.data === YT.PlayerState.PLAYING) {
+        if (conn && conn.open) conn.send({ type: 'music', action: 'play', time: time });
+      } else if (event.data === YT.PlayerState.PAUSED) {
+        if (conn && conn.open) conn.send({ type: 'music', action: 'pause', time: time });
+      }
+    }
+
+    function handleRemoteMusic(data) {
+      isRemote = true;
+      if (data.action === 'load') player.loadVideoById(data.videoId, data.time);
+      else if (data.action === 'play') {
+        if (Math.abs(player.getCurrentTime() - data.time) > 0.5) player.seekTo(data.time, true);
+        player.playVideo();
+      } else if (data.action === 'pause') {
+        player.pauseVideo();
+        player.seekTo(data.time, true);
+      }
+      setTimeout(() => isRemote = false, 800);
+    }
+  </script>
+</body>
+</html>
