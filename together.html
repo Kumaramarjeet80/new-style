@@ -66,7 +66,7 @@
     <div class="player-container">
       <div id="sync-overlay">
         <h3>Sync Permission Required</h3>
-        <p style="font-size: 13px; color: #94a3b8;">Browsers block remote audio playback until you click unlock.</p>
+        <p style="font-size: 13px; color: #94a3b8;">Click below to initialize the audio sync player.</p>
         <button onclick="unlockAudio()" style="background: #22c55e; padding: 12px 24px; font-size: 15px;">Unlock Audio Sync</button>
       </div>
       <div id="youtube-player"></div>
@@ -75,8 +75,8 @@
     <div class="control-card">
       <label style="font-size: 12px; font-weight: bold; color: #94a3b8;">MUSIC CONTROLS</label>
       <div class="input-group">
-        <input type="text" id="yt-url" placeholder="Paste YouTube link or Video ID">
-        <button onclick="changeSong()">Load Track</button>
+        <input type="text" id="yt-url" placeholder="Paste YouTube link or Video ID (e.g. dQw4w9WgXcQ)">
+        <button id="load-btn" onclick="changeSong()">Load Track</button>
       </div>
       <div class="input-group" style="justify-content: space-between;">
         <button onclick="togglePlayPause()" style="flex: 1;">Play / Pause</button>
@@ -102,6 +102,7 @@
   <script src="https://www.youtube.com/iframe_api"></script>
 
   <script>
+    // Local Storage Setup
     const LOCAL_STORAGE_KEY = 'p2p_sync_chat_history';
     let chatHistory = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
 
@@ -126,7 +127,7 @@
       }
     }
 
-    // P2P Setup
+    // PeerJS Connection Setup
     let peer = new Peer();
     let conn = null;
 
@@ -177,7 +178,7 @@
       }
     }
 
-    // Chat Functions
+    // Messaging Logic
     function sendChatMessage() {
       const input = document.getElementById('chat-input');
       const text = input.value.trim();
@@ -214,8 +215,9 @@
       return text.replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]));
     }
 
-    // Player Engine & Auto-Sync Fixes
-    let player;
+    // YouTube Synchronized Player Engine
+    let player = null;
+    let isPlayerReady = false;
     let isRemoteAction = false;
     let audioUnlocked = false;
 
@@ -224,6 +226,7 @@
         videoId: 'M7lc1UVf-VE',
         playerVars: { 'autoplay': 0, 'controls': 1, 'enablejsapi': 1 },
         events: {
+          'onReady': () => { isPlayerReady = true; },
           'onStateChange': onPlayerStateChange
         }
       });
@@ -232,32 +235,56 @@
     function unlockAudio() {
       audioUnlocked = true;
       document.getElementById('sync-overlay').style.display = 'none';
-      if (player && typeof player.playVideo === 'function') {
+      if (isPlayerReady && player && typeof player.playVideo === 'function') {
         player.playVideo();
         setTimeout(() => player.pauseVideo(), 200);
       }
     }
 
-    function extractVideoId(url) {
-      const match = url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/);
-      return (match && match[2].length === 11) ? match[2] : url;
+    function extractVideoId(input) {
+      if (!input) return null;
+      const str = input.trim();
+      // Match standard YouTube URLs, short URLs, or raw 11-char Video IDs
+      const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+      const match = str.match(regExp);
+      if (match && match[2].length === 11) {
+        return match[2];
+      }
+      return str.length === 11 ? str : null;
     }
 
     function changeSong() {
-      const url = document.getElementById('yt-url').value;
-      const videoId = extractVideoId(url);
-      if (!videoId) return;
+      const urlInput = document.getElementById('yt-url').value;
+      const videoId = extractVideoId(urlInput);
+
+      if (!videoId) {
+        alert("Please enter a valid YouTube Video URL or 11-character Video ID.");
+        return;
+      }
+
+      if (!isPlayerReady || !player) {
+        alert("Player is still loading. Please wait 2 seconds and click 'Unlock Audio Sync' first.");
+        return;
+      }
 
       isRemoteAction = true;
-      player.loadVideoById(videoId, 0);
       
+      // Load track locally
+      if (typeof player.loadVideoById === 'function') {
+        player.loadVideoById(videoId, 0);
+      }
+
+      // Sync across P2P connection
       sendP2PData({ type: 'music_sync', action: 'load', videoId: videoId, time: 0 });
-      addMessageToHistory({ type: 'system', text: `Track changed: ${videoId}` });
+      addMessageToHistory({ type: 'system', text: `Loaded track ID: ${videoId}` });
+
+      document.getElementById('yt-url').value = '';
       setTimeout(() => { isRemoteAction = false; }, 1000);
     }
 
     function togglePlayPause() {
-      if (!player) return;
+      if (!isPlayerReady || !player) return;
+
       const state = player.getPlayerState();
       const time = player.getCurrentTime();
 
@@ -271,7 +298,7 @@
     }
 
     function onPlayerStateChange(event) {
-      if (isRemoteAction) return;
+      if (isRemoteAction || !isPlayerReady) return;
       const time = player.getCurrentTime();
 
       if (event.data === YT.PlayerState.PLAYING) {
@@ -282,7 +309,7 @@
     }
 
     function applyRemotePlayerState(data) {
-      if (!audioUnlocked) return;
+      if (!isPlayerReady || !player) return;
 
       isRemoteAction = true;
 
@@ -302,7 +329,7 @@
     }
 
     function forceSyncWithPartner() {
-      if (player) {
+      if (isPlayerReady && player) {
         sendP2PData({
           type: 'music_sync',
           action: player.getPlayerState() === YT.PlayerState.PLAYING ? 'play' : 'pause',
