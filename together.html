@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>P2P Music & Chat Room</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { display: flex; height: 100vh; background: #0f172a; color: #f8fafc; }
+
+    /* Layout */
+    #left-panel { flex: 1.2; display: flex; flex-direction: column; border-right: 1px solid #334155; padding: 20px; gap: 15px; }
+    #right-panel { flex: 1; display: flex; flex-direction: column; background: #1e293b; }
+
+    /* YouTube Container */
+    .player-container { position: relative; width: 100%; height: 280px; background: #000; border-radius: 12px; overflow: hidden; }
+    iframe#youtube-player { width: 100%; height: 100%; border: none; }
+
+    /* Controls */
+    .control-card { background: #334155; padding: 15px; border-radius: 10px; display: flex; flex-direction: column; gap: 10px; }
+    .input-group { display: flex; gap: 8px; }
+    input[type="text"] { flex: 1; padding: 10px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: white; outline: none; }
+    button { padding: 10px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
+    button:hover { background: #2563eb; }
+
+    /* Connection Bar */
+    .connection-box { background: #1e293b; padding: 12px; border-radius: 8px; border: 1px solid #475569; display: flex; flex-direction: column; gap: 8px; }
+    .status-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #ef4444; }
+    .dot.connected { background: #22c55e; }
+
+    /* Chat Area */
+    .chat-header { padding: 15px 20px; background: #0f172a; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
+    #chat-messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+    .msg { max-width: 75%; padding: 10px 14px; border-radius: 8px; font-size: 14px; line-height: 1.4; }
+    .msg.mine { align-self: flex-end; background: #2563eb; color: white; }
+    .msg.partner { align-self: flex-start; background: #334155; color: white; }
+    .msg-meta { font-size: 10px; opacity: 0.7; margin-top: 4px; text-align: right; }
+    .sys-msg { align-self: center; background: #475569; font-size: 12px; padding: 4px 10px; border-radius: 12px; color: #cbd5e1; }
+
+    .chat-input-area { padding: 15px; background: #0f172a; display: flex; gap: 10px; border-top: 1px solid #334155; }
+  </style>
+
+  <!-- PeerJS Library for P2P WebRTC connection -->
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+</head>
+<body>
+
+  <!-- Left: Synchronized YouTube Player -->
+  <div id="left-panel">
+    <h2>Synchronized Player</h2>
+
+    <!-- Connection Setup -->
+    <div class="connection-box">
+      <div class="status-badge">
+        <div id="status-dot" class="dot"></div>
+        <span id="status-text">Disconnected</span>
+      </div>
+      <div>
+        <small style="color: #94a3b8;">Your Peer ID:</small>
+        <strong id="my-peer-id" style="color: #60a5fa;">Generating...</strong>
+      </div>
+      <div class="input-group">
+        <input type="text" id="remote-peer-id" placeholder="Enter Partner's Peer ID">
+        <button onclick="connectToPeer()">Connect</button>
+      </div>
+    </div>
+
+    <!-- YouTube Frame -->
+    <div class="player-container">
+      <div id="youtube-player"></div>
+    </div>
+
+    <!-- Music Sync Controls -->
+    <div class="control-card">
+      <label style="font-size: 12px; font-weight: bold; color: #94a3b8;">SYNC MUSIC CONTROLS</label>
+      <div class="input-group">
+        <input type="text" id="yt-url" placeholder="Paste YouTube link or Video ID">
+        <button onclick="changeSong()">Load Track</button>
+      </div>
+      <div class="input-group" style="justify-content: space-between;">
+        <button onclick="togglePlayPause()" style="flex: 1;">Play / Pause</button>
+        <button onclick="resync()" style="background: #475569;">Force Sync</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Real-time Chat (Saved to LocalStorage) -->
+  <div id="right-panel">
+    <div class="chat-header">
+      <h3>Chat Room</h3>
+      <button onclick="clearChatHistory()" style="background: #dc2626; padding: 6px 12px; font-size: 12px;">Clear History</button>
+    </div>
+
+    <div id="chat-messages"></div>
+
+    <div class="chat-input-area">
+      <input type="text" id="chat-input" placeholder="Type a message..." onkeydown="if(event.key==='Enter') sendChatMessage()">
+      <button onclick="sendChatMessage()">Send</button>
+    </div>
+  </div>
+
+  <!-- YouTube IFrame API -->
+  <script src="https://www.youtube.com/iframe_api"></script>
+
+  <script>
+    // --- 1. LOCAL STORAGE & CHAT HISTORY ---
+    const LOCAL_STORAGE_KEY = 'p2p_sync_chat_history';
+    let chatHistory = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
+
+    function saveAndRenderLocalHistory() {
+      const container = document.getElementById('chat-messages');
+      container.innerHTML = '';
+      chatHistory.forEach(msg => renderMessageUI(msg));
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function addMessageToHistory(msg) {
+      chatHistory.push(msg);
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(chatHistory));
+      renderMessageUI(msg);
+    }
+
+    function clearChatHistory() {
+      if (confirm("Clear local chat history?")) {
+        chatHistory = [];
+        localStorage.removeItem(LOCAL_STORAGE_KEY);
+        saveAndRenderLocalHistory();
+      }
+    }
+
+    // --- 2. PEERJS DIRECT P2P CONNECTION ---
+    let peer = new Peer();
+    let conn = null;
+
+    peer.on('open', (id) => {
+      document.getElementById('my-peer-id').innerText = id;
+    });
+
+    peer.on('connection', (incomingConn) => {
+      conn = incomingConn;
+      setupConnectionListeners();
+    });
+
+    function connectToPeer() {
+      const remoteId = document.getElementById('remote-peer-id').value.trim();
+      if (!remoteId) return alert("Please enter a valid Peer ID.");
+      conn = peer.connect(remoteId);
+      setupConnectionListeners();
+    }
+
+    function setupConnectionListeners() {
+      conn.on('open', () => {
+        document.getElementById('status-dot').classList.add('connected');
+        document.getElementById('status-text').innerText = 'Connected';
+        addMessageToHistory({ type: 'system', text: 'Peer connected directly!' });
+      });
+
+      conn.on('data', (data) => {
+        handleIncomingData(data);
+      });
+
+      conn.on('close', () => {
+        document.getElementById('status-dot').classList.remove('connected');
+        document.getElementById('status-text').innerText = 'Disconnected';
+      });
+    }
+
+    // Direct Data Router
+    function handleIncomingData(data) {
+      if (data.type === 'chat') {
+        addMessageToHistory({ type: 'partner', text: data.text, time: data.time });
+      } else if (data.type === 'music_sync') {
+        applyRemotePlayerState(data);
+      }
+    }
+
+    function sendP2PData(data) {
+      if (conn && conn.open) {
+        conn.send(data);
+      }
+    }
+
+    // --- 3. CHAT LOGIC ---
+    function sendChatMessage() {
+      const input = document.getElementById('chat-input');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const msg = { type: 'mine', text: text, time: time };
+
+      // Save locally
+      addMessageToHistory(msg);
+
+      // Send to partner
+      sendP2PData({ type: 'chat', text: text, time: time });
+
+      input.value = '';
+    }
+
+    function renderMessageUI(msg) {
+      const container = document.getElementById('chat-messages');
+      const div = document.createElement('div');
+
+      if (msg.type === 'system') {
+        div.className = 'sys-msg';
+        div.innerText = msg.text;
+      } else {
+        div.className = `msg ${msg.type}`;
+        div.innerHTML = `
+          <div>${escapeHtml(msg.text)}</div>
+          <div class="msg-meta">${msg.time || ''}</div>
+        `;
+      }
+
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+      return text.replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]));
+    }
+
+    // --- 4. YOUTUBE SYNCHRONIZATION ---
+    let player;
+    let isInternalChange = false;
+
+    function onYouTubeIframeAPIReady() {
+      player = new YT.Player('youtube-player', {
+        videoId: 'M7lc1UVf-VE',
+        playerVars: { 'autoplay': 0, 'controls': 1 },
+        events: { 'onStateChange': onPlayerStateChange }
+      });
+    }
+
+    function extractVideoId(url) {
+      const match = url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/);
+      return (match && match[2].length === 11) ? match[2] : url;
+    }
+
+    function changeSong() {
+      const url = document.getElementById('yt-url').value;
+      const videoId = extractVideoId(url);
+      if (!videoId) return;
+
+      player.loadVideoById(videoId, 0);
+      
+      const payload = { type: 'music_sync', action: 'load', videoId: videoId, time: 0 };
+      sendP2PData(payload);
+      addMessageToHistory({ type: 'system', text: `Track changed to video ID: ${videoId}` });
+    }
+
+    function togglePlayPause() {
+      const state = player.getPlayerState();
+      const time = player.getCurrentTime();
+
+      if (state === YT.PlayerState.PLAYING) {
+        player.pauseVideo();
+        sendP2PData({ type: 'music_sync', action: 'pause', time: time });
+      } else {
+        player.playVideo();
+        sendP2PData({ type: 'music_sync', action: 'play', time: time });
+      }
+    }
+
+    function onPlayerStateChange(event) {
+      if (isInternalChange) return;
+      const time = player.getCurrentTime();
+
+      if (event.data === YT.PlayerState.PLAYING) {
+        sendP2PData({ type: 'music_sync', action: 'play', time: time });
+      } else if (event.data === YT.PlayerState.PAUSED) {
+        sendP2PData({ type: 'music_sync', action: 'pause', time: time });
+      }
+    }
+
+    function applyRemotePlayerState(data) {
+      isInternalChange = true;
+
+      if (data.action === 'load') {
+        player.loadVideoById(data.videoId, data.time);
+      } else if (data.action === 'play') {
+        if (Math.abs(player.getCurrentTime() - data.time) > 0.4) {
+          player.seekTo(data.time, true);
+        }
+        player.playVideo();
+      } else if (data.action === 'pause') {
+        player.pauseVideo();
+        player.seekTo(data.time, true);
+      }
+
+      setTimeout(() => { isInternalChange = false; }, 500);
+    }
+
+    function resync() {
+      if (player && conn && conn.open) {
+        sendP2PData({ type: 'music_sync', action: 'play', time: player.getCurrentTime() });
+      }
+    }
+
+    // Initialize local chat history on page load
+    saveAndRenderLocalHistory();
+  </script>
+</body>
+</html>
