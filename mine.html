@@ -29,8 +29,8 @@
       justify-content: center; align-items: center; z-index: 10; gap: 10px; text-align: center; padding: 20px;
     }
 
-    #search-results { max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
-    .search-item { display: flex; align-items: center; gap: 10px; background: #0f172a; padding: 8px; border-radius: 6px; cursor: pointer; }
+    #search-results { max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+    .search-item { display: flex; align-items: center; gap: 10px; background: #0f172a; padding: 8px; border-radius: 6px; cursor: pointer; border: 1px solid #334155; }
     .search-item:hover { background: #334155; }
     .search-item img { width: 60px; height: 45px; border-radius: 4px; object-fit: cover; }
     .search-item-title { font-size: 13px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -40,8 +40,8 @@
     .msg { max-width: 75%; padding: 10px 14px; border-radius: 8px; font-size: 14px; line-height: 1.4; }
     .msg.mine { align-self: flex-end; background: #2563eb; color: white; }
     .msg.partner { align-self: flex-start; background: #334155; color: white; }
+    .msg.system { align-self: center; background: #3b82f6; color: #ffffff; font-weight: bold; font-size: 12px; text-align: center; max-width: 90%; border-radius: 12px; padding: 6px 12px; }
     .msg-meta { font-size: 10px; opacity: 0.7; margin-top: 4px; text-align: right; }
-    .sys-msg { align-self: center; background: #475569; font-size: 12px; padding: 4px 10px; border-radius: 12px; color: #cbd5e1; }
     .chat-input-area { padding: 15px; background: #0f172a; display: flex; gap: 10px; border-top: 1px solid #334155; }
   </style>
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
@@ -49,7 +49,7 @@
 <body>
 
   <div id="left-panel">
-    <h2>Mine Page</h2>
+    <h2>Mine Room</h2>
 
     <div class="card">
       <div class="status-badge">
@@ -69,7 +69,7 @@
     <div class="card">
       <label style="font-size: 12px; font-weight: bold; color: #94a3b8;">SEARCH & PLAY SONG</label>
       <div class="input-group">
-        <input type="text" id="yt-search-query" placeholder="Search song or paste YouTube link..." onkeydown="if(event.key==='Enter') executeSearch()">
+        <input type="text" id="yt-search-query" placeholder="Search song name or paste YouTube URL..." onkeydown="if(event.key==='Enter') executeSearch()">
         <button onclick="executeSearch()">Search</button>
       </div>
       <div id="search-results"></div>
@@ -94,20 +94,15 @@
   <script src="https://www.youtube.com/iframe_api"></script>
 
   <script>
+    const USER_NAME = "Mine";
     const MY_ID = 'pair-room-mine-node-1234';
     const TARGET_ID = 'pair-room-yours-node-1234';
 
     let peer = new Peer(MY_ID);
     let conn = null;
 
-    peer.on('open', () => {
-      attemptConnection();
-    });
-
-    peer.on('connection', (incoming) => {
-      conn = incoming;
-      setupConnection();
-    });
+    peer.on('open', () => { attemptConnection(); });
+    peer.on('connection', (incoming) => { conn = incoming; setupConnection(); });
 
     function attemptConnection() {
       if (!conn || !conn.open) {
@@ -124,6 +119,7 @@
 
       conn.on('data', (data) => {
         if (data.type === 'chat') renderMessageUI(data.text, 'partner', data.time);
+        else if (data.type === 'system') renderMessageUI(data.text, 'system', data.time);
         else if (data.type === 'music') handleRemoteMusic(data);
       });
 
@@ -142,9 +138,7 @@
       const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       renderMessageUI(text, 'mine', time);
 
-      if (conn && conn.open) {
-        conn.send({ type: 'chat', text: text, time: time });
-      }
+      if (conn && conn.open) conn.send({ type: 'chat', text: text, time: time });
       input.value = '';
     }
 
@@ -157,7 +151,7 @@
       container.scrollTop = container.scrollHeight;
     }
 
-    // YouTube Integration
+    // YouTube Synchronized Player & Multi-Server Search
     let player;
     let isRemote = false;
 
@@ -183,29 +177,47 @@
       const videoId = (match && match[2].length === 11) ? match[2] : (query.length === 11 ? query : null);
 
       if (videoId) {
-        playSong(videoId);
+        playSong(videoId, "Direct Loaded Track");
       } else {
-        fetch(`https://invidious.io.lol/api/v1/search?q=${encodeURIComponent(query)}&type=video`)
+        const container = document.getElementById('search-results');
+        container.innerHTML = '<small style="color: #94a3b8;">Searching songs...</small>';
+
+        fetch(`https://pipedapi.kavin.rocks/search?q=${encodeURIComponent(query)}&filter=music_songs`)
           .then(res => res.json())
           .then(data => {
-            const container = document.getElementById('search-results');
             container.innerHTML = '';
-            data.slice(0, 4).forEach(item => {
+            if (!data.items || data.items.length === 0) throw new Error("No results");
+            data.items.slice(0, 5).forEach(item => {
+              const vId = item.url.split('v=')[1];
               const div = document.createElement('div');
               div.className = 'search-item';
-              div.onclick = () => playSong(item.videoId);
-              div.innerHTML = `<img src="${item.videoThumbnails ? item.videoThumbnails[0].url : ''}"><div class="search-item-title">${item.title}</div>`;
+              div.onclick = () => playSong(vId, item.title);
+              div.innerHTML = `<img src="${item.thumbnail}"><div class="search-item-title">${item.title}</div>`;
               container.appendChild(div);
             });
+          })
+          .catch(() => {
+            container.innerHTML = '<small style="color: #ef4444;">Search failed. Please enter a direct YouTube link or Video ID.</small>';
           });
       }
     }
 
-    function playSong(videoId) {
+    function playSong(videoId, songTitle) {
       isRemote = true;
       player.loadVideoById(videoId, 0);
-      if (conn && conn.open) conn.send({ type: 'music', action: 'load', videoId: videoId, time: 0 });
+
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const announcement = `🎵 ${USER_NAME} started playing: "${songTitle}"`;
+
+      renderMessageUI(announcement, 'system', time);
+
+      if (conn && conn.open) {
+        conn.send({ type: 'music', action: 'load', videoId: videoId, time: 0 });
+        conn.send({ type: 'system', text: announcement, time: time });
+      }
+
       document.getElementById('search-results').innerHTML = '';
+      document.getElementById('yt-search-query').value = '';
       setTimeout(() => isRemote = false, 800);
     }
 
