@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Online Superstore</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background: #f4f6f8; color: #333; }
+    header { background: #1e293b; color: white; padding: 15px 5%; display: flex; justify-content: space-between; align-items: center; }
+    .nav-btns button { background: #0284c7; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-left: 8px; }
+    .container { max-width: 1200px; margin: 20px auto; padding: 0 15px; }
+    
+    /* Filters */
+    .filter-bar { background: white; padding: 15px; border-radius: 8px; display: flex; gap: 15px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .filter-bar select, .filter-bar input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; flex: 1; }
+    
+    /* Grid */
+    .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; }
+    .product-card { background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); display: flex; flex-direction: column; justify-content: space-between; padding: 15px; }
+    .product-card img { width: 100%; height: 180px; object-fit: cover; border-radius: 4px; }
+    .product-title { font-size: 16px; font-weight: bold; margin: 10px 0 5px 0; }
+    .product-price { color: #16a34a; font-weight: bold; font-size: 18px; margin-bottom: 10px; }
+    .btn { background: #16a34a; color: white; border: none; padding: 10px; width: 100%; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    
+    /* Modals */
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 100; }
+    .modal-content { background: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 450px; position: relative; }
+    .modal-content input { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ccc; border-radius: 4px; }
+    .close { position: absolute; right: 15px; top: 10px; font-size: 20px; cursor: pointer; }
+    
+    /* Cart Drawer */
+    .cart-drawer { position: fixed; right: -400px; top: 0; width: 380px; height: 100%; background: white; box-shadow: -2px 0 10px rgba(0,0,0,0.1); transition: 0.3s; padding: 20px; display: flex; flex-direction: column; z-index: 200; }
+    .cart-drawer.open { right: 0; }
+    .cart-items { flex: 1; overflow-y: auto; margin: 20px 0; }
+    .cart-item { display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h2>🛒 StoreFront</h2>
+    <div class="nav-btns">
+      <span id="user-display"></span>
+      <button id="login-btn" onclick="openModal('login-modal')">Login</button>
+      <button id="reg-btn" onclick="openModal('reg-modal')">Register</button>
+      <button onclick="toggleCart()">Cart (<span id="cart-count">0</span>)</button>
+      <button id="logout-btn" style="display:none; background:#dc2626;" onclick="logout()">Logout</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- Filter & Sort Bar -->
+    <div class="filter-bar">
+      <select id="category-filter" onchange="filterProducts()">
+        <option value="">All Categories</option>
+      </select>
+      <select id="sort-filter" onchange="filterProducts()">
+        <option value="none">Sort By</option>
+        <option value="low-high">Price: Low to High</option>
+        <option value="high-low">Price: High to Low</option>
+      </select>
+      <input type="text" id="search-input" placeholder="Search products..." onkeyup="filterProducts()">
+    </div>
+
+    <!-- Product Grid -->
+    <div class="product-grid" id="product-container">
+      <p>Loading products...</p>
+    </div>
+  </div>
+
+  <!-- Registration Modal -->
+  <div id="reg-modal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal('reg-modal')">&times;</span>
+      <h3>Customer Registration</h3>
+      <input type="text" id="reg-fullname" placeholder="Full Name">
+      <input type="email" id="reg-email" placeholder="Email Address">
+      <input type="text" id="reg-mobile" placeholder="Mobile Number">
+      <input type="text" id="reg-username" placeholder="Unique Username">
+      <input type="password" id="reg-password" placeholder="Password">
+      <button class="btn" onclick="registerUser()">Register</button>
+    </div>
+  </div>
+
+  <!-- Login Modal -->
+  <div id="login-modal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal('login-modal')">&times;</span>
+      <h3>Customer Login</h3>
+      <input type="text" id="login-id" placeholder="Username or Mobile Number">
+      <input type="password" id="login-password" placeholder="Password">
+      <button class="btn" onclick="loginUser()">Login</button>
+    </div>
+  </div>
+
+  <!-- Shopping Cart Drawer -->
+  <div id="cart-drawer" class="cart-drawer">
+    <h3>Your Shopping Cart</h3>
+    <div class="cart-items" id="cart-items-container"></div>
+    <h4>Total: ₹<span id="cart-total">0</span></h4>
+    <button class="btn" style="margin-top: 15px;" onclick="checkout()">Checkout & Download Tally Receipt</button>
+  </div>
+
+  <script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxVo2WyQ1qjN87BYpAYm5LnGjp3MnShabMoNW6UHWxraOjA8zh63pzDDSMrGwg48EAH/exec"; // Paste your deployed Apps Script URL here
+    let allProducts = [], cart = [], currentUser = JSON.parse(localStorage.getItem('user')) || null;
+
+    window.onload = () => {
+      fetchProducts();
+      fetchCategories();
+      updateUserUI();
+    };
+
+    function updateUserUI() {
+      if (currentUser) {
+        document.getElementById('user-display').innerText = `Hello, ${currentUser.fullname}`;
+        document.getElementById('login-btn').style.display = 'none';
+        document.getElementById('reg-btn').style.display = 'none';
+        document.getElementById('logout-btn').style.display = 'inline-block';
+      } else {
+        document.getElementById('user-display').innerText = '';
+        document.getElementById('login-btn').style.display = 'inline-block';
+        document.getElementById('reg-btn').style.display = 'inline-block';
+        document.getElementById('logout-btn').style.display = 'none';
+      }
+    }
+
+    async function fetchProducts() {
+      const res = await fetch(`${SCRIPT_URL}?action=getProducts`);
+      const data = await res.json();
+      if(data.status === 'success') {
+        allProducts = data.products;
+        renderProducts(allProducts);
+      }
+    }
+
+    async function fetchCategories() {
+      const res = await fetch(`${SCRIPT_URL}?action=getCategories`);
+      const data = await res.json();
+      if(data.status === 'success') {
+        const select = document.getElementById('category-filter');
+        data.categories.forEach(c => select.innerHTML += `<option value="${c}">${c}</option>`);
+      }
+    }
+
+    function renderProducts(products) {
+      const container = document.getElementById('product-container');
+      container.innerHTML = products.map(p => `
+        <div class="product-card">
+          <img src="${p.imageUrl || 'https://via.placeholder.com/150'}" alt="${p.name}">
+          <div class="product-title">${p.name}</div>
+          <small>${p.type}</small>
+          <p style="font-size: 12px; margin: 5px 0;">${p.description}</p>
+          <div class="product-price">₹${parseFloat(p.price).toFixed(2)}</div>
+          <button class="btn" onclick="addToCart('${p.id}')">Add to Cart</button>
+        </div>
+      `).join('');
+    }
+
+    function filterProducts() {
+      let filtered = [...allProducts];
+      const category = document.getElementById('category-filter').value;
+      const sort = document.getElementById('sort-filter').value;
+      const search = document.getElementById('search-input').value.toLowerCase();
+
+      if (category) filtered = filtered.filter(p => p.type === category);
+      if (search) filtered = filtered.filter(p => p.name.toLowerCase().includes(search));
+      if (sort === 'low-high') filtered.sort((a, b) => a.price - b.price);
+      if (sort === 'high-low') filtered.sort((a, b) => b.price - a.price);
+
+      renderProducts(filtered);
+    }
+
+    function registerUser() {
+      const payload = {
+        action: 'registerUser',
+        fullname: document.getElementById('reg-fullname').value,
+        email: document.getElementById('reg-email').value,
+        mobile: document.getElementById('reg-mobile').value,
+        username: document.getElementById('reg-username').value,
+        password: document.getElementById('reg-password').value
+      };
+      sendRequest(payload, () => closeModal('reg-modal'));
+    }
+
+    function loginUser() {
+      const payload = {
+        action: 'loginUser',
+        loginId: document.getElementById('login-id').value,
+        password: document.getElementById('login-password').value
+      };
+      sendRequest(payload, (data) => {
+        currentUser = data.user;
+        localStorage.setItem('user', JSON.stringify(currentUser));
+        updateUserUI();
+        closeModal('login-modal');
+      });
+    }
+
+    function logout() {
+      localStorage.removeItem('user');
+      currentUser = null;
+      updateUserUI();
+    }
+
+    function addToCart(id) {
+      const prod = allProducts.find(p => p.id === id);
+      const existing = cart.find(item => item.id === id);
+      if (existing) existing.qty += 1;
+      else cart.push({ ...prod, qty: 1, price: parseFloat(prod.price) });
+      updateCartUI();
+    }
+
+    function updateCartUI() {
+      document.getElementById('cart-count').innerText = cart.reduce((acc, i) => acc + i.qty, 0);
+      const container = document.getElementById('cart-items-container');
+      container.innerHTML = cart.map(item => `
+        <div class="cart-item">
+          <div>
+            <strong>${item.name}</strong><br>
+            <small>₹${item.price} x ${item.qty}</small>
+          </div>
+          <div>₹${(item.price * item.qty).toFixed(2)}</div>
+        </div>
+      `).join('');
+      document.getElementById('cart-total').innerText = cart.reduce((acc, i) => acc + (i.price * i.qty), 0).toFixed(2);
+    }
+
+    async function checkout() {
+      if (!currentUser) return alert("Please Login to Checkout!");
+      if (cart.length === 0) return alert("Your Cart is Empty!");
+
+      const total = cart.reduce((acc, i) => acc + (i.price * i.qty), 0);
+      const payload = {
+        action: 'checkout',
+        username: currentUser.username,
+        user: currentUser,
+        cart: cart,
+        total: total
+      };
+
+      alert("Generating Tally Invoice Receipt in Google Drive...");
+      const res = await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
+      const data = await res.json();
+      
+      if (data.status === 'success') {
+        alert("Checkout Complete! Tally Receipt PDF Saved to Google Drive.");
+        window.open(data.pdfUrl, '_blank');
+        cart = [];
+        updateCartUI();
+        toggleCart();
+      }
+    }
+
+    async function sendRequest(payload, callback) {
+      const res = await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
+      const data = await res.json();
+      alert(data.message || "Operation Completed");
+      if (data.status === 'success' && callback) callback(data);
+    }
+
+    function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    function toggleCart() { document.getElementById('cart-drawer').classList.toggle('open'); }
+  </script>
+</body>
+</html>
