@@ -69,7 +69,7 @@
     <div class="card">
       <label style="font-size: 12px; font-weight: bold; color: #94a3b8;">SEARCH & PLAY SONG</label>
       <div class="input-group">
-        <input type="text" id="yt-search-query" placeholder="Search song name or paste YouTube URL..." onkeydown="if(event.key==='Enter') executeSearch()">
+        <input type="text" id="yt-search-query" placeholder="Enter Song Name or Paste YouTube Link..." onkeydown="if(event.key==='Enter') executeSearch()">
         <button onclick="executeSearch()">Search</button>
       </div>
       <div id="search-results"></div>
@@ -95,23 +95,30 @@
 
   <script>
     const USER_NAME = "Mine";
-    const MY_ID = 'pair-room-mine-node-1234';
-    const TARGET_ID = 'pair-room-yours-node-1234';
+    const MY_ID = 'dual-sync-mine-key-9988';
+    const TARGET_ID = 'dual-sync-yours-key-9988';
 
     let peer = new Peer(MY_ID);
     let conn = null;
 
-    peer.on('open', () => { attemptConnection(); });
-    peer.on('connection', (incoming) => { conn = incoming; setupConnection(); });
+    peer.on('open', () => {
+      connectToPartner();
+    });
 
-    function attemptConnection() {
-      if (!conn || !conn.open) {
-        conn = peer.connect(TARGET_ID);
-        setupConnection();
-      }
+    peer.on('connection', (incoming) => {
+      conn = incoming;
+      bindEvents();
+    });
+
+    function connectToPartner() {
+      if (conn && conn.open) return;
+      conn = peer.connect(TARGET_ID, { reliable: true });
+      bindEvents();
     }
 
-    function setupConnection() {
+    function bindEvents() {
+      if (!conn) return;
+
       conn.on('open', () => {
         document.getElementById('status-text').innerText = "Connected to Yours!";
         document.getElementById('status-dot').classList.add('connected');
@@ -124,9 +131,9 @@
       });
 
       conn.on('close', () => {
-        document.getElementById('status-text').innerText = "Reconnecting...";
+        document.getElementById('status-text').innerText = "Disconnected. Reconnecting...";
         document.getElementById('status-dot').classList.remove('connected');
-        setTimeout(attemptConnection, 3000);
+        setTimeout(connectToPartner, 2500);
       });
     }
 
@@ -151,7 +158,7 @@
       container.scrollTop = container.scrollHeight;
     }
 
-    // YouTube Synchronized Player & Multi-Server Search
+    // YouTube Synchronized Engine & Multi-Source Search
     let player;
     let isRemote = false;
 
@@ -168,38 +175,61 @@
       if (player) { player.playVideo(); setTimeout(() => player.pauseVideo(), 200); }
     }
 
+    function extractVideoId(url) {
+      const reg = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+      const match = url.match(reg);
+      if (match && match[2].length === 11) return match[2];
+      return url.length === 11 ? url : null;
+    }
+
     function executeSearch() {
       const query = document.getElementById('yt-search-query').value.trim();
       if (!query) return;
 
-      const reg = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-      const match = query.match(reg);
-      const videoId = (match && match[2].length === 11) ? match[2] : (query.length === 11 ? query : null);
-
-      if (videoId) {
-        playSong(videoId, "Direct Loaded Track");
-      } else {
-        const container = document.getElementById('search-results');
-        container.innerHTML = '<small style="color: #94a3b8;">Searching songs...</small>';
-
-        fetch(`https://pipedapi.kavin.rocks/search?q=${encodeURIComponent(query)}&filter=music_songs`)
-          .then(res => res.json())
-          .then(data => {
-            container.innerHTML = '';
-            if (!data.items || data.items.length === 0) throw new Error("No results");
-            data.items.slice(0, 5).forEach(item => {
-              const vId = item.url.split('v=')[1];
-              const div = document.createElement('div');
-              div.className = 'search-item';
-              div.onclick = () => playSong(vId, item.title);
-              div.innerHTML = `<img src="${item.thumbnail}"><div class="search-item-title">${item.title}</div>`;
-              container.appendChild(div);
-            });
-          })
-          .catch(() => {
-            container.innerHTML = '<small style="color: #ef4444;">Search failed. Please enter a direct YouTube link or Video ID.</small>';
-          });
+      const directId = extractVideoId(query);
+      if (directId) {
+        playSong(directId, "Loaded Track");
+        return;
       }
+
+      const container = document.getElementById('search-results');
+      container.innerHTML = '<small style="color: #94a3b8;">Searching songs...</small>';
+
+      // Multi-endpoint Search Fetcher
+      fetch(`https://api.v3.yt/search?q=${encodeURIComponent(query)}`)
+        .then(res => res.json())
+        .then(data => renderResults(data.results))
+        .catch(() => {
+          fetch(`https://invidious.io.lol/api/v1/search?q=${encodeURIComponent(query)}&type=video`)
+            .then(res => res.json())
+            .then(data => renderResults(data))
+            .catch(() => {
+              container.innerHTML = '<small style="color: #ef4444;">Search unavailable. Paste direct YouTube link/ID instead.</small>';
+            });
+        });
+    }
+
+    function renderResults(data) {
+      const container = document.getElementById('search-results');
+      container.innerHTML = '';
+      if (!data || data.length === 0) {
+        container.innerHTML = '<small style="color: #ef4444;">No tracks found.</small>';
+        return;
+      }
+
+      data.slice(0, 5).forEach(item => {
+        const vId = item.videoId || (item.url ? item.url.split('v=')[1] : null);
+        const title = item.title || "Selected Song";
+        const thumb = item.thumbnail || (item.videoThumbnails ? item.videoThumbnails[0].url : `https://img.youtube.com/vi/${vId}/hqdefault.jpg`);
+
+        if (vId) {
+          const div = document.createElement('div');
+          div.className = 'search-item';
+          div.onclick = () => playSong(vId, title);
+          div.innerHTML = `<img src="${thumb}"><div class="search-item-title">${title}</div>`;
+          container.appendChild(div);
+        }
+      });
     }
 
     function playSong(videoId, songTitle) {
