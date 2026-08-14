@@ -107,7 +107,7 @@
     .msg-system {
       align-self: center; background: rgba(255, 209, 102, 0.12); color: var(--gold);
       font-size: 12px; border-radius: 12px; border: 1px dashed rgba(255, 209, 102, 0.3);
-      padding: 6px 14px; text-align: center;
+      padding: 8px 16px; text-align: center; max-width: 90%;
     }
     .msg-meta { font-size: 10px; opacity: 0.75; margin-top: 5px; text-align: right; }
 
@@ -252,8 +252,7 @@
   </div>
 
   <script>
-    // PASTE YOUR DEPLOYED APPS SCRIPT URL HERE
-    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzadHQfqz1rucwfinzC3YYkk6Hepg66MiblG3CJVPtgNqEBramsGjy8DmJ2Uu1dunaL/exec";
+    const APPS_SCRIPT_URL = "YOUR_DEPLOYED_GOOGLE_APPS_SCRIPT_URL_HERE";
     const CURRENT_USER = "Kumaramarjeet80";
     const MY_PEER_ID = "world_private_kumaramarjeet80_892";
     const TARGET_PEER_ID = "world_private_cutieee_892";
@@ -264,6 +263,13 @@
     let ytPlayer = null;
     let syncInterval = null;
     const audioEngine = document.getElementById("global-audio-engine");
+
+    function getFormattedTimestamp() {
+      const now = new Date();
+      const dateStr = now.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      return `${dateStr} at ${timeStr}`;
+    }
 
     function dismissWelcome() {
       const modal = document.getElementById("welcome-modal");
@@ -281,7 +287,6 @@
       if (btn) btn.classList.add('active');
     }
 
-    // 1-Sec Heartbeat Sync Loop
     function start1SecTogethernessLoop() {
       if (syncInterval) clearInterval(syncInterval);
       syncInterval = setInterval(() => {
@@ -319,7 +324,7 @@
         if (audioEngine && savedTimeAudio > 0) broadcastRaw({ type: "audio_seek", time: savedTimeAudio, index: currentSongIndex });
       }, 1500);
 
-      renderSystemMessage("🔄 Reconnecting sync network... Timestamp preserved!", "Now");
+      renderSystemMessage(`🔄 Reconnected sync network! (${getFormattedTimestamp()})`, "Now");
     }
 
     function playDriveSongByIndex(index, notify = true) {
@@ -340,10 +345,8 @@
       }
 
       if (notify) {
-        broadcastMessage({
-          type: "system",
-          text: `🎶 Kumaramarjeet80 played: "${song.title}"`
-        });
+        const announcement = `🎶 Kumaramarjeet80 played "${song.title}" • ${getFormattedTimestamp()}`;
+        broadcastMessage({ type: "system", text: announcement });
       }
     }
 
@@ -432,6 +435,7 @@
       broadcastRaw({ type: "audio_play_sync", index: index, currentTime: 0 });
     }
 
+    // Admin Upload with Instant Live Auto-Reload for Partner
     async function handleAdminUpload() {
       const fileInput = document.getElementById("upload-file");
       const titleInput = document.getElementById("upload-title");
@@ -461,19 +465,32 @@
         };
 
         try {
-          const res = await fetch(APPS_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
+          const res = await fetch(APPS_SCRIPT_URL, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(payload)
+          });
           const data = await res.json();
           if (data.status === "success") {
             alert("Song successfully saved to Google Drive and Spreadsheet!");
             titleInput.value = "";
             artistInput.value = "";
             fileInput.value = "";
-            fetchDriveSongs();
+            
+            // Reload local songs list
+            await fetchDriveSongs();
+
+            // Broadcast real-time auto-reload trigger to Cutieee
+            broadcastRaw({ type: "auto_reload_songs" });
+            broadcastMessage({
+              type: "system",
+              text: `✨ Amarjeet uploaded a new song: "${payload.title}" (${getFormattedTimestamp()})`
+            });
           } else {
             alert("Upload failed: " + data.message);
           }
         } catch (err) {
-          alert("Error sending file to Apps Script.");
+          alert("Error sending file to Apps Script: " + err.message);
         } finally {
           uploadBtn.disabled = false;
           uploadBtn.innerText = "Upload to Drive";
@@ -487,12 +504,14 @@
       if (!confirm("Delete this song from Drive & Spreadsheet?")) return;
       const res = await fetch(APPS_SCRIPT_URL, {
         method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify({ action: "deleteSong", user: CURRENT_USER, songId: songId })
       });
       const data = await res.json();
       if (data.status === "success") {
         alert("Song deleted!");
-        fetchDriveSongs();
+        await fetchDriveSongs();
+        broadcastRaw({ type: "auto_reload_songs" });
       }
     }
 
@@ -505,13 +524,23 @@
       a.click();
     }
 
-    // WebRTC Setup
     function initWebRTC() {
-      peer = new Peer(MY_PEER_ID);
+      if (peer) {
+        try { peer.destroy(); } catch(e) {}
+      }
+
+      peer = new Peer(MY_PEER_ID, {
+        debug: 1,
+        config: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+          ]
+        }
+      });
 
       peer.on('open', () => {
-        dataConnection = peer.connect(TARGET_PEER_ID);
-        setupDataHandlers();
+        tryConnectPartner();
       });
 
       peer.on('connection', (conn) => {
@@ -526,15 +555,36 @@
         showCallBar("Call in Progress");
         call.on('stream', remoteStream => attachStreams(localMediaStream, remoteStream));
       });
+
+      peer.on('error', (err) => {
+        if (err.type === 'peer-unavailable') {
+          setTimeout(tryConnectPartner, 4000);
+        }
+      });
+    }
+
+    function tryConnectPartner() {
+      if (!peer || peer.destroyed) return;
+      dataConnection = peer.connect(TARGET_PEER_ID, { reliable: true });
+      setupDataHandlers();
     }
 
     function setupDataHandlers() {
+      if (!dataConnection) return;
+
       dataConnection.on('open', () => {
         document.querySelectorAll(".status-dot").forEach(d => d.classList.add("connected"));
+        renderSystemMessage(`Cutieee is now online! (${getFormattedTimestamp()})`, "Now");
       });
-      dataConnection.on('data', data => handleIncomingP2P(data));
+
+      dataConnection.on('data', (data) => {
+        handleIncomingP2P(data);
+      });
+
       dataConnection.on('close', () => {
         document.querySelectorAll(".status-dot").forEach(d => d.classList.remove("connected"));
+        renderSystemMessage(`Cutieee went offline. (${getFormattedTimestamp()})`, "Now");
+        setTimeout(tryConnectPartner, 3000);
       });
     }
 
@@ -543,6 +593,8 @@
         renderMessage(payload.sender, payload.content, payload.mediaType, payload.time, false);
       } else if (payload.type === "system") {
         renderSystemMessage(payload.text, payload.time);
+      } else if (payload.type === "auto_reload_songs") {
+        fetchDriveSongs(); // Auto-reload songs library immediately!
       }
       else if (payload.type === "yt_heartbeat") {
         if (ytPlayer && ytPlayer.getCurrentTime && ytPlayer.seekTo) {
@@ -552,8 +604,8 @@
           }
         }
       }
-      else if (payload.type === "yt_seek" && ytPlayer && ytPlayer.seekTo) {
-        ytPlayer.seekTo(payload.time, true);
+      else if (payload.type === "yt_seek") {
+        if (ytPlayer && ytPlayer.seekTo) ytPlayer.seekTo(payload.time, true);
       }
       else if (payload.type === "yt_sync") {
         if (payload.action === "load" && ytPlayer && ytPlayer.loadVideoById) {
@@ -670,16 +722,27 @@
       const box = document.getElementById("chat-messages");
       const el = document.createElement("div");
       el.className = "msg msg-system";
-      el.innerText = `${text} • ${time}`;
+      el.innerText = `${text}`;
       box.appendChild(el);
       box.scrollTop = box.scrollHeight;
     }
 
+    // YouTube Sync Engine with Auto Title Fetching
     function onYouTubeIframeAPIReady() {
       ytPlayer = new YT.Player('player', { height: '220', width: '100%', videoId: '' });
     }
 
-    function loadSyncedYTVideo() {
+    async function fetchYouTubeTitle(videoId) {
+      try {
+        const response = await fetch(`https://noembed.com/embed?url=https://www.youtube.com/watch?v=${videoId}`);
+        const data = await response.json();
+        return data.title || `YouTube Video (${videoId})`;
+      } catch (err) {
+        return `YouTube Video (${videoId})`;
+      }
+    }
+
+    async function loadSyncedYTVideo() {
       const url = document.getElementById("yt-url").value.trim();
       const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
       const vid = match ? match[1] : url;
@@ -692,10 +755,11 @@
           videoId: vid,
           time: 0
         });
-        broadcastMessage({
-          type: "system",
-          text: `📺 Kumaramarjeet80 started YouTube video (${vid})`
-        });
+
+        // Automatically fetch real YouTube song title
+        const ytTitle = await fetchYouTubeTitle(vid);
+        const announcement = `📺 Kumaramarjeet80 played YouTube sync song: "${ytTitle}" on ${getFormattedTimestamp()}`;
+        broadcastMessage({ type: "system", text: announcement });
       }
     }
 
@@ -705,7 +769,7 @@
         broadcastRaw({ type: "yt_sync", action: "stop" });
         broadcastMessage({
           type: "system",
-          text: `⏹️ Kumaramarjeet80 stopped the YouTube video`
+          text: `⏹️ Kumaramarjeet80 stopped the YouTube video on ${getFormattedTimestamp()}`
         });
       }
     }
