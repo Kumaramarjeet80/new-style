@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Cutieee's World ✨</title>
+  
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <script src="https://www.youtube.com/iframe_api"></script>
+
+  <style>
+    :root {
+      --bg-main: #0d0f18;
+      --bg-card: #16192b;
+      --accent: #ff4d88;
+      --accent-glow: rgba(255, 77, 136, 0.4);
+      --text: #ffffff;
+      --text-muted: #9aa0bc;
+      --green: #00e676;
+      --danger: #ff3366;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', -apple-system, sans-serif; }
+    body { background: var(--bg-main); color: var(--text); padding-bottom: 120px; }
+
+    /* Welcome Gesture Modal */
+    #welcome-modal {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
+      display: flex; justify-content: center; align-items: center; z-index: 10000; transition: opacity 0.5s;
+    }
+    .modal-content {
+      background: var(--bg-card); border: 2px solid var(--accent); padding: 30px 24px;
+      border-radius: 20px; text-align: center; max-width: 360px; width: 90%;
+      box-shadow: 0 0 30px var(--accent-glow); animation: popIn 0.4s ease-out;
+    }
+    @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+    /* Romantic Compliment Toast / Popup */
+    #compliment-popup {
+      position: fixed; top: 75px; right: 15px; left: 15px; max-width: 400px; margin: 0 auto;
+      background: linear-gradient(135deg, #ff4d88, #ff8da1); color: #fff;
+      padding: 16px 20px; border-radius: 16px; box-shadow: 0 10px 25px rgba(255,77,136,0.5);
+      z-index: 9999; display: none; animation: slideDown 0.5s ease-out;
+    }
+    @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+    /* Floating Call Bar */
+    #call-floating-bar {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 60px;
+      background: rgba(22, 25, 43, 0.95); backdrop-filter: blur(10px);
+      z-index: 9000; align-items: center; justify-content: space-between;
+      padding: 0 12px; border-bottom: 2px solid var(--accent);
+    }
+    .call-btn-group { display: flex; gap: 6px; }
+    .call-btn {
+      padding: 6px 10px; border: none; border-radius: 8px; font-size: 11px;
+      cursor: pointer; background: #252a45; color: #fff; font-weight: 600;
+    }
+    .call-btn-danger { background: var(--danger) !important; }
+
+    /* Video Call Overlay */
+    #video-overlay {
+      display: none; position: fixed; top: 60px; left: 0; width: 100%; height: calc(100vh - 180px);
+      background: #000; z-index: 8500;
+    }
+    #remote-video { width: 100%; height: 100%; object-fit: contain; }
+    #local-video {
+      position: absolute; bottom: 15px; right: 15px; width: 120px; height: 90px;
+      object-fit: cover; border-radius: 10px; border: 2px solid var(--accent); background: #111;
+    }
+
+    /* Fixed Bottom Navigation */
+    nav {
+      position: fixed; bottom: 0; left: 0; width: 100%; height: 65px;
+      background: #121422; display: flex; justify-content: space-around;
+      align-items: center; border-top: 1px solid #23273f; z-index: 8000;
+    }
+    nav button {
+      background: none; border: none; color: var(--text-muted);
+      font-size: 11px; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer;
+    }
+    nav button.active { color: var(--accent); font-weight: bold; }
+
+    /* Full-Featured Global Music Engine Bar */
+    #global-music-bar {
+      position: fixed; bottom: 65px; left: 0; width: 100%; height: 55px;
+      background: #191c30; border-top: 1px solid #282e4e; display: flex;
+      align-items: center; justify-content: space-between; padding: 0 15px; z-index: 7999;
+    }
+    .player-track-info { display: flex; flex-direction: column; max-width: 45%; overflow: hidden; }
+    .player-controls { display: flex; align-items: center; gap: 10px; }
+    .ctrl-btn { background: none; border: none; color: #fff; font-size: 18px; cursor: pointer; }
+
+    .page { display: none; padding: 15px; max-width: 800px; margin: 10px auto 0; }
+    .page.active { display: block; }
+    .card { background: var(--bg-card); padding: 18px; border-radius: 14px; margin-bottom: 15px; border: 1px solid #232842; }
+
+    /* Chat Section */
+    #chat-messages { height: 52vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 8px; }
+    .msg { padding: 10px 14px; border-radius: 14px; max-width: 78%; font-size: 14px; }
+    .msg-mine { align-self: flex-end; background: var(--accent); color: #fff; }
+    .msg-theirs { align-self: flex-start; background: #232742; color: #fff; }
+    .msg-system { align-self: center; background: #1c2035; color: #ffca28; font-size: 12px; border-radius: 8px; }
+    .msg-meta { font-size: 10px; opacity: 0.7; margin-top: 3px; text-align: right; }
+
+    .status-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; background: gray; }
+    .status-dot.connected { background: var(--green); box-shadow: 0 0 8px var(--green); }
+
+    input, select, button { padding: 10px; border-radius: 8px; border: 1px solid #2b3152; background: #20243d; color: #fff; }
+    button { cursor: pointer; }
+    .song-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #20253f; }
+  </style>
+</head>
+<body>
+
+  <!-- Welcome Gesture Modal -->
+  <div id="welcome-modal">
+    <div class="modal-content">
+      <div style="font-size: 40px; margin-bottom: 10px;">✨🌸✨</div>
+      <h2 style="color:var(--accent); margin-bottom: 8px;">Welcome Cutieee!</h2>
+      <p style="color:var(--text-muted); font-size: 14px; margin-bottom: 20px;">Welcome to our private place. Everything here is built just for us.</p>
+      <button onclick="dismissWelcome()" style="background:var(--accent); width:100%; font-weight:bold; border:none; padding:12px;">Step Inside ❤️</button>
+    </div>
+  </div>
+
+  <!-- Recurring Romantic Compliment Toast -->
+  <div id="compliment-popup">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <strong style="font-size:13px;">❤️ Just for you</strong>
+      <span onclick="closeCompliment()" style="cursor:pointer; font-weight:bold;">&times;</span>
+    </div>
+    <div id="compliment-text" style="margin-top:6px; font-size:14px; line-height:1.4;"></div>
+  </div>
+
+  <!-- Top Floating Call Bar -->
+  <div id="call-floating-bar">
+    <div style="display:flex; align-items:center; gap:6px;">
+      <span class="status-dot connected"></span>
+      <span id="call-label" style="font-size:12px; font-weight:600;">Call Active</span>
+    </div>
+    <div class="call-btn-group">
+      <button class="call-btn" onclick="toggleCallMode('video')">🎥</button>
+      <button class="call-btn" onclick="switchCameraFacing()">🔄</button>
+      <button class="call-btn" onclick="toggleCallMode('screen')">🖥️</button>
+      <button class="call-btn" onclick="toggleCallMode('screen-and-cam')">🖼️</button>
+      <button class="call-btn call-btn-danger" onclick="endCall()">❌</button>
+    </div>
+  </div>
+
+  <!-- Video Call Layers -->
+  <div id="video-overlay">
+    <video id="remote-video" autoplay playsinline></video>
+    <video id="local-video" autoplay playsinline muted></video>
+  </div>
+
+  <!-- Persistent Global Audio Engine Bar -->
+  <div id="global-music-bar">
+    <div class="player-track-info">
+      <span id="player-title" style="font-size:13px; font-weight:600; white-space:nowrap; text-overflow:ellipsis;">No track selected</span>
+      <span id="player-artist" style="font-size:11px; color:var(--text-muted);">Drive Library</span>
+    </div>
+    <div class="player-controls">
+      <button class="ctrl-btn" onclick="playPreviousSong()">⏮️</button>
+      <button class="ctrl-btn" onclick="toggleGlobalAudio()" id="play-pause-btn">▶️</button>
+      <button class="ctrl-btn" onclick="playNextSong()">⏭️</button>
+    </div>
+    <audio id="global-audio-engine"></audio>
+  </div>
+
+  <!-- Bottom Navigation -->
+  <nav>
+    <button onclick="navigate('songs')" id="nav-songs" class="active">🎵 Songs</button>
+    <button onclick="navigate('together')" id="nav-together">💞 Together</button>
+    <button onclick="navigate('ytsync')" id="nav-ytsync">📺 YT Sync</button>
+    <button onclick="navigate('chat')" id="nav-chat">💬 Chat</button>
+    <button onclick="initiateCall('audio')" id="nav-call">📞 Call</button>
+  </nav>
+
+  <!-- PAGE 1: Drive Songs -->
+  <div id="page-songs" class="page active">
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3>Drive Music Library</h3>
+        <button onclick="fetchDriveSongs()" style="font-size:11px; padding:4px 8px;">🔄 Refresh</button>
+      </div>
+      <input type="text" id="song-search" placeholder="Search song or artist..." onkeyup="renderSongList()" style="width:100%; margin-bottom:10px;">
+      <select id="song-filter-cat" onchange="renderSongList()" style="width:100%; margin-bottom:12px;">
+        <option value="ALL">All Playlists & Categories</option>
+        <option value="Romantic">Romantic</option>
+        <option value="Slow">Slow & Cozy</option>
+        <option value="Favorites">Favorites</option>
+      </select>
+      <div id="drive-song-list">Loading songs from Google Drive...</div>
+    </div>
+
+    <!-- Upload Song -->
+    <div class="card">
+      <h4>Upload a Song to Drive</h4>
+      <input type="text" id="upload-title" placeholder="Title" style="width:100%; margin:6px 0;">
+      <input type="text" id="upload-artist" placeholder="Artist" style="width:100%; margin:6px 0;">
+      <input type="file" id="upload-file" accept="audio/*" style="width:100%; margin:6px 0;">
+      <button onclick="handleSongUpload()" style="width:100%; background:var(--accent); font-weight:bold; margin-top:8px;">Upload to Drive</button>
+    </div>
+  </div>
+
+  <!-- PAGE 2: Listen Drive Songs Together -->
+  <div id="page-together" class="page">
+    <div class="card">
+      <h3>Listen Together (Drive Sync)</h3>
+      <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">
+        Partner Connection: <span id="partner-dot" class="status-dot"></span>
+      </p>
+      <div id="together-songs-list"></div>
+      <div style="margin-top:15px; display:flex; gap:10px;">
+        <button onclick="syncResyncPlayback()" style="flex:1;">🔄 Resync Clock</button>
+        <button onclick="broadcastAudioAction('togglePlay')" style="flex:1; background:var(--accent); font-weight:bold;">⏯️ Play / Pause Both</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE 3: YouTube Real-time Sync -->
+  <div id="page-ytsync" class="page">
+    <div class="card">
+      <h3>YouTube Video Sync</h3>
+      <input type="text" id="yt-url" placeholder="Paste YouTube Link or Video ID" style="width:100%; margin:10px 0 8px;">
+      <div style="display:flex; gap:8px;">
+        <button onclick="loadSyncedYTVideo()" style="flex:2; background:var(--accent); font-weight:bold;">Load on Both</button>
+        <button onclick="syncYT()" style="flex:1;">🔄 Resync</button>
+      </div>
+      <div id="yt-player-container" style="margin-top:15px; text-align:center;">
+        <div id="player"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE 4: Chat -->
+  <div id="page-chat" class="page">
+    <div class="card" style="padding:10px;">
+      <h3>Cutieee & Amarjeet</h3>
+      <div id="chat-messages"></div>
+      <div style="display:flex; gap:6px; margin-top:8px;">
+        <input type="text" id="chat-input" placeholder="Type a sweet message..." style="flex:1;">
+        <input type="file" id="chat-media-input" accept="image/*,video/*" style="display:none;" onchange="sendMediaMessage(this)">
+        <button onclick="document.getElementById('chat-media-input').click()">📎</button>
+        <button onclick="sendTextMessage()" style="background:var(--accent); font-weight:bold;">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzadHQfqz1rucwfinzC3YYkk6Hepg66MiblG3CJVPtgNqEBramsGjy8DmJ2Uu1dunaL/exec";
+    const CURRENT_USER = "Cutieee";
+    const MY_PEER_ID = "world_private_cutieee_892";
+    const TARGET_PEER_ID = "world_private_kumaramarjeet80_892";
+
+    // 100 Romantic Compliments Dataset
+    const compliments = [
+      "You make every day feel brighter just by being in it.",
+      "I’ve never met someone who understands me the way you do.",
+      "You have the kind of smile that makes my heart skip a beat.",
+      "You’re not just beautiful — you’re unforgettable.",
+      "I feel lucky every single time I get to talk to you.",
+      "You make ordinary moments feel so special.",
+      "Your laugh is easily my favorite sound in the world.",
+      "You have a way of making everything feel safe and warm.",
+      "You’re dangerously good at stealing my attention.",
+      "How do you manage to look amazing without even trying?",
+      "You’re like my favorite song — I never want you out of my head.",
+      "You’re the reason I check my phone with a smile every time.",
+      "You make even simple conversations feel like an adventure.",
+      "I think you might be my absolute favorite view.",
+      "You make my heart race without even saying a single word.",
+      "You make me want to be the best version of myself.",
+      "You’ve become my safe place in this busy world.",
+      "Your eyes are like a whole universe I could get lost in.",
+      "You’re effortlessly gorgeous, inside and out.",
+      "I love how we can talk for hours and never run out of things to say."
+    ];
+
+    let peer = null, dataConnection = null, currentCall = null;
+    let localMediaStream = null, facingMode = "user";
+    let songsData = [], currentSongIndex = 0;
+    let ytPlayer = null;
+    const audioEngine = document.getElementById("global-audio-engine");
+
+    // Welcome Gesture
+    function dismissWelcome() {
+      const modal = document.getElementById("welcome-modal");
+      modal.style.opacity = "0";
+      setTimeout(() => modal.style.display = "none", 500);
+      initWebRTC();
+      fetchDriveSongs();
+      startComplimentEngine();
+    }
+
+    // Compliment Generator (Triggers every 2 to 3 minutes)
+    function startComplimentEngine() {
+      function triggerNext() {
+        const randomDelay = Math.floor(Math.random() * (180000 - 120000 + 1)) + 120000; // 2-3 mins
+        setTimeout(() => {
+          showRandomCompliment();
+          triggerNext();
+        }, randomDelay);
+      }
+      setTimeout(showRandomCompliment, 5000); // Initial after 5 sec
+      triggerNext();
+    }
+
+    function showRandomCompliment() {
+      const popup = document.getElementById("compliment-popup");
+      const text = document.getElementById("compliment-text");
+      const randomMsg = compliments[Math.floor(Math.random() * compliments.length)];
+      text.innerText = randomMsg;
+      popup.style.display = "block";
+      setTimeout(closeCompliment, 12000);
+    }
+
+    function closeCompliment() {
+      document.getElementById("compliment-popup").style.display = "none";
+    }
+
+    // Navigation Switcher
+    function navigate(pageId) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+      document.getElementById(`page-${pageId}`).classList.add('active');
+      const btn = document.getElementById(`nav-${pageId}`);
+      if (btn) btn.classList.add('active');
+    }
+
+    // Music Player Controller
+    function playDriveSongByIndex(index, notify = true) {
+      if (!songsData.length) return;
+      if (index < 0) index = songsData.length - 1;
+      if (index >= songsData.length) index = 0;
+      currentSongIndex = index;
+      
+      const song = songsData[currentSongIndex];
+      audioEngine.src = song.directUrl;
+      audioEngine.play();
+      document.getElementById("play-pause-btn").innerText = "⏸️";
+      document.getElementById("player-title").innerText = song.title;
+      document.getElementById("player-artist").innerText = song.artist;
+
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: song.title,
+          artist: song.artist,
+          artwork: [{ src: 'https://cdn-icons-png.flaticon.com/512/3844/3844724.png', sizes: '512x512', type: 'image/png' }]
+        });
+      }
+
+      if (notify) {
+        broadcastMessage({
+          type: "system",
+          text: `🎶 Cutieee played "${song.title}"`
+        });
+      }
+    }
+
+    function toggleGlobalAudio() {
+      if (audioEngine.paused) {
+        audioEngine.play();
+        document.getElementById("play-pause-btn").innerText = "⏸️";
+      } else {
+        audioEngine.pause();
+        document.getElementById("play-pause-btn").innerText = "▶️";
+      }
+    }
+
+    function playNextSong() { playDriveSongByIndex(currentSongIndex + 1); }
+    function playPreviousSong() { playDriveSongByIndex(currentSongIndex - 1); }
+
+    audioEngine.onended = () => playNextSong();
+
+    // Drive Songs Fetch & Render
+    async function fetchDriveSongs() {
+      try {
+        const res = await fetch(`${APPS_SCRIPT_URL}?action=getSongs`);
+        const data = await res.json();
+        if (data.status === "success") {
+          songsData = data.songs;
+          renderSongList();
+        }
+      } catch(e) {
+        document.getElementById("drive-song-list").innerText = "Error loading songs from spreadsheet.";
+      }
+    }
+
+    function renderSongList() {
+      const filterCat = document.getElementById("song-filter-cat").value;
+      const search = document.getElementById("song-search").value.toLowerCase();
+      const listContainer = document.getElementById("drive-song-list");
+      const togetherList = document.getElementById("together-songs-list");
+      
+      const filtered = songsData.filter(s => {
+        const matchesCat = (filterCat === "ALL" || s.category === filterCat || s.playlist === filterCat);
+        const matchesSearch = s.title.toLowerCase().includes(search) || s.artist.toLowerCase().includes(search);
+        return matchesCat && matchesSearch;
+      });
+
+      if (!filtered.length) {
+        listContainer.innerHTML = "<p style='font-size:12px; color:gray;'>No songs found.</p>";
+        return;
+      }
+
+      listContainer.innerHTML = filtered.map((song, i) => `
+        <div class="song-item">
+          <div>
+            <strong>${song.title}</strong>
+            <div style="font-size:11px; color:var(--text-muted);">${song.artist} • ${song.category}</div>
+          </div>
+          <div style="display:flex; gap:6px;">
+            <button onclick="playDriveSongByIndex(${i})" style="font-size:11px; background:var(--accent);">▶️ Play</button>
+            ${song.allowDownload ? `<a href="${song.directUrl}" download style="padding:6px 10px; background:#292e4a; border-radius:8px; text-decoration:none; color:#fff; font-size:11px;">⬇️</a>` : ''}
+          </div>
+        </div>
+      `).join('');
+
+      togetherList.innerHTML = filtered.map((song, i) => `
+        <div class="song-item">
+          <div><strong>${song.title}</strong></div>
+          <button onclick="playTogether(${i})" style="font-size:11px; background:var(--accent);">Play for Both 💞</button>
+        </div>
+      `).join('');
+    }
+
+    function playTogether(index) {
+      playDriveSongByIndex(index, true);
+      const song = songsData[index];
+      broadcastMessage({
+        type: "audio_sync",
+        action: "play",
+        index: index,
+        currentTime: 0
+      });
+    }
+
+    // WebRTC Real-Time Network & Calls
+    function initWebRTC() {
+      peer = new Peer(MY_PEER_ID);
+
+      peer.on('open', () => {
+        dataConnection = peer.connect(TARGET_PEER_ID);
+        setupDataHandlers();
+      });
+
+      peer.on('connection', (conn) => {
+        dataConnection = conn;
+        setupDataHandlers();
+      });
+
+      peer.on('call', async (call) => {
+        currentCall = call;
+        localMediaStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+        call.answer(localMediaStream);
+        showCallBar("Call in Progress");
+        call.on('stream', remoteStream => attachStreams(localMediaStream, remoteStream));
+      });
+    }
+
+    function setupDataHandlers() {
+      dataConnection.on('open', () => {
+        document.querySelectorAll(".status-dot").forEach(d => d.classList.add("connected"));
+      });
+      dataConnection.on('data', data => handleIncomingP2P(data));
+      dataConnection.on('close', () => {
+        document.querySelectorAll(".status-dot").forEach(d => d.classList.remove("connected"));
+      });
+    }
+
+    function handleIncomingP2P(payload) {
+      if (payload.type === "chat") {
+        renderMessage(payload.sender, payload.content, payload.mediaType, payload.time, false);
+      } else if (payload.type === "system") {
+        renderSystemMessage(payload.text, payload.time);
+      } else if (payload.type === "audio_sync") {
+        if (payload.action === "play") {
+          playDriveSongByIndex(payload.index, false);
+          audioEngine.currentTime = payload.currentTime;
+        } else if (payload.action === "togglePlay") {
+          toggleGlobalAudio();
+        }
+      } else if (payload.type === "yt_sync" && ytPlayer && ytPlayer.loadVideoById) {
+        ytPlayer.loadVideoById(payload.videoId, payload.time);
+      }
+    }
+
+    function broadcastMessage(dataObj) {
+      dataObj.time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      dataObj.sender = CURRENT_USER;
+      if (dataConnection && dataConnection.open) dataConnection.send(dataObj);
+      if (dataObj.type === "chat") renderMessage(CURRENT_USER, dataObj.content, dataObj.mediaType, dataObj.time, true);
+      if (dataObj.type === "system") renderSystemMessage(dataObj.text, dataObj.time);
+    }
+
+    // Call Switching Actions
+    async function initiateCall(type) {
+      localMediaStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: type === 'video' });
+      currentCall = peer.call(TARGET_PEER_ID, localMediaStream);
+      showCallBar(type === "video" ? "Video Call" : "Audio Call");
+      currentCall.on('stream', remoteStream => attachStreams(localMediaStream, remoteStream));
+    }
+
+    function attachStreams(local, remote) {
+      document.getElementById("video-overlay").style.display = "block";
+      document.getElementById("local-video").srcObject = local;
+      document.getElementById("remote-video").srcObject = remote;
+    }
+
+    function showCallBar(title) {
+      document.getElementById("call-floating-bar").style.display = "flex";
+      document.getElementById("call-label").innerText = title;
+    }
+
+    async function toggleCallMode(mode) {
+      if (!currentCall) return;
+      let newStream;
+      if (mode === 'video') newStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: { facingMode } });
+      if (mode === 'screen') newStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+      if (mode === 'screen-and-cam') {
+        newStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        const cam = await navigator.mediaDevices.getUserMedia({ video: true });
+        document.getElementById("local-video").srcObject = cam;
+      }
+      const videoTrack = newStream.getVideoTracks()[0];
+      const sender = currentCall.peerConnection.getSenders().find(s => s.track.kind === 'video');
+      if (sender && videoTrack) sender.replaceTrack(videoTrack);
+    }
+
+    async function switchCameraFacing() {
+      facingMode = facingMode === "user" ? "environment" : "user";
+      toggleCallMode('video');
+    }
+
+    function endCall() {
+      if (currentCall) currentCall.close();
+      if (localMediaStream) localMediaStream.getTracks().forEach(t => t.stop());
+      document.getElementById("call-floating-bar").style.display = "none";
+      document.getElementById("video-overlay").style.display = "none";
+    }
+
+    // Chat Mechanics
+    function sendTextMessage() {
+      const input = document.getElementById("chat-input");
+      if (!input.value.trim()) return;
+      broadcastMessage({ type: "chat", content: input.value, mediaType: "text" });
+      input.value = "";
+    }
+
+    function sendMediaMessage(input) {
+      const file = input.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        broadcastMessage({
+          type: "chat", content: e.target.result, mediaType: file.type.startsWith("image") ? "image" : "video"
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function renderMessage(sender, content, type, time, isMine) {
+      const box = document.getElementById("chat-messages");
+      const el = document.createElement("div");
+      el.className = `msg ${isMine ? 'msg-mine' : 'msg-theirs'}`;
+      let body = type === "text" ? `<div>${content}</div>` : `<img src="${content}" style="max-width:100%; border-radius:8px;">`;
+      el.innerHTML = `<strong>${sender}</strong>${body}<div class="msg-meta">${time}</div>`;
+      box.appendChild(el);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function renderSystemMessage(text, time) {
+      const box = document.getElementById("chat-messages");
+      const el = document.createElement("div");
+      el.className = "msg msg-system";
+      el.innerText = `${text} • ${time}`;
+      box.appendChild(el);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    // YouTube API Init
+    function onYouTubeIframeAPIReady() {
+      ytPlayer = new YT.Player('player', { height: '220', width: '100%', videoId: '' });
+    }
+    function loadSyncedYTVideo() {
+      const url = document.getElementById("yt-url").value;
+      const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
+      const vid = match ? match[1] : url;
+      if (vid && ytPlayer) {
+        ytPlayer.loadVideoById(vid);
+        broadcastMessage({ type: "yt_sync", videoId: vid, time: 0 });
+      }
+    }
+    function syncYT() {
+      if (ytPlayer && ytPlayer.getCurrentTime) {
+        broadcastMessage({ type: "yt_sync", videoId: ytPlayer.getVideoData().video_id, time: ytPlayer.getCurrentTime() });
+      }
+    }
+  </script>
+</body>
+</html>
