@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Private Space | Him</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <script src="https://www.youtube.com/iframe_api"></script>
   <style>
@@ -11,135 +11,122 @@
       --bg: #0b0f19; --card: #151d30; --accent: #38bdf8;
       --text: #f8fafc; --danger: #ef4444; --success: #22c55e;
     }
-    * { box-sizing: border-box; }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     body {
       margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: var(--bg); color: var(--text); height: 100vh; overflow: hidden;
+      background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column;
     }
-    .split-layout {
-      display: flex; width: 100vw; height: 100vh;
+    .main-container {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+      padding: 16px; width: 100%; max-width: 1200px; margin: auto; flex: 1;
     }
-    .split-pane {
-      flex: 1; padding: 24px; display: flex; flex-direction: column;
-      justify-content: center; align-items: center; border-right: 1px solid #1e293b;
-    }
-    .split-pane:last-child { border-right: none; }
-    @media (max-width: 850px) {
-      .split-layout { flex-direction: column; overflow-y: auto; height: auto; }
-      .split-pane { width: 100%; min-height: 100vh; border-right: none; border-bottom: 1px solid #1e293b; }
+    @media (max-width: 900px) {
+      .main-container { grid-template-columns: 1fr; padding: 12px; gap: 12px; }
     }
     .card {
-      background: var(--card); border-radius: 20px; padding: 24px; width: 100%; max-width: 480px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.4); display: flex; flex-direction: column; gap: 16px;
+      background: var(--card); border-radius: 18px; padding: 16px;
+      display: flex; flex-direction: column; gap: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
     }
-    .header-row {
-      display: flex; justify-content: space-between; align-items: center;
-    }
+    .header-row { display: flex; justify-content: space-between; align-items: center; }
     .status-badge {
-      font-size: 12px; padding: 4px 10px; border-radius: 20px; font-weight: 600;
+      font-size: 11px; padding: 4px 10px; border-radius: 20px; font-weight: 600;
     }
-    .online { background: rgba(34, 197, 94, 0.2); color: var(--success); }
-    .offline { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+    .online { background: rgba(34, 197, 94, 0.15); color: var(--success); }
+    .offline { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
     
-    /* Music UI */
-    .yt-wrapper {
-      width: 100%; height: 250px; background: #000; border-radius: 12px; overflow: hidden;
+    .media-box {
+      width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 12px; overflow: hidden; position: relative;
     }
-    .url-input-row { display: flex; gap: 8px; width: 100%; }
-    input[type="text"] {
-      flex: 1; padding: 10px 14px; border-radius: 8px; border: 1px solid #334155;
-      background: #0b0f19; color: #fff; outline: none;
-    }
-    
-    /* Video UI */
-    .video-grid {
-      position: relative; width: 100%; height: 260px; background: #000;
-      border-radius: 12px; overflow: hidden;
-    }
+    #player { width: 100%; height: 100%; }
     #remoteVideo { width: 100%; height: 100%; object-fit: cover; }
     #localVideo {
-      position: absolute; bottom: 12px; right: 12px; width: 100px; height: 75px;
-      border-radius: 8px; object-fit: cover; border: 2px solid var(--accent);
+      position: absolute; bottom: 8px; right: 8px; width: 80px; height: 60px;
+      border-radius: 6px; object-fit: cover; border: 2px solid var(--accent); background: #222;
     }
-    .btn-group { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+    .url-input-row { display: flex; gap: 8px; }
+    input[type="text"] {
+      flex: 1; padding: 10px 12px; border-radius: 8px; border: 1px solid #334155;
+      background: #0b0f19; color: #fff; outline: none; font-size: 14px;
+    }
+    .btn-group { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
     button {
-      padding: 10px 16px; border: none; border-radius: 8px; font-weight: 600;
-      cursor: pointer; transition: 0.2s; background: #334155; color: white;
+      flex: 1; min-width: 90px; padding: 10px 14px; border: none; border-radius: 8px;
+      font-weight: 600; font-size: 13px; cursor: pointer; background: #334155; color: white;
     }
     .btn-call { background: var(--success); }
     .btn-end { background: var(--danger); }
-    .btn-active { background: var(--accent); color: #000; }
     .btn-muted { background: var(--danger); }
+    .btn-rec { background: #e11d48; }
   </style>
 </head>
 <body>
 
-  <div class="split-layout">
-    <!-- Side 1: Together Music Listening -->
-    <div class="split-pane">
-      <div class="card">
-        <div class="header-row">
-          <h3 style="margin:0;">🎵 Shared Music Room</h3>
-          <span id="musicSyncStatus" class="status-badge offline">Syncing...</span>
-        </div>
-        <div class="url-input-row">
-          <input type="text" id="ytUrl" placeholder="Paste YouTube link...">
-          <button onclick="loadCustomVideo()">Load</button>
-        </div>
-        <div class="yt-wrapper">
-          <div id="player"></div>
-        </div>
-        <div class="btn-group">
-          <button onclick="toggleMusicPlay()" id="musicPlayBtn" class="btn-call">▶ Play</button>
-          <button onclick="forceSync()">🔄 Force Timestamp Sync</button>
-        </div>
+  <div class="main-container">
+    <!-- Music Column -->
+    <div class="card">
+      <div class="header-row">
+        <h4 style="margin:0;">🎵 Shared Music (Studio Audio)</h4>
+        <span id="musicStatus" class="status-badge offline">Syncing...</span>
+      </div>
+      <div class="url-input-row">
+        <input type="text" id="ytUrl" placeholder="Paste YouTube link...">
+        <button onclick="loadCustomVideo()" style="flex:0; min-width:60px; background:var(--accent); color:#000;">Load</button>
+      </div>
+      <div class="media-box">
+        <div id="player"></div>
+      </div>
+      <div class="btn-group">
+        <button onclick="toggleMusicPlay()" id="musicPlayBtn" class="btn-call">▶ Play</button>
+        <button onclick="forceSync()">🔄 Force Timestamp Sync</button>
       </div>
     </div>
 
-    <!-- Side 2: Video Call & Recording -->
-    <div class="split-pane">
-      <div class="card">
-        <div class="header-row">
-          <h3 style="margin:0;">📹 Video Call (Her)</h3>
-          <span id="callStatus" class="status-badge offline">Disconnected</span>
-        </div>
-        <div class="video-grid">
-          <video id="remoteVideo" autoplay playsinline></video>
-          <video id="localVideo" autoplay playsinline muted></video>
-        </div>
-        <div class="btn-group">
-          <button id="callBtn" class="btn-call" onclick="startCall()">📞 Call</button>
-          <button id="endBtn" class="btn-end" onclick="endCall()" style="display:none;">📴 End</button>
-          <button id="micBtn" onclick="toggleMic()">🎤 Mic: ON</button>
-          <button id="camBtn" onclick="toggleCam()">📷 Cam: ON</button>
-        </div>
-        <!-- Recording feature for Him -->
-        <div class="btn-group" style="border-top: 1px solid #1e293b; padding-top: 10px;">
-          <button id="recBtn" onclick="startRecording()" style="background: #e11d48;">⏺ Record Her</button>
-          <button id="stopRecBtn" onclick="stopRecording()" disabled>💾 Save Video</button>
-        </div>
+    <!-- Call Column -->
+    <div class="card">
+      <div class="header-row">
+        <h4 style="margin:0;">📹 Video Call (Her)</h4>
+        <span id="callStatus" class="status-badge offline">Disconnected</span>
+      </div>
+      <div class="media-box">
+        <video id="remoteVideo" autoplay playsinline></video>
+        <video id="localVideo" autoplay playsinline muted></video>
+      </div>
+      <div class="btn-group">
+        <button id="callBtn" class="btn-call" onclick="startCall()">📞 Call</button>
+        <button id="endBtn" class="btn-end" onclick="endCall()" style="display:none;">📴 End</button>
+        <button id="micBtn" onclick="toggleMic()">🎤 Mic: ON</button>
+        <button id="camBtn" onclick="toggleCam()">📷 Cam: ON</button>
+      </div>
+      <div class="btn-group" style="border-top:1px solid #1e293b; padding-top:8px;">
+        <button id="recBtn" class="btn-rec" onclick="startRecording()">⏺ Record Her</button>
+        <button id="stopRecBtn" onclick="stopRecording()" disabled>💾 Save Video</button>
       </div>
     </div>
   </div>
 
   <script>
-    const myId = "room-2026-user-him";
-    const targetId = "room-2026-user-her";
+    const myId = "room-2026-user-him", targetId = "room-2026-user-her";
     const peer = new Peer(myId);
     let dataConn = null, callObj = null, localStream = null;
     let micEnabled = true, camEnabled = true;
     let mediaRecorder = null, recordedChunks = [];
 
-    // Auto-Connect Signaling
-    peer.on('open', () => autoConnect());
-    peer.on('connection', (c) => {
-      dataConn = c;
-      setupDataChannel();
-      updateStatus(true);
-    });
+    // High-Fidelity Audio Constraints (Preserves clean original sound)
+    const mediaConstraints = {
+      video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
+      audio: {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+        channelCount: 2,
+        sampleRate: 48000
+      }
+    };
 
+    peer.on('open', () => autoConnect());
+    peer.on('connection', (c) => { dataConn = c; setupDataChannel(); updateStatus(true); });
     peer.on('call', (call) => {
-      navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((stream) => {
+      navigator.mediaDevices.getUserMedia(mediaConstraints).then((stream) => {
         localStream = stream;
         document.getElementById('localVideo').srcObject = stream;
         call.answer(stream);
@@ -149,41 +136,33 @@
 
     function autoConnect() {
       dataConn = peer.connect(targetId);
-      dataConn.on('open', () => {
-        updateStatus(true);
-        setupDataChannel();
-      });
-      dataConn.on('close', () => {
-        updateStatus(false);
-        setTimeout(autoConnect, 3000);
-      });
+      dataConn.on('open', () => { updateStatus(true); setupDataChannel(); });
+      dataConn.on('close', () => { updateStatus(false); setTimeout(autoConnect, 3000); });
       setTimeout(() => { if (!dataConn || !dataConn.open) autoConnect(); }, 4000);
     }
 
     function updateStatus(online) {
-      const b1 = document.getElementById('musicSyncStatus');
-      const b2 = document.getElementById('callStatus');
-      b1.className = b2.className = `status-badge ${online ? 'online' : 'offline'}`;
-      b1.innerText = b2.innerText = online ? 'Connected' : 'Connecting...';
+      ['musicStatus', 'callStatus'].forEach(id => {
+        const el = document.getElementById(id);
+        el.className = `status-badge ${online ? 'online' : 'offline'}`;
+        el.innerText = online ? 'Connected' : 'Connecting...';
+      });
     }
 
-    // WebRTC Video Call
     function startCall() {
-      navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((stream) => {
+      navigator.mediaDevices.getUserMedia(mediaConstraints).then((stream) => {
         localStream = stream;
         document.getElementById('localVideo').srcObject = stream;
         const call = peer.call(targetId, stream);
         handleStream(call);
-      }).catch(err => alert("Permission denied: " + err));
+      }).catch(err => alert("Audio/Video Access: " + err));
     }
 
     function handleStream(call) {
       callObj = call;
       document.getElementById('callBtn').style.display = 'none';
-      document.getElementById('endBtn').style.display = 'inline-block';
-      call.on('stream', (remoteStream) => {
-        document.getElementById('remoteVideo').srcObject = remoteStream;
-      });
+      document.getElementById('endBtn').style.display = 'block';
+      call.on('stream', (remStream) => { document.getElementById('remoteVideo').srcObject = remStream; });
       call.on('close', () => resetCall());
     }
 
@@ -194,13 +173,12 @@
     }
 
     function resetCall() {
-      document.getElementById('callBtn').style.display = 'inline-block';
+      document.getElementById('callBtn').style.display = 'block';
       document.getElementById('endBtn').style.display = 'none';
       document.getElementById('remoteVideo').srcObject = null;
       document.getElementById('localVideo').srcObject = null;
     }
 
-    // Toggle Mic / Cam with Visual Text State
     function toggleMic() {
       if (localStream) {
         micEnabled = !micEnabled;
@@ -221,18 +199,17 @@
       }
     }
 
-    // Video Recording Feature (Exclusive for Him)
     function startRecording() {
       const stream = document.getElementById('remoteVideo').srcObject;
-      if (!stream) return alert('Start the call with her first to record her video!');
+      if (!stream) return alert('Call must be active to record.');
       recordedChunks = [];
-      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp8,opus' });
       mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
       mediaRecorder.onstop = () => {
         const blob = new Blob(recordedChunks, { type: 'video/webm' });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = `video_call_${Date.now()}.webm`;
+        a.download = `recording_${Date.now()}.webm`;
         a.click();
       };
       mediaRecorder.start();
@@ -247,28 +224,29 @@
     }
 
     // YouTube Sync Engine
-    let player, isRemoteAction = false;
+    let player, isRemote = false;
     function onYouTubeIframeAPIReady() {
       player = new YT.Player('player', {
         height: '100%', width: '100%', videoId: 'dQw4w9WgXcQ',
+        playerVars: { playsinline: 1 },
         events: { 'onStateChange': onPlayerStateChange }
       });
     }
 
-    function onPlayerStateChange(event) {
-      if (isRemoteAction) return;
-      if (event.data === YT.PlayerState.PLAYING) {
+    function onPlayerStateChange(e) {
+      if (isRemote) return;
+      if (e.data === YT.PlayerState.PLAYING) {
         updatePlayBtn(true);
         sendSignal({ type: 'MUSIC_PLAY', time: player.getCurrentTime() });
-      } else if (event.data === YT.PlayerState.PAUSED) {
+      } else if (e.data === YT.PlayerState.PAUSED) {
         updatePlayBtn(false);
         sendSignal({ type: 'MUSIC_PAUSE', time: player.getCurrentTime() });
       }
     }
 
     function toggleMusicPlay() {
-      const state = player.getPlayerState();
-      if (state === YT.PlayerState.PLAYING) {
+      const isPlaying = player.getPlayerState() === YT.PlayerState.PLAYING;
+      if (isPlaying) {
         player.pauseVideo();
         sendSignal({ type: 'MUSIC_PAUSE', time: player.getCurrentTime() });
       } else {
@@ -277,9 +255,7 @@
       }
     }
 
-    function forceSync() {
-      sendSignal({ type: 'MUSIC_SEEK', time: player.getCurrentTime() });
-    }
+    function forceSync() { sendSignal({ type: 'MUSIC_SEEK', time: player.getCurrentTime() }); }
 
     function loadCustomVideo() {
       const url = document.getElementById('ytUrl').value;
@@ -297,28 +273,17 @@
     }
 
     function setupDataChannel() {
-      dataConn.on('data', (data) => {
-        isRemoteAction = true;
-        if (data.type === 'MUSIC_PLAY') {
-          player.seekTo(data.time, true);
-          player.playVideo();
-          updatePlayBtn(true);
-        } else if (data.type === 'MUSIC_PAUSE') {
-          player.seekTo(data.time, true);
-          player.pauseVideo();
-          updatePlayBtn(false);
-        } else if (data.type === 'MUSIC_SEEK') {
-          player.seekTo(data.time, true);
-        } else if (data.type === 'MUSIC_LOAD') {
-          player.loadVideoById(data.id);
-        }
-        setTimeout(() => { isRemoteAction = false; }, 500);
+      dataConn.on('data', (d) => {
+        isRemote = true;
+        if (d.type === 'MUSIC_PLAY') { player.seekTo(d.time, true); player.playVideo(); updatePlayBtn(true); }
+        if (d.type === 'MUSIC_PAUSE') { player.seekTo(d.time, true); player.pauseVideo(); updatePlayBtn(false); }
+        if (d.type === 'MUSIC_SEEK') player.seekTo(d.time, true);
+        if (d.type === 'MUSIC_LOAD') player.loadVideoById(d.id);
+        setTimeout(() => { isRemote = false; }, 500);
       });
     }
 
-    function sendSignal(obj) {
-      if (dataConn && dataConn.open) dataConn.send(obj);
-    }
+    function sendSignal(obj) { if (dataConn && dataConn.open) dataConn.send(obj); }
   </script>
 </body>
 </html>
