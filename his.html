@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Private Space | Him</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script src="https://www.youtube.com/iframe_api"></script>
+  <style>
+    :root {
+      --bg: #0b0f19; --card: #151d30; --accent: #38bdf8;
+      --text: #f8fafc; --danger: #ef4444; --success: #22c55e;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column;
+    }
+    .main-container {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+      padding: 16px; width: 100%; max-width: 1200px; margin: auto; flex: 1;
+    }
+    @media (max-width: 900px) {
+      .main-container { grid-template-columns: 1fr; padding: 12px; gap: 12px; }
+    }
+    .card {
+      background: var(--card); border-radius: 18px; padding: 16px;
+      display: flex; flex-direction: column; gap: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .header-row { display: flex; justify-content: space-between; align-items: center; }
+    .status-badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; font-weight: 600; }
+    .online { background: rgba(34, 197, 94, 0.15); color: var(--success); }
+    .offline { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
+    .recording-badge { background: rgba(239, 68, 68, 0.25); color: #f87171; border: 1px solid #ef4444; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    
+    .media-box {
+      width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 12px; overflow: hidden; position: relative;
+    }
+    #player { width: 100%; height: 100%; }
+    #remoteVideo { width: 100%; height: 100%; object-fit: cover; }
+    #localVideo {
+      position: absolute; bottom: 8px; right: 8px; width: 80px; height: 60px;
+      border-radius: 6px; object-fit: cover; border: 2px solid var(--accent); background: #222;
+    }
+    .url-input-row { display: flex; gap: 8px; }
+    input[type="text"] {
+      flex: 1; padding: 10px 12px; border-radius: 8px; border: 1px solid #334155;
+      background: #0b0f19; color: #fff; outline: none; font-size: 14px;
+    }
+    .btn-group { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+    button {
+      flex: 1; min-width: 90px; padding: 10px 14px; border: none; border-radius: 8px;
+      font-weight: 600; font-size: 13px; cursor: pointer; background: #334155; color: white;
+    }
+    .btn-call { background: var(--success); }
+    .btn-end { background: var(--danger); }
+    .btn-muted { background: var(--danger); }
+
+    .vault-section {
+      grid-column: 1 / -1; background: var(--card); border-radius: 18px; padding: 16px;
+      margin-top: 10px; display: flex; flex-direction: column; gap: 12px;
+    }
+    .vault-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px;
+    }
+    .vault-item {
+      background: #0b0f19; border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 8px;
+    }
+    .vault-item video { width: 100%; border-radius: 6px; aspect-ratio: 16/9; background: #000; }
+  </style>
+</head>
+<body>
+
+  <div class="main-container">
+    <!-- Shared Music Column -->
+    <div class="card">
+      <div class="header-row">
+        <h4 style="margin:0;">🎵 Shared Music (Studio Audio)</h4>
+        <span id="musicStatus" class="status-badge offline">Syncing...</span>
+      </div>
+      <div class="url-input-row">
+        <input type="text" id="ytUrl" placeholder="Paste YouTube link...">
+        <button onclick="loadCustomVideo()" style="flex:0; min-width:60px; background:var(--accent); color:#000;">Load</button>
+      </div>
+      <div class="media-box">
+        <div id="player"></div>
+      </div>
+      <div class="btn-group">
+        <button onclick="toggleMusicPlay()" id="musicPlayBtn" class="btn-call">▶ Play</button>
+        <button onclick="forceSync()">🔄 Force Timestamp Sync</button>
+      </div>
+    </div>
+
+    <!-- View Each Other Column -->
+    <div class="card">
+      <div class="header-row">
+        <h4 style="margin:0;">👁️ View Each Other</h4>
+        <div>
+          <span id="recStatus" class="status-badge recording-badge" style="display:none; margin-right:4px;">🔴 Recording</span>
+          <span id="callStatus" class="status-badge offline">Disconnected</span>
+        </div>
+      </div>
+      <div class="media-box">
+        <video id="remoteVideo" autoplay playsinline></video>
+        <video id="localVideo" autoplay playsinline muted></video>
+      </div>
+      <div class="btn-group">
+        <button id="viewBtn" class="btn-call" onclick="startViewEachOther()">👁️ View Each Other</button>
+        <button id="endViewBtn" class="btn-end" onclick="endViewEachOther()" style="display:none;">❌ Stop Viewing</button>
+        <button id="micBtn" onclick="toggleMic()">🎤 Mic: ON</button>
+        <button id="camBtn" onclick="toggleCam()">📷 Cam: ON</button>
+      </div>
+    </div>
+
+    <!-- Saved Video Vault -->
+    <div class="vault-section">
+      <div class="header-row">
+        <h4 style="margin:0;">📁 Saved Video Vault (Equal Split MP4)</h4>
+        <button onclick="clearAllRecordings()" style="flex:0; min-width:100px; background:#e11d48; font-size:11px; padding:6px 12px;">Delete All</button>
+      </div>
+      <div id="vaultList" class="vault-grid">
+        <small style="opacity: 0.6;">No recordings saved yet. When you end "View Each Other", video frames will be saved here automatically.</small>
+      </div>
+    </div>
+  </div>
+
+  <canvas id="compositeCanvas" width="1280" height="720" style="display:none;"></canvas>
+
+  <script>
+    const myId = "room-2026-user-him", targetId = "room-2026-user-her";
+    const peer = new Peer(myId);
+    let dataConn = null, callObj = null, localStream = null, remoteStreamObj = null;
+    let micEnabled = true, camEnabled = true;
+    let isMusicPlaying = false;
+    let mediaRecorder = null, recordedChunks = [];
+    let canvasAnimId = null;
+    let syncInterval = null;
+
+    // IndexedDB Setup
+    let db;
+    const dbReq = indexedDB.open("CallRecordingsDB_CleanV4", 1);
+    dbReq.onupgradeneeded = (e) => {
+      db = e.target.result;
+      if (!db.objectStoreNames.contains("recordings")) {
+        db.createObjectStore("recordings", { keyPath: "id", autoIncrement: true });
+      }
+    };
+    dbReq.onsuccess = (e) => {
+      db = e.target.result;
+      renderSavedRecordings();
+    };
+
+    function saveRecordingLocally(blob) {
+      if (!blob || blob.size === 0) return;
+      const tx = db.transaction("recordings", "readwrite");
+      tx.objectStore("recordings").add({
+        blob: blob,
+        date: new Date().toLocaleString(),
+        timestamp: Date.now()
+      });
+      tx.oncomplete = () => renderSavedRecordings();
+    }
+
+    function renderSavedRecordings() {
+      if (!db) return;
+      const tx = db.transaction("recordings", "readonly");
+      const req = tx.objectStore("recordings").getAll();
+      req.onsuccess = () => {
+        const list = document.getElementById('vaultList');
+        list.innerHTML = "";
+        if (!req.result || req.result.length === 0) {
+          list.innerHTML = '<small style="opacity: 0.6;">No recordings saved yet. Clean MP4s will appear here automatically.</small>';
+          return;
+        }
+        req.result.reverse().forEach((item) => {
+          const url = URL.createObjectURL(item.blob);
+          const div = document.createElement('div');
+          div.className = 'vault-item';
+          div.innerHTML = `
+            <video src="${url}" controls playsinline preload="metadata"></video>
+            <div style="font-size:11px; opacity:0.8;">📅 ${item.date} (${(item.blob.size / (1024*1024)).toFixed(2)} MB)</div>
+            <div style="display:flex; gap:6px;">
+              <a href="${url}" download="view_each_other_${item.timestamp}.mp4" style="flex:1; text-align:center; background:#38bdf8; color:#000; text-decoration:none; padding:8px; border-radius:6px; font-size:12px; font-weight:bold;">⬇ Download .MP4</a>
+              <button onclick="deleteRecording(${item.id})" style="flex:0; background:#ef4444; padding:6px 12px; font-size:12px;">🗑</button>
+            </div>
+          `;
+          list.appendChild(div);
+        });
+      };
+    }
+
+    function deleteRecording(id) {
+      const tx = db.transaction("recordings", "readwrite");
+      tx.objectStore("recordings").delete(id);
+      tx.oncomplete = () => renderSavedRecordings();
+    }
+
+    function clearAllRecordings() {
+      if (!confirm("Delete all saved recordings?")) return;
+      const tx = db.transaction("recordings", "readwrite");
+      tx.objectStore("recordings").clear();
+      tx.oncomplete = () => renderSavedRecordings();
+    }
+
+    // Camera/Audio constraints
+    const mediaConstraints = {
+      video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+    };
+
+    peer.on('open', () => autoConnect());
+    peer.on('connection', (c) => { dataConn = c; setupDataChannel(); updateStatus(true); });
+    peer.on('call', (call) => {
+      navigator.mediaDevices.getUserMedia(mediaConstraints).then((stream) => {
+        localStream = stream;
+        document.getElementById('localVideo').srcObject = stream;
+        call.answer(stream);
+        handleStream(call);
+      });
+    });
+
+    function autoConnect() {
+      dataConn = peer.connect(targetId);
+      dataConn.on('open', () => { updateStatus(true); setupDataChannel(); });
+      dataConn.on('close', () => { updateStatus(false); setTimeout(autoConnect, 3000); });
+      setTimeout(() => { if (!dataConn || !dataConn.open) autoConnect(); }, 4000);
+    }
+
+    function updateStatus(online) {
+      ['musicStatus', 'callStatus'].forEach(id => {
+        const el = document.getElementById(id);
+        el.className = `status-badge ${online ? 'online' : 'offline'}`;
+        el.innerText = online ? 'Connected' : 'Connecting...';
+      });
+    }
+
+    function startViewEachOther() {
+      navigator.mediaDevices.getUserMedia(mediaConstraints).then((stream) => {
+        localStream = stream;
+        document.getElementById('localVideo').srcObject = stream;
+        const call = peer.call(targetId, stream);
+        handleStream(call);
+      }).catch(err => alert("Camera permission required: " + err));
+    }
+
+    function handleStream(call) {
+      callObj = call;
+      document.getElementById('viewBtn').style.display = 'none';
+      document.getElementById('endViewBtn').style.display = 'block';
+
+      call.on('stream', (remStream) => {
+        remoteStreamObj = remStream;
+        document.getElementById('remoteVideo').srcObject = remStream;
+
+        const videoTrack = remStream.getVideoTracks()[0];
+        if (videoTrack) {
+          if (videoTrack.muted) {
+            videoTrack.onunmute = () => startCleanDualRecording();
+          } else {
+            startCleanDualRecording();
+          }
+        }
+      });
+      call.on('close', () => resetViewUI());
+    }
+
+    function endViewEachOther() {
+      sendSignal({ type: 'VIEW_ENDED' });
+      terminateView();
+    }
+
+    function terminateView() {
+      stopCleanDualRecording();
+      if (callObj) callObj.close();
+      if (localStream) localStream.getTracks().forEach(t => t.stop());
+      resetViewUI();
+    }
+
+    function resetViewUI() {
+      document.getElementById('viewBtn').style.display = 'block';
+      document.getElementById('endViewBtn').style.display = 'none';
+      document.getElementById('remoteVideo').srcObject = null;
+      document.getElementById('localVideo').srcObject = null;
+    }
+
+    function toggleMic() {
+      if (localStream) {
+        micEnabled = !micEnabled;
+        localStream.getAudioTracks()[0].enabled = micEnabled;
+        const btn = document.getElementById('micBtn');
+        btn.innerText = `🎤 Mic: ${micEnabled ? 'ON' : 'OFF'}`;
+        btn.className = micEnabled ? '' : 'btn-muted';
+      }
+    }
+
+    function toggleCam() {
+      if (localStream) {
+        camEnabled = !camEnabled;
+        localStream.getVideoTracks()[0].enabled = camEnabled;
+        const btn = document.getElementById('camBtn');
+        btn.innerText = `📷 Cam: ${camEnabled ? 'ON' : 'OFF'}`;
+        btn.className = camEnabled ? '' : 'btn-muted';
+      }
+    }
+
+    // Precise Aspect-Ratio Crop Math (object-fit: cover)
+    function drawCoverImage(ctx, img, dx, dy, dWidth, dHeight) {
+      const vWidth = img.videoWidth || 640;
+      const vHeight = img.videoHeight || 480;
+      const targetRatio = dWidth / dHeight;
+      const videoRatio = vWidth / vHeight;
+      
+      let sWidth, sHeight, sx, sy;
+      if (videoRatio > targetRatio) {
+        sHeight = vHeight;
+        sWidth = vHeight * targetRatio;
+        sx = (vWidth - sWidth) / 2;
+        sy = 0;
+      } else {
+        sWidth = vWidth;
+        sHeight = vWidth / targetRatio;
+        sx = 0;
+        sy = (vHeight - sHeight) / 2;
+      }
+      ctx.drawImage(img, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
+    }
+
+    // Recording: Equal Frame Ratio with NO Distracting Mic Audio in Output
+    function startCleanDualRecording() {
+      if (mediaRecorder && mediaRecorder.state === 'recording') return;
+      recordedChunks = [];
+
+      const canvas = document.getElementById('compositeCanvas');
+      const ctx = canvas.getContext('2d');
+      const localVid = document.getElementById('localVideo');
+      const remoteVid = document.getElementById('remoteVideo');
+
+      function drawFrames() {
+        ctx.fillStyle = '#0a0e17';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Frame 1: Left 50% (Him)
+        if (localVid.readyState >= 2) {
+          drawCoverImage(ctx, localVid, 0, 0, 640, 720);
+        }
+        // Frame 2: Right 50% (Her)
+        if (remoteVid.readyState >= 2) {
+          drawCoverImage(ctx, remoteVid, 640, 0, 640, 720);
+        }
+
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(640, 0);
+        ctx.lineTo(640, 720);
+        ctx.stroke();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 22px sans-serif';
+        ctx.fillText('You', 24, 40);
+        ctx.fillText('Her', 664, 40);
+
+        canvasAnimId = requestAnimationFrame(drawFrames);
+      }
+      drawFrames();
+
+      // Only capture visual video frames (leaves out mic interference completely)
+      const cleanStream = canvas.captureStream(30);
+
+      const mimeTypes = ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=h264', 'video/webm'];
+      const activeMime = mimeTypes.find(t => MediaRecorder.isTypeSupported(t)) || 'video/mp4';
+
+      try {
+        mediaRecorder = new MediaRecorder(cleanStream, { mimeType: activeMime });
+      } catch (e) {
+        mediaRecorder = new MediaRecorder(cleanStream);
+      }
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) recordedChunks.push(e.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        cancelAnimationFrame(canvasAnimId);
+        const fullBlob = new Blob(recordedChunks, { type: 'video/mp4' });
+        saveRecordingLocally(fullBlob);
+        document.getElementById('recStatus').style.display = 'none';
+      };
+
+      mediaRecorder.start(500);
+      document.getElementById('recStatus').style.display = 'inline-block';
+    }
+
+    function stopCleanDualRecording() {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.requestData();
+        mediaRecorder.stop();
+      }
+    }
+
+    // YouTube Sync Engine (Single-Click with Auto-Handshake)
+    let player, isRemoteAction = false;
+    function onYouTubeIframeAPIReady() {
+      player = new YT.Player('player', {
+        height: '100%', width: '100%', videoId: 'dQw4w9WgXcQ',
+        playerVars: { playsinline: 1 },
+        events: { 'onStateChange': onPlayerStateChange }
+      });
+    }
+
+    function onPlayerStateChange(e) {
+      if (isRemoteAction) return;
+      if (e.data === YT.PlayerState.PLAYING) {
+        isMusicPlaying = true;
+        updatePlayBtn(true);
+        broadcastPlay(player.getCurrentTime());
+      } else if (e.data === YT.PlayerState.PAUSED) {
+        isMusicPlaying = false;
+        updatePlayBtn(false);
+        sendSignal({ type: 'MUSIC_PAUSE', time: player.getCurrentTime() });
+      }
+    }
+
+    function broadcastPlay(time) {
+      sendSignal({ type: 'MUSIC_PLAY_REQUEST', time: time });
+      // Clear any previous interval before setting a new one
+      if (syncInterval) clearInterval(syncInterval);
+      syncInterval = setInterval(() => {
+        if (player.getPlayerState() === YT.PlayerState.PLAYING) {
+          sendSignal({ type: 'MUSIC_SYNC_CHECK', time: player.getCurrentTime() });
+        } else {
+          clearInterval(syncInterval);
+        }
+      }, 3000);
+    }
+
+    function toggleMusicPlay() {
+      const isPlaying = player.getPlayerState() === YT.PlayerState.PLAYING;
+      if (isPlaying) {
+        player.pauseVideo();
+        updatePlayBtn(false);
+        sendSignal({ type: 'MUSIC_PAUSE', time: player.getCurrentTime() });
+      } else {
+        player.playVideo();
+        updatePlayBtn(true);
+        broadcastPlay(player.getCurrentTime());
+      }
+    }
+
+    function forceSync() {
+      sendSignal({ type: 'MUSIC_SEEK', time: player.getCurrentTime() });
+    }
+
+    function loadCustomVideo() {
+      const url = document.getElementById('ytUrl').value;
+      const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
+      if (match && match[1]) {
+        player.loadVideoById(match[1]);
+        sendSignal({ type: 'MUSIC_LOAD', id: match[1] });
+      }
+    }
+
+    function updatePlayBtn(isPlaying) {
+      const btn = document.getElementById('musicPlayBtn');
+      btn.innerText = isPlaying ? '⏸ Pause' : '▶ Play';
+      btn.className = isPlaying ? 'btn-end' : 'btn-call';
+    }
+
+    function setupDataChannel() {
+      dataConn.on('data', (d) => {
+        if (d.type === 'VIEW_ENDED') terminateView();
+
+        isRemoteAction = true;
+        if (d.type === 'MUSIC_PLAY_REQUEST') {
+          player.seekTo(d.time, true);
+          player.playVideo();
+          updatePlayBtn(true);
+          // Confirm back
+          sendSignal({ type: 'MUSIC_PLAY_ACK', time: player.getCurrentTime() });
+        }
+        if (d.type === 'MUSIC_SYNC_CHECK') {
+          const drift = Math.abs(player.getCurrentTime() - d.time);
+          if (drift > 1.2) player.seekTo(d.time, true);
+        }
+        if (d.type === 'MUSIC_PAUSE') {
+          player.seekTo(d.time, true);
+          player.pauseVideo();
+          updatePlayBtn(false);
+        }
+        if (d.type === 'MUSIC_SEEK') player.seekTo(d.time, true);
+        if (d.type === 'MUSIC_LOAD') player.loadVideoById(d.id);
+        
+        setTimeout(() => { isRemoteAction = false; }, 500);
+      });
+    }
+
+    function sendSignal(obj) { if (dataConn && dataConn.open) dataConn.send(obj); }
+  </script>
+</body>
+</html>
