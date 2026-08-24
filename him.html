@@ -28,9 +28,7 @@
       display: flex; flex-direction: column; gap: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
     }
     .header-row { display: flex; justify-content: space-between; align-items: center; }
-    .status-badge {
-      font-size: 11px; padding: 4px 10px; border-radius: 20px; font-weight: 600;
-    }
+    .status-badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; font-weight: 600; }
     .online { background: rgba(34, 197, 94, 0.15); color: var(--success); }
     .offline { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
     .recording-badge { background: rgba(239, 68, 68, 0.25); color: #f87171; border: 1px solid #ef4444; animation: pulse 1.5s infinite; }
@@ -100,7 +98,7 @@
       <div class="header-row">
         <h4 style="margin:0;">📹 Video Call</h4>
         <div>
-          <span id="recStatus" class="status-badge recording-badge" style="display:none; margin-right:4px;">🔴 Auto-Recording</span>
+          <span id="recStatus" class="status-badge recording-badge" style="display:none; margin-right:4px;">🔴 Dual-Record</span>
           <span id="callStatus" class="status-badge offline">Disconnected</span>
         </div>
       </div>
@@ -119,7 +117,7 @@
     <!-- Saved Video Recordings Vault -->
     <div class="vault-section">
       <div class="header-row">
-        <h4 style="margin:0;">📁 Saved Video Vault (Local Storage)</h4>
+        <h4 style="margin:0;">📁 Saved Video Vault (Dual Frame)</h4>
         <button onclick="clearAllRecordings()" style="flex:0; min-width:100px; background:#e11d48; font-size:11px; padding:6px 12px;">Delete All</button>
       </div>
       <div id="vaultList" class="vault-grid">
@@ -128,16 +126,20 @@
     </div>
   </div>
 
+  <!-- Off-screen Canvas for Dual Composite Stream -->
+  <canvas id="compositeCanvas" width="1280" height="720" style="display:none;"></canvas>
+
   <script>
     const myId = "room-2026-user-him", targetId = "room-2026-user-her";
     const peer = new Peer(myId);
     let dataConn = null, callObj = null, localStream = null, remoteStreamObj = null;
     let micEnabled = true, camEnabled = true;
     let mediaRecorder = null, recordedChunks = [];
+    let canvasAnimId = null, audioCtx = null;
 
-    // --- IndexedDB Local Video Storage Setup ---
+    // --- IndexedDB Video Storage ---
     let db;
-    const dbReq = indexedDB.open("CallRecordingsDB_v2", 1);
+    const dbReq = indexedDB.open("CallRecordingsDB_DualFrame", 1);
     dbReq.onupgradeneeded = (e) => {
       db = e.target.result;
       if (!db.objectStoreNames.contains("recordings")) {
@@ -150,10 +152,7 @@
     };
 
     function saveRecordingLocally(blob) {
-      if (!blob || blob.size === 0) {
-        console.warn("Empty blob ignored.");
-        return;
-      }
+      if (!blob || blob.size === 0) return;
       const tx = db.transaction("recordings", "readwrite");
       const store = tx.objectStore("recordings");
       store.add({
@@ -173,7 +172,7 @@
         const list = document.getElementById('vaultList');
         list.innerHTML = "";
         if (!req.result || req.result.length === 0) {
-          list.innerHTML = '<small style="opacity: 0.6;">No recordings saved yet. They will appear here automatically when calls end.</small>';
+          list.innerHTML = '<small style="opacity: 0.6;">No recordings saved yet. Dual-frame videos will appear here automatically when calls end.</small>';
           return;
         }
         req.result.reverse().forEach((item) => {
@@ -184,7 +183,7 @@
             <video src="${url}" controls playsinline preload="metadata"></video>
             <div style="font-size:11px; opacity:0.8;">📅 ${item.date} (${(item.blob.size / (1024*1024)).toFixed(2)} MB)</div>
             <div style="display:flex; gap:6px;">
-              <a href="${url}" download="call_${item.timestamp}.mp4" style="flex:1; text-align:center; background:#38bdf8; color:#000; text-decoration:none; padding:8px; border-radius:6px; font-size:12px; font-weight:bold;">⬇ Download</a>
+              <a href="${url}" download="dual_call_${item.timestamp}.webm" style="flex:1; text-align:center; background:#38bdf8; color:#000; text-decoration:none; padding:8px; border-radius:6px; font-size:12px; font-weight:bold;">⬇ Download</a>
               <button onclick="deleteRecording(${item.id})" style="flex:0; background:#ef4444; padding:6px 12px; font-size:12px;">🗑</button>
             </div>
           `;
@@ -206,10 +205,16 @@
       tx.oncomplete = () => renderSavedRecordings();
     }
 
-    // Audio & Video Setup
+    // --- Enhanced Voice Clarity & Noise Cancellation Constraints ---
     const mediaConstraints = {
       video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
-      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 2, sampleRate: 48000 }
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        channelCount: 1,
+        sampleRate: 48000
+      }
     };
 
     peer.on('open', () => autoConnect());
@@ -257,70 +262,112 @@
         const remoteVideo = document.getElementById('remoteVideo');
         remoteVideo.srcObject = remStream;
 
-        // Ensure track is active and streaming frames before initializing recorder
         const videoTrack = remStream.getVideoTracks()[0];
         if (videoTrack) {
           if (videoTrack.muted) {
-            videoTrack.onunmute = () => startAutoRecording(remStream);
+            videoTrack.onunmute = () => startDualFrameRecording();
           } else {
-            startAutoRecording(remStream);
+            startDualFrameRecording();
           }
         } else {
-          startAutoRecording(remStream);
+          startDualFrameRecording();
         }
       });
 
       call.on('close', () => resetCall());
     }
 
-    function getSupportedMimeType() {
-      const types = [
-        'video/webm;codecs=vp9,opus',
-        'video/webm;codecs=vp8,opus',
-        'video/webm;codecs=h264,opus',
-        'video/webm',
-        'video/mp4'
-      ];
-      for (const t of types) {
-        if (MediaRecorder.isTypeSupported(t)) return t;
-      }
-      return '';
-    }
-
-    function startAutoRecording(stream) {
+    // --- Dual-Frame Canvas Compositor & Audio Mixer ---
+    function startDualFrameRecording() {
       if (mediaRecorder && mediaRecorder.state === 'recording') return;
       recordedChunks = [];
-      const selectedMime = getSupportedMimeType();
-      
-      const options = selectedMime ? { mimeType: selectedMime } : {};
+
+      const canvas = document.getElementById('compositeCanvas');
+      const ctx = canvas.getContext('2d');
+      const localVid = document.getElementById('localVideo');
+      const remoteVid = document.getElementById('remoteVideo');
+
+      function drawFrames() {
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Frame 1: Left Side (Him)
+        if (localVid.readyState >= 2) {
+          ctx.drawImage(localVid, 0, 0, 640, 720);
+        }
+        // Frame 2: Right Side (Her)
+        if (remoteVid.readyState >= 2) {
+          ctx.drawImage(remoteVid, 640, 0, 640, 720);
+        }
+
+        // Dividing line & UI labels
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(640, 0);
+        ctx.lineTo(640, 720);
+        ctx.stroke();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '20px sans-serif';
+        ctx.fillText('You', 20, 40);
+        ctx.fillText('Her', 660, 40);
+
+        canvasAnimId = requestAnimationFrame(drawFrames);
+      }
+      drawFrames();
+
+      const compositeVideoStream = canvas.captureStream(30);
+
+      // Web Audio API Dual Track Mixer
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const audioDestination = audioCtx.createMediaStreamDestination();
+
+      if (localStream && localStream.getAudioTracks().length > 0) {
+        const localSource = audioCtx.createMediaStreamSource(localStream);
+        localSource.connect(audioDestination);
+      }
+      if (remoteStreamObj && remoteStreamObj.getAudioTracks().length > 0) {
+        const remoteSource = audioCtx.createMediaStreamSource(remoteStreamObj);
+        remoteSource.connect(audioDestination);
+      }
+
+      // Combine Mixed Audio with Composite 2-Frame Video Stream
+      const combinedTracks = [
+        ...compositeVideoStream.getVideoTracks(),
+        ...audioDestination.stream.getAudioTracks()
+      ];
+      const mixedStream = new MediaStream(combinedTracks);
+
+      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus') 
+        ? 'video/webm;codecs=vp8,opus' 
+        : 'video/webm';
+
       try {
-        mediaRecorder = new MediaRecorder(stream, options);
-      } catch (err) {
-        console.error("MediaRecorder fallback:", err);
-        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder = new MediaRecorder(mixedStream, { mimeType: mimeType });
+      } catch (e) {
+        mediaRecorder = new MediaRecorder(mixedStream);
       }
 
       mediaRecorder.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) {
-          recordedChunks.push(e.data);
-        }
+        if (e.data && e.data.size > 0) recordedChunks.push(e.data);
       };
 
       mediaRecorder.onstop = () => {
-        const type = selectedMime || 'video/webm';
-        const fullBlob = new Blob(recordedChunks, { type: type });
+        cancelAnimationFrame(canvasAnimId);
+        if (audioCtx && audioCtx.state !== 'closed') audioCtx.close();
+        const fullBlob = new Blob(recordedChunks, { type: mimeType });
         saveRecordingLocally(fullBlob);
         document.getElementById('recStatus').style.display = 'none';
       };
 
-      // Collect data in 500ms chunks to guarantee complete playback metadata
       mediaRecorder.start(500);
       document.getElementById('recStatus').style.display = 'inline-block';
     }
 
-    function stopAutoRecording() {
+    function stopDualFrameRecording() {
       if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-        mediaRecorder.requestData(); // Flush remaining frames
+        mediaRecorder.requestData();
         mediaRecorder.stop();
       }
     }
@@ -331,7 +378,7 @@
     }
 
     function terminateCall() {
-      stopAutoRecording();
+      stopDualFrameRecording();
       if (callObj) callObj.close();
       if (localStream) localStream.getTracks().forEach(t => t.stop());
       resetCall();
