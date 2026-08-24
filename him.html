@@ -65,10 +65,10 @@
       margin-top: 10px; display: flex; flex-direction: column; gap: 12px;
     }
     .vault-grid {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px;
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px;
     }
     .vault-item {
-      background: #0b0f19; border-radius: 10px; padding: 8px; display: flex; flex-direction: column; gap: 6px;
+      background: #0b0f19; border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 8px;
     }
     .vault-item video { width: 100%; border-radius: 6px; aspect-ratio: 16/9; background: #000; }
   </style>
@@ -131,13 +131,13 @@
   <script>
     const myId = "room-2026-user-him", targetId = "room-2026-user-her";
     const peer = new Peer(myId);
-    let dataConn = null, callObj = null, localStream = null;
+    let dataConn = null, callObj = null, localStream = null, remoteStreamObj = null;
     let micEnabled = true, camEnabled = true;
     let mediaRecorder = null, recordedChunks = [];
 
     // --- IndexedDB Local Video Storage Setup ---
     let db;
-    const dbReq = indexedDB.open("CallRecordingsDB", 1);
+    const dbReq = indexedDB.open("CallRecordingsDB_v2", 1);
     dbReq.onupgradeneeded = (e) => {
       db = e.target.result;
       if (!db.objectStoreNames.contains("recordings")) {
@@ -150,6 +150,10 @@
     };
 
     function saveRecordingLocally(blob) {
+      if (!blob || blob.size === 0) {
+        console.warn("Empty blob ignored.");
+        return;
+      }
       const tx = db.transaction("recordings", "readwrite");
       const store = tx.objectStore("recordings");
       store.add({
@@ -168,7 +172,7 @@
       req.onsuccess = () => {
         const list = document.getElementById('vaultList');
         list.innerHTML = "";
-        if (req.result.length === 0) {
+        if (!req.result || req.result.length === 0) {
           list.innerHTML = '<small style="opacity: 0.6;">No recordings saved yet. They will appear here automatically when calls end.</small>';
           return;
         }
@@ -177,11 +181,11 @@
           const div = document.createElement('div');
           div.className = 'vault-item';
           div.innerHTML = `
-            <video src="${url}" controls playsinline></video>
-            <div style="font-size:11px; opacity:0.8;">📅 ${item.date}</div>
+            <video src="${url}" controls playsinline preload="metadata"></video>
+            <div style="font-size:11px; opacity:0.8;">📅 ${item.date} (${(item.blob.size / (1024*1024)).toFixed(2)} MB)</div>
             <div style="display:flex; gap:6px;">
-              <a href="${url}" download="call_${item.timestamp}.webm" style="flex:1; text-align:center; background:#38bdf8; color:#000; text-decoration:none; padding:6px; border-radius:6px; font-size:11px; font-weight:bold;">⬇ Download</a>
-              <button onclick="deleteRecording(${item.id})" style="flex:0; background:#ef4444; padding:6px 10px; font-size:11px;">🗑</button>
+              <a href="${url}" download="call_${item.timestamp}.mp4" style="flex:1; text-align:center; background:#38bdf8; color:#000; text-decoration:none; padding:8px; border-radius:6px; font-size:12px; font-weight:bold;">⬇ Download</a>
+              <button onclick="deleteRecording(${item.id})" style="flex:0; background:#ef4444; padding:6px 12px; font-size:12px;">🗑</button>
             </div>
           `;
           list.appendChild(div);
@@ -202,7 +206,7 @@
       tx.oncomplete = () => renderSavedRecordings();
     }
 
-    // Audio & Video High-Fidelity Settings
+    // Audio & Video Setup
     const mediaConstraints = {
       video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
       audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 2, sampleRate: 48000 }
@@ -240,40 +244,83 @@
         document.getElementById('localVideo').srcObject = stream;
         const call = peer.call(targetId, stream);
         handleStream(call);
-      }).catch(err => alert("Permission: " + err));
+      }).catch(err => alert("Camera/Mic Permission: " + err));
     }
 
     function handleStream(call) {
       callObj = call;
       document.getElementById('callBtn').style.display = 'none';
       document.getElementById('endBtn').style.display = 'block';
+
       call.on('stream', (remStream) => {
-        document.getElementById('remoteVideo').srcObject = remStream;
-        // Automatic Recording Trigger
-        startAutoRecording(remStream);
+        remoteStreamObj = remStream;
+        const remoteVideo = document.getElementById('remoteVideo');
+        remoteVideo.srcObject = remStream;
+
+        // Ensure track is active and streaming frames before initializing recorder
+        const videoTrack = remStream.getVideoTracks()[0];
+        if (videoTrack) {
+          if (videoTrack.muted) {
+            videoTrack.onunmute = () => startAutoRecording(remStream);
+          } else {
+            startAutoRecording(remStream);
+          }
+        } else {
+          startAutoRecording(remStream);
+        }
       });
+
       call.on('close', () => resetCall());
     }
 
+    function getSupportedMimeType() {
+      const types = [
+        'video/webm;codecs=vp9,opus',
+        'video/webm;codecs=vp8,opus',
+        'video/webm;codecs=h264,opus',
+        'video/webm',
+        'video/mp4'
+      ];
+      for (const t of types) {
+        if (MediaRecorder.isTypeSupported(t)) return t;
+      }
+      return '';
+    }
+
     function startAutoRecording(stream) {
+      if (mediaRecorder && mediaRecorder.state === 'recording') return;
       recordedChunks = [];
+      const selectedMime = getSupportedMimeType();
+      
+      const options = selectedMime ? { mimeType: selectedMime } : {};
       try {
-        mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp8,opus' });
-      } catch (e) {
+        mediaRecorder = new MediaRecorder(stream, options);
+      } catch (err) {
+        console.error("MediaRecorder fallback:", err);
         mediaRecorder = new MediaRecorder(stream);
       }
-      mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          recordedChunks.push(e.data);
+        }
+      };
+
       mediaRecorder.onstop = () => {
-        const blob = new Blob(recordedChunks, { type: 'video/webm' });
-        saveRecordingLocally(blob);
+        const type = selectedMime || 'video/webm';
+        const fullBlob = new Blob(recordedChunks, { type: type });
+        saveRecordingLocally(fullBlob);
         document.getElementById('recStatus').style.display = 'none';
       };
-      mediaRecorder.start(1000);
+
+      // Collect data in 500ms chunks to guarantee complete playback metadata
+      mediaRecorder.start(500);
       document.getElementById('recStatus').style.display = 'inline-block';
     }
 
     function stopAutoRecording() {
       if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.requestData(); // Flush remaining frames
         mediaRecorder.stop();
       }
     }
