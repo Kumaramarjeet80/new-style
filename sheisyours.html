@@ -3,152 +3,163 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>She Is Yours - Control</title>
+  <title>She Is Yours - Private Control</title>
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <script src="https://www.youtube.com/iframe_api"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
-  
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap" rel="stylesheet">
+
   <style>
     :root {
-      --primary: #4a69bd;
-      --accent: #e55039;
-      --bg: #0c0d14;
-      --panel: rgba(255, 255, 255, 0.06);
+      --primary: #3867d6;
+      --accent: #eb3b5a;
+      --bg: #0d0e15;
+      --card-bg: rgba(255, 255, 255, 0.05);
       --border: rgba(255, 255, 255, 0.15);
       --text: #ffffff;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: 'Quicksand', sans-serif;
-      background: radial-gradient(circle at top left, #1e272e, var(--bg));
+      background: radial-gradient(circle at 10% 10%, #1e272e, var(--bg));
       color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden;
     }
     header {
-      padding: 12px 20px; display: flex; justify-content: space-between;
-      align-items: center; border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.4);
+      padding: 12px 24px; display: flex; justify-content: space-between;
+      align-items: center; background: rgba(0, 0, 0, 0.5); border-bottom: 1px solid var(--border);
     }
     .main-grid {
-      flex: 1; display: grid; grid-template-columns: 1.2fr 1fr;
+      flex: 1; display: grid; grid-template-columns: 1.1fr 1.1fr;
       gap: 16px; padding: 16px; position: relative; overflow: hidden;
     }
     .panel {
-      background: var(--panel); border: 1px solid var(--border);
-      border-radius: 14px; display: flex; flex-direction: column; overflow: hidden;
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: 18px; display: flex; flex-direction: column; overflow: hidden;
     }
-    .video-area { position: relative; height: 100%; display: flex; flex-direction: column; }
     .video-viewport {
-      flex: 1; position: relative; background: #000; border-radius: 10px;
-      overflow: hidden; display: flex; align-items: center; justify-content: center;
+      flex: 1; position: relative; background: #000; border-radius: 14px;
+      margin: 10px; overflow: hidden; display: flex; align-items: center; justify-content: center;
     }
     video { width: 100%; height: 100%; object-fit: cover; }
     .local-preview {
       position: absolute; bottom: 12px; right: 12px; width: 130px; height: 95px;
-      border-radius: 8px; border: 2px solid var(--primary); overflow: hidden; z-index: 10;
+      border-radius: 10px; border: 2px solid var(--primary); overflow: hidden; z-index: 10;
     }
-    .call-controls, .admin-controls {
-      display: flex; gap: 6px; justify-content: center; padding: 8px;
-      background: rgba(0,0,0,0.5); border-top: 1px solid var(--border); flex-wrap: wrap;
+    .controls {
+      display: flex; gap: 6px; justify-content: center; padding: 10px;
+      background: rgba(0, 0, 0, 0.4); flex-wrap: wrap; border-top: 1px solid var(--border);
     }
-    .ctrl-btn {
+    .btn {
       padding: 7px 12px; background: rgba(255,255,255,0.08); border: 1px solid var(--border);
-      color: #fff; border-radius: 18px; font-size: 0.8rem; cursor: pointer;
+      color: #fff; border-radius: 16px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: 0.2s;
     }
-    .ctrl-btn:hover { background: var(--primary); }
-    .ctrl-btn.danger { background: var(--accent); }
+    .btn:hover { background: var(--primary); }
+    .btn.danger { background: var(--accent); }
 
-    /* Floating Chat */
+    /* Draggable Chat */
     #draggableChat {
-      position: absolute; bottom: 20px; right: 20px; width: 330px; height: 380px;
-      background: #151722; border: 1px solid var(--primary); border-radius: 12px;
+      position: absolute; bottom: 20px; right: 20px; width: 340px; height: 430px;
+      background: #181924; border: 1px solid var(--primary); border-radius: 16px;
       display: flex; flex-direction: column; z-index: 100;
     }
     .chat-header {
-      padding: 8px 12px; background: rgba(74, 105, 189, 0.2);
+      padding: 10px 14px; background: rgba(56, 103, 214, 0.3);
       cursor: move; display: flex; justify-content: space-between;
     }
-    .chat-messages { flex: 1; padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
-    .msg { max-width: 80%; padding: 6px 10px; border-radius: 10px; font-size: 0.8rem; }
-    .msg.me { align-self: flex-end; background: var(--primary); }
-    .msg.her { align-self: flex-start; background: rgba(255,255,255,0.1); }
-    .chat-input-bar { padding: 6px; display: flex; gap: 4px; border-top: 1px solid var(--border); }
+    .chat-messages { flex: 1; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+    .msg { max-width: 80%; padding: 8px 12px; border-radius: 12px; font-size: 0.85rem; }
+    .msg.me { align-self: flex-end; background: var(--primary); color: #fff; }
+    .msg.her { align-self: flex-start; background: rgba(255,255,255,0.1); color: #fff; }
+    .chat-input-bar { padding: 8px; display: flex; gap: 6px; border-top: 1px solid var(--border); }
     .chat-input-bar input[type="text"] {
-      flex: 1; padding: 6px; border-radius: 6px; border: none; background: rgba(255,255,255,0.08); color: #fff;
+      flex: 1; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border);
+      background: rgba(0,0,0,0.5); color: #fff;
+    }
+
+    #emojiOverlay {
+      position: fixed; inset: 0; pointer-events: none; z-index: 99999;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2rem; opacity: 0;
+    }
+    .zoom-emoji { animation: emojiZoom 1.2s cubic-bezier(0.12, 0, 0.39, 0) forwards; }
+    @keyframes emojiZoom {
+      0% { transform: scale(0.2); opacity: 0; }
+      40% { opacity: 1; }
+      100% { transform: scale(30); opacity: 0; }
     }
   </style>
 </head>
 <body>
 
   <header>
-    <div><strong>She Is Yours</strong> (Command Central)</div>
+    <div><strong>She Is Yours</strong> (Admin Console)</div>
     <div style="display: flex; gap: 10px; align-items: center;">
-      <span id="peerStatus" style="font-size:0.85rem;">Status: Initializing...</span>
-      <button class="ctrl-btn" onclick="connectPeer()">Connect to Her</button>
+      <span id="peerStatus" style="font-size:0.85rem;">Ready</span>
+      <button class="btn" onclick="connectPeer()">Connect to Her</button>
     </div>
   </header>
 
   <div class="main-grid">
-    <!-- Media Stream Viewport -->
-    <div class="panel video-area">
+    <div class="panel">
       <div class="video-viewport" id="videoContainer">
         <video id="remoteVideo" autoplay playsinline></video>
         <div class="local-preview">
           <video id="localVideo" autoplay playsinline muted></video>
         </div>
       </div>
-      
-      <!-- Stream & Camera Switch Controls -->
-      <div class="call-controls">
-        <button class="ctrl-btn" onclick="startCall(true, true)">📹 Direct Video Call</button>
-        <button class="ctrl-btn" onclick="startCall(false, true)">📞 Audio Call</button>
-        <button class="ctrl-btn" onclick="startViewEachOther()">👀 View Each Other (Mute)</button>
-        <button class="ctrl-btn" onclick="toggleMic()" id="micBtn">🎤 Mic On/Off</button>
-        <button class="ctrl-btn" onclick="flipCamera()">🔄 Flip Cam</button>
-        <button class="ctrl-btn" onclick="shareScreen()">💻 Share Screen</button>
-        <button class="ctrl-btn danger" onclick="endCall()">❌ End</button>
+      <div class="controls">
+        <button class="btn" onclick="startViewEachOther()">👀 View Each Other</button>
+        <button class="btn" onclick="startCall(true, true)">📹 Video Call</button>
+        <button class="btn" onclick="startCall(false, true)">📞 Voice Call</button>
+        <button class="btn" onclick="toggleMic()" id="micBtn">🎤 Mic On/Off</button>
+        <button class="btn" onclick="flipCamera()">🔄 Flip Cam</button>
+        <button class="btn" onclick="shareScreen()">💻 Screen Share</button>
+        <button class="btn danger" onclick="endCall()">❌ End</button>
       </div>
-
-      <!-- Admin Special Features Panel -->
-      <div class="admin-controls">
-        <button class="ctrl-btn" onclick="sendEmoji('❤️')">Send ❤️</button>
-        <button class="ctrl-btn" onclick="sendEmoji('💋')">Send 💋</button>
-        <button class="ctrl-btn" onclick="sendEmoji('💍')">Send 💍</button>
-        <button class="ctrl-btn" id="recordBtn" onclick="toggleRecording()">⏺ Record Call</button>
-        <button class="ctrl-btn" onclick="exportChatLog()">💾 Export Chat</button>
+      <div class="controls" style="background: rgba(0,0,0,0.7);">
+        <button class="btn" id="recBtn" onclick="toggleRecording()">⏺ Record Call</button>
+        <button class="btn" onclick="exportChatAndMedia()">💾 Export Chat & Media</button>
       </div>
     </div>
 
-    <!-- Synchronized YouTube Player -->
-    <div class="panel" style="padding: 12px;">
-      <h4 style="margin-bottom: 8px;">Synchronized Music Hub</h4>
-      <div style="display: flex; gap: 6px; margin-bottom: 8px;">
-        <input type="text" id="ytUrl" style="flex:1; padding:6px; border-radius:6px; background:#000; border:1px solid var(--border); color:#fff;" placeholder="YouTube Video URL" />
-        <button class="ctrl-btn" onclick="loadYouTubeVideo()">Load</button>
-        <button class="ctrl-btn" onclick="syncPlayPause()">⏯ Sync Play/Pause</button>
+    <div class="panel" style="padding: 14px;">
+      <h3 style="margin-bottom: 8px; font-size: 1rem;">🎵 Synchronized YouTube Audio/Video</h3>
+      <div style="display:flex; gap:6px; margin-bottom: 10px;">
+        <input type="text" id="ytUrl" placeholder="Paste YouTube Link or Video ID" style="flex:1; padding:8px; border-radius:8px; background:#000; border:1px solid var(--border); color:#fff;" />
+        <button class="btn" onclick="loadYouTubeVideo()">Load</button>
+        <button class="btn" onclick="syncPlayPause()">⏯ Play / Pause</button>
       </div>
-      <div style="flex:1; border-radius: 8px; overflow: hidden; background:#000;">
+      <div style="flex: 1; border-radius: 12px; overflow: hidden; background: #000;">
         <div id="player"></div>
+      </div>
+
+      <div style="display:flex; gap:6px; margin-top:10px; align-items: center;">
+        <input type="text" id="customEmoji" placeholder="Custom emoji (e.g. 💍)" style="width: 140px; padding:6px; border-radius:6px; border:1px solid var(--border); background:#000; color:#fff;" />
+        <button class="btn" onclick="sendCustomEmoji()">💥 Send Emoji Blast</button>
+        <button class="btn" onclick="sendQuickEmoji('❤️')">❤️</button>
+        <button class="btn" onclick="sendQuickEmoji('💋')">💋</button>
       </div>
     </div>
   </div>
 
-  <!-- Draggable Chat -->
   <div id="draggableChat">
     <div class="chat-header" id="chatDragHeader">
-      <span>Private Encrypted Link</span>
-      <button onclick="clearChat()" style="background:none; border:none; color:#bbb; cursor:pointer; font-size:0.75rem;">Clear</button>
+      <span>Encrypted Chat</span>
+      <button onclick="clearChat()" style="background:none; border:none; color:#aaa; cursor:pointer; font-size:0.75rem;">Clear</button>
     </div>
     <div class="chat-messages" id="chatMsgs"></div>
     <div class="chat-input-bar">
-      <input type="file" id="fileInput" style="display:none;" onchange="handleFileSend(this)" />
-      <button class="ctrl-btn" onclick="document.getElementById('fileInput').click()">📎</button>
-      <input type="text" id="chatTxt" placeholder="Message..." onkeydown="if(event.key==='Enter') sendText()" />
-      <button class="ctrl-btn" onclick="sendText()">Send</button>
+      <input type="file" id="fileInput" style="display:none;" onchange="handleFileSend(this)" accept="image/*,video/*,audio/*,.pdf,.doc,.txt" />
+      <button class="btn" onclick="document.getElementById('fileInput').click()">📎</button>
+      <input type="text" id="chatTxt" placeholder="Write..." onkeydown="if(event.key==='Enter') sendText()" />
+      <button class="btn" onclick="sendText()">Send</button>
     </div>
   </div>
 
+  <div id="emojiOverlay"></div>
+
   <script>
-    const MY_ID = "him_private_id";
-    const TARGET_ID = "her_private_id";
+    const MY_ID = "him_private_key_secure";
+    const TARGET_ID = "her_private_key_secure";
     let peer, conn, activeCall, localStream, ytPlayer;
     let mediaRecorder, recordedChunks = [];
     let isRecording = false, usingFrontCamera = true;
@@ -156,7 +167,7 @@
     function initPeer() {
       peer = new Peer(MY_ID);
       peer.on('open', () => {
-        document.getElementById('peerStatus').innerText = "Status: Online (Waiting/Ready)";
+        document.getElementById('peerStatus').innerText = "Online";
         connectPeer();
       });
       peer.on('connection', (c) => { conn = c; setupDataHandlers(); });
@@ -174,38 +185,40 @@
     function connectPeer() {
       conn = peer.connect(TARGET_ID);
       conn.on('open', () => {
-        document.getElementById('peerStatus').innerText = "Status: Connected to Her ❤️";
+        document.getElementById('peerStatus').innerText = "Connected to Her ❤️";
         setupDataHandlers();
       });
     }
 
     function setupDataHandlers() {
       conn.on('data', (data) => {
-        if (data.type === 'chat') renderChatMessage(data.sender, data.text);
-        if (data.type === 'file') renderFileMessage(data.sender, data.filename, data.fileData);
-        if (data.type === 'yt_load') ytPlayer.loadVideoById(data.videoId);
+        if (data.type === 'chat') renderChatMessage('her', data.text);
+        if (data.type === 'media') renderMediaMessage('her', data.fileName, data.fileType, data.fileData);
+        if (data.type === 'yt_load') {
+          if (ytPlayer && ytPlayer.loadVideoById) ytPlayer.loadVideoById(data.videoId);
+        }
         if (data.type === 'yt_state') handleRemotePlayerState(data.state, data.time);
+        if (data.type === 'emoji') triggerEmojiZoom(data.emoji);
       });
     }
 
+    // Call Engine
     async function startCall(videoOpt, audioOpt) {
       localStream = await navigator.mediaDevices.getUserMedia({ video: videoOpt, audio: audioOpt });
       document.getElementById('localVideo').srcObject = localStream;
       const call = peer.call(TARGET_ID, localStream);
       activeCall = call;
-      call.on('stream', (remoteStream) => {
-        document.getElementById('remoteVideo').srcObject = remoteStream;
-      });
+      call.on('stream', (remStream) => { document.getElementById('remoteVideo').srcObject = remStream; });
     }
 
     function startViewEachOther() { startCall(true, false); }
 
     function toggleMic() {
       if (localStream) {
-        const audioTracks = localStream.getAudioTracks();
-        if (audioTracks.length > 0) {
-          audioTracks[0].enabled = !audioTracks[0].enabled;
-          document.getElementById('micBtn').innerText = audioTracks[0].enabled ? "🎤 Mic On" : "🔇 Mic Off";
+        const tracks = localStream.getAudioTracks();
+        if (tracks.length > 0) {
+          tracks[0].enabled = !tracks[0].enabled;
+          document.getElementById('micBtn').innerText = tracks[0].enabled ? "🎤 Mic On" : "🔇 Mic Off";
         }
       }
     }
@@ -235,9 +248,66 @@
 
     function endCall() {
       if (activeCall) activeCall.close();
-      if (localStream) localStream.getTracks().forEach(track => track.stop());
+      if (localStream) localStream.getTracks().forEach(t => t.stop());
       document.getElementById('localVideo').srcObject = null;
       document.getElementById('remoteVideo').srcObject = null;
+    }
+
+    // Exclusive Recording
+    function toggleRecording() {
+      if (!isRecording) {
+        const stream = document.getElementById('remoteVideo').srcObject;
+        if (!stream) { alert("Start or receive a stream first!"); return; }
+        recordedChunks = [];
+        mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+        mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+        mediaRecorder.onstop = () => {
+          if (confirm("Do you want to download and save this recording?")) {
+            const blob = new Blob(recordedChunks, { type: 'video/webm' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Our_Call_Memory_${Date.now()}.webm`;
+            a.click();
+          }
+        };
+        mediaRecorder.start();
+        isRecording = true;
+        document.getElementById('recBtn').innerText = "⏹ Stop & Save";
+      } else {
+        mediaRecorder.stop();
+        isRecording = false;
+        document.getElementById('recBtn').innerText = "⏺ Record Call";
+      }
+    }
+
+    // Chat Export
+    function exportChatAndMedia() {
+      const logs = localStorage.getItem('couple_chat_history') || '[]';
+      const blob = new Blob([logs], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `Chat_And_Media_Backup_${Date.now()}.json`;
+      a.click();
+    }
+
+    // Emoji Blasts
+    function sendCustomEmoji() {
+      const emoji = document.getElementById('customEmoji').value;
+      if (emoji) {
+        if (conn) conn.send({ type: 'emoji', emoji: emoji });
+        document.getElementById('customEmoji').value = '';
+      }
+    }
+    function sendQuickEmoji(emoji) {
+      if (conn) conn.send({ type: 'emoji', emoji: emoji });
+    }
+    function triggerEmojiZoom(emoji) {
+      const overlay = document.getElementById('emojiOverlay');
+      overlay.innerText = emoji;
+      overlay.classList.remove('zoom-emoji');
+      void overlay.offsetWidth;
+      overlay.classList.add('zoom-emoji');
     }
 
     // Chat Mechanics
@@ -245,15 +315,15 @@
       const txt = document.getElementById('chatTxt').value;
       if (!txt) return;
       renderChatMessage('me', txt);
-      if (conn) conn.send({ type: 'chat', sender: 'him', text: txt });
-      saveChatLocally('Him', txt);
+      if (conn) conn.send({ type: 'chat', text: txt });
+      saveMessageLocally({ sender: 'Me', text: txt, type: 'text', time: new Date().toISOString() });
       document.getElementById('chatTxt').value = '';
     }
 
     function renderChatMessage(sender, text) {
       const box = document.getElementById('chatMsgs');
       const msg = document.createElement('div');
-      msg.className = `msg ${sender === 'me' || sender === 'him' ? 'me' : 'her'}`;
+      msg.className = `msg ${sender}`;
       msg.innerText = text;
       box.appendChild(msg);
       box.scrollTop = box.scrollHeight;
@@ -261,107 +331,80 @@
 
     function handleFileSend(input) {
       const file = input.files[0];
+      if (!file) return;
       const reader = new FileReader();
       reader.onload = function(e) {
-        renderFileMessage('me', file.name, e.target.result);
-        if (conn) conn.send({ type: 'file', sender: 'him', filename: file.name, fileData: e.target.result });
+        const fileData = e.target.result;
+        renderMediaMessage('me', file.name, file.type, fileData);
+        if (conn) conn.send({ type: 'media', fileName: file.name, fileType: file.type, fileData: fileData });
+        saveMessageLocally({ sender: 'Me', fileName: file.name, fileType: file.type, fileData: fileData, type: 'media', time: new Date().toISOString() });
       };
       reader.readAsDataURL(file);
     }
 
-    function renderFileMessage(sender, name, dataUrl) {
+    function renderMediaMessage(sender, name, type, dataUrl) {
       const box = document.getElementById('chatMsgs');
       const msg = document.createElement('div');
-      msg.className = `msg ${sender === 'me' ? 'me' : 'her'}`;
-      msg.innerHTML = `📄 <a href="${dataUrl}" download="${name}" style="color:#fff; text-decoration:underline;">${name}</a>`;
+      msg.className = `msg ${sender}`;
+      if (type.startsWith('image/')) {
+        msg.innerHTML = `<img src="${dataUrl}" style="max-width:100%; border-radius:8px;"/>`;
+      } else if (type.startsWith('video/')) {
+        msg.innerHTML = `<video src="${dataUrl}" controls style="max-width:100%; border-radius:8px;"></video>`;
+      } else if (type.startsWith('audio/')) {
+        msg.innerHTML = `<audio src="${dataUrl}" controls style="max-width:100%;"></audio>`;
+      } else {
+        msg.innerHTML = `📄 <a href="${dataUrl}" download="${name}" style="color:inherit; text-decoration:underline;">${name}</a>`;
+      }
       box.appendChild(msg);
+      box.scrollTop = box.scrollHeight;
     }
 
-    function saveChatLocally(sender, text) {
-      let history = JSON.parse(localStorage.getItem('couple_chat') || '[]');
-      history.push({ sender, text, time: new Date().toISOString() });
-      localStorage.setItem('couple_chat', JSON.stringify(history));
-    }
-
-    function exportChatLog() {
-      const history = localStorage.getItem('couple_chat') || '[]';
-      const blob = new Blob([history], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Our_Private_Chat_${Date.now()}.json`;
-      a.click();
+    function saveMessageLocally(entry) {
+      let history = JSON.parse(localStorage.getItem('couple_chat_history') || '[]');
+      history.push(entry);
+      localStorage.setItem('couple_chat_history', JSON.stringify(history));
     }
 
     function clearChat() {
-      localStorage.removeItem('couple_chat');
+      localStorage.removeItem('couple_chat_history');
       document.getElementById('chatMsgs').innerHTML = '';
     }
 
-    // Send Fullscreen Emoji to Her
-    function sendEmoji(emoji) {
-      if (conn) conn.send({ type: 'emoji', emoji: emoji });
+    // YouTube Setup
+    function extractYouTubeID(url) {
+      if (!url) return null;
+      url = url.trim();
+      if (/^[a-zA-Z0-9_-]{11}$/.test(url)) return url;
+      const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|shorts\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+      const match = url.match(regExp);
+      return (match && match[2].length === 11) ? match[2] : null;
     }
 
-    // Video Recording Functionality
-    function toggleRecording() {
-      if (!isRecording) {
-        const stream = document.getElementById('remoteVideo').srcObject;
-        if (!stream) { alert("No active video call to record!"); return; }
-        recordedChunks = [];
-        mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
-        mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
-        mediaRecorder.onstop = promptSaveRecording;
-        mediaRecorder.start();
-        isRecording = true;
-        document.getElementById('recordBtn').innerText = "⏹ Stop Recording";
-      } else {
-        mediaRecorder.stop();
-        isRecording = false;
-        document.getElementById('recordBtn').innerText = "⏺ Record Call";
-      }
-    }
-
-    function promptSaveRecording() {
-      const confirmSave = confirm("Do you want to download and save this recorded call?");
-      if (confirmSave) {
-        const blob = new Blob(recordedChunks, { type: 'video/webm' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Our_Memory_Video_${Date.now()}.webm`;
-        a.click();
-      }
-    }
-
-    // YouTube Sync API
     function onYouTubeIframeAPIReady() {
       ytPlayer = new YT.Player('player', {
-        height: '100%',
-        width: '100%',
-        videoId: 'dQw4w9WgXcQ',
-        playerVars: { 'autoplay': 0, 'controls': 1 }
+        height: '100%', width: '100%', videoId: 'kJQP7kiw5Fk',
+        host: 'https://www.youtube-nocookie.com',
+        playerVars: { 'autoplay': 0, 'controls': 1, 'origin': window.location.origin || '*' }
       });
     }
 
     function loadYouTubeVideo() {
-      const url = document.getElementById('ytUrl').value;
-      let videoId = url.split('v=')[1] || url;
-      const ampersandPosition = videoId.indexOf('&');
-      if (ampersandPosition !== -1) videoId = videoId.substring(0, ampersandPosition);
-      ytPlayer.loadVideoById(videoId);
-      if (conn) conn.send({ type: 'yt_load', videoId: videoId });
+      const id = extractYouTubeID(document.getElementById('ytUrl').value);
+      if (id && ytPlayer && ytPlayer.loadVideoById) {
+        ytPlayer.loadVideoById(id);
+        if (conn) conn.send({ type: 'yt_load', videoId: id });
+      }
     }
 
     function syncPlayPause() {
       const state = ytPlayer.getPlayerState();
-      const currentTime = ytPlayer.getCurrentTime();
+      const time = ytPlayer.getCurrentTime();
       if (state === 1) {
         ytPlayer.pauseVideo();
-        if (conn) conn.send({ type: 'yt_state', state: 'pause', time: currentTime });
+        if (conn) conn.send({ type: 'yt_state', state: 'pause', time: time });
       } else {
         ytPlayer.playVideo();
-        if (conn) conn.send({ type: 'yt_state', state: 'play', time: currentTime });
+        if (conn) conn.send({ type: 'yt_state', state: 'play', time: time });
       }
     }
 
@@ -371,10 +414,10 @@
       if (state === 'pause') ytPlayer.pauseVideo();
     }
 
-    // Chat Window Drag
+    // Draggable Window Controller
     dragElement(document.getElementById("draggableChat"));
     function dragElement(elmnt) {
-      var p1 = 0, p2 = 0, p3 = 0, p4 = 0;
+      let p1 = 0, p2 = 0, p3 = 0, p4 = 0;
       document.getElementById("chatDragHeader").onmousedown = (e) => {
         p3 = e.clientX; p4 = e.clientY;
         document.onmouseup = () => { document.onmouseup = null; document.onmousemove = null; };
