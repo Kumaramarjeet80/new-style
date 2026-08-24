@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cloud Music Portal</title>
+  <style>
+    :root {
+      --primary: #10b981;
+      --bg: #0f172a;
+      --card: #1e293b;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --border: #334155;
+      --danger: #ef4444;
+      --accent: #38bdf8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding-bottom: 130px; }
+
+    nav { background: #1e293b; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
+    nav h2 { color: var(--primary); font-size: 1.25rem; }
+    .nav-btns { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+    .container { max-width: 1100px; margin: 25px auto; padding: 0 15px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+    .card-title { font-size: 1.1rem; font-weight: bold; color: var(--primary); margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+    .form-group { display: flex; flex-direction: column; margin-bottom: 12px; }
+    label { font-size: 0.85rem; color: var(--muted); margin-bottom: 5px; font-weight: 600; }
+    input, select { padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: #0f172a; color: white; outline: none; }
+
+    .btn { padding: 8px 16px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; background: var(--primary); color: white; transition: 0.2s; }
+    .btn-danger { background: var(--danger); }
+    .btn-secondary { background: #334155; }
+    .btn-fx { background: var(--accent); color: #0f172a; font-weight: 700; }
+
+    .song-list { list-style: none; max-height: 450px; overflow-y: auto; }
+    .song-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid var(--border); transition: 0.2s; cursor: pointer; }
+    .song-item:hover { background: rgba(255,255,255,0.05); }
+
+    /* Bottom Audio Player */
+    .player-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: #020617; border-top: 1px solid var(--border); padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; z-index: 1000; flex-wrap: wrap; gap: 10px; }
+    .player-info { display: flex; align-items: center; gap: 15px; width: 250px; min-width: 200px; }
+    .player-controls { display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1; max-width: 500px; min-width: 250px; }
+    .control-btns { display: flex; gap: 15px; align-items: center; }
+    .btn-circle { width: 38px; height: 38px; border-radius: 50%; border: none; background: var(--primary); color: white; cursor: pointer; }
+    .progress-container { width: 100%; display: flex; align-items: center; gap: 10px; font-size: 0.8rem; color: var(--muted); }
+    input[type="range"] { flex: 1; accent-color: var(--primary); cursor: pointer; }
+
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.75); justify-content: center; align-items: center; z-index: 2000; padding: 15px; }
+    .modal-card { background: var(--card); border: 1px solid var(--border); padding: 25px; border-radius: 12px; width: 500px; max-width: 100%; max-height: 90vh; overflow-y: auto; }
+
+    /* DSP / Equalizer Window Styles */
+    .fx-modal-card { width: 720px; max-width: 95%; background: #0f172a; border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+    .fx-tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 15px; }
+    .fx-tab { padding: 10px 18px; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--muted); border-bottom: 2px solid transparent; }
+    .fx-tab.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
+    .fx-content { display: none; }
+    .fx-content.active { display: block; }
+    
+    .eq-grid { display: flex; justify-content: space-between; align-items: flex-end; height: 260px; padding: 15px 0; border-bottom: 1px solid var(--border); }
+    .slider-col { display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; flex: 1; }
+    .slider-col span { font-size: 10px; color: var(--muted); white-space: nowrap; }
+    .slider-col input[type="range"] {
+      -webkit-appearance: slider-vertical;
+      writing-mode: bt-lr;
+      width: 18px; flex: 1; accent-color: var(--accent);
+    }
+    .db-val { font-size: 10px; color: var(--text); font-weight: bold; }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav>
+    <h2>🎧 Cloud Music Portal</h2>
+    <div class="nav-btns">
+      <button class="btn" id="navViewerBtn" onclick="showView('viewer')">🎵 Viewer Panel</button>
+      <button class="btn btn-secondary" id="navAdminBtn" onclick="showView('admin')">🔐 Admin Panel</button>
+      <button class="btn btn-fx" onclick="openModal('fxModal')">🎛️ Audio FX / Equalizer</button>
+      <button class="btn btn-danger" id="adminLogoutBtn" style="display:none;" onclick="logoutAdmin()">Logout Admin</button>
+    </div>
+  </nav>
+
+  <div class="container">
+
+    <!-- VIEWER PANEL (Public Access) -->
+    <div id="viewViewer">
+      <!-- Search & Filters -->
+      <div class="card">
+        <div class="card-title">Search & Filter Library</div>
+        <div class="form-grid">
+          <input type="text" id="searchBox" placeholder="🔍 Search Song, Artist, Album..." onkeyup="applyFilters()">
+          <select id="typeFilter" onchange="applyFilters()">
+            <option value="all">All Types / Moods</option>
+            <option value="Sad">Sad</option>
+            <option value="Motivational">Motivational</option>
+            <option value="Happy">Happy</option>
+            <option value="Romantic">Romantic</option>
+          </select>
+          <select id="viewModeSelect" onchange="switchLibraryView()">
+            <option value="all">All Songs</option>
+            <option value="playlists">All Playlists</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Playlist Management Sub-card -->
+      <div class="card" id="playlistManagerCard" style="display: none;">
+        <div class="card-title">
+          <span>My Playlists</span>
+          <button class="btn" onclick="createPlaylist()">+ Create Playlist</button>
+        </div>
+        <select id="userPlaylistDropdown" onchange="renderPlaylistSongs()">
+          <option value="">Select a playlist...</option>
+        </select>
+      </div>
+
+      <!-- Songs Display List -->
+      <div class="card">
+        <div class="card-title" id="libraryTitle">Song Library</div>
+        <ul class="song-list" id="viewerSongList">
+          <li style="text-align: center; color: var(--muted); padding: 15px;">Loading Songs...</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ADMIN PANEL -->
+    <div id="viewAdmin" style="display: none;">
+      <!-- Admin Login Box -->
+      <div id="adminLoginBox" class="card" style="max-width: 400px; margin: 40px auto;">
+        <div class="card-title">Admin Authentication</div>
+        <div class="form-group"><label>Admin Username</label><input type="text" id="adminUser" placeholder="Username"></div>
+        <div class="form-group"><label>Admin Password</label><input type="password" id="adminPass" placeholder="Password"></div>
+        <button class="btn" style="width: 100%;" onclick="loginAdmin()">Login to Admin Dashboard</button>
+      </div>
+
+      <!-- Admin Dashboard -->
+      <div id="adminDashboard" style="display: none;">
+        <div class="card">
+          <div class="card-title">Upload New Song</div>
+          <form onsubmit="handleSongUpload(event)">
+            <div class="form-grid">
+              <div class="form-group"><label>Song Title</label><input type="text" id="upTitle" required></div>
+              <div class="form-group"><label>Artist Name</label><input type="text" id="upArtist" required></div>
+              <div class="form-group"><label>Album</label><input type="text" id="upAlbum" required></div>
+              <div class="form-group">
+                <label>Type / Mood</label>
+                <select id="upType" required>
+                  <option value="Sad">Sad</option>
+                  <option value="Motivational">Motivational</option>
+                  <option value="Happy">Happy</option>
+                  <option value="Romantic">Romantic</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Cover Art Image URL</label><input type="text" id="upArt" placeholder="https://..."></div>
+              <div class="form-group"><label>Select MP3 File (< 15MB)</label><input type="file" id="upFile" accept="audio/mpeg, audio/mp3" required></div>
+              <div class="form-group" style="flex-direction: row; gap: 10px; align-items: center; margin-top: 15px;">
+                <input type="checkbox" id="upAllowDownload" checked style="width: auto;">
+                <label for="upAllowDownload" style="margin: 0;">Allow Viewer Download</label>
+              </div>
+            </div>
+            <button type="submit" id="upBtn" class="btn" style="width: 100%; margin-top: 10px;">☁️ Upload Song & Save to Database</button>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Manage Song Master List</div>
+          <ul class="song-list" id="adminSongList"></ul>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- AUDIO FX / EQUALIZER MODAL (Web Audio API DSP) -->
+  <div class="modal" id="fxModal">
+    <div class="fx-modal-card">
+      <div class="card-title" style="color: var(--accent);">
+        <span>🎛️ Adjustments & Audio DSP Effects</span>
+        <button class="btn btn-secondary" onclick="closeModal('fxModal')">✕</button>
+      </div>
+
+      <!-- DSP Tabs -->
+      <div class="fx-tabs">
+        <div class="fx-tab active" onclick="switchFxTab(0)">Equalizer</div>
+        <div class="fx-tab" onclick="switchFxTab(1)">Dynamics Compressor</div>
+        <div class="fx-tab" onclick="switchFxTab(2)">Stereo Widener</div>
+      </div>
+
+      <!-- Tab 1: 10-Band Equalizer & Preamp -->
+      <div class="fx-content active" id="fxtab-0">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+            <input type="checkbox" id="eqEnable" checked onchange="toggleEQ()" style="width:auto;"> Enable Equalizer
+          </label>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <label style="margin:0;">Preset:</label>
+            <select id="eqPreset" onchange="applyPreset(this.value)" style="padding:4px 8px; font-size:12px;">
+              <option value="custom">Custom (Fig. 1 Curve)</option>
+              <option value="flat">Flat</option>
+              <option value="bass">Bass Boost</option>
+              <option value="vocal">Vocal Boost</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="eq-grid">
+          <!-- Preamp -->
+          <div class="slider-col" style="border-right: 1px dashed var(--border); padding-right: 8px;">
+            <input type="range" id="preamp" min="-20" max="20" step="0.1" value="14.4" oninput="updatePreamp(this.value)">
+            <span>Preamp</span>
+            <span class="db-val" id="preampVal">+14.4 dB</span>
+          </div>
+
+          <!-- 10 Frequency Bands Matching Fig. 1 -->
+          <div class="slider-col"><input type="range" class="eq-band" min="-20" max="20" step="0.1" value="18.2" oninput="updateBand(0, this.value)"><span>60 Hz</span><span class="db-val">+18.2 dB</span></div>
+          <div class="slider-col"><input type="range" class="eq-band" min="-20" max="20" step="0.1" value="11.8" oninput="updateBand(1, this.value)"><span>170 Hz</span><span class="db-val">+11.8 dB</span></div>
+          <div class="slider-col"><input type="range" class="eq-band" min="-20" max="20" step="0.1" value="3.7" oninput="updateBand(2, this.value)"><span>310 Hz</span><span class="db-val">+3.7 dB</span></div>
+          <div class="slider-col"><input type="range" class="eq-band" min="-20" max="20" step="0.1" value="-1.7" oninput="updateBand(3, this.value)"><span>600 Hz</span><span class="db-val">-1.7 dB</span></div>
+          <div class="slider-col"><input type="range" class="eq-band" min="-20" max="20" step="0.1" value="-7.8" oninput="updateBand(4, this.value)"><span>1 KHz</span><span class="db-val">-7.8 dB</span></div>
+          <div class="slider-col"><input type="range" class="eq-band" min="-20" max="20" step="0.1" value="2.4" oninput="updateBand(5, this.value)"><span>3 KHz</span><span class="db-val">+2.4 dB</span></div>
+          <div class="slider-col"><input type="range" class="eq-band" min="-20" max="20" step="0.1" value="9.8" oninput="updateBand(6, this.value)"><span>6 KHz</span><span class="db-val">+9.8 dB</span></div>
+          <div class="slider-col"><input type="range" class="eq-band" min="-20" max="20" step="0.1" value="14.1" oninput="updateBand(7, this.value)"><span>12 KHz</span><span class="db-val">+14.1 dB</span></div>
+          <div class="slider-col"><input type="range" class="eq-band" min="-20" max="20" step="0.1" value="-3.6" oninput="updateBand(8, this.value)"><span>14 KHz</span><span class="db-val">-3.6 dB</span></div>
+          <div class="slider-col"><input type="range" class="eq-band" min="-20" max="20" step="0.1" value="11.6" oninput="updateBand(9, this.value)"><span>16 KHz</span><span class="db-val">+11.6 dB</span></div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Compressor -->
+      <div class="fx-content" id="fxtab-1">
+        <label style="display:flex; align-items:center; gap:8px; margin-bottom:12px; cursor:pointer;">
+          <input type="checkbox" id="compEnable" onchange="toggleCompressor()" style="width:auto;"> Enable Dynamics Compressor
+        </label>
+        <div style="display:flex; flex-direction:column; gap:12px; font-size:13px;">
+          <label>Threshold (-100 to 0 dB): <input type="range" id="compThreshold" min="-100" max="0" value="-24" oninput="updateCompressor()"></label>
+          <label>Knee (0 to 40 dB): <input type="range" id="compKnee" min="0" max="40" value="30" oninput="updateCompressor()"></label>
+          <label>Ratio (1 to 20): <input type="range" id="compRatio" min="1" max="20" value="12" oninput="updateCompressor()"></label>
+          <label>Attack (0 to 1 sec): <input type="range" id="compAttack" min="0" max="1" step="0.01" value="0.003" oninput="updateCompressor()"></label>
+          <label>Release (0 to 1 sec): <input type="range" id="compRelease" min="0" max="1" step="0.01" value="0.25" oninput="updateCompressor()"></label>
+        </div>
+      </div>
+
+      <!-- Tab 3: Stereo Widener -->
+      <div class="fx-content" id="fxtab-2">
+        <label style="display:flex; align-items:center; gap:8px; margin-bottom:12px; cursor:pointer;">
+          <input type="checkbox" id="widenerEnable" onchange="toggleWidener()" style="width:auto;"> Enable Stereo Widener
+        </label>
+        <label style="font-size:13px;">Stereo Width (0% to 200%):
+          <input type="range" id="stereoWidth" min="0" max="2" step="0.05" value="1.3" oninput="updateWidener(this.value)">
+        </label>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; margin-top: 15px; border-top:1px solid var(--border); padding-top:12px;">
+        <button class="btn btn-secondary" onclick="resetFX()">Reset to Fig. 1 Preset</button>
+        <button class="btn" onclick="closeModal('fxModal')">Save & Apply</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDIT SONG MODAL (ADMIN) -->
+  <div class="modal" id="editSongModal">
+    <div class="modal-card">
+      <div class="card-title">Update Song Record</div>
+      <form onsubmit="handleSongUpdate(event)">
+        <input type="hidden" id="editSongId">
+        <div class="form-group"><label>Title</label><input type="text" id="editTitle" required></div>
+        <div class="form-group"><label>Artist</label><input type="text" id="editArtist" required></div>
+        <div class="form-group"><label>Album</label><input type="text" id="editAlbum" required></div>
+        <div class="form-group">
+          <label>Type / Mood</label>
+          <select id="editType" required>
+            <option value="Sad">Sad</option>
+            <option value="Motivational">Motivational</option>
+            <option value="Happy">Happy</option>
+            <option value="Romantic">Romantic</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Cover Art URL</label><input type="text" id="editArt"></div>
+        <div class="form-group" style="flex-direction: row; gap: 10px; align-items: center;">
+          <input type="checkbox" id="editAllowDownload" style="width: auto;">
+          <label for="editAllowDownload" style="margin:0;">Allow Viewer Download</label>
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 10px;">
+          <button type="submit" class="btn" style="flex:1;">Save Update</button>
+          <button type="button" class="btn btn-secondary" onclick="closeModal('editSongModal')">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- BOTTOM AUDIO PLAYER -->
+  <audio id="audioEngine" preload="metadata" crossorigin="anonymous"></audio>
+  <div class="player-bar">
+    <div class="player-info">
+      <div style="width:45px; height:45px; background:var(--primary); border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:1.2rem;">🎶</div>
+      <div style="overflow:hidden;">
+        <h4 id="playerTitle" style="font-size:0.9rem; white-space:nowrap; text-overflow:ellipsis; overflow:hidden;">No Song Selected</h4>
+        <p id="playerArtist" style="font-size:0.75rem; color:var(--muted);">Select a track</p>
+      </div>
+    </div>
+    <div class="player-controls">
+      <div class="control-btns">
+        <button class="btn-circle" style="background:#334155;" onclick="playPrev()">⏮️</button>
+        <button class="btn-circle" id="playPauseBtn" onclick="togglePlayPause()">▶️</button>
+        <button class="btn-circle" style="background:#334155;" onclick="playNext()">⏭️</button>
+      </div>
+      <div class="progress-container">
+        <span id="currentTime">0:00</span>
+        <input type="range" id="progressBar" value="0" min="0" max="100" oninput="seekAudio()">
+        <span id="durationTime">0:00</span>
+      </div>
+    </div>
+    <div>
+      <button class="btn btn-fx" style="padding:6px 12px; font-size:0.8rem;" onclick="openModal('fxModal')">🎛️ Equalizer FX</button>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbyHH-cp_38fIfGLiIWQCxrUOWrGDkCEVLxsbRUC0r9lcNKhaIm1K2e9A5uBV8p8TsJT/exec";
+
+    let masterSongs = [];
+    let currentPlaylist = [];
+    let currentTrackIndex = 0;
+    let isPlaying = false;
+    let isAdminLoggedIn = false;
+    let playlists = JSON.parse(localStorage.getItem("app_playlists")) || {};
+
+    const audio = document.getElementById('audioEngine');
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    const progressBar = document.getElementById('progressBar');
+
+    // ==========================================
+    // WEB AUDIO API - EQUALIZER & DSP PIPELINE
+    // ==========================================
+    const freqs = [60, 170, 310, 600, 1000, 3000, 6000, 12000, 14000, 16000];
+    const initialGains = [18.2, 11.8, 3.7, -1.7, -7.8, 2.4, 9.8, 14.1, -3.6, 11.6];
+    
+    let audioCtx = null, sourceNode = null, preampNode = null, compressorNode = null;
+    let filterNodes = [];
+    let isEQEnabled = true;
+
+    function initAudioContext() {
+      if (audioCtx) return;
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      sourceNode = audioCtx.createMediaElementSource(audio);
+
+      // 1. Preamp Gain Node
+      preampNode = audioCtx.createGain();
+      preampNode.gain.value = Math.pow(10, 14.4 / 20);
+
+      // 2. 10-Band Biquad Filter Chain
+      let lastNode = preampNode;
+      freqs.forEach((freq, idx) => {
+        const filter = audioCtx.createBiquadFilter();
+        if (idx === 0) filter.type = "lowshelf";
+        else if (idx === freqs.length - 1) filter.type = "highshelf";
+        else filter.type = "peaking";
+        
+        filter.frequency.value = freq;
+        filter.gain.value = initialGains[idx];
+        filter.Q.value = 1.4;
+        
+        lastNode.connect(filter);
+        lastNode = filter;
+        filterNodes.push(filter);
+      });
+
+      // 3. Dynamics Compressor Node
+      compressorNode = audioCtx.createDynamicsCompressor();
+      lastNode.connect(compressorNode);
+
+      // 4. Output Route
+      compressorNode.connect(audioCtx.destination);
+      sourceNode.connect(preampNode);
+    }
+
+    function switchFxTab(index) {
+      document.querySelectorAll('.fx-tab').forEach((t, i) => t.classList.toggle('active', i === index));
+      document.querySelectorAll('.fx-content').forEach((c, i) => c.classList.toggle('active', i === index));
+    }
+
+    function updateBand(index, value) {
+      initAudioContext();
+      const val = parseFloat(value);
+      filterNodes[index].gain.value = isEQEnabled ? val : 0;
+      document.querySelectorAll('.slider-col .db-val')[index + 1].innerText = `${val >= 0 ? '+' : ''}${val.toFixed(1)} dB`;
+    }
+
+    function updatePreamp(value) {
+      initAudioContext();
+      const val = parseFloat(value);
+      preampNode.gain.value = Math.pow(10, val / 20);
+      document.getElementById('preampVal').innerText = `${val >= 0 ? '+' : ''}${val.toFixed(1)} dB`;
+    }
+
+    function toggleEQ() {
+      isEQEnabled = document.getElementById('eqEnable').checked;
+      filterNodes.forEach((filter, idx) => {
+        const val = parseFloat(document.querySelectorAll('.eq-band')[idx].value);
+        filter.gain.value = isEQEnabled ? val : 0;
+      });
+    }
+
+    function updateCompressor() {
+      if (!compressorNode) return;
+      compressorNode.threshold.value = parseFloat(document.getElementById('compThreshold').value);
+      compressorNode.knee.value = parseFloat(document.getElementById('compKnee').value);
+      compressorNode.ratio.value = parseFloat(document.getElementById('compRatio').value);
+      compressorNode.attack.value = parseFloat(document.getElementById('compAttack').value);
+      compressorNode.release.value = parseFloat(document.getElementById('compRelease').value);
+    }
+
+    function toggleCompressor() {
+      initAudioContext();
+      const enabled = document.getElementById('compEnable').checked;
+      compressorNode.ratio.value = enabled ? 12 : 1;
+    }
+
+    function toggleWidener() {
+      initAudioContext();
+    }
+
+    function updateWidener(val) {
+      initAudioContext();
+    }
+
+    function applyPreset(type) {
+      let values = [];
+      if (type === 'custom') values = initialGains;
+      else if (type === 'flat') values = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+      else if (type === 'bass') values = [12, 10, 7, 3, 0, 0, 0, 0, 0, 0];
+      else if (type === 'vocal') values = [-2, -2, 0, 4, 8, 6, 2, 0, -2, -4];
+
+      document.querySelectorAll('.eq-band').forEach((slider, i) => {
+        slider.value = values[i];
+        updateBand(i, values[i]);
+      });
+    }
+
+    function resetFX() {
+      applyPreset('custom');
+      document.getElementById('preamp').value = 14.4;
+      updatePreamp(14.4);
+    }
+
+    // ==========================================
+    // APPLICATION LOGIC
+    // ==========================================
+    window.onload = function() {
+      fetchSongs();
+    };
+
+    function showView(v) {
+      document.getElementById('viewViewer').style.display = v === 'viewer' ? 'block' : 'none';
+      document.getElementById('viewAdmin').style.display = v === 'admin' ? 'block' : 'none';
+    }
+
+    function loginAdmin() {
+      const u = document.getElementById('adminUser').value.trim();
+      const p = document.getElementById('adminPass').value.trim();
+
+      if (u === 'kumaramarjeet' && p === 'hehe') {
+        isAdminLoggedIn = true;
+        document.getElementById('adminLoginBox').style.display = 'none';
+        document.getElementById('adminDashboard').style.display = 'block';
+        document.getElementById('adminLogoutBtn').style.display = 'inline-block';
+        renderAdminSongs();
+      } else {
+        alert("Invalid Admin Username or Password!");
+      }
+    }
+
+    function logoutAdmin() {
+      isAdminLoggedIn = false;
+      document.getElementById('adminUser').value = '';
+      document.getElementById('adminPass').value = '';
+      document.getElementById('adminLoginBox').style.display = 'block';
+      document.getElementById('adminDashboard').style.display = 'none';
+      document.getElementById('adminLogoutBtn').style.display = 'none';
+      showView('viewer');
+    }
+
+    async function fetchSongs() {
+      try {
+        const res = await fetch(`${API_URL}?action=getSongs`);
+        const json = await res.json();
+        if (json.status === "success") {
+          masterSongs = json.songs;
+          currentPlaylist = [...masterSongs];
+          renderViewerSongs(currentPlaylist);
+        }
+      } catch(err) {
+        console.error(err);
+      }
+    }
+
+    function renderViewerSongs(songs) {
+      const list = document.getElementById('viewerSongList');
+      list.innerHTML = '';
+      if (songs.length === 0) {
+        list.innerHTML = `<li style="text-align:center; color:var(--muted); padding:15px;">No songs found.</li>`;
+        return;
+      }
+      songs.forEach((s, idx) => {
+        let downloadBtn = s.allowDownload 
+          ? `<button class="btn" style="padding:4px 8px; font-size:0.75rem;" onclick="event.stopPropagation(); downloadSong('${s.fileId}', '${s.title}')">📥 Download</button>`
+          : `<span style="font-size:0.75rem; color:var(--muted);">No Download</span>`;
+
+        list.innerHTML += `
+          <li class="song-item" onclick="playSongIndex(${idx})">
+            <div>
+              <h4>${s.title}</h4>
+              <p style="font-size:0.8rem; color:var(--muted);">${s.artist} • ${s.album} • <strong style="color:var(--primary);">${s.type}</strong></p>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <button class="btn btn-secondary" style="padding:4px 8px; font-size:0.75rem;" onclick="event.stopPropagation(); addToPlaylistPrompt('${s.id}')">+ Playlist</button>
+              ${downloadBtn}
+            </div>
+          </li>
+        `;
+      });
+    }
+
+    function applyFilters() {
+      const q = document.getElementById('searchBox').value.toLowerCase();
+      const type = document.getElementById('typeFilter').value;
+
+      const filtered = masterSongs.filter(s => {
+        const matchesQ = s.title.toLowerCase().includes(q) || s.artist.toLowerCase().includes(q) || s.album.toLowerCase().includes(q);
+        const matchesType = type === 'all' || s.type === type;
+        return matchesQ && matchesType;
+      });
+
+      currentPlaylist = filtered;
+      renderViewerSongs(currentPlaylist);
+    }
+
+    function playSongIndex(idx) {
+      if (!currentPlaylist.length) return;
+      initAudioContext();
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+
+      currentTrackIndex = idx;
+      const track = currentPlaylist[currentTrackIndex];
+      const fileId = track.fileId || extractDriveId(track.streamUrl || track.driveUrl);
+
+      document.getElementById('playerTitle').innerText = track.title;
+      document.getElementById('playerArtist').innerText = track.artist;
+
+      const streamCandidates = [
+        `https://lh3.googleusercontent.com/d/${fileId}`,
+        `https://docs.google.com/uc?export=download&id=${fileId}`
+      ];
+
+      tryStreamCandidates(streamCandidates, 0, track, fileId);
+    }
+
+    function tryStreamCandidates(urls, index, track, fileId) {
+      if (index >= urls.length) {
+        fetchAudioViaProxy(fileId, track);
+        return;
+      }
+      audio.src = urls[index];
+      audio.load();
+      audio.play().then(() => {
+        isPlaying = true;
+        playPauseBtn.innerText = "⏸️";
+        setupMediaSession(track);
+      }).catch(() => tryStreamCandidates(urls, index + 1, track, fileId));
+    }
+
+    async function fetchAudioViaProxy(fileId, track) {
+      try {
+        const res = await fetch(`${API_URL}?action=stream&id=${fileId}`);
+        const base64Data = await res.text();
+        audio.src = "data:audio/mpeg;base64," + base64Data;
+        audio.load();
+        audio.play();
+        isPlaying = true;
+        playPauseBtn.innerText = "⏸️";
+        setupMediaSession(track);
+      } catch(e) {
+        alert("Playback Failed: Check Google Drive Folder permissions.");
+      }
+    }
+
+    function togglePlayPause() {
+      if (!audio.src) return;
+      initAudioContext();
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+
+      if (isPlaying) { audio.pause(); playPauseBtn.innerText = "▶️"; }
+      else { audio.play(); playPauseBtn.innerText = "⏸️"; }
+      isPlaying = !isPlaying;
+    }
+
+    function playNext() { if (currentPlaylist.length) playSongIndex((currentTrackIndex + 1) % currentPlaylist.length); }
+    function playPrev() { if (currentPlaylist.length) playSongIndex((currentTrackIndex - 1 + currentPlaylist.length) % currentPlaylist.length); }
+
+    function setupMediaSession(track) {
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: track.title, artist: track.artist, album: track.album,
+          artwork: [{ src: track.art || 'https://via.placeholder.com/150', sizes: '150x150', type: 'image/png' }]
+        });
+        navigator.mediaSession.setActionHandler('play', togglePlayPause);
+        navigator.mediaSession.setActionHandler('pause', togglePlayPause);
+        navigator.mediaSession.setActionHandler('previoustrack', playPrev);
+        navigator.mediaSession.setActionHandler('nexttrack', playNext);
+      }
+    }
+
+    async function downloadSong(fileId, title) {
+      alert("Preparing download from cloud...");
+      const res = await fetch(`${API_URL}?action=stream&id=${fileId}`);
+      const base64Data = await res.text();
+      const a = document.createElement("a");
+      a.href = "data:audio/mpeg;base64," + base64Data;
+      a.download = `${title}.mp3`;
+      a.click();
+    }
+
+    // PLAYLIST LOGIC
+    function switchLibraryView() {
+      const mode = document.getElementById('viewModeSelect').value;
+      if (mode === 'playlists') {
+        document.getElementById('playlistManagerCard').style.display = 'block';
+        updatePlaylistDropdown();
+        renderPlaylistSongs();
+      } else {
+        document.getElementById('playlistManagerCard').style.display = 'none';
+        currentPlaylist = [...masterSongs];
+        renderViewerSongs(currentPlaylist);
+      }
+    }
+
+    function createPlaylist() {
+      const name = prompt("Enter new Playlist Name:");
+      if (name && !playlists[name]) {
+        playlists[name] = [];
+        localStorage.setItem("app_playlists", JSON.stringify(playlists));
+        updatePlaylistDropdown();
+      }
+    }
+
+    function updatePlaylistDropdown() {
+      const select = document.getElementById('userPlaylistDropdown');
+      select.innerHTML = '<option value="">Select a playlist...</option>';
+      Object.keys(playlists).forEach(p => {
+        select.innerHTML += `<option value="${p}">${p}</option>`;
+      });
+    }
+
+    function addToPlaylistPrompt(songId) {
+      const keys = Object.keys(playlists);
+      if (!keys.length) { alert("Please create a playlist first!"); return; }
+      const p = prompt(`Enter Playlist Name to add:\nAvailable: ${keys.join(", ")}`);
+      if (p && playlists[p] && !playlists[p].includes(songId)) {
+        playlists[p].push(songId);
+        localStorage.setItem("app_playlists", JSON.stringify(playlists));
+        alert("Added to Playlist!");
+      }
+    }
+
+    function renderPlaylistSongs() {
+      const pName = document.getElementById('userPlaylistDropdown').value;
+      if (!pName) return;
+      const ids = playlists[pName] || [];
+      currentPlaylist = masterSongs.filter(s => ids.includes(s.id));
+      renderViewerSongs(currentPlaylist);
+    }
+
+    // ADMIN SONG ACTIONS
+    async function handleSongUpload(e) {
+      e.preventDefault();
+      const file = document.getElementById('upFile').files[0];
+      if (file.size > 15 * 1024 * 1024) { alert("File > 15MB limit!"); return; }
+
+      const btn = document.getElementById('upBtn');
+      btn.disabled = true; btn.innerText = "Uploading to Drive...";
+
+      const reader = new FileReader();
+      reader.onload = async function() {
+        const payload = {
+          action: "uploadSong",
+          title: document.getElementById('upTitle').value.trim(),
+          artist: document.getElementById('upArtist').value.trim(),
+          album: document.getElementById('upAlbum').value.trim(),
+          type: document.getElementById('upType').value,
+          coverArt: document.getElementById('upArt').value.trim(),
+          allowDownload: document.getElementById('upAllowDownload').checked,
+          fileName: file.name,
+          fileData: reader.result.split(',')[1]
+        };
+        const res = await apiPost(payload);
+        if (res.status === "success") {
+          alert("Song Uploaded!");
+          fetchSongs();
+          renderAdminSongs();
+        }
+        btn.disabled = false; btn.innerText = "☁️ Upload Song & Save to Database";
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function renderAdminSongs() {
+      const list = document.getElementById('adminSongList');
+      list.innerHTML = '';
+      masterSongs.forEach(s => {
+        list.innerHTML += `
+          <li class="song-item">
+            <div>
+              <h4>${s.title}</h4>
+              <p style="font-size:0.8rem; color:var(--muted);">${s.artist} • ${s.album} • Download: ${s.allowDownload ? 'Allowed' : 'Disabled'}</p>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button class="btn" style="padding:4px 8px; font-size:0.75rem;" onclick="openEditSongModal('${s.id}')">Edit</button>
+              <button class="btn btn-danger" style="padding:4px 8px; font-size:0.75rem;" onclick="deleteSong('${s.id}')">Delete</button>
+            </div>
+          </li>
+        `;
+      });
+    }
+
+    function openEditSongModal(id) {
+      const s = masterSongs.find(item => item.id === id);
+      if (!s) return;
+      document.getElementById('editSongId').value = s.id;
+      document.getElementById('editTitle').value = s.title;
+      document.getElementById('editArtist').value = s.artist;
+      document.getElementById('editAlbum').value = s.album;
+      document.getElementById('editType').value = s.type;
+      document.getElementById('editArt').value = s.art;
+      document.getElementById('editAllowDownload').checked = s.allowDownload;
+      openModal('editSongModal');
+    }
+
+    async function handleSongUpdate(e) {
+      e.preventDefault();
+      const payload = {
+        action: "updateSong",
+        songId: document.getElementById('editSongId').value,
+        title: document.getElementById('editTitle').value.trim(),
+        artist: document.getElementById('editArtist').value.trim(),
+        album: document.getElementById('editAlbum').value.trim(),
+        type: document.getElementById('editType').value,
+        coverArt: document.getElementById('editArt').value.trim(),
+        allowDownload: document.getElementById('editAllowDownload').checked
+      };
+      closeModal('editSongModal');
+      await apiPost(payload);
+      alert("Song Updated!");
+      fetchSongs();
+    }
+
+    async function deleteSong(id) {
+      if (!confirm("Are you sure you want to delete this song?")) return;
+      await apiPost({ action: "deleteSong", songId: id });
+      alert("Song Deleted!");
+      fetchSongs();
+    }
+
+    async function apiPost(payload) {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload)
+      });
+      return await res.json();
+    }
+
+    function extractDriveId(url) {
+      const m = url ? url.match(/[-\w]{25,}/) : null;
+      return m ? m[0] : null;
+    }
+
+    function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    audio.ontimeupdate = function() {
+      if (audio.duration) {
+        progressBar.value = (audio.currentTime / audio.duration) * 100;
+        document.getElementById('currentTime').innerText = formatTime(audio.currentTime);
+        document.getElementById('durationTime').innerText = formatTime(audio.duration);
+      }
+    };
+    audio.onended = playNext;
+    function seekAudio() { if (audio.duration) audio.currentTime = (progressBar.value / 100) * audio.duration; }
+    function formatTime(s) { const m = Math.floor(s/60); const sec = Math.floor(s%60); return `${m}:${sec < 10 ? '0' : ''}${sec}`; }
+  </script>
+</body>
+</html>
