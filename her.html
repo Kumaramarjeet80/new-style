@@ -65,7 +65,7 @@
     <!-- Music Column -->
     <div class="card">
       <div class="header-row">
-        <h4 style="margin:0;">🎵 Shared Music (Studio Audio) 🌸</h4>
+        <h4 style="margin:0;">🎵 Shared Music 🌸</h4>
         <span id="musicStatus" class="status-badge offline">Syncing...</span>
       </div>
       <div class="url-input-row">
@@ -106,16 +106,9 @@
     let dataConn = null, callObj = null, localStream = null;
     let micEnabled = true, camEnabled = true;
 
-    // High-Fidelity Audio Constraints (Preserves clean original sound)
     const mediaConstraints = {
       video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
-      audio: {
-        echoCancellation: false,
-        noiseSuppression: false,
-        autoGainControl: false,
-        channelCount: 2,
-        sampleRate: 48000
-      }
+      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 2, sampleRate: 48000 }
     };
 
     peer.on('open', () => autoConnect());
@@ -162,6 +155,11 @@
     }
 
     function endCall() {
+      sendSignal({ type: 'CALL_ENDED' });
+      terminateCall();
+    }
+
+    function terminateCall() {
       if (callObj) callObj.close();
       if (localStream) localStream.getTracks().forEach(t => t.stop());
       resetCall();
@@ -245,6 +243,8 @@
 
     function setupDataChannel() {
       dataConn.on('data', (d) => {
+        if (d.type === 'CALL_ENDED') terminateCall();
+        
         isRemote = true;
         if (d.type === 'MUSIC_PLAY') { player.seekTo(d.time, true); player.playVideo(); updatePlayBtn(true); }
         if (d.type === 'MUSIC_PAUSE') { player.seekTo(d.time, true); player.pauseVideo(); updatePlayBtn(false); }
