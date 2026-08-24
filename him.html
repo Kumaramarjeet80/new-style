@@ -33,6 +33,8 @@
     }
     .online { background: rgba(34, 197, 94, 0.15); color: var(--success); }
     .offline { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
+    .recording-badge { background: rgba(239, 68, 68, 0.25); color: #f87171; border: 1px solid #ef4444; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
     
     .media-box {
       width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 12px; overflow: hidden; position: relative;
@@ -56,7 +58,19 @@
     .btn-call { background: var(--success); }
     .btn-end { background: var(--danger); }
     .btn-muted { background: var(--danger); }
-    .btn-rec { background: #e11d48; }
+
+    /* Saved Videos Section */
+    .vault-section {
+      grid-column: 1 / -1; background: var(--card); border-radius: 18px; padding: 16px;
+      margin-top: 10px; display: flex; flex-direction: column; gap: 12px;
+    }
+    .vault-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px;
+    }
+    .vault-item {
+      background: #0b0f19; border-radius: 10px; padding: 8px; display: flex; flex-direction: column; gap: 6px;
+    }
+    .vault-item video { width: 100%; border-radius: 6px; aspect-ratio: 16/9; background: #000; }
   </style>
 </head>
 <body>
@@ -65,7 +79,7 @@
     <!-- Music Column -->
     <div class="card">
       <div class="header-row">
-        <h4 style="margin:0;">🎵 Shared Music (Studio Audio)</h4>
+        <h4 style="margin:0;">🎵 Shared Music</h4>
         <span id="musicStatus" class="status-badge offline">Syncing...</span>
       </div>
       <div class="url-input-row">
@@ -84,8 +98,11 @@
     <!-- Call Column -->
     <div class="card">
       <div class="header-row">
-        <h4 style="margin:0;">📹 Video Call (Her)</h4>
-        <span id="callStatus" class="status-badge offline">Disconnected</span>
+        <h4 style="margin:0;">📹 Video Call</h4>
+        <div>
+          <span id="recStatus" class="status-badge recording-badge" style="display:none; margin-right:4px;">🔴 Auto-Recording</span>
+          <span id="callStatus" class="status-badge offline">Disconnected</span>
+        </div>
       </div>
       <div class="media-box">
         <video id="remoteVideo" autoplay playsinline></video>
@@ -97,9 +114,16 @@
         <button id="micBtn" onclick="toggleMic()">🎤 Mic: ON</button>
         <button id="camBtn" onclick="toggleCam()">📷 Cam: ON</button>
       </div>
-      <div class="btn-group" style="border-top:1px solid #1e293b; padding-top:8px;">
-        <button id="recBtn" class="btn-rec" onclick="startRecording()">⏺ Record Her</button>
-        <button id="stopRecBtn" onclick="stopRecording()" disabled>💾 Save Video</button>
+    </div>
+
+    <!-- Saved Video Recordings Vault -->
+    <div class="vault-section">
+      <div class="header-row">
+        <h4 style="margin:0;">📁 Saved Video Vault (Local Storage)</h4>
+        <button onclick="clearAllRecordings()" style="flex:0; min-width:100px; background:#e11d48; font-size:11px; padding:6px 12px;">Delete All</button>
+      </div>
+      <div id="vaultList" class="vault-grid">
+        <small style="opacity: 0.6;">No recordings saved yet. They will appear here automatically when calls end.</small>
       </div>
     </div>
   </div>
@@ -111,16 +135,77 @@
     let micEnabled = true, camEnabled = true;
     let mediaRecorder = null, recordedChunks = [];
 
-    // High-Fidelity Audio Constraints (Preserves clean original sound)
+    // --- IndexedDB Local Video Storage Setup ---
+    let db;
+    const dbReq = indexedDB.open("CallRecordingsDB", 1);
+    dbReq.onupgradeneeded = (e) => {
+      db = e.target.result;
+      if (!db.objectStoreNames.contains("recordings")) {
+        db.createObjectStore("recordings", { keyPath: "id", autoIncrement: true });
+      }
+    };
+    dbReq.onsuccess = (e) => {
+      db = e.target.result;
+      renderSavedRecordings();
+    };
+
+    function saveRecordingLocally(blob) {
+      const tx = db.transaction("recordings", "readwrite");
+      const store = tx.objectStore("recordings");
+      store.add({
+        blob: blob,
+        date: new Date().toLocaleString(),
+        timestamp: Date.now()
+      });
+      tx.oncomplete = () => renderSavedRecordings();
+    }
+
+    function renderSavedRecordings() {
+      if (!db) return;
+      const tx = db.transaction("recordings", "readonly");
+      const store = tx.objectStore("recordings");
+      const req = store.getAll();
+      req.onsuccess = () => {
+        const list = document.getElementById('vaultList');
+        list.innerHTML = "";
+        if (req.result.length === 0) {
+          list.innerHTML = '<small style="opacity: 0.6;">No recordings saved yet. They will appear here automatically when calls end.</small>';
+          return;
+        }
+        req.result.reverse().forEach((item) => {
+          const url = URL.createObjectURL(item.blob);
+          const div = document.createElement('div');
+          div.className = 'vault-item';
+          div.innerHTML = `
+            <video src="${url}" controls playsinline></video>
+            <div style="font-size:11px; opacity:0.8;">📅 ${item.date}</div>
+            <div style="display:flex; gap:6px;">
+              <a href="${url}" download="call_${item.timestamp}.webm" style="flex:1; text-align:center; background:#38bdf8; color:#000; text-decoration:none; padding:6px; border-radius:6px; font-size:11px; font-weight:bold;">⬇ Download</a>
+              <button onclick="deleteRecording(${item.id})" style="flex:0; background:#ef4444; padding:6px 10px; font-size:11px;">🗑</button>
+            </div>
+          `;
+          list.appendChild(div);
+        });
+      };
+    }
+
+    function deleteRecording(id) {
+      const tx = db.transaction("recordings", "readwrite");
+      tx.objectStore("recordings").delete(id);
+      tx.oncomplete = () => renderSavedRecordings();
+    }
+
+    function clearAllRecordings() {
+      if (!confirm("Are you sure you want to delete all saved call recordings?")) return;
+      const tx = db.transaction("recordings", "readwrite");
+      tx.objectStore("recordings").clear();
+      tx.oncomplete = () => renderSavedRecordings();
+    }
+
+    // Audio & Video High-Fidelity Settings
     const mediaConstraints = {
       video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
-      audio: {
-        echoCancellation: false,
-        noiseSuppression: false,
-        autoGainControl: false,
-        channelCount: 2,
-        sampleRate: 48000
-      }
+      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 2, sampleRate: 48000 }
     };
 
     peer.on('open', () => autoConnect());
@@ -155,18 +240,51 @@
         document.getElementById('localVideo').srcObject = stream;
         const call = peer.call(targetId, stream);
         handleStream(call);
-      }).catch(err => alert("Audio/Video Access: " + err));
+      }).catch(err => alert("Permission: " + err));
     }
 
     function handleStream(call) {
       callObj = call;
       document.getElementById('callBtn').style.display = 'none';
       document.getElementById('endBtn').style.display = 'block';
-      call.on('stream', (remStream) => { document.getElementById('remoteVideo').srcObject = remStream; });
+      call.on('stream', (remStream) => {
+        document.getElementById('remoteVideo').srcObject = remStream;
+        // Automatic Recording Trigger
+        startAutoRecording(remStream);
+      });
       call.on('close', () => resetCall());
     }
 
+    function startAutoRecording(stream) {
+      recordedChunks = [];
+      try {
+        mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp8,opus' });
+      } catch (e) {
+        mediaRecorder = new MediaRecorder(stream);
+      }
+      mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+        saveRecordingLocally(blob);
+        document.getElementById('recStatus').style.display = 'none';
+      };
+      mediaRecorder.start(1000);
+      document.getElementById('recStatus').style.display = 'inline-block';
+    }
+
+    function stopAutoRecording() {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+      }
+    }
+
     function endCall() {
+      sendSignal({ type: 'CALL_ENDED' });
+      terminateCall();
+    }
+
+    function terminateCall() {
+      stopAutoRecording();
       if (callObj) callObj.close();
       if (localStream) localStream.getTracks().forEach(t => t.stop());
       resetCall();
@@ -197,30 +315,6 @@
         btn.innerText = `📷 Cam: ${camEnabled ? 'ON' : 'OFF'}`;
         btn.className = camEnabled ? '' : 'btn-muted';
       }
-    }
-
-    function startRecording() {
-      const stream = document.getElementById('remoteVideo').srcObject;
-      if (!stream) return alert('Call must be active to record.');
-      recordedChunks = [];
-      mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp8,opus' });
-      mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(recordedChunks, { type: 'video/webm' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `recording_${Date.now()}.webm`;
-        a.click();
-      };
-      mediaRecorder.start();
-      document.getElementById('recBtn').disabled = true;
-      document.getElementById('stopRecBtn').disabled = false;
-    }
-
-    function stopRecording() {
-      mediaRecorder.stop();
-      document.getElementById('recBtn').disabled = false;
-      document.getElementById('stopRecBtn').disabled = true;
     }
 
     // YouTube Sync Engine
@@ -274,6 +368,8 @@
 
     function setupDataChannel() {
       dataConn.on('data', (d) => {
+        if (d.type === 'CALL_ENDED') terminateCall();
+        
         isRemote = true;
         if (d.type === 'MUSIC_PLAY') { player.seekTo(d.time, true); player.playVideo(); updatePlayBtn(true); }
         if (d.type === 'MUSIC_PAUSE') { player.seekTo(d.time, true); player.pauseVideo(); updatePlayBtn(false); }
