@@ -29,9 +29,7 @@
       border: 1px solid #ffe4e6;
     }
     .header-row { display: flex; justify-content: space-between; align-items: center; }
-    .status-badge {
-      font-size: 11px; padding: 4px 10px; border-radius: 20px; font-weight: 600;
-    }
+    .status-badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; font-weight: 600; }
     .online { background: #d1fae5; color: #065f46; }
     .offline { background: #ffe4e6; color: #be123c; }
     
@@ -106,9 +104,16 @@
     let dataConn = null, callObj = null, localStream = null;
     let micEnabled = true, camEnabled = true;
 
+    // --- Enhanced Voice Clarity & Noise Cancellation Constraints ---
     const mediaConstraints = {
       video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
-      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 2, sampleRate: 48000 }
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        channelCount: 1,
+        sampleRate: 48000
+      }
     };
 
     peer.on('open', () => autoConnect());
