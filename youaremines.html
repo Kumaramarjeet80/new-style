@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Our private world</title>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <script src="https://www.youtube.com/iframe_api"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --primary: #ff5e7e;
+      --bg: #121016;
+      --panel: rgba(255, 255, 255, 0.07);
+      --border: rgba(255, 255, 255, 0.12);
+      --text: #ffffff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Quicksand', sans-serif;
+      background: radial-gradient(circle at top right, #2c1624, var(--bg));
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Modal / Greetings */
+    .modal {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+      backdrop-filter: blur(8px); display: flex; align-items: center;
+      justify-content: center; z-index: 10000;
+    }
+    .modal-box {
+      background: #1e1b24; padding: 35px; border-radius: 20px;
+      border: 1px solid var(--primary); text-align: center; max-width: 420px;
+    }
+    .modal-box h2 { font-family: 'Dancing Script', cursive; font-size: 2.4rem; color: var(--primary); margin-bottom: 12px; }
+    .modal-box button {
+      margin-top: 20px; padding: 10px 30px; background: var(--primary);
+      border: none; border-radius: 25px; color: #fff; font-weight: 600; cursor: pointer;
+    }
+
+    /* Top Bar */
+    header {
+      padding: 14px 24px; display: flex; justify-content: space-between;
+      align-items: center; border-bottom: 1px solid var(--border);
+      background: rgba(0,0,0,0.3);
+    }
+    .heart-title { font-family: 'Dancing Script', cursive; font-size: 1.8rem; color: var(--primary); }
+    .status-badge { font-size: 0.85rem; padding: 4px 12px; border-radius: 12px; background: #333; }
+    .status-badge.online { background: #2ed573; color: #000; }
+
+    /* Main Grid */
+    .main-grid {
+      flex: 1; display: grid; grid-template-columns: 1.2fr 1fr;
+      gap: 16px; padding: 16px; position: relative; overflow: hidden;
+    }
+
+    /* Panels */
+    .panel {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 16px; backdrop-filter: blur(12px); display: flex;
+      flex-direction: column; overflow: hidden;
+    }
+
+    /* Video Call Container */
+    .video-area { position: relative; height: 100%; display: flex; flex-direction: column; }
+    .video-viewport {
+      flex: 1; position: relative; background: #000; border-radius: 12px;
+      overflow: hidden; display: flex; align-items: center; justify-content: center;
+    }
+    video { width: 100%; height: 100%; object-fit: cover; }
+    .local-preview {
+      position: absolute; bottom: 15px; right: 15px; width: 130px;
+      height: 95px; border-radius: 10px; border: 2px solid var(--primary);
+      overflow: hidden; z-index: 10; background: #111;
+    }
+
+    /* Call Controls */
+    .call-controls {
+      display: flex; gap: 8px; justify-content: center; padding: 10px;
+      background: rgba(0,0,0,0.4); border-top: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+    .ctrl-btn {
+      padding: 8px 14px; background: rgba(255,255,255,0.1); border: 1px solid var(--border);
+      color: #fff; border-radius: 20px; font-size: 0.8rem; cursor: pointer; transition: 0.2s;
+    }
+    .ctrl-btn:hover { background: var(--primary); }
+    .ctrl-btn.danger { background: #ff4757; }
+
+    /* YouTube Area */
+    .music-area { flex: 1; display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+    .yt-controls { display: flex; gap: 6px; }
+    .yt-controls input {
+      flex: 1; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border);
+      background: rgba(0,0,0,0.4); color: #fff;
+    }
+
+    /* Draggable Chat Box */
+    #draggableChat {
+      position: absolute; bottom: 20px; right: 20px; width: 340px; height: 420px;
+      background: #18151f; border: 1px solid var(--primary); border-radius: 14px;
+      display: flex; flex-direction: column; z-index: 100; box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+    }
+    .chat-header {
+      padding: 10px 14px; background: rgba(255, 94, 126, 0.15);
+      cursor: move; display: flex; justify-content: space-between;
+      border-top-left-radius: 14px; border-top-right-radius: 14px;
+    }
+    .chat-messages {
+      flex: 1; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
+    }
+    .msg { max-width: 80%; padding: 8px 12px; border-radius: 12px; font-size: 0.85rem; }
+    .msg.me { align-self: flex-end; background: var(--primary); color: #fff; }
+    .msg.her { align-self: flex-start; background: rgba(255,255,255,0.12); }
+    .chat-input-bar {
+      padding: 8px; display: flex; gap: 6px; border-top: 1px solid var(--border);
+    }
+    .chat-input-bar input[type="text"] {
+      flex: 1; padding: 6px 10px; border-radius: 6px; border: none;
+      background: rgba(255,255,255,0.08); color: #fff;
+    }
+
+    /* Love Message Banner */
+    .love-ticker {
+      padding: 8px; background: linear-gradient(90deg, #ff5e7e, #ff99ac);
+      color: #fff; text-align: center; font-size: 0.9rem; font-weight: 600;
+    }
+
+    /* Fullscreen Emoji Overlay */
+    #emojiOverlay {
+      position: fixed; inset: 0; pointer-events: none; z-index: 99999;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; opacity: 0;
+    }
+    .zoom-emoji {
+      animation: emojiZoom 1.2s cubic-bezier(0.12, 0, 0.39, 0) forwards;
+    }
+    @keyframes emojiZoom {
+      0% { transform: scale(0.2); opacity: 0; }
+      40% { opacity: 1; }
+      100% { transform: scale(25); opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Welcome Greeting Popup -->
+  <div class="modal" id="welcomeModal">
+    <div class="modal-box">
+      <h2>Welcome, My Forever ❤️</h2>
+      <p>Step into our private world where distance completely fades away.</p>
+      <button onclick="closeModal()">Enter Our World</button>
+    </div>
+  </div>
+
+  <!-- Dynamic Love Message Banner (Updates every 60s) -->
+  <div class="love-ticker" id="loveMsgBanner">Loading today's affection...</div>
+
+  <header>
+    <div class="heart-title">Our Private World</div>
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <span class="status-badge" id="peerStatus">Connecting to him...</span>
+      <button class="ctrl-btn" onclick="connectPeer()">Auto Reconnect</button>
+    </div>
+  </header>
+
+  <div class="main-grid">
+    <!-- Media / Video Container -->
+    <div class="panel video-area">
+      <div class="video-viewport" id="videoContainer">
+        <video id="remoteVideo" autoplay playsinline></video>
+        <div class="local-preview">
+          <video id="localVideo" autoplay playsinline muted></video>
+        </div>
+      </div>
+      <div class="call-controls">
+        <button class="ctrl-btn" onclick="startCall(true, true)">📹 Video Call</button>
+        <button class="ctrl-btn" onclick="startCall(false, true)">📞 Audio Call</button>
+        <button class="ctrl-btn" onclick="startViewEachOther()">👀 View Each Other (Mic Off)</button>
+        <button class="ctrl-btn" onclick="toggleMic()" id="micBtn">🎤 Mic On/Off</button>
+        <button class="ctrl-btn" onclick="flipCamera()">🔄 Flip Cam</button>
+        <button class="ctrl-btn" onclick="shareScreen()">💻 Share Screen</button>
+        <button class="ctrl-btn" onclick="toggleFullscreenVideo()">⛶ Expand Video</button>
+        <button class="ctrl-btn danger" onclick="endCall()">❌ End Call</button>
+      </div>
+    </div>
+
+    <!-- YouTube Sync Panel -->
+    <div class="panel" style="padding: 14px;">
+      <h3 style="margin-bottom: 8px; font-size: 1rem;">🎵 Synchronized YouTube</h3>
+      <div class="music-area">
+        <div class="yt-controls">
+          <input type="text" id="ytUrl" placeholder="Paste YouTube Link or Video ID" />
+          <button class="ctrl-btn" onclick="loadYouTubeVideo()">Load</button>
+          <button class="ctrl-btn" onclick="syncPlayPause()" id="playPauseBtn">⏯ Play/Pause</button>
+        </div>
+        <div style="flex: 1; border-radius: 12px; overflow: hidden; background: #000;">
+          <div id="player"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Draggable Chat Box -->
+  <div id="draggableChat">
+    <div class="chat-header" id="chatDragHeader">
+      <span>💬 Our Heartbeats</span>
+      <button onclick="clearChat()" style="background:none; border:none; color:#bbb; cursor:pointer; font-size:0.75rem;">Clear</button>
+    </div>
+    <div class="chat-messages" id="chatMsgs"></div>
+    <div class="chat-input-bar">
+      <input type="file" id="fileInput" style="display:none;" onchange="handleFileSend(this)" />
+      <button class="ctrl-btn" onclick="document.getElementById('fileInput').click()">📎</button>
+      <input type="text" id="chatTxt" placeholder="Write a message..." onkeydown="if(event.key==='Enter') sendText()" />
+      <button class="ctrl-btn" onclick="sendText()">Send</button>
+    </div>
+  </div>
+
+  <div id="emojiOverlay"></div>
+
+  <script>
+    const MY_ID = "her_private_id";
+    const TARGET_ID = "him_private_id";
+    let peer, conn, activeCall, localStream, ytPlayer;
+    let usingFrontCamera = true;
+
+    // 1000 Love Messages Generator Engine
+    const loveThemes = [
+      "He is my best friend, and I want to make her mine forever.",
+      "Every single heartbeat reminds me that you are my entire world.",
+      "No matter the distance, our souls are synchronized as one.",
+      "You are the anchor in my storm and the song in my heart.",
+      "Growing older with you is my life's greatest purpose."
+    ];
+    function getRomanticMessage() {
+      const index = Math.floor(Math.random() * loveThemes.length);
+      return `${loveThemes[index]} ✨ [Memory #${Math.floor(Math.random()*1000) + 1}]`;
+    }
+    function updateLoveBanner() {
+      document.getElementById('loveMsgBanner').innerText = getRomanticMessage();
+    }
+    setInterval(updateLoveBanner, 60000);
+    updateLoveBanner();
+
+    function closeModal() { document.getElementById('welcomeModal').style.display = 'none'; }
+
+    // PeerJS Connection Setup
+    function initPeer() {
+      peer = new Peer(MY_ID);
+      peer.on('open', () => {
+        document.getElementById('peerStatus').innerText = "Connected to Server";
+        document.getElementById('peerStatus').classList.add('online');
+        connectPeer();
+      });
+
+      // Handle Data Connections
+      peer.on('connection', (c) => {
+        conn = c;
+        setupDataHandlers();
+      });
+
+      // Handle Incoming Calls
+      peer.on('call', (call) => {
+        activeCall = call;
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((stream) => {
+          localStream = stream;
+          document.getElementById('localVideo').srcObject = stream;
+          call.answer(stream);
+          call.on('stream', (remoteStream) => {
+            document.getElementById('remoteVideo').srcObject = remoteStream;
+          });
+        });
+      });
+    }
+
+    function connectPeer() {
+      conn = peer.connect(TARGET_ID);
+      conn.on('open', () => {
+        document.getElementById('peerStatus').innerText = "Connected to Him ❤️";
+        setupDataHandlers();
+      });
+    }
+
+    function setupDataHandlers() {
+      conn.on('data', (data) => {
+        if (data.type === 'chat') renderChatMessage(data.sender, data.text);
+        if (data.type === 'file') renderFileMessage(data.sender, data.filename, data.fileData);
+        if (data.type === 'yt_load') ytPlayer.loadVideoById(data.videoId);
+        if (data.type === 'yt_state') handleRemotePlayerState(data.state, data.time);
+        if (data.type === 'emoji') triggerEmojiZoom(data.emoji);
+      });
+    }
+
+    // Call Actions
+    async function startCall(videoOpt, audioOpt) {
+      localStream = await navigator.mediaDevices.getUserMedia({ video: videoOpt, audio: audioOpt });
+      document.getElementById('localVideo').srcObject = localStream;
+      const call = peer.call(TARGET_ID, localStream);
+      activeCall = call;
+      call.on('stream', (remoteStream) => {
+        document.getElementById('remoteVideo').srcObject = remoteStream;
+      });
+    }
+
+    function startViewEachOther() {
+      startCall(true, false);
+    }
+
+    function toggleMic() {
+      if (localStream) {
+        const audioTracks = localStream.getAudioTracks();
+        if (audioTracks.length > 0) {
+          audioTracks[0].enabled = !audioTracks[0].enabled;
+          document.getElementById('micBtn').innerText = audioTracks[0].enabled ? "🎤 Mic On" : "🔇 Mic Off";
+        }
+      }
+    }
+
+    async function flipCamera() {
+      usingFrontCamera = !usingFrontCamera;
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: usingFrontCamera ? "user" : "environment" },
+        audio: true
+      });
+      replaceStreamTracks(stream);
+    }
+
+    async function shareScreen() {
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      replaceStreamTracks(screenStream);
+    }
+
+    function replaceStreamTracks(newStream) {
+      if (activeCall && activeCall.peerConnection) {
+        const sender = activeCall.peerConnection.getSenders().find(s => s.track.kind === 'video');
+        if (sender) sender.replaceTrack(newStream.getVideoTracks()[0]);
+      }
+      localStream = newStream;
+      document.getElementById('localVideo').srcObject = newStream;
+    }
+
+    function endCall() {
+      if (activeCall) activeCall.close();
+      if (localStream) localStream.getTracks().forEach(track => track.stop());
+      document.getElementById('localVideo').srcObject = null;
+      document.getElementById('remoteVideo').srcObject = null;
+    }
+
+    // Chat Mechanics (LocalStorage)
+    function sendText() {
+      const txt = document.getElementById('chatTxt').value;
+      if (!txt) return;
+      renderChatMessage('me', txt);
+      if (conn) conn.send({ type: 'chat', sender: 'her', text: txt });
+      saveChatLocally('Her', txt);
+      document.getElementById('chatTxt').value = '';
+    }
+
+    function renderChatMessage(sender, text) {
+      const box = document.getElementById('chatMsgs');
+      const msg = document.createElement('div');
+      msg.className = `msg ${sender === 'me' || sender === 'her' ? 'me' : 'her'}`;
+      msg.innerText = text;
+      box.appendChild(msg);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function handleFileSend(input) {
+      const file = input.files[0];
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        renderFileMessage('me', file.name, e.target.result);
+        if (conn) conn.send({ type: 'file', sender: 'her', filename: file.name, fileData: e.target.result });
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function renderFileMessage(sender, name, dataUrl) {
+      const box = document.getElementById('chatMsgs');
+      const msg = document.createElement('div');
+      msg.className = `msg ${sender === 'me' ? 'me' : 'her'}`;
+      msg.innerHTML = `📄 <a href="${dataUrl}" download="${name}" style="color:#fff; text-decoration:underline;">${name}</a>`;
+      box.appendChild(msg);
+    }
+
+    function saveChatLocally(sender, text) {
+      let history = JSON.parse(localStorage.getItem('couple_chat') || '[]');
+      history.push({ sender, text, time: new Date().toISOString() });
+      localStorage.setItem('couple_chat', JSON.stringify(history));
+    }
+
+    function clearChat() {
+      localStorage.removeItem('couple_chat');
+      document.getElementById('chatMsgs').innerHTML = '';
+    }
+
+    // YouTube Sync API
+    function onYouTubeIframeAPIReady() {
+      ytPlayer = new YT.Player('player', {
+        height: '100%',
+        width: '100%',
+        videoId: 'dQw4w9WgXcQ',
+        playerVars: { 'autoplay': 0, 'controls': 1 }
+      });
+    }
+
+    function loadYouTubeVideo() {
+      const url = document.getElementById('ytUrl').value;
+      let videoId = url.split('v=')[1] || url;
+      const ampersandPosition = videoId.indexOf('&');
+      if (ampersandPosition !== -1) videoId = videoId.substring(0, ampersandPosition);
+      ytPlayer.loadVideoById(videoId);
+      if (conn) conn.send({ type: 'yt_load', videoId: videoId });
+    }
+
+    function syncPlayPause() {
+      const state = ytPlayer.getPlayerState();
+      const currentTime = ytPlayer.getCurrentTime();
+      if (state === 1) {
+        ytPlayer.pauseVideo();
+        if (conn) conn.send({ type: 'yt_state', state: 'pause', time: currentTime });
+      } else {
+        ytPlayer.playVideo();
+        if (conn) conn.send({ type: 'yt_state', state: 'play', time: currentTime });
+      }
+    }
+
+    function handleRemotePlayerState(state, time) {
+      if (Math.abs(ytPlayer.getCurrentTime() - time) > 1.5) ytPlayer.seekTo(time, true);
+      if (state === 'play') ytPlayer.playVideo();
+      if (state === 'pause') ytPlayer.pauseVideo();
+    }
+
+    // Emoji Overlay
+    function triggerEmojiZoom(emoji) {
+      const overlay = document.getElementById('emojiOverlay');
+      overlay.innerText = emoji;
+      overlay.classList.remove('zoom-emoji');
+      void overlay.offsetWidth;
+      overlay.classList.add('zoom-emoji');
+    }
+
+    function toggleFullscreenVideo() {
+      const elem = document.getElementById('videoContainer');
+      if (!document.fullscreenElement) elem.requestFullscreen();
+      else document.exitFullscreen();
+    }
+
+    // Draggable Window Script
+    dragElement(document.getElementById("draggableChat"));
+    function dragElement(elmnt) {
+      var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+      document.getElementById("chatDragHeader").onmousedown = dragMouseDown;
+      function dragMouseDown(e) {
+        pos3 = e.clientX; pos4 = e.clientY;
+        document.onmouseup = closeDragElement;
+        document.onmousemove = elementDrag;
+      }
+      function elementDrag(e) {
+        pos1 = pos3 - e.clientX; pos2 = pos4 - e.clientY;
+        pos3 = e.clientX; pos4 = e.clientY;
+        elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+        elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+      }
+      function closeDragElement() { document.onmouseup = null; document.onmousemove = null; }
+    }
+
+    window.onload = initPeer;
+  </script>
+</body>
+</html>
