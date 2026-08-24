@@ -62,7 +62,7 @@
       margin-top: 10px; display: flex; flex-direction: column; gap: 12px;
     }
     .vault-grid {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px;
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px;
     }
     .vault-item {
       background: #0b0f19; border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 8px;
@@ -116,11 +116,11 @@
     <!-- Saved Video Vault -->
     <div class="vault-section">
       <div class="header-row">
-        <h4 style="margin:0;">📁 Saved Video Vault (Dual Frame)</h4>
+        <h4 style="margin:0;">📁 Saved Video Vault (.MP4 Dual Frame)</h4>
         <button onclick="clearAllRecordings()" style="flex:0; min-width:100px; background:#e11d48; font-size:11px; padding:6px 12px;">Delete All</button>
       </div>
       <div id="vaultList" class="vault-grid">
-        <small style="opacity: 0.6;">No recordings saved yet. Dual-frame recordings appear here automatically when calls end.</small>
+        <small style="opacity: 0.6;">No recordings saved yet. Dual-frame MP4s appear here automatically when calls end.</small>
       </div>
     </div>
   </div>
@@ -135,11 +135,11 @@
     let isMusicPlaying = false;
     let mediaRecorder = null, recordedChunks = [];
     let canvasAnimId = null, audioCtx = null;
-    let localAudioSource = null, remoteAudioSource = null;
+    let activeMimeType = "video/mp4";
 
     // IndexedDB Storage
     let db;
-    const dbReq = indexedDB.open("CallRecordingsDB_V3", 1);
+    const dbReq = indexedDB.open("CallRecordingsDB_MP4", 1);
     dbReq.onupgradeneeded = (e) => {
       db = e.target.result;
       if (!db.objectStoreNames.contains("recordings")) {
@@ -170,7 +170,7 @@
         const list = document.getElementById('vaultList');
         list.innerHTML = "";
         if (!req.result || req.result.length === 0) {
-          list.innerHTML = '<small style="opacity: 0.6;">No recordings saved yet. Dual-frame recordings appear here automatically when calls end.</small>';
+          list.innerHTML = '<small style="opacity: 0.6;">No recordings saved yet. Dual-frame MP4s appear here automatically when calls end.</small>';
           return;
         }
         req.result.reverse().forEach((item) => {
@@ -181,7 +181,7 @@
             <video src="${url}" controls playsinline preload="metadata"></video>
             <div style="font-size:11px; opacity:0.8;">📅 ${item.date} (${(item.blob.size / (1024*1024)).toFixed(2)} MB)</div>
             <div style="display:flex; gap:6px;">
-              <a href="${url}" download="dual_call_${item.timestamp}.webm" style="flex:1; text-align:center; background:#38bdf8; color:#000; text-decoration:none; padding:8px; border-radius:6px; font-size:12px; font-weight:bold;">⬇ Download</a>
+              <a href="${url}" download="call_${item.timestamp}.mp4" style="flex:1; text-align:center; background:#38bdf8; color:#000; text-decoration:none; padding:8px; border-radius:6px; font-size:12px; font-weight:bold;">⬇ Download .MP4</a>
               <button onclick="deleteRecording(${item.id})" style="flex:0; background:#ef4444; padding:6px 12px; font-size:12px;">🗑</button>
             </div>
           `;
@@ -197,13 +197,12 @@
     }
 
     function clearAllRecordings() {
-      if (!confirm("Are you sure you want to delete all saved call recordings?")) return;
+      if (!confirm("Are you sure you want to delete all saved recordings?")) return;
       const tx = db.transaction("recordings", "readwrite");
       tx.objectStore("recordings").clear();
       tx.oncomplete = () => renderSavedRecordings();
     }
 
-    // High Clarity Noise Suppression Audio
     const mediaConstraints = {
       video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
       audio: {
@@ -276,14 +275,9 @@
       call.on('close', () => resetCall());
     }
 
-    // Auto audio control: Mic ON by default on call, Mic OFF automatically if music is playing
     function applyAudioAutoRules() {
       if (!localStream) return;
-      if (isMusicPlaying) {
-        setMicState(false);
-      } else {
-        setMicState(true);
-      }
+      setMicState(!isMusicPlaying);
     }
 
     function setMicState(enable) {
@@ -310,7 +304,28 @@
       }
     }
 
-    // Dual-Frame Compositor + Dynamic Mixed Audio Recorder
+    // Canvas Aspect-Ratio Crop Helper (Simulates object-fit: cover)
+    function drawCoverImage(ctx, img, dx, dy, dWidth, dHeight) {
+      const vWidth = img.videoWidth || 640;
+      const vHeight = img.videoHeight || 480;
+      const targetRatio = dWidth / dHeight;
+      const videoRatio = vWidth / vHeight;
+      
+      let sWidth, sHeight, sx, sy;
+      if (videoRatio > targetRatio) {
+        sHeight = vHeight;
+        sWidth = vHeight * targetRatio;
+        sx = (vWidth - sWidth) / 2;
+        sy = 0;
+      } else {
+        sWidth = vWidth;
+        sHeight = vWidth / targetRatio;
+        sx = 0;
+        sy = (vHeight - sHeight) / 2;
+      }
+      ctx.drawImage(img, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
+    }
+
     function startDualFrameRecording() {
       if (mediaRecorder && mediaRecorder.state === 'recording') return;
       recordedChunks = [];
@@ -321,18 +336,19 @@
       const remoteVid = document.getElementById('remoteVideo');
 
       function drawFrames() {
-        ctx.fillStyle = '#000000';
+        ctx.fillStyle = '#0a0e17';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Frame 1: Left Side (Him)
+        // Frame 1: Left Half (Him)
         if (localVid.readyState >= 2) {
-          ctx.drawImage(localVid, 0, 0, 640, 720);
+          drawCoverImage(ctx, localVid, 0, 0, 640, 720);
         }
-        // Frame 2: Right Side (Her)
+        // Frame 2: Right Half (Her)
         if (remoteVid.readyState >= 2) {
-          ctx.drawImage(remoteVid, 640, 0, 640, 720);
+          drawCoverImage(ctx, remoteVid, 640, 0, 640, 720);
         }
 
+        // Center Split Line & Labels
         ctx.strokeStyle = '#38bdf8';
         ctx.lineWidth = 4;
         ctx.beginPath();
@@ -341,9 +357,12 @@
         ctx.stroke();
 
         ctx.fillStyle = '#ffffff';
-        ctx.font = '20px sans-serif';
-        ctx.fillText('You', 20, 40);
-        ctx.fillText('Her', 660, 40);
+        ctx.font = 'bold 22px sans-serif';
+        ctx.shadowColor = "rgba(0,0,0,0.8)";
+        ctx.shadowBlur = 6;
+        ctx.fillText('You', 24, 40);
+        ctx.fillText('Her', 664, 40);
+        ctx.shadowBlur = 0;
 
         canvasAnimId = requestAnimationFrame(drawFrames);
       }
@@ -351,17 +370,17 @@
 
       const compositeVideoStream = canvas.captureStream(30);
 
-      // Web Audio API Audio Routing Hub
+      // Web Audio Hub
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       const audioDestination = audioCtx.createMediaStreamDestination();
 
       if (localStream && localStream.getAudioTracks().length > 0) {
-        localAudioSource = audioCtx.createMediaStreamSource(localStream);
-        localAudioSource.connect(audioDestination);
+        const localSource = audioCtx.createMediaStreamSource(localStream);
+        localSource.connect(audioDestination);
       }
       if (remoteStreamObj && remoteStreamObj.getAudioTracks().length > 0) {
-        remoteAudioSource = audioCtx.createMediaStreamSource(remoteStreamObj);
-        remoteAudioSource.connect(audioDestination);
+        const remoteSource = audioCtx.createMediaStreamSource(remoteStreamObj);
+        remoteSource.connect(audioDestination);
       }
 
       const combinedTracks = [
@@ -370,14 +389,22 @@
       ];
       const mixedStream = new MediaStream(combinedTracks);
 
-      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus') 
-        ? 'video/webm;codecs=vp8,opus' 
-        : 'video/webm';
+      // Preferred MP4 Codec Negotiation
+      const mimeTypes = [
+        'video/mp4;codecs=avc1,mp4a.40.2',
+        'video/mp4',
+        'video/webm;codecs=h264,opus',
+        'video/webm;codecs=vp8,opus',
+        'video/webm'
+      ];
+
+      activeMimeType = mimeTypes.find(type => MediaRecorder.isTypeSupported(type)) || 'video/mp4';
 
       try {
-        mediaRecorder = new MediaRecorder(mixedStream, { mimeType: mimeType });
+        mediaRecorder = new MediaRecorder(mixedStream, { mimeType: activeMimeType });
       } catch (e) {
         mediaRecorder = new MediaRecorder(mixedStream);
+        activeMimeType = "video/mp4";
       }
 
       mediaRecorder.ondataavailable = (e) => {
@@ -387,7 +414,7 @@
       mediaRecorder.onstop = () => {
         cancelAnimationFrame(canvasAnimId);
         if (audioCtx && audioCtx.state !== 'closed') audioCtx.close();
-        const fullBlob = new Blob(recordedChunks, { type: mimeType });
+        const fullBlob = new Blob(recordedChunks, { type: 'video/mp4' });
         saveRecordingLocally(fullBlob);
         document.getElementById('recStatus').style.display = 'none';
       };
@@ -422,7 +449,7 @@
       document.getElementById('localVideo').srcObject = null;
     }
 
-    // YouTube Sync & Music State Automation
+    // YouTube Sync Engine
     let player, isRemote = false;
     function onYouTubeIframeAPIReady() {
       player = new YT.Player('player', {
