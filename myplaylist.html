@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Pro Audio Player & Playlist Studio</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --bg: #0f172a; --panel: #1e293b; --border: #334155;
+      --text: #f8fafc; --accent: #38bdf8; --danger: #ef4444;
+    }
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: var(--bg); color: var(--text); margin: 0; padding: 15px; display: flex; justify-content: center; }
+    
+    .container {
+      display: grid; grid-template-columns: 1fr 1.2fr; gap: 15px;
+      width: 100%; max-width: 1200px; min-height: 90vh;
+    }
+    @media (max-width: 900px) { .container { grid-template-columns: 1fr; } }
+    
+    .card {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px;
+    }
+    .header { font-size: 16px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+    
+    /* Tabs */
+    .tabs { display: flex; border-bottom: 1px solid var(--border); }
+    .tab { padding: 8px 14px; cursor: pointer; font-size: 12px; border-bottom: 2px solid transparent; }
+    .tab.active { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Equalizer Grid */
+    .eq-grid {
+      display: flex; justify-content: space-between; height: 200px; padding: 10px 0;
+    }
+    .slider-col { display: flex; flex-direction: column; align-items: center; height: 100%; gap: 6px; }
+    .slider-col span { font-size: 10px; opacity: 0.8; }
+    .slider-col input[type="range"] {
+      -webkit-appearance: slider-vertical; width: 16px; flex: 1; accent-color: var(--accent); cursor: pointer;
+    }
+    
+    /* Playlist View */
+    .playlist-box {
+      flex: 1; overflow-y: auto; max-height: 480px; display: flex; flex-direction: column; gap: 6px;
+    }
+    .track-item {
+      background: rgba(0,0,0,0.25); border: 1px solid var(--border); border-radius: 8px;
+      padding: 8px 12px; display: flex; align-items: center; gap: 8px; font-size: 13px;
+    }
+    .track-item.active { border-color: var(--accent); background: rgba(56, 189, 248, 0.1); }
+    .track-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .track-num { width: 35px; background: transparent; border: 1px solid var(--border); color: #fff; text-align: center; border-radius: 4px; }
+    
+    button, select {
+      background: #334155; color: #fff; border: 1px solid var(--border);
+      padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px;
+    }
+    button:hover { background: var(--accent); color: #000; }
+    .btn-danger { background: rgba(239, 68, 68, 0.2); color: var(--danger); border-color: var(--danger); }
+    .btn-danger:hover { background: var(--danger); color: #fff; }
+    
+    audio { width: 100%; height: 36px; border-radius: 8px; margin-top: auto; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Left Column: Playlist Manager -->
+    <div class="card">
+      <div class="header">
+        <span>📑 Local Storage Playlist</span>
+        <span id="trackCount" style="font-size: 12px; opacity: 0.7;">0 Tracks</span>
+      </div>
+      
+      <div style="display:flex; gap:8px;">
+        <input type="file" id="fileInput" multiple accept="audio/*" style="display: none;" onchange="handleFileSelect(this)">
+        <button onclick="document.getElementById('fileInput').click()" style="flex:1;">➕ Add Multiple Songs</button>
+        <button onclick="clearAllTracks()" class="btn-danger">Clear All</button>
+      </div>
+
+      <div class="playlist-box" id="playlistContainer">
+        <small style="opacity: 0.6; text-align: center; margin-top: 40px;">Playlist empty. Upload tracks from local storage.</small>
+      </div>
+
+      <div style="border-top: 1px solid var(--border); padding-top: 10px;">
+        <div style="font-size:12px; margin-bottom: 6px;" id="currentPlayingTitle">No song playing</div>
+        <audio id="audioPlayer" controls></audio>
+      </div>
+    </div>
+
+    <!-- Right Column: VLC Audio Effects Processing -->
+    <div class="card">
+      <div class="header">🎛️ Audio Adjustments & Effects</div>
+      
+      <div class="tabs">
+        <div class="tab active" onclick="switchTab(0)">10-Band EQ</div>
+        <div class="tab" onclick="switchTab(1)">Compressor</div>
+        <div class="tab" onclick="switchTab(2)">Stereo Widener</div>
+      </div>
+
+      <!-- Equalizer Tab -->
+      <div class="tab-content active" id="tab-0">
+        <div style="display:flex; justify-content:space-between; margin: 10px 0;">
+          <label><input type="checkbox" id="eqToggle" checked onchange="toggleEQ()"> Enable</label>
+          <select onchange="applyPreset(this.value)">
+            <option value="custom">Preset: Custom</option>
+            <option value="flat">Flat</option>
+            <option value="bass">Bass Boost</option>
+            <option value="vocal">Vocal Boost</option>
+          </select>
+        </div>
+
+        <div class="eq-grid">
+          <div class="slider-col" style="border-right:1px dashed var(--border); padding-right:6px;">
+            <input type="range" id="preamp" min="-20" max="20" step="0.5" value="14.4" oninput="updatePreamp(this.value)">
+            <span>Preamp</span>
+            <span id="preampVal" style="font-size:9px;">14.4dB</span>
+          </div>
+          <!-- 10 Frequency Sliders -->
+          <div class="slider-col"><input type="range" class="eq-band" min="-20" max="20" step="0.5" value="18.2" oninput="updateBand(0, this.value)"><span>60Hz</span></div>
+          <div class="slider-col"><input type="range" class="eq-band" min="-20" max="20" step="0.5" value="11.8" oninput="updateBand(1, this.value)"><span>170Hz</span></div>
+          <div class="slider-col"><input type="range" class="eq-band" min="-20" max="20" step="0.5" value="3.7" oninput="updateBand(2, this.value)"><span>310Hz</span></div>
+          <div class="slider-col"><input type="range" class="eq-band" min="-20" max="20" step="0.5" value="-1.7" oninput="updateBand(3, this.value)"><span>600Hz</span></div>
+          <div class="slider-col"><input type="range" class="eq-band" min="-20" max="20" step="0.5" value="-7.8" oninput="updateBand(4, this.value)"><span>1kHz</span></div>
+          <div class="slider-col"><input type="range" class="eq-band" min="-20" max="20" step="0.5" value="2.4" oninput="updateBand(5, this.value)"><span>3kHz</span></div>
+          <div class="slider-col"><input type="range" class="eq-band" min="-20" max="20" step="0.5" value="9.8" oninput="updateBand(6, this.value)"><span>6kHz</span></div>
+          <div class="slider-col"><input type="range" class="eq-band" min="-20" max="20" step="0.5" value="14.1" oninput="updateBand(7, this.value)"><span>12kHz</span></div>
+          <div class="slider-col"><input type="range" class="eq-band" min="-20" max="20" step="0.5" value="-3.6" oninput="updateBand(8, this.value)"><span>14kHz</span></div>
+          <div class="slider-col"><input type="range" class="eq-band" min="-20" max="20" step="0.5" value="11.6" oninput="updateBand(9, this.value)"><span>16kHz</span></div>
+        </div>
+      </div>
+
+      <!-- Compressor Tab -->
+      <div class="tab-content" id="tab-1">
+        <label style="display:block; margin: 12px 0;"><input type="checkbox" id="compToggle" onchange="toggleCompressor()"> Enable Compressor</label>
+        <div style="display:flex; flex-direction:column; gap:10px; font-size:12px;">
+          <label>Threshold: <input type="range" id="compThreshold" min="-60" max="0" value="-24" oninput="updateCompressor()"></label>
+          <label>Knee: <input type="range" id="compKnee" min="0" max="40" value="30" oninput="updateCompressor()"></label>
+          <label>Ratio: <input type="range" id="compRatio" min="1" max="20" value="12" oninput="updateCompressor()"></label>
+        </div>
+      </div>
+
+      <!-- Stereo Widener Tab -->
+      <div class="tab-content" id="tab-2">
+        <label style="display:block; margin: 12px 0;"><input type="checkbox" id="widenerToggle" onchange="toggleWidener()"> Enable Widener</label>
+        <label style="font-size:12px;">Stereo Width: 
+          <input type="range" id="widenerWidth" min="0" max="2" step="0.1" value="1.5">
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- IndexedDB Local Audio Database ---
+    let db, playlist = [], currentTrackIndex = -1;
+    const dbReq = indexedDB.open("ProMusicPlayerDB", 1);
+    
+    dbReq.onupgradeneeded = (e) => {
+      db = e.target.result;
+      if (!db.objectStoreNames.contains("tracks")) {
+        db.createObjectStore("tracks", { keyPath: "id", autoIncrement: true });
+      }
+    };
+    dbReq.onsuccess = (e) => {
+      db = e.target.result;
+      loadPlaylistFromDB();
+    };
+
+    function loadPlaylistFromDB() {
+      const tx = db.transaction("tracks", "readonly");
+      const req = tx.objectStore("tracks").getAll();
+      req.onsuccess = () => {
+        playlist = req.result.sort((a,b) => a.order - b.order);
+        renderPlaylist();
+      };
+    }
+
+    function handleFileSelect(input) {
+      const files = Array.from(input.files);
+      if (!files.length) return;
+      const tx = db.transaction("tracks", "readwrite");
+      const store = tx.objectStore("tracks");
+      
+      files.forEach((file, i) => {
+        store.add({
+          name: file.name.replace(/\.[^/.]+$/, ""),
+          blob: file,
+          order: playlist.length + i + 1
+        });
+      });
+      tx.oncomplete = () => loadPlaylistFromDB();
+    }
+
+    function renderPlaylist() {
+      const box = document.getElementById('playlistContainer');
+      document.getElementById('trackCount').innerText = `${playlist.length} Tracks`;
+      box.innerHTML = "";
+      if (!playlist.length) {
+        box.innerHTML = '<small style="opacity: 0.6; text-align: center; margin-top: 40px;">Playlist empty. Upload tracks from local storage.</small>';
+        return;
+      }
+
+      playlist.forEach((track, idx) => {
+        const div = document.createElement('div');
+        div.className = `track-item ${idx === currentTrackIndex ? 'active' : ''}`;
+        div.innerHTML = `
+          <input type="number" class="track-num" value="${idx + 1}" onchange="changeTrackPosition(${idx}, this.value)">
+          <div class="track-name" onclick="playTrack(${idx})" style="cursor:pointer;">${track.name}</div>
+          <button onclick="playNextInQueue(${idx})" title="Set to play next">⏭ Next</button>
+          <button onclick="moveTrack(${idx}, -1)">▲</button>
+          <button onclick="moveTrack(${idx}, 1)">▼</button>
+          <button onclick="deleteTrack(${track.id})" class="btn-danger">✕</button>
+        `;
+        box.appendChild(div);
+      });
+    }
+
+    function playTrack(index) {
+      if (index < 0 || index >= playlist.length) return;
+      initAudioEngine();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      
+      currentTrackIndex = index;
+      const track = playlist[index];
+      const player = document.getElementById('audioPlayer');
+      player.src = URL.createObjectURL(track.blob);
+      player.play();
+      document.getElementById('currentPlayingTitle').innerText = `▶ Playing: ${track.name}`;
+      renderPlaylist();
+    }
+
+    // Auto Play Next Track Handler
+    document.getElementById('audioPlayer').onended = () => {
+      if (currentTrackIndex + 1 < playlist.length) {
+        playTrack(currentTrackIndex + 1);
+      }
+    };
+
+    function playNextInQueue(fromIndex) {
+      if (fromIndex === currentTrackIndex || fromIndex === currentTrackIndex + 1) return;
+      const item = playlist.splice(fromIndex, 1)[0];
+      playlist.splice(currentTrackIndex + 1, 0, item);
+      persistReordering();
+    }
+
+    function moveTrack(index, delta) {
+      const target = index + delta;
+      if (target < 0 || target >= playlist.length) return;
+      const temp = playlist[index];
+      playlist[index] = playlist[target];
+      playlist[target] = temp;
+      persistReordering();
+    }
+
+    function changeTrackPosition(fromIndex, newPos) {
+      const toIndex = parseInt(newPos) - 1;
+      if (isNaN(toIndex) || toIndex < 0 || toIndex >= playlist.length) return renderPlaylist();
+      const item = playlist.splice(fromIndex, 1)[0];
+      playlist.splice(toIndex, 0, item);
+      persistReordering();
+    }
+
+    function persistReordering() {
+      const tx = db.transaction("tracks", "readwrite");
+      const store = tx.objectStore("tracks");
+      playlist.forEach((item, idx) => {
+        item.order = idx + 1;
+        store.put(item);
+      });
+      tx.oncomplete = () => renderPlaylist();
+    }
+
+    function deleteTrack(id) {
+      const tx = db.transaction("tracks", "readwrite");
+      tx.objectStore("tracks").delete(id);
+      tx.oncomplete = () => loadPlaylistFromDB();
+    }
+
+    function clearAllTracks() {
+      if (!confirm("Clear whole playlist?")) return;
+      const tx = db.transaction("tracks", "readwrite");
+      tx.objectStore("tracks").clear();
+      tx.oncomplete = () => { playlist = []; currentTrackIndex = -1; renderPlaylist(); };
+    }
+
+    // --- Web Audio Processing Engine (VLC Audio Suite) ---
+    const freqs = [60, 170, 310, 600, 1000, 3000, 6000, 12000, 14000, 16000];
+    const initialGains = [18.2, 11.8, 3.7, -1.7, -7.8, 2.4, 9.8, 14.1, -3.6, 11.6];
+    let audioCtx, sourceNode, preampNode, compressorNode, filterNodes = [];
+
+    function initAudioEngine() {
+      if (audioCtx) return;
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const player = document.getElementById('audioPlayer');
+      sourceNode = audioCtx.createMediaElementSource(player);
+
+      preampNode = audioCtx.createGain();
+      preampNode.gain.value = Math.pow(10, 14.4 / 20);
+
+      let lastNode = preampNode;
+      freqs.forEach((freq, idx) => {
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = idx === 0 ? "lowshelf" : idx === 9 ? "highshelf" : "peaking";
+        filter.frequency.value = freq;
+        filter.gain.value = initialGains[idx];
+        lastNode.connect(filter);
+        lastNode = filter;
+        filterNodes.push(filter);
+      });
+
+      compressorNode = audioCtx.createDynamicsCompressor();
+      compressorNode.ratio.value = 1; // Default bypassed
+      lastNode.connect(compressorNode);
+      compressorNode.connect(audioCtx.destination);
+      sourceNode.connect(preampNode);
+    }
+
+    function updateBand(idx, val) {
+      initAudioEngine();
+      filterNodes[idx].gain.value = parseFloat(val);
+    }
+    function updatePreamp(val) {
+      initAudioEngine();
+      preampNode.gain.value = Math.pow(10, parseFloat(val) / 20);
+      document.getElementById('preampVal').innerText = `${val}dB`;
+    }
+    function toggleEQ() {
+      const enabled = document.getElementById('eqToggle').checked;
+      filterNodes.forEach((f, i) => f.gain.value = enabled ? initialGains[i] : 0);
+    }
+    function toggleCompressor() {
+      initAudioEngine();
+      compressorNode.ratio.value = document.getElementById('compToggle').checked ? 12 : 1;
+    }
+    function updateCompressor() {
+      if (!compressorNode) return;
+      compressorNode.threshold.value = parseFloat(document.getElementById('compThreshold').value);
+      compressorNode.knee.value = parseFloat(document.getElementById('compKnee').value);
+      compressorNode.ratio.value = parseFloat(document.getElementById('compRatio').value);
+    }
+    function switchTab(index) {
+      document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i === index));
+      document.querySelectorAll('.tab-content').forEach((c, i) => c.classList.toggle('active', i === index));
+    }
+  </script>
+</body>
+</html>
