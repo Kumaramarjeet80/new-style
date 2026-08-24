@@ -68,7 +68,7 @@
     .vault-item {
       background: #0b0f19; border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 8px;
     }
-    .vault-item video { width: 100%; border-radius: 6px; aspect-ratio: 16/9; background: #000; }
+    .vault-item video { width: 100%; border-radius: 6px; aspect-ratio: 1 / 1; background: #000; }
   </style>
 </head>
 <body>
@@ -98,7 +98,7 @@
       <div class="header-row">
         <h4 style="margin:0;">📹 Video Call</h4>
         <div>
-          <span id="recStatus" class="status-badge recording-badge" style="display:none; margin-right:4px;">🔴 Dual-Record</span>
+          <span id="recStatus" class="status-badge recording-badge" style="display:none; margin-right:4px;">🔴 18:18 Rec</span>
           <span id="callStatus" class="status-badge offline">Disconnected</span>
         </div>
       </div>
@@ -117,17 +117,17 @@
     <!-- Saved Video Recordings Vault -->
     <div class="vault-section">
       <div class="header-row">
-        <h4 style="margin:0;">📁 Saved Video Vault (Dual Frame)</h4>
+        <h4 style="margin:0;">📁 Saved Video Vault (18:18 Ratio)</h4>
         <button onclick="clearAllRecordings()" style="flex:0; min-width:100px; background:#e11d48; font-size:11px; padding:6px 12px;">Delete All</button>
       </div>
       <div id="vaultList" class="vault-grid">
-        <small style="opacity: 0.6;">No recordings saved yet. They will appear here automatically when calls end.</small>
+        <small style="opacity: 0.6;">No recordings saved yet. Videos will appear here automatically when calls end.</small>
       </div>
     </div>
   </div>
 
-  <!-- Off-screen Canvas for Dual Composite Stream -->
-  <canvas id="compositeCanvas" width="1280" height="720" style="display:none;"></canvas>
+  <!-- 18:18 (1080x1080) Full HD Square Composite Canvas -->
+  <canvas id="compositeCanvas" width="1080" height="1080" style="display:none;"></canvas>
 
   <script>
     const myId = "room-2026-user-him", targetId = "room-2026-user-her";
@@ -139,7 +139,7 @@
 
     // --- IndexedDB Video Storage ---
     let db;
-    const dbReq = indexedDB.open("CallRecordingsDB_DualFrame", 1);
+    const dbReq = indexedDB.open("CallRecordingsDB_18_18", 1);
     dbReq.onupgradeneeded = (e) => {
       db = e.target.result;
       if (!db.objectStoreNames.contains("recordings")) {
@@ -172,7 +172,7 @@
         const list = document.getElementById('vaultList');
         list.innerHTML = "";
         if (!req.result || req.result.length === 0) {
-          list.innerHTML = '<small style="opacity: 0.6;">No recordings saved yet. Dual-frame videos will appear here automatically when calls end.</small>';
+          list.innerHTML = '<small style="opacity: 0.6;">No recordings saved yet. Videos will appear here automatically when calls end.</small>';
           return;
         }
         req.result.reverse().forEach((item) => {
@@ -183,7 +183,7 @@
             <video src="${url}" controls playsinline preload="metadata"></video>
             <div style="font-size:11px; opacity:0.8;">📅 ${item.date} (${(item.blob.size / (1024*1024)).toFixed(2)} MB)</div>
             <div style="display:flex; gap:6px;">
-              <a href="${url}" download="dual_call_${item.timestamp}.webm" style="flex:1; text-align:center; background:#38bdf8; color:#000; text-decoration:none; padding:8px; border-radius:6px; font-size:12px; font-weight:bold;">⬇ Download</a>
+              <a href="${url}" download="18_18_call_${item.timestamp}.webm" style="flex:1; text-align:center; background:#38bdf8; color:#000; text-decoration:none; padding:8px; border-radius:6px; font-size:12px; font-weight:bold;">⬇ Download</a>
               <button onclick="deleteRecording(${item.id})" style="flex:0; background:#ef4444; padding:6px 12px; font-size:12px;">🗑</button>
             </div>
           `;
@@ -199,15 +199,15 @@
     }
 
     function clearAllRecordings() {
-      if (!confirm("Are you sure you want to delete all saved call recordings?")) return;
+      if (!confirm("Delete all saved 18:18 call recordings?")) return;
       const tx = db.transaction("recordings", "readwrite");
       tx.objectStore("recordings").clear();
       tx.oncomplete = () => renderSavedRecordings();
     }
 
-    // --- Enhanced Voice Clarity & Noise Cancellation Constraints ---
+    // --- Enhanced Voice & Direct Feed Audio ---
     const mediaConstraints = {
-      video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
+      video: { width: { ideal: 1920 }, height: { ideal: 1080 }, facingMode: "user" },
       audio: {
         echoCancellation: true,
         noiseSuppression: true,
@@ -265,20 +265,64 @@
         const videoTrack = remStream.getVideoTracks()[0];
         if (videoTrack) {
           if (videoTrack.muted) {
-            videoTrack.onunmute = () => startDualFrameRecording();
+            videoTrack.onunmute = () => start1818CompositorRecording();
           } else {
-            startDualFrameRecording();
+            start1818CompositorRecording();
           }
         } else {
-          startDualFrameRecording();
+          start1818CompositorRecording();
         }
       });
 
       call.on('close', () => resetCall());
     }
 
-    // --- Dual-Frame Canvas Compositor & Audio Mixer ---
-    function startDualFrameRecording() {
+    // --- Dynamic 18:18 Ratio Aspect Engine ---
+    function drawVideoFit(ctx, video, x, y, w, h) {
+      const vW = video.videoWidth || 640;
+      const vH = video.videoHeight || 480;
+      const vRatio = vW / vH;
+      const targetRatio = w / h;
+
+      if (Math.abs(vRatio - targetRatio) < 0.2) {
+        // Direct fit without stretching
+        ctx.drawImage(video, x, y, w, h);
+      } else {
+        // Letterbox & render "frame output missing" on empty sections
+        let drawW, drawH, drawX, drawY;
+        if (vRatio > targetRatio) {
+          drawW = w;
+          drawH = w / vRatio;
+          drawX = x;
+          drawY = y + (h - drawH) / 2;
+        } else {
+          drawH = h;
+          drawW = h * vRatio;
+          drawX = x + (w - drawW) / 2;
+          drawY = y;
+        }
+
+        // Draw Blank Background Filler & text
+        ctx.fillStyle = "#05070e";
+        ctx.fillRect(x, y, w, h);
+
+        ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+        ctx.font = "bold 16px sans-serif";
+        ctx.textAlign = "center";
+        
+        if (drawY > y + 20) {
+          ctx.fillText("frame output missing", x + w/2, y + (drawY - y)/2 + 6);
+          ctx.fillText("frame output missing", x + w/2, drawY + drawH + (y + h - (drawY + drawH))/2 + 6);
+        } else if (drawX > x + 20) {
+          ctx.fillText("frame output missing", x + (drawX - x)/2, y + h/2);
+          ctx.fillText("frame output missing", drawX + drawW + (x + w - (drawX + drawW))/2, y + h/2);
+        }
+
+        ctx.drawImage(video, drawX, drawY, drawW, drawH);
+      }
+    }
+
+    function start1818CompositorRecording() {
       if (mediaRecorder && mediaRecorder.state === 'recording') return;
       recordedChunks = [];
 
@@ -287,39 +331,38 @@
       const localVid = document.getElementById('localVideo');
       const remoteVid = document.getElementById('remoteVideo');
 
-      function drawFrames() {
-        ctx.fillStyle = '#000000';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      function draw1818Frames() {
+        ctx.fillStyle = '#0b0f19';
+        ctx.fillRect(0, 0, 1080, 1080);
 
-        // Frame 1: Left Side (Him)
-        if (localVid.readyState >= 2) {
-          ctx.drawImage(localVid, 0, 0, 640, 720);
+        const myIsLandscape = (localVid.videoWidth || 1) >= (localVid.videoHeight || 1);
+        const herIsLandscape = (remoteVid.videoWidth || 1) >= (remoteVid.videoHeight || 1);
+
+        if (myIsLandscape && herIsLandscape) {
+          // Both 18:9 -> Split Horizontally into 18:18 (1080x540 each)
+          if (localVid.readyState >= 2) drawVideoFit(ctx, localVid, 0, 0, 1080, 540);
+          if (remoteVid.readyState >= 2) drawVideoFit(ctx, remoteVid, 0, 540, 1080, 540);
+
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.moveTo(0, 540); ctx.lineTo(1080, 540); ctx.stroke();
+        } else {
+          // Vertical Split into 18:18 (540x1080 each)
+          if (localVid.readyState >= 2) drawVideoFit(ctx, localVid, 0, 0, 540, 1080);
+          if (remoteVid.readyState >= 2) drawVideoFit(ctx, remoteVid, 540, 0, 540, 1080);
+
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.moveTo(540, 0); ctx.lineTo(540, 1080); ctx.stroke();
         }
-        // Frame 2: Right Side (Her)
-        if (remoteVid.readyState >= 2) {
-          ctx.drawImage(remoteVid, 640, 0, 640, 720);
-        }
 
-        // Dividing line & UI labels
-        ctx.strokeStyle = '#38bdf8';
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.moveTo(640, 0);
-        ctx.lineTo(640, 720);
-        ctx.stroke();
-
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '20px sans-serif';
-        ctx.fillText('You', 20, 40);
-        ctx.fillText('Her', 660, 40);
-
-        canvasAnimId = requestAnimationFrame(drawFrames);
+        canvasAnimId = requestAnimationFrame(draw1818Frames);
       }
-      drawFrames();
+      draw1818Frames();
 
       const compositeVideoStream = canvas.captureStream(30);
 
-      // Web Audio API Dual Track Mixer
+      // Web Audio API Dual Voice Mixer
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       const audioDestination = audioCtx.createMediaStreamDestination();
 
@@ -332,7 +375,6 @@
         remoteSource.connect(audioDestination);
       }
 
-      // Combine Mixed Audio with Composite 2-Frame Video Stream
       const combinedTracks = [
         ...compositeVideoStream.getVideoTracks(),
         ...audioDestination.stream.getAudioTracks()
@@ -343,8 +385,15 @@
         ? 'video/webm;codecs=vp8,opus' 
         : 'video/webm';
 
+      // Uncompressed 8 Mbps Bitrate Configuration
+      const recorderOptions = {
+        mimeType: mimeType,
+        videoBitsPerSecond: 8000000,
+        audioBitsPerSecond: 128000
+      };
+
       try {
-        mediaRecorder = new MediaRecorder(mixedStream, { mimeType: mimeType });
+        mediaRecorder = new MediaRecorder(mixedStream, recorderOptions);
       } catch (e) {
         mediaRecorder = new MediaRecorder(mixedStream);
       }
@@ -365,7 +414,7 @@
       document.getElementById('recStatus').style.display = 'inline-block';
     }
 
-    function stopDualFrameRecording() {
+    function stop1818CompositorRecording() {
       if (mediaRecorder && mediaRecorder.state !== 'inactive') {
         mediaRecorder.requestData();
         mediaRecorder.stop();
@@ -378,7 +427,7 @@
     }
 
     function terminateCall() {
-      stopDualFrameRecording();
+      stop1818CompositorRecording();
       if (callObj) callObj.close();
       if (localStream) localStream.getTracks().forEach(t => t.stop());
       resetCall();
