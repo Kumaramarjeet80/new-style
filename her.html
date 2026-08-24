@@ -2,77 +2,134 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Special Space | Her</title>
+  <title>Private Space | Her</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script src="https://www.youtube.com/iframe_api"></script>
   <style>
     :root {
       --bg: #fff1f2; --card: #ffffff; --accent: #f43f5e;
       --text: #881337; --danger: #e11d48; --success: #10b981;
     }
+    * { box-sizing: border-box; }
     body {
       margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: var(--bg); color: var(--text); display: flex; flex-direction: column;
-      align-items: center; justify-content: center; min-height: 100vh;
+      background: var(--bg); color: var(--text); height: 100vh; overflow: hidden;
+    }
+    .split-layout {
+      display: flex; width: 100vw; height: 100vh;
+    }
+    .split-pane {
+      flex: 1; padding: 24px; display: flex; flex-direction: column;
+      justify-content: center; align-items: center; border-right: 1px solid #ffe4e6;
+    }
+    .split-pane:last-child { border-right: none; }
+    @media (max-width: 850px) {
+      .split-layout { flex-direction: column; overflow-y: auto; height: auto; }
+      .split-pane { width: 100%; min-height: 100vh; border-right: none; border-bottom: 1px solid #ffe4e6; }
     }
     .card {
-      background: var(--card); border-radius: 24px; padding: 24px; width: 90%; max-width: 500px;
-      box-shadow: 0 10px 25px rgba(244,63,94,0.15); text-align: center; border: 1px solid #ffe4e6;
+      background: var(--card); border-radius: 24px; padding: 24px; width: 100%; max-width: 480px;
+      box-shadow: 0 10px 25px rgba(244,63,94,0.12); display: flex; flex-direction: column; gap: 16px;
+      border: 1px solid #ffe4e6;
     }
-    .status-dot {
-      height: 10px; width: 10px; border-radius: 50%; display: inline-block; margin-right: 6px;
+    .header-row {
+      display: flex; justify-content: space-between; align-items: center;
     }
-    .online { background: var(--success); }
-    .offline { background: #cbd5e1; }
+    .status-badge {
+      font-size: 12px; padding: 4px 12px; border-radius: 20px; font-weight: 600;
+    }
+    .online { background: #d1fae5; color: #065f46; }
+    .offline { background: #ffe4e6; color: #be123c; }
+    
+    /* Music UI */
+    .yt-wrapper {
+      width: 100%; height: 250px; background: #ffe4e6; border-radius: 16px; overflow: hidden;
+    }
+    .url-input-row { display: flex; gap: 8px; width: 100%; }
+    input[type="text"] {
+      flex: 1; padding: 10px 14px; border-radius: 12px; border: 1px solid #fecdd3;
+      background: #fff; color: var(--text); outline: none;
+    }
+    
+    /* Video UI */
     .video-grid {
-      position: relative; width: 100%; height: 280px; background: #ffe4e6;
-      border-radius: 16px; margin: 16px 0; overflow: hidden;
+      position: relative; width: 100%; height: 260px; background: #ffe4e6;
+      border-radius: 16px; overflow: hidden;
     }
     #remoteVideo { width: 100%; height: 100%; object-fit: cover; }
     #localVideo {
       position: absolute; bottom: 12px; right: 12px; width: 100px; height: 75px;
       border-radius: 12px; object-fit: cover; border: 2px solid var(--accent);
     }
-    .btn-group { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+    .btn-group { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
     button {
-      padding: 10px 20px; border: none; border-radius: 20px; font-weight: 600;
-      cursor: pointer; transition: 0.2s;
+      padding: 10px 18px; border: none; border-radius: 20px; font-weight: 600;
+      cursor: pointer; transition: 0.2s; background: #ffe4e6; color: var(--text);
     }
-    .btn-call { background: var(--accent); color: white; box-shadow: 0 4px 12px rgba(244,63,94,0.3); }
-    .btn-end { background: var(--danger); color: white; display: none; }
-    .btn-action { background: #ffe4e6; color: var(--text); }
+    .btn-call { background: var(--accent); color: white; }
+    .btn-end { background: var(--danger); color: white; }
+    .btn-muted { background: var(--danger); color: white; }
   </style>
 </head>
 <body>
 
-  <div class="card">
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-      <h2 style="margin:0; font-weight:700;">Her Sanctuary ✨</h2>
-      <div style="font-size:13px;"><span id="statusDot" class="status-dot offline"></span><span id="statusText">Connecting...</span></div>
+  <div class="split-layout">
+    <!-- Side 1: Together Music Listening -->
+    <div class="split-pane">
+      <div class="card">
+        <div class="header-row">
+          <h3 style="margin:0;">🎵 Shared Music Room 🌸</h3>
+          <span id="musicSyncStatus" class="status-badge offline">Syncing...</span>
+        </div>
+        <div class="url-input-row">
+          <input type="text" id="ytUrl" placeholder="Paste YouTube link...">
+          <button onclick="loadCustomVideo()" style="background: var(--accent); color: white;">Load</button>
+        </div>
+        <div class="yt-wrapper">
+          <div id="player"></div>
+        </div>
+        <div class="btn-group">
+          <button onclick="toggleMusicPlay()" id="musicPlayBtn" class="btn-call">▶ Play</button>
+          <button onclick="forceSync()">🔄 Correct Sync</button>
+        </div>
+      </div>
     </div>
 
-    <div class="video-grid">
-      <video id="remoteVideo" autoplay playsinline></video>
-      <video id="localVideo" autoplay playsinline muted></video>
-    </div>
-
-    <div class="btn-group">
-      <button id="callBtn" class="btn-call" onclick="startCall()">📞 Call Him</button>
-      <button id="endBtn" class="btn-end" onclick="endCall()">📴 End Call</button>
-      <button class="btn-action" onclick="toggleMic()">🎤 Mic</button>
-      <button class="btn-action" onclick="toggleCam()">📷 Cam</button>
+    <!-- Side 2: Video Call -->
+    <div class="split-pane">
+      <div class="card">
+        <div class="header-row">
+          <h3 style="margin:0;">📹 Video Call (Him) ✨</h3>
+          <span id="callStatus" class="status-badge offline">Disconnected</span>
+        </div>
+        <div class="video-grid">
+          <video id="remoteVideo" autoplay playsinline></video>
+          <video id="localVideo" autoplay playsinline muted></video>
+        </div>
+        <div class="btn-group">
+          <button id="callBtn" class="btn-call" onclick="startCall()">📞 Call Him</button>
+          <button id="endBtn" class="btn-end" onclick="endCall()" style="display:none;">📴 End</button>
+          <button id="micBtn" onclick="toggleMic()">🎤 Mic: ON</button>
+          <button id="camBtn" onclick="toggleCam()">📷 Cam: ON</button>
+        </div>
+      </div>
     </div>
   </div>
 
   <script>
     const myId = "room-2026-user-her";
     const targetId = "room-2026-user-him";
-    let peer = new Peer(myId);
-    let localStream = null, currentCall = null;
+    const peer = new Peer(myId);
+    let dataConn = null, callObj = null, localStream = null;
+    let micEnabled = true, camEnabled = true;
 
-    peer.on('open', () => {
-      document.getElementById('statusDot').className = 'status-dot online';
-      document.getElementById('statusText').innerText = 'Online 🌸';
+    // Auto-Connect Signaling
+    peer.on('open', () => autoConnect());
+    peer.on('connection', (c) => {
+      dataConn = c;
+      setupDataChannel();
+      updateStatus(true);
     });
 
     peer.on('call', (call) => {
@@ -80,55 +137,156 @@
         localStream = stream;
         document.getElementById('localVideo').srcObject = stream;
         call.answer(stream);
-        handleCallEvents(call);
+        handleStream(call);
       });
     });
 
+    function autoConnect() {
+      dataConn = peer.connect(targetId);
+      dataConn.on('open', () => {
+        updateStatus(true);
+        setupDataChannel();
+      });
+      dataConn.on('close', () => {
+        updateStatus(false);
+        setTimeout(autoConnect, 3000);
+      });
+      setTimeout(() => { if (!dataConn || !dataConn.open) autoConnect(); }, 4000);
+    }
+
+    function updateStatus(online) {
+      const b1 = document.getElementById('musicSyncStatus');
+      const b2 = document.getElementById('callStatus');
+      b1.className = b2.className = `status-badge ${online ? 'online' : 'offline'}`;
+      b1.innerText = b2.innerText = online ? 'Connected 💖' : 'Waiting...';
+    }
+
+    // WebRTC Video Call
     function startCall() {
       navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((stream) => {
         localStream = stream;
         document.getElementById('localVideo').srcObject = stream;
         const call = peer.call(targetId, stream);
-        handleCallEvents(call);
-      }).catch(err => alert("Camera/Mic permission needed: " + err));
+        handleStream(call);
+      }).catch(err => alert("Permission needed: " + err));
     }
 
-    function handleCallEvents(call) {
-      currentCall = call;
+    function handleStream(call) {
+      callObj = call;
       document.getElementById('callBtn').style.display = 'none';
       document.getElementById('endBtn').style.display = 'inline-block';
-
       call.on('stream', (remoteStream) => {
         document.getElementById('remoteVideo').srcObject = remoteStream;
       });
-      call.on('close', () => resetCallUI());
+      call.on('close', () => resetCall());
     }
 
     function endCall() {
-      if (currentCall) currentCall.close();
+      if (callObj) callObj.close();
       if (localStream) localStream.getTracks().forEach(t => t.stop());
-      resetCallUI();
+      resetCall();
     }
 
-    function resetCallUI() {
+    function resetCall() {
       document.getElementById('callBtn').style.display = 'inline-block';
       document.getElementById('endBtn').style.display = 'none';
       document.getElementById('remoteVideo').srcObject = null;
       document.getElementById('localVideo').srcObject = null;
     }
 
+    // Toggle Mic / Cam with Visual Text State
     function toggleMic() {
       if (localStream) {
-        const audio = localStream.getAudioTracks()[0];
-        if (audio) audio.enabled = !audio.enabled;
+        micEnabled = !micEnabled;
+        localStream.getAudioTracks()[0].enabled = micEnabled;
+        const btn = document.getElementById('micBtn');
+        btn.innerText = `🎤 Mic: ${micEnabled ? 'ON' : 'OFF'}`;
+        btn.className = micEnabled ? '' : 'btn-muted';
       }
     }
 
     function toggleCam() {
       if (localStream) {
-        const video = localStream.getVideoTracks()[0];
-        if (video) video.enabled = !video.enabled;
+        camEnabled = !camEnabled;
+        localStream.getVideoTracks()[0].enabled = camEnabled;
+        const btn = document.getElementById('camBtn');
+        btn.innerText = `📷 Cam: ${camEnabled ? 'ON' : 'OFF'}`;
+        btn.className = camEnabled ? '' : 'btn-muted';
       }
+    }
+
+    // YouTube Sync Engine
+    let player, isRemoteAction = false;
+    function onYouTubeIframeAPIReady() {
+      player = new YT.Player('player', {
+        height: '100%', width: '100%', videoId: 'dQw4w9WgXcQ',
+        events: { 'onStateChange': onPlayerStateChange }
+      });
+    }
+
+    function onPlayerStateChange(event) {
+      if (isRemoteAction) return;
+      if (event.data === YT.PlayerState.PLAYING) {
+        updatePlayBtn(true);
+        sendSignal({ type: 'MUSIC_PLAY', time: player.getCurrentTime() });
+      } else if (event.data === YT.PlayerState.PAUSED) {
+        updatePlayBtn(false);
+        sendSignal({ type: 'MUSIC_PAUSE', time: player.getCurrentTime() });
+      }
+    }
+
+    function toggleMusicPlay() {
+      const state = player.getPlayerState();
+      if (state === YT.PlayerState.PLAYING) {
+        player.pauseVideo();
+        sendSignal({ type: 'MUSIC_PAUSE', time: player.getCurrentTime() });
+      } else {
+        player.playVideo();
+        sendSignal({ type: 'MUSIC_PLAY', time: player.getCurrentTime() });
+      }
+    }
+
+    function forceSync() {
+      sendSignal({ type: 'MUSIC_SEEK', time: player.getCurrentTime() });
+    }
+
+    function loadCustomVideo() {
+      const url = document.getElementById('ytUrl').value;
+      const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
+      if (match && match[1]) {
+        player.loadVideoById(match[1]);
+        sendSignal({ type: 'MUSIC_LOAD', id: match[1] });
+      }
+    }
+
+    function updatePlayBtn(isPlaying) {
+      const btn = document.getElementById('musicPlayBtn');
+      btn.innerText = isPlaying ? '⏸ Pause' : '▶ Play';
+      btn.className = isPlaying ? 'btn-end' : 'btn-call';
+    }
+
+    function setupDataChannel() {
+      dataConn.on('data', (data) => {
+        isRemoteAction = true;
+        if (data.type === 'MUSIC_PLAY') {
+          player.seekTo(data.time, true);
+          player.playVideo();
+          updatePlayBtn(true);
+        } else if (data.type === 'MUSIC_PAUSE') {
+          player.seekTo(data.time, true);
+          player.pauseVideo();
+          updatePlayBtn(false);
+        } else if (data.type === 'MUSIC_SEEK') {
+          player.seekTo(data.time, true);
+        } else if (data.type === 'MUSIC_LOAD') {
+          player.loadVideoById(data.id);
+        }
+        setTimeout(() => { isRemoteAction = false; }, 500);
+      });
+    }
+
+    function sendSignal(obj) {
+      if (dataConn && dataConn.open) dataConn.send(obj);
     }
   </script>
 </body>
