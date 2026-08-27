@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin - Live Orders & Payment Tracker</title>
+  
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.css" />
+  
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { margin: 0; padding: 20px; background: #f1f5f9; }
+    .container { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+    .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    h2 { margin: 0 0 8px 0; color: #0f172a; }
+    #map { height: 350px; width: 100%; border-radius: 8px; margin-bottom: 12px; border: 1px solid #cbd5e1; }
+    .btn { padding: 10px 16px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+    .btn-save { background: #2563eb; color: white; }
+    .btn-clear { background: #ef4444; color: white; }
+    .btn-refresh { background: #0f172a; color: white; }
+    .btn-map { background: #059669; color: white; text-decoration: none; padding: 6px 12px; border-radius: 4px; font-size: 13px; display: inline-block; }
+    
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13px; }
+    th, td { text-align: left; padding: 10px; border-bottom: 1px solid #e2e8f0; }
+    th { background: #f8fafc; color: #475569; }
+    .badge-paid { background: #dcfce7; color: #166534; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="card">
+    <h2>🛠️ Admin Delivery Zone Setup</h2>
+    <p style="color:#64748b; font-size:14px; margin-top:0;">Draw the boundary and save to write directly to Google Sheets.</p>
+    <div id="map"></div>
+    <div style="display: flex; gap: 10px;">
+      <button class="btn btn-save" onclick="saveZone()">💾 Save Zone to Sheet</button>
+      <button class="btn btn-clear" onclick="clearZone()">🗑️ Clear Zone</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h2>📦 Paid Orders (Live from Google Sheets)</h2>
+      <button class="btn btn-refresh" onclick="loadOrders()">🔄 Refresh Orders</button>
+    </div>
+    
+    <table id="ordersTable">
+      <thead>
+        <tr>
+          <th>Order & Payment ID</th>
+          <th>Customer</th>
+          <th>Contact (Phone/Email)</th>
+          <th>Address</th>
+          <th>Item / Total</th>
+          <th>Payment</th>
+          <th>Rider Navigation</th>
+        </tr>
+      </thead>
+      <tbody id="ordersBody">
+        <tr><td colspan="7" style="text-align:center; color:#94a3b8;">Loading orders from Google Sheets...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.js"></script>
+
+<script>
+  const SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbx0c0o_6vWfIxZh8OC3b7yJ9Rq37jRPl_QPpQ7AVuhIrs7LPrmi4KMGOwy-Xz5RF6QbXg/exec";
+
+  const map = L.map('map').setView([25.6000, 85.1300], 12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+  map.pm.addControls({ position: 'topleft', drawRectangle: true, drawPolygon: true });
+
+  let currentPolygonLayer = null;
+
+  fetch(`${SPREADSHEET_API_URL}?action=getZone`)
+    .then(res => res.json())
+    .then(data => {
+      if (data && data.zone) {
+        const zoneData = (typeof data.zone === 'string') ? JSON.parse(data.zone) : data.zone;
+        currentPolygonLayer = L.geoJSON(zoneData, {
+          style: { color: "#2563eb", fillColor: "#3b82f6", fillOpacity: 0.3 }
+        }).addTo(map);
+        map.fitBounds(currentPolygonLayer.getBounds());
+      }
+    });
+
+  map.on('pm:create', (e) => {
+    if (currentPolygonLayer) map.removeLayer(currentPolygonLayer);
+    currentPolygonLayer = e.layer;
+  });
+
+  function saveZone() {
+    if (!currentPolygonLayer) return alert("Please draw a polygon boundary first.");
+    const geojsonData = currentPolygonLayer.toGeoJSON();
+
+    fetch(SPREADSHEET_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "saveZone", zone: geojsonData })
+    })
+    .then(() => alert("Delivery Zone saved directly to Google Sheets Settings!"));
+  }
+
+  function clearZone() {
+    if (currentPolygonLayer) map.removeLayer(currentPolygonLayer);
+    fetch(SPREADSHEET_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "clearZone" })
+    }).then(() => alert("Delivery Zone deleted from Google Sheets."));
+  }
+
+  function loadOrders() {
+    const tbody = document.getElementById('ordersBody');
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#94a3b8;">Fetching latest rows from Sheet...</td></tr>';
+
+    fetch(`${SPREADSHEET_API_URL}?action=getOrders`)
+      .then(res => res.json())
+      .then(data => {
+        if (!data.orders || data.orders.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#94a3b8;">No orders found in sheet.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = data.orders.map(o => `
+          <tr>
+            <td>
+              <b>${o.orderId}</b><br>
+              <small style="color:#2563eb">${o.paymentId || 'N/A'}</small><br>
+              <small style="color:#64748b">${o.date}</small>
+            </td>
+            <td>${o.name}</td>
+            <td>📞 ${o.phone}<br>✉️ ${o.email || 'N/A'}</td>
+            <td>${o.address}</td>
+            <td>${o.item} (x${o.qty})<br><b>${o.amount}</b></td>
+            <td><span class="badge-paid">${o.status || 'PAID'}</span></td>
+            <td>
+              <a href="${o.mapsUrl}" target="_blank" class="btn-map">
+                🗺️ Navigate (${o.coords})
+              </a>
+            </td>
+          </tr>
+        `).join('');
+      });
+  }
+
+  loadOrders();
+</script>
+</body>
+</html>
