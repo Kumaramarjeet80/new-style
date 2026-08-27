@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin - Live Google Sheets Dashboard</title>
+  <title>Admin - Live Orders & Payment Tracker</title>
   
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.css" />
@@ -11,7 +11,7 @@
   <style>
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { margin: 0; padding: 20px; background: #f1f5f9; }
-    .container { max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+    .container { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
     .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
     h2 { margin: 0 0 8px 0; color: #0f172a; }
     #map { height: 350px; width: 100%; border-radius: 8px; margin-bottom: 12px; border: 1px solid #cbd5e1; }
@@ -24,6 +24,7 @@
     table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13px; }
     th, td { text-align: left; padding: 10px; border-bottom: 1px solid #e2e8f0; }
     th { background: #f8fafc; color: #475569; }
+    .badge-paid { background: #dcfce7; color: #166534; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -31,8 +32,8 @@
 <div class="container">
   <!-- ZONE CONFIGURATION -->
   <div class="card">
-    <h2>🛠️ Admin Delivery Zone (Saved to Spreadsheet)</h2>
-    <p style="color:#64748b; font-size:14px; margin-top:0;">Draw the boundary and click save to write directly to Google Sheets.</p>
+    <h2>🛠️ Admin Delivery Zone Setup</h2>
+    <p style="color:#64748b; font-size:14px; margin-top:0;">Draw the boundary and save to write directly to Google Sheets.</p>
     <div id="map"></div>
     <div style="display: flex; gap: 10px;">
       <button class="btn btn-save" onclick="saveZone()">💾 Save Zone to Sheet</button>
@@ -40,26 +41,27 @@
     </div>
   </div>
 
-  <!-- LIVE ORDERS FROM SPREADSHEET -->
+  <!-- LIVE PAID ORDERS -->
   <div class="card">
     <div style="display:flex; justify-content:space-between; align-items:center;">
-      <h2>📦 Incoming Orders (Fetched from Sheet)</h2>
+      <h2>📦 Paid Orders (Live from Google Sheets)</h2>
       <button class="btn btn-refresh" onclick="loadOrders()">🔄 Refresh Orders</button>
     </div>
     
     <table id="ordersTable">
       <thead>
         <tr>
-          <th>Order ID</th>
+          <th>Order & Payment ID</th>
           <th>Customer</th>
           <th>Phone</th>
           <th>Address</th>
           <th>Item / Total</th>
+          <th>Payment</th>
           <th>Rider Navigation</th>
         </tr>
       </thead>
       <tbody id="ordersBody">
-        <tr><td colspan="6" style="text-align:center; color:#94a3b8;">Loading orders from Google Sheets...</td></tr>
+        <tr><td colspan="7" style="text-align:center; color:#94a3b8;">Loading orders from Google Sheets...</td></tr>
       </tbody>
     </table>
   </div>
@@ -69,7 +71,7 @@
 <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.js"></script>
 
 <script>
-  // PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL HERE:
+  // CONFIGURATION KEY:
   const SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbwLMMkc71sKvQkU-ryv0O9oGSbObOdQNsb2y3ViUmWs3c4rzIBAcGGY147b1ktghHuPbQ/exec";
 
   const map = L.map('map').setView([25.6000, 85.1300], 12);
@@ -79,7 +81,7 @@
 
   let currentPolygonLayer = null;
 
-  // Fetch current zone from Sheet Settings on load
+  // Load existing zone from Sheet Settings
   fetch(`${SPREADSHEET_API_URL}?action=getZone`)
     .then(res => res.json())
     .then(data => {
@@ -90,8 +92,7 @@
         }).addTo(map);
         map.fitBounds(currentPolygonLayer.getBounds());
       }
-    })
-    .catch(err => console.error("Error loading zone:", err));
+    });
 
   map.on('pm:create', (e) => {
     if (currentPolygonLayer) map.removeLayer(currentPolygonLayer);
@@ -107,9 +108,7 @@
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({ action: "saveZone", zone: geojsonData })
     })
-    .then(res => res.json())
-    .then(() => alert("Delivery Zone saved directly to Google Sheets Settings!"))
-    .catch(() => alert("Saved to sheet (verify cell A1 in Settings tab)."));
+    .then(() => alert("Delivery Zone saved directly to Google Sheets Settings!"));
   }
 
   function clearZone() {
@@ -123,23 +122,28 @@
 
   function loadOrders() {
     const tbody = document.getElementById('ordersBody');
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#94a3b8;">Fetching latest rows from Sheet...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#94a3b8;">Fetching latest rows from Sheet...</td></tr>';
 
     fetch(`${SPREADSHEET_API_URL}?action=getOrders`)
       .then(res => res.json())
       .then(data => {
         if (!data.orders || data.orders.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#94a3b8;">No orders found in sheet.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#94a3b8;">No orders found in sheet.</td></tr>';
           return;
         }
 
         tbody.innerHTML = data.orders.map(o => `
           <tr>
-            <td><b>${o.orderId}</b><br><small style="color:#64748b">${o.date}</small></td>
+            <td>
+              <b>${o.orderId}</b><br>
+              <small style="color:#2563eb">${o.paymentId || 'N/A'}</small><br>
+              <small style="color:#64748b">${o.date}</small>
+            </td>
             <td>${o.name}</td>
             <td>${o.phone}</td>
             <td>${o.address}</td>
             <td>${o.item} (x${o.qty})<br><b>${o.amount}</b></td>
+            <td><span class="badge-paid">${o.status || 'PAID'}</span></td>
             <td>
               <a href="${o.mapsUrl}" target="_blank" class="btn-map">
                 🗺️ Navigate (${o.coords})
@@ -147,9 +151,6 @@
             </td>
           </tr>
         `).join('');
-      })
-      .catch(err => {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#ef4444;">Error connecting to Google Sheets.</td></tr>';
       });
   }
 
