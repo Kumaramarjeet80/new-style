@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin - Set Delivery Zones</title>
+  
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.css" />
+  
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { margin: 0; padding: 20px; background: #f1f5f9; display: flex; flex-direction: column; align-items: center; }
+    .card { background: white; padding: 24px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); width: 100%; max-width: 800px; }
+    h2 { margin: 0 0 8px 0; color: #0f172a; }
+    p { color: #64748b; margin-top: 0; font-size: 14px; }
+    #map { height: 420px; width: 100%; border-radius: 8px; margin-bottom: 16px; border: 1px solid #cbd5e1; }
+    .actions { display: flex; gap: 12px; }
+    .btn { padding: 12px 20px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+    .btn-save { background: #2563eb; color: white; flex: 2; }
+    .btn-save:hover { background: #1d4ed8; }
+    .btn-clear { background: #ef4444; color: white; flex: 1; }
+    .btn-clear:hover { background: #dc2626; }
+    .status { margin-top: 12px; padding: 12px; border-radius: 8px; font-size: 14px; display: none; }
+    .status-ok { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <h2>🛠️ Admin Delivery Zone Manager</h2>
+  <p>Use the polygon tool on the left toolbar to draw your service zone, then click <b>Save Delivery Zone</b>.</p>
+  
+  <div id="map"></div>
+
+  <div class="actions">
+    <button class="btn btn-save" onclick="saveZone()">💾 Save Delivery Zone</button>
+    <button class="btn btn-clear" onclick="clearZone()">🗑️ Clear Zone</button>
+  </div>
+
+  <div id="status" class="status"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.js"></script>
+
+<script>
+  const map = L.map('map').setView([25.6000, 85.1300], 12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap'
+  }).addTo(map);
+
+  map.pm.addControls({
+    position: 'topleft',
+    drawCircle: false,
+    drawCircleMarker: false,
+    drawPolyline: false,
+    drawRectangle: true,
+    drawPolygon: true,
+    drawMarker: false,
+    cutPolygon: false
+  });
+
+  let currentPolygonLayer = null;
+
+  // Load existing zone if stored
+  const savedData = localStorage.getItem('mohna_delivery_zone');
+  if (savedData) {
+    const geojson = JSON.parse(savedData);
+    currentPolygonLayer = L.geoJSON(geojson, {
+      style: { color: "#2563eb", fillColor: "#3b82f6", fillOpacity: 0.3 }
+    }).addTo(map);
+  }
+
+  map.on('pm:create', (e) => {
+    if (currentPolygonLayer) {
+      map.removeLayer(currentPolygonLayer);
+    }
+    currentPolygonLayer = e.layer;
+  });
+
+  function saveZone() {
+    const status = document.getElementById('status');
+    if (!currentPolygonLayer) {
+      alert("Please draw a polygon area on the map first.");
+      return;
+    }
+
+    const geojsonData = currentPolygonLayer.toGeoJSON();
+    localStorage.setItem('mohna_delivery_zone', JSON.stringify(geojsonData));
+
+    status.className = 'status status-ok';
+    status.style.display = 'block';
+    status.innerHTML = '✅ <b>Delivery Zone Saved!</b> Open the customer page to test live verification.';
+  }
+
+  function clearZone() {
+    if (currentPolygonLayer) {
+      map.removeLayer(currentPolygonLayer);
+      currentPolygonLayer = null;
+    }
+    localStorage.removeItem('mohna_delivery_zone');
+    const status = document.getElementById('status');
+    status.className = 'status status-ok';
+    status.style.display = 'block';
+    status.innerHTML = '🗑️ Delivery zone cleared from storage.';
+  }
+</script>
+</body>
+</html>
