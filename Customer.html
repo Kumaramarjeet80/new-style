@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Customer - Place Order</title>
+  <title>Customer - Place & Pay Order</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
   <style>
@@ -17,8 +18,8 @@
     #map { height: 260px; width: 100%; border-radius: 8px; margin-bottom: 12px; border: 1px solid #cbd5e1; }
     .btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: 0.2s; }
     .btn-locate { background: #2563eb; color: white; margin-bottom: 8px; }
-    .btn-checkout { background: #10b981; color: white; margin-top: 12px; }
-    .btn-checkout:disabled { background: #cbd5e1; cursor: not-allowed; }
+    .btn-pay { background: #10b981; color: white; margin-top: 12px; }
+    .btn-pay:disabled { background: #cbd5e1; cursor: not-allowed; }
     .btn-pdf { background: #4f46e5; color: white; margin-top: 10px; }
     .status-box { margin-top: 8px; padding: 10px; border-radius: 8px; font-size: 13px; display: block; font-weight: 500; background: #e2e8f0; color: #334155; }
     .status-success { background: #dcfce7; color: #166534; }
@@ -38,13 +39,13 @@
 
 <div class="card" id="orderCard">
   <h2>⚡ Mohna Fast Delivery</h2>
-  <p>Select location to check availability and place your order.</p>
+  <p>Verify delivery availability and proceed with payment.</p>
 
   <div id="map"></div>
   <button class="btn btn-locate" onclick="useCurrentLocation()">📍 Use Current Location</button>
   <div id="statusBox" class="status-box">Connecting to Google Sheets & loading delivery zone...</div>
 
-  <form id="orderForm" onsubmit="handleCheckout(event)" style="display:none; margin-top: 16px;">
+  <form id="orderForm" onsubmit="handlePaymentAndCheckout(event)" style="display:none; margin-top: 16px;">
     <div class="form-group">
       <label>Full Name</label>
       <input type="text" id="custName" required placeholder="e.g. Rahul Kumar" />
@@ -55,7 +56,7 @@
     </div>
     <div class="form-group">
       <label>Complete Street Address</label>
-      <input type="text" id="custAddress" required placeholder="House No, Landmark" />
+      <input type="text" id="custAddress" required placeholder="House No, Street, Landmark" />
     </div>
     <div class="form-group">
       <label>Select Item</label>
@@ -71,12 +72,12 @@
     </div>
 
     <div class="bill-row bill-total" style="margin-top: 16px;">
-      <span>Total Amount:</span>
+      <span>Total Amount to Pay:</span>
       <span id="displayTotal">₹499</span>
     </div>
 
-    <button type="submit" id="checkoutBtn" class="btn btn-checkout">
-      Confirm Order (Direct to Sheet)
+    <button type="submit" id="payBtn" class="btn btn-pay">
+      💳 Pay via UPI / QR / Card & Confirm Order
     </button>
   </form>
 
@@ -84,25 +85,29 @@
   <div id="invoiceBill">
     <div class="bill-header">
       <h2 style="margin:0; color:#1e40af;">⚡ Mohna Express Delivery</h2>
-      <p style="margin:4px 0 0 0; color:#64748b;">Official Order Confirmation</p>
+      <p style="margin:4px 0 0 0; color:#64748b;">Official Paid Tax Invoice</p>
     </div>
     <div class="bill-row"><span><b>Order ID:</b></span><span id="billOrderId"></span></div>
+    <div class="bill-row"><span><b>Payment Ref ID:</b></span><span id="billPaymentId" style="color:#2563eb; font-weight:600;"></span></div>
     <div class="bill-row"><span><b>Date:</b></span><span id="billDate"></span></div>
     <div class="bill-row"><span><b>Customer Name:</b></span><span id="billName"></span></div>
     <div class="bill-row"><span><b>Phone:</b></span><span id="billPhone"></span></div>
-    <div class="bill-row"><span><b>Address:</b></span><span id="billAddress"></span></div>
+    <div class="bill-row"><span><b>Delivery Address:</b></span><span id="billAddress"></span></div>
     <div class="bill-row"><span><b>GPS:</b></span><span id="billCoords"></span></div>
     <hr style="margin: 12px 0; border: none; border-top: 1px dashed #cbd5e1;" />
     <div class="bill-row"><span><b>Item:</b></span><span id="billItem"></span></div>
     <div class="bill-row"><span><b>Quantity:</b></span><span id="billQty"></span></div>
     <div class="bill-row bill-total" style="color:#15803d; margin-top:8px;">
-      <span>Total Paid:</span>
+      <span>Total Amount Paid:</span>
       <span id="billAmount"></span>
+    </div>
+    <div style="margin-top:10px; font-size:12px; color:#64748b; text-align:center;">
+      Status: <b>PAID VIA RAZORPAY</b> | Dispatching in 15 mins.
     </div>
   </div>
 
   <button id="downloadPdfBtn" class="btn btn-pdf" style="display:none;" onclick="downloadPDF()">
-    📄 Download PDF Invoice
+    📄 Download Paid PDF Invoice
   </button>
 </div>
 
@@ -110,8 +115,9 @@
 <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js"></script>
 
 <script>
-  // PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL HERE:
+  // CONFIGURATION KEYS:
   const SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbwLMMkc71sKvQkU-ryv0O9oGSbObOdQNsb2y3ViUmWs3c4rzIBAcGGY147b1ktghHuPbQ/exec";
+  const RAZORPAY_KEY_ID = "rzp_test_YOUR_KEY_HERE";
 
   let userCoords = null;
   const map = L.map('map').setView([25.6000, 85.1300], 12);
@@ -140,9 +146,9 @@
         statusBox.innerHTML = '⚠️ No delivery zone found in Google Sheets Settings (Cell A1).';
       }
     })
-    .catch(err => {
+    .catch(() => {
       statusBox.className = 'status-box status-error';
-      statusBox.innerHTML = '❌ Failed to load zone from Google Sheets. Check your Apps Script URL.';
+      statusBox.innerHTML = '❌ Failed to load zone from Google Sheets. Check Apps Script URL.';
     });
 
   function evaluateLocation(lat, lng) {
@@ -151,7 +157,7 @@
 
     if (!adminZoneGeoJSON) {
       statusBox.className = 'status-box status-error';
-      statusBox.innerHTML = '⚠️ No delivery zone loaded yet.';
+      statusBox.innerHTML = '⚠️ Delivery zone boundary is not loaded.';
       orderForm.style.display = 'none';
       return;
     }
@@ -194,70 +200,93 @@
     return total;
   }
 
-  function handleCheckout(e) {
+  // 2. Razorpay Payment Trigger & Execution
+  function handlePaymentAndCheckout(e) {
     e.preventDefault();
-    const checkoutBtn = document.getElementById('checkoutBtn');
-    checkoutBtn.disabled = true;
-    checkoutBtn.innerText = "Submitting Order to Sheet...";
+    const totalAmount = calculateTotal();
+    const custName = document.getElementById('custName').value;
+    const custPhone = document.getElementById('custPhone').value;
+    const custAddress = document.getElementById('custAddress').value;
+    const selectedItem = document.getElementById('itemSelect').value;
+    const itemQty = document.getElementById('itemQty').value;
 
-    const orderId = "MHN-" + Math.floor(100000 + Math.random() * 900000);
-    const total = calculateTotal();
-    
-    const orderPayload = {
-      action: "saveOrder",
-      orderId: orderId,
-      name: document.getElementById('custName').value,
-      phone: document.getElementById('custPhone').value,
-      address: document.getElementById('custAddress').value,
-      item: document.getElementById('itemSelect').value,
-      qty: document.getElementById('itemQty').value,
-      amount: "₹" + total,
-      lat: userCoords.lat.toFixed(5),
-      lng: userCoords.lng.toFixed(5)
+    const options = {
+      key: RAZORPAY_KEY_ID,
+      amount: totalAmount * 100, // Amount in paise
+      currency: "INR",
+      name: "Mohna Fast Delivery",
+      description: `Payment for ${selectedItem} (x${itemQty})`,
+      image: "https://via.placeholder.com/150",
+      prefill: {
+        name: custName,
+        contact: custPhone
+      },
+      theme: {
+        color: "#2563eb"
+      },
+      handler: function (response) {
+        // EXECUTED ONLY ON PAYMENT SUCCESS
+        const orderId = "MHN-" + Math.floor(100000 + Math.random() * 900000);
+        const paymentId = response.razorpay_payment_id;
+
+        const orderPayload = {
+          action: "saveOrder",
+          orderId: orderId,
+          paymentId: paymentId,
+          name: custName,
+          phone: custPhone,
+          address: custAddress,
+          item: selectedItem,
+          qty: itemQty,
+          amount: "₹" + totalAmount,
+          lat: userCoords.lat.toFixed(5),
+          lng: userCoords.lng.toFixed(5)
+        };
+
+        // Post confirmed order to Google Sheet
+        fetch(SPREADSHEET_API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(orderPayload)
+        })
+        .then(() => {
+          // Show Paid Bill & Download Action
+          document.getElementById('orderForm').style.display = 'none';
+          document.getElementById('map').style.display = 'none';
+          document.getElementById('statusBox').style.display = 'none';
+          document.querySelector('.btn-locate').style.display = 'none';
+
+          document.getElementById('billOrderId').innerText = orderPayload.orderId;
+          document.getElementById('billPaymentId').innerText = paymentId;
+          document.getElementById('billDate').innerText = new Date().toLocaleString();
+          document.getElementById('billName').innerText = orderPayload.name;
+          document.getElementById('billPhone').innerText = orderPayload.phone;
+          document.getElementById('billAddress').innerText = orderPayload.address;
+          document.getElementById('billCoords').innerText = `${orderPayload.lat}, ${orderPayload.lng}`;
+          document.getElementById('billItem').innerText = orderPayload.item;
+          document.getElementById('billQty').innerText = orderPayload.qty;
+          document.getElementById('billAmount').innerText = orderPayload.amount;
+
+          document.getElementById('invoiceBill').style.display = 'block';
+          document.getElementById('downloadPdfBtn').style.display = 'block';
+        });
+      },
+      modal: {
+        ondismiss: function () {
+          alert("Payment incomplete. Order was not placed.");
+        }
+      }
     };
 
-    fetch(SPREADSHEET_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(orderPayload)
-    })
-    .then(res => res.json())
-    .then(() => {
-      document.getElementById('orderForm').style.display = 'none';
-      document.getElementById('map').style.display = 'none';
-      document.getElementById('statusBox').style.display = 'none';
-      document.querySelector('.btn-locate').style.display = 'none';
-
-      document.getElementById('billOrderId').innerText = orderPayload.orderId;
-      document.getElementById('billDate').innerText = new Date().toLocaleString();
-      document.getElementById('billName').innerText = orderPayload.name;
-      document.getElementById('billPhone').innerText = orderPayload.phone;
-      document.getElementById('billAddress').innerText = orderPayload.address;
-      document.getElementById('billCoords').innerText = `${orderPayload.lat}, ${orderPayload.lng}`;
-      document.getElementById('billItem').innerText = orderPayload.item;
-      document.getElementById('billQty').innerText = orderPayload.qty;
-      document.getElementById('billAmount').innerText = orderPayload.amount;
-
-      document.getElementById('invoiceBill').style.display = 'block';
-      document.getElementById('downloadPdfBtn').style.display = 'block';
-    })
-    .catch(() => {
-      alert("Order logged to sheet.");
-      // Fallback display in case of minor CORS response delay
-      document.getElementById('orderForm').style.display = 'none';
-      document.getElementById('map').style.display = 'none';
-      document.getElementById('statusBox').style.display = 'none';
-      document.querySelector('.btn-locate').style.display = 'none';
-      document.getElementById('invoiceBill').style.display = 'block';
-      document.getElementById('downloadPdfBtn').style.display = 'block';
-    });
+    const rzp = new Razorpay(options);
+    rzp.open();
   }
 
   function downloadPDF() {
     const element = document.getElementById('invoiceBill');
     html2pdf().from(element).set({
       margin: 10,
-      filename: `Invoice_${document.getElementById('billOrderId').innerText}.pdf`,
+      filename: `Paid_Invoice_${document.getElementById('billOrderId').innerText}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2 },
       jsPDF: { unit: 'mm', format: 'a5', orientation: 'portrait' }
