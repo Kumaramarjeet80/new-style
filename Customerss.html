@@ -6,7 +6,7 @@
   <title>Customer - Place & Pay Order</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
   <style>
@@ -19,9 +19,8 @@
     .btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: 0.2s; }
     .btn-locate { background: #2563eb; color: white; margin-bottom: 8px; }
     .btn-pay { background: #10b981; color: white; margin-top: 12px; }
-    .btn-pay:disabled { background: #cbd5e1; cursor: not-allowed; }
     .btn-pdf { background: #4f46e5; color: white; margin-top: 10px; }
-    .btn-wa { background: #25D366; color: white; margin-top: 10px; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn-wa { background: #25D366; color: white; margin-top: 10px; text-decoration: none; display: flex; align-items: center; justify-content: center; }
     .status-box { margin-top: 8px; padding: 10px; border-radius: 8px; font-size: 13px; display: block; font-weight: 500; background: #e2e8f0; color: #334155; }
     .status-success { background: #dcfce7; color: #166534; }
     .status-error { background: #fee2e2; color: #991b1b; }
@@ -30,6 +29,11 @@
     label { font-size: 13px; font-weight: 600; color: #334155; display: block; margin-bottom: 4px; }
     input, select { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; }
     
+    /* UPI Modal */
+    #upiModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 9999; padding: 16px; }
+    .modal-content { background: white; padding: 24px; border-radius: 12px; max-width: 400px; width: 100%; text-align: center; }
+    #qrcode { display: flex; justify-content: center; margin: 16px 0; }
+
     #invoiceBill { display: none; padding: 24px; border: 1px solid #e2e8f0; border-radius: 8px; background: white; margin-top: 20px; }
     .bill-header { border-bottom: 2px solid #0f172a; padding-bottom: 10px; margin-bottom: 12px; }
     .bill-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 14px; }
@@ -40,19 +44,19 @@
 
 <div class="card" id="orderCard">
   <h2>⚡ Mohna Fast Delivery</h2>
-  <p>Verify delivery availability and proceed with payment.</p>
+  <p>Verify delivery availability and proceed with UPI payment.</p>
 
   <div id="map"></div>
   <button class="btn btn-locate" onclick="useCurrentLocation()">📍 Use Current Location</button>
   <div id="statusBox" class="status-box">Connecting to Google Sheets & loading delivery zone...</div>
 
-  <form id="orderForm" onsubmit="handlePaymentAndCheckout(event)" style="display:none; margin-top: 16px;">
+  <form id="orderForm" onsubmit="openUpiPaymentModal(event)" style="display:none; margin-top: 16px;">
     <div class="form-group">
       <label>Full Name</label>
       <input type="text" id="custName" required placeholder="e.g. Rahul Kumar" />
     </div>
     <div class="form-group">
-      <label>Email Address (For Free Receipt)</label>
+      <label>Email Address</label>
       <input type="email" id="custEmail" required placeholder="yourname@gmail.com" />
     </div>
     <div class="form-group">
@@ -82,9 +86,29 @@
     </div>
 
     <button type="submit" id="payBtn" class="btn btn-pay">
-      💳 Pay via UPI / QR / Card & Confirm Order
+      📱 Pay via UPI / Dynamic QR Code
     </button>
   </form>
+
+  <!-- DYNAMIC UPI QR POPUP MODAL -->
+  <div id="upiModal">
+    <div class="modal-content">
+      <h3 style="margin-top:0; color:#0f172a;">Scan with any UPI App</h3>
+      <p style="font-size:13px; color:#64748b; margin-bottom:10px;">GPay, PhonePe, Paytm, or BHIM</p>
+      
+      <div id="qrcode"></div>
+      
+      <h3 id="modalAmount" style="color:#16a34a; margin: 10px 0;"></h3>
+      <small style="color:#64748b;">UPI ID: <b id="displayUpiId">mohnaexpress@upi</b></small>
+
+      <button class="btn" style="background:#16a34a; color:white; margin-top:16px;" onclick="confirmPaymentSuccess()">
+        ✅ Simulate Test Payment Success
+      </button>
+      <button class="btn" style="background:#ef4444; color:white; margin-top:8px;" onclick="closeUpiModal()">
+        ❌ Cancel
+      </button>
+    </div>
+  </div>
 
   <!-- PDF BILL CONTAINER -->
   <div id="invoiceBill">
@@ -108,7 +132,7 @@
       <span id="billAmount"></span>
     </div>
     <div style="margin-top:10px; font-size:12px; color:#64748b; text-align:center;">
-      Status: <b>PAID VIA RAZORPAY</b> | Dispatching in 15-20 mins.
+      Status: <b>PAID VIA UPI QR</b> | Dispatching in 15-20 mins.
     </div>
   </div>
 
@@ -117,7 +141,7 @@
   </button>
   
   <a id="whatsappBtn" class="btn btn-wa" style="display:none;" target="_blank">
-    💬 Share / Open Receipt on WhatsApp
+    💬 Share Receipt on WhatsApp
   </a>
 </div>
 
@@ -125,9 +149,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js"></script>
 
 <script>
-  // INSERT YOUR DEPLOYED URL & KEY HERE:
   const SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbwHo1NbKb8621yOmU6mizBhS0JOdmxZoVnweKA3pAAm5MF_cOk9AI9fS8Q1kUNQ3Sna/exec";
-  const RAZORPAY_KEY_ID = "rzp_test_TUjrxJIbpA4EWb";
+  const DEFAULT_UPI_ID = "mohnaexpress@upi"; // Replace with your actual UPI ID when live
 
   let userCoords = null;
   const map = L.map('map').setView([25.6000, 85.1300], 12);
@@ -137,7 +160,7 @@
   let userMarker = null;
   const statusBox = document.getElementById('statusBox');
 
-  // Fetch Zone from Sheet
+  // Load Zone from Google Sheets
   fetch(`${SPREADSHEET_API_URL}?action=getZone`)
     .then(res => res.json())
     .then(data => {
@@ -151,12 +174,12 @@
         statusBox.innerHTML = '✅ Delivery zone loaded. Click map or "Use Current Location".';
       } else {
         statusBox.className = 'status-box status-error';
-        statusBox.innerHTML = '⚠️ No delivery zone configured yet by Admin.';
+        statusBox.innerHTML = '⚠️ No delivery zone found in Google Sheets Settings.';
       }
     })
     .catch(() => {
       statusBox.className = 'status-box status-error';
-      statusBox.innerHTML = '❌ Error fetching delivery zone from Google Sheets.';
+      statusBox.innerHTML = '❌ Failed to connect to Google Sheets.';
     });
 
   function evaluateLocation(lat, lng) {
@@ -207,7 +230,9 @@
     return total;
   }
 
-  function handlePaymentAndCheckout(e) {
+  let currentOrderPayload = null;
+
+  function openUpiPaymentModal(e) {
     e.preventDefault();
     const totalAmount = calculateTotal();
     const custName = document.getElementById('custName').value;
@@ -216,94 +241,89 @@
     const custAddress = document.getElementById('custAddress').value;
     const selectedItem = document.getElementById('itemSelect').value;
     const itemQty = document.getElementById('itemQty').value;
+    const orderId = "MHN-" + Math.floor(100000 + Math.random() * 900000);
 
-    const options = {
-      key: RAZORPAY_KEY_ID,
-      amount: totalAmount * 100, // In Paise
-      currency: "INR",
-      name: "Mohna Fast Delivery",
-      description: `Payment for ${selectedItem}`,
-      image: "https://cdn-icons-png.flaticon.com/512/3081/3081329.png",
-      prefill: {
-        name: custName,
-        email: custEmail,
-        contact: custPhone
-      },
-      notes: {
-        address: custAddress
-      },
-      theme: { color: "#2563eb" },
-      handler: function (response) {
-        const orderId = "MHN-" + Math.floor(100000 + Math.random() * 900000);
-        const paymentId = response.razorpay_payment_id;
-
-        const orderPayload = {
-          action: "saveOrder",
-          orderId: orderId,
-          paymentId: paymentId,
-          name: custName,
-          email: custEmail,
-          phone: custPhone,
-          address: custAddress,
-          item: selectedItem,
-          qty: itemQty,
-          amount: "₹" + totalAmount,
-          lat: userCoords.lat.toFixed(5),
-          lng: userCoords.lng.toFixed(5)
-        };
-
-        // Post directly to Google Sheets
-        fetch(SPREADSHEET_API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify(orderPayload)
-        })
-        .then(() => {
-          document.getElementById('orderForm').style.display = 'none';
-          document.getElementById('map').style.display = 'none';
-          document.getElementById('statusBox').style.display = 'none';
-          document.querySelector('.btn-locate').style.display = 'none';
-
-          document.getElementById('billOrderId').innerText = orderPayload.orderId;
-          document.getElementById('billPaymentId').innerText = paymentId;
-          document.getElementById('billDate').innerText = new Date().toLocaleString();
-          document.getElementById('billName').innerText = orderPayload.name;
-          document.getElementById('billEmail').innerText = orderPayload.email;
-          document.getElementById('billPhone').innerText = orderPayload.phone;
-          document.getElementById('billAddress').innerText = orderPayload.address;
-          document.getElementById('billCoords').innerText = `${orderPayload.lat}, ${orderPayload.lng}`;
-          document.getElementById('billItem').innerText = orderPayload.item;
-          document.getElementById('billQty').innerText = orderPayload.qty;
-          document.getElementById('billAmount').innerText = orderPayload.amount;
-
-          document.getElementById('invoiceBill').style.display = 'block';
-          document.getElementById('downloadPdfBtn').style.display = 'block';
-
-          // Free WhatsApp Link
-          const waText = encodeURIComponent(
-            `⚡ *MOHNA EXPRESS ORDER CONFIRMED* ⚡\n\n` +
-            `*Order ID:* ${orderPayload.orderId}\n` +
-            `*Payment ID:* ${paymentId}\n` +
-            `*Customer:* ${custName}\n` +
-            `*Item:* ${selectedItem} (x${itemQty})\n` +
-            `*Total Paid:* ${orderPayload.amount}\n` +
-            `*Delivery Address:* ${custAddress}\n\n` +
-            `📍 *Route:* https://www.google.com/maps/dir/?api=1&destination=${orderPayload.lat},${orderPayload.lng}`
-          );
-          const waBtn = document.getElementById('whatsappBtn');
-          waBtn.href = `https://wa.me/91${custPhone.replace(/[^0-9]/g, "")}?text=${waText}`;
-          waBtn.style.display = 'flex';
-        });
-      },
-      modal: {
-        ondismiss: function () {
-          alert("Payment was not completed.");
-        }
-      }
+    currentOrderPayload = {
+      action: "saveOrder",
+      orderId: orderId,
+      name: custName,
+      email: custEmail,
+      phone: custPhone,
+      address: custAddress,
+      item: selectedItem,
+      qty: itemQty,
+      amount: "₹" + totalAmount,
+      lat: userCoords.lat.toFixed(5),
+      lng: userCoords.lng.toFixed(5)
     };
 
-    const rzp = new Razorpay(options);
-    rzp.open();
+    // Construct Standard NPCI Dynamic UPI Intent String
+    const upiString = `upi://pay?pa=${DEFAULT_UPI_ID}&pn=MohnaExpress&am=${totalAmount}&cu=INR&tn=${orderId}`;
+
+    // Generate Dynamic QR Code
+    const qrContainer = document.getElementById('qrcode');
+    qrContainer.innerHTML = "";
+    new QRCode(qrContainer, {
+      text: upiString,
+      width: 180,
+      height: 180
+    });
+
+    document.getElementById('modalAmount').innerText = "Pay ₹" + totalAmount;
+    document.getElementById('upiModal').style.display = "flex";
+  }
+
+  function closeUpiModal() {
+    document.getElementById('upiModal').style.display = "none";
+  }
+
+  function confirmPaymentSuccess() {
+    closeUpiModal();
+    const testPaymentId = "pay_upi_" + Math.random().toString(36).substring(2, 10);
+    currentOrderPayload.paymentId = testPaymentId;
+
+    // Send confirmed order to Google Sheet
+    fetch(SPREADSHEET_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(currentOrderPayload)
+    })
+    .then(() => {
+      document.getElementById('orderForm').style.display = 'none';
+      document.getElementById('map').style.display = 'none';
+      document.getElementById('statusBox').style.display = 'none';
+      document.querySelector('.btn-locate').style.display = 'none';
+
+      document.getElementById('billOrderId').innerText = currentOrderPayload.orderId;
+      document.getElementById('billPaymentId').innerText = testPaymentId;
+      document.getElementById('billDate').innerText = new Date().toLocaleString();
+      document.getElementById('billName').innerText = currentOrderPayload.name;
+      document.getElementById('billEmail').innerText = currentOrderPayload.email;
+      document.getElementById('billPhone').innerText = currentOrderPayload.phone;
+      document.getElementById('billAddress').innerText = currentOrderPayload.address;
+      document.getElementById('billCoords').innerText = `${currentOrderPayload.lat}, ${currentOrderPayload.lng}`;
+      document.getElementById('billItem').innerText = currentOrderPayload.item;
+      document.getElementById('billQty').innerText = currentOrderPayload.qty;
+      document.getElementById('billAmount').innerText = currentOrderPayload.amount;
+
+      document.getElementById('invoiceBill').style.display = 'block';
+      document.getElementById('downloadPdfBtn').style.display = 'block';
+
+      // WhatsApp receipt
+      const waText = encodeURIComponent(
+        `⚡ *MOHNA EXPRESS ORDER CONFIRMED* ⚡\n\n` +
+        `*Order ID:* ${currentOrderPayload.orderId}\n` +
+        `*Payment Ref:* ${testPaymentId}\n` +
+        `*Customer:* ${currentOrderPayload.name}\n` +
+        `*Item:* ${currentOrderPayload.item} (x${currentOrderPayload.qty})\n` +
+        `*Total Paid:* ${currentOrderPayload.amount}\n` +
+        `*Address:* ${currentOrderPayload.address}\n\n` +
+        `📍 *Delivery Route:* https://www.google.com/maps/dir/?api=1&destination=${currentOrderPayload.lat},${currentOrderPayload.lng}`
+      );
+      const waBtn = document.getElementById('whatsappBtn');
+      waBtn.href = `https://wa.me/91${currentOrderPayload.phone.replace(/[^0-9]/g, "")}?text=${waText}`;
+      waBtn.style.display = 'flex';
+    });
   }
 
   function downloadPDF() {
