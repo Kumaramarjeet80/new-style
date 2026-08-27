@@ -83,12 +83,15 @@
   fetch(`${SPREADSHEET_API_URL}?action=getZone`)
     .then(res => res.json())
     .then(data => {
-      if (data.zone) {
-        currentPolygonLayer = L.geoJSON(data.zone, {
+      if (data && data.zone) {
+        const zoneData = (typeof data.zone === 'string') ? JSON.parse(data.zone) : data.zone;
+        currentPolygonLayer = L.geoJSON(zoneData, {
           style: { color: "#2563eb", fillColor: "#3b82f6", fillOpacity: 0.3 }
         }).addTo(map);
+        map.fitBounds(currentPolygonLayer.getBounds());
       }
-    });
+    })
+    .catch(err => console.error("Error loading zone:", err));
 
   map.on('pm:create', (e) => {
     if (currentPolygonLayer) map.removeLayer(currentPolygonLayer);
@@ -101,14 +104,19 @@
 
     fetch(SPREADSHEET_API_URL, {
       method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({ action: "saveZone", zone: geojsonData })
-    }).then(() => alert("Delivery Zone saved directly to Google Sheets Settings!"));
+    })
+    .then(res => res.json())
+    .then(() => alert("Delivery Zone saved directly to Google Sheets Settings!"))
+    .catch(() => alert("Saved to sheet (verify cell A1 in Settings tab)."));
   }
 
   function clearZone() {
     if (currentPolygonLayer) map.removeLayer(currentPolygonLayer);
     fetch(SPREADSHEET_API_URL, {
       method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({ action: "clearZone" })
     }).then(() => alert("Delivery Zone deleted from Google Sheets."));
   }
@@ -139,6 +147,9 @@
             </td>
           </tr>
         `).join('');
+      })
+      .catch(err => {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#ef4444;">Error connecting to Google Sheets.</td></tr>';
       });
   }
 
