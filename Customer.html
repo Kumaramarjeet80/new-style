@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Customer - Place Order</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { margin: 0; padding: 20px; background: #f8fafc; display: flex; justify-content: center; }
+    .card { background: white; padding: 24px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); width: 100%; max-width: 580px; }
+    h2 { margin: 0 0 6px 0; color: #0f172a; }
+    p { color: #64748b; font-size: 14px; margin-top: 0; }
+    #map { height: 260px; width: 100%; border-radius: 8px; margin-bottom: 12px; border: 1px solid #cbd5e1; }
+    .btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+    .btn-locate { background: #2563eb; color: white; margin-bottom: 8px; }
+    .btn-checkout { background: #10b981; color: white; margin-top: 12px; }
+    .btn-pdf { background: #4f46e5; color: white; margin-top: 10px; }
+    .status-box { margin-top: 8px; padding: 10px; border-radius: 8px; font-size: 13px; display: none; font-weight: 500; }
+    .status-success { background: #dcfce7; color: #166534; }
+    .status-error { background: #fee2e2; color: #991b1b; }
+    
+    .form-group { margin-top: 12px; }
+    label { font-size: 13px; font-weight: 600; color: #334155; display: block; margin-bottom: 4px; }
+    input, select { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; }
+    
+    #invoiceBill { display: none; padding: 24px; border: 1px solid #e2e8f0; border-radius: 8px; background: white; margin-top: 20px; }
+    .bill-header { border-bottom: 2px solid #0f172a; padding-bottom: 10px; margin-bottom: 12px; }
+    .bill-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 14px; }
+    .bill-total { border-top: 1px solid #cbd5e1; padding-top: 8px; font-weight: bold; font-size: 16px; }
+  </style>
+</head>
+<body>
+
+<div class="card" id="orderCard">
+  <h2>⚡ Mohna Fast Delivery</h2>
+  <p>Select location to check availability and place your order.</p>
+
+  <div id="map"></div>
+  <button class="btn btn-locate" onclick="useCurrentLocation()">📍 Use Current Location</button>
+  <div id="statusBox" class="status-box"></div>
+
+  <form id="orderForm" onsubmit="handleCheckout(event)" style="display:none; margin-top: 16px;">
+    <div class="form-group">
+      <label>Full Name</label>
+      <input type="text" id="custName" required placeholder="e.g. Rahul Kumar" />
+    </div>
+    <div class="form-group">
+      <label>Phone Number</label>
+      <input type="tel" id="custPhone" required placeholder="10-digit Mobile Number" />
+    </div>
+    <div class="form-group">
+      <label>Complete Street Address</label>
+      <input type="text" id="custAddress" required placeholder="House No, Landmark" />
+    </div>
+    <div class="form-group">
+      <label>Select Item</label>
+      <select id="itemSelect" onchange="calculateTotal()">
+        <option value="Grocery Essentials Box" data-price="499">Grocery Essentials Box - ₹499</option>
+        <option value="Fresh Veggie Basket" data-price="299">Fresh Veggie Basket - ₹299</option>
+        <option value="Dairy & Bakery Pack" data-price="199">Dairy & Bakery Pack - ₹199</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Quantity</label>
+      <input type="number" id="itemQty" value="1" min="1" max="10" onchange="calculateTotal()" />
+    </div>
+
+    <div class="bill-row bill-total" style="margin-top: 16px;">
+      <span>Total Amount:</span>
+      <span id="displayTotal">₹499</span>
+    </div>
+
+    <button type="submit" id="checkoutBtn" class="btn btn-checkout">
+      Confirm Order (Direct to Sheet)
+    </button>
+  </form>
+
+  <!-- PDF BILL CONTAINER -->
+  <div id="invoiceBill">
+    <div class="bill-header">
+      <h2 style="margin:0; color:#1e40af;">⚡ Mohna Express Delivery</h2>
+      <p style="margin:4px 0 0 0; color:#64748b;">Official Order Confirmation</p>
+    </div>
+    <div class="bill-row"><span><b>Order ID:</b></span><span id="billOrderId"></span></div>
+    <div class="bill-row"><span><b>Date:</b></span><span id="billDate"></span></div>
+    <div class="bill-row"><span><b>Customer Name:</b></span><span id="billName"></span></div>
+    <div class="bill-row"><span><b>Phone:</b></span><span id="billPhone"></span></div>
+    <div class="bill-row"><span><b>Address:</b></span><span id="billAddress"></span></div>
+    <div class="bill-row"><span><b>GPS:</b></span><span id="billCoords"></span></div>
+    <hr style="margin: 12px 0; border: none; border-top: 1px dashed #cbd5e1;" />
+    <div class="bill-row"><span><b>Item:</b></span><span id="billItem"></span></div>
+    <div class="bill-row"><span><b>Quantity:</b></span><span id="billQty"></span></div>
+    <div class="bill-row bill-total" style="color:#15803d; margin-top:8px;">
+      <span>Total Paid:</span>
+      <span id="billAmount"></span>
+    </div>
+  </div>
+
+  <button id="downloadPdfBtn" class="btn btn-pdf" style="display:none;" onclick="downloadPDF()">
+    📄 Download PDF Invoice
+  </button>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js"></script>
+
+<script>
+  // PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL HERE:
+  const SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbwLMMkc71sKvQkU-ryv0O9oGSbObOdQNsb2y3ViUmWs3c4rzIBAcGGY147b1ktghHuPbQ/exec";
+
+  let userCoords = null;
+  const map = L.map('map').setView([25.6000, 85.1300], 12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+  let adminZoneGeoJSON = null;
+  let userMarker = null;
+
+  // 1. Fetch Zone boundary from Google Sheet
+  fetch(`${SPREADSHEET_API_URL}?action=getZone`)
+    .then(res => res.json())
+    .then(data => {
+      if (data.zone) {
+        adminZoneGeoJSON = data.zone;
+        L.geoJSON(adminZoneGeoJSON, {
+          style: { color: "#2563eb", weight: 2, fillColor: "#3b82f6", fillOpacity: 0.25 }
+        }).addTo(map);
+      }
+    });
+
+  function evaluateLocation(lat, lng) {
+    userCoords = { lat, lng };
+    const statusBox = document.getElementById('statusBox');
+    const orderForm = document.getElementById('orderForm');
+    statusBox.style.display = 'block';
+
+    if (!adminZoneGeoJSON) {
+      statusBox.className = 'status-box status-error';
+      statusBox.innerHTML = '⚠️ No delivery zone found on Google Sheets.';
+      orderForm.style.display = 'none';
+      return;
+    }
+
+    const isDeliverable = turf.booleanPointInPolygon(turf.point([lng, lat]), adminZoneGeoJSON);
+
+    if (userMarker) userMarker.setLatLng([lat, lng]);
+    else userMarker = L.marker([lat, lng]).addTo(map);
+
+    if (isDeliverable) {
+      statusBox.className = 'status-box status-success';
+      statusBox.innerHTML = `✅ <b>Deliverable Area!</b> 15-minute dispatch active.`;
+      orderForm.style.display = 'block';
+    } else {
+      statusBox.className = 'status-box status-error';
+      statusBox.innerHTML = `❌ <b>Undeliverable Location</b> (${lat.toFixed(4)}, ${lng.toFixed(4)}).`;
+      orderForm.style.display = 'none';
+    }
+  }
+
+  function useCurrentLocation() {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        map.setView([pos.coords.latitude, pos.coords.longitude], 14);
+        evaluateLocation(pos.coords.latitude, pos.coords.longitude);
+      },
+      () => alert("GPS Permission Denied."),
+      { enableHighAccuracy: true }
+    );
+  }
+
+  map.on('click', (e) => evaluateLocation(e.latlng.lat, e.latlng.lng));
+
+  function calculateTotal() {
+    const item = document.getElementById('itemSelect');
+    const price = parseInt(item.options[item.selectedIndex].dataset.price);
+    const qty = parseInt(document.getElementById('itemQty').value) || 1;
+    const total = price * qty;
+    document.getElementById('displayTotal').innerText = "₹" + total;
+    return total;
+  }
+
+  function handleCheckout(e) {
+    e.preventDefault();
+    const checkoutBtn = document.getElementById('checkoutBtn');
+    checkoutBtn.disabled = true;
+    checkoutBtn.innerText = "Submitting Order to Sheet...";
+
+    const orderId = "MHN-" + Math.floor(100000 + Math.random() * 900000);
+    const total = calculateTotal();
+    
+    const orderPayload = {
+      action: "saveOrder",
+      orderId: orderId,
+      name: document.getElementById('custName').value,
+      phone: document.getElementById('custPhone').value,
+      address: document.getElementById('custAddress').value,
+      item: document.getElementById('itemSelect').value,
+      qty: document.getElementById('itemQty').value,
+      amount: "₹" + total,
+      lat: userCoords.lat.toFixed(5),
+      lng: userCoords.lng.toFixed(5)
+    };
+
+    // Post order directly to Google Spreadsheet
+    fetch(SPREADSHEET_API_URL, {
+      method: "POST",
+      body: JSON.stringify(orderPayload)
+    })
+    .then(() => {
+      // Hide input UI & show printable bill
+      document.getElementById('orderForm').style.display = 'none';
+      document.getElementById('map').style.display = 'none';
+      document.getElementById('statusBox').style.display = 'none';
+      document.querySelector('.btn-locate').style.display = 'none';
+
+      document.getElementById('billOrderId').innerText = orderPayload.orderId;
+      document.getElementById('billDate').innerText = new Date().toLocaleString();
+      document.getElementById('billName').innerText = orderPayload.name;
+      document.getElementById('billPhone').innerText = orderPayload.phone;
+      document.getElementById('billAddress').innerText = orderPayload.address;
+      document.getElementById('billCoords').innerText = `${orderPayload.lat}, ${orderPayload.lng}`;
+      document.getElementById('billItem').innerText = orderPayload.item;
+      document.getElementById('billQty').innerText = orderPayload.qty;
+      document.getElementById('billAmount').innerText = orderPayload.amount;
+
+      document.getElementById('invoiceBill').style.display = 'block';
+      document.getElementById('downloadPdfBtn').style.display = 'block';
+    })
+    .catch(() => {
+      alert("Error saving order. Please try again.");
+      checkoutBtn.disabled = false;
+      checkoutBtn.innerText = "Confirm Order";
+    });
+  }
+
+  function downloadPDF() {
+    const element = document.getElementById('invoiceBill');
+    html2pdf().from(element).set({
+      margin: 10,
+      filename: `Invoice_${document.getElementById('billOrderId').innerText}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: 'mm', format: 'a5', orientation: 'portrait' }
+    }).save();
+  }
+</script>
+</body>
+</html>
