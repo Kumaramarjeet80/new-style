@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard - Products, Categories, Zones & Orders</title>
+  
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.css" />
+  
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { margin: 0; padding: 20px; background: #f1f5f9; }
+    .container { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+    .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+    h2, h3 { margin: 0 0 10px 0; color: #0f172a; }
+    
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 850px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    .form-group { margin-bottom: 10px; }
+    .form-group label { display: block; font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 4px; }
+    .form-group input, .form-group select { width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; }
+
+    .btn { padding: 8px 14px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px; }
+    .btn-primary { background: #2563eb; color: white; }
+    .btn-danger { background: #ef4444; color: white; }
+    .btn-dark { background: #0f172a; color: white; }
+    .btn-del { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; padding: 4px 8px; font-size: 11px; }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
+    th { background: #f8fafc; color: #475569; }
+
+    #map { height: 380px; width: 100%; border-radius: 8px; border: 1px solid #cbd5e1; }
+    .zone-tooltip { background: #1e40af; color: white; font-weight: bold; border-radius: 4px; padding: 3px 6px; border: none; font-size: 11px; }
+
+    #printSection { display: none; }
+    @media print {
+      @page { size: A4 portrait; margin: 8mm; }
+      body { margin: 0 !important; padding: 0 !important; background: white !important; }
+      body * { visibility: hidden; }
+      #printSection, #printSection * { visibility: visible; }
+      #printSection { display: block !important; position: absolute; left: 0; top: 0; width: 100%; }
+      .a4-slip-grid { display: grid !important; grid-template-columns: repeat(2, 1fr) !important; gap: 6mm !important; width: 100% !important; }
+      .a4-slip { border: 1.5px dashed #334155 !important; border-radius: 6px !important; padding: 8px 10px !important; font-size: 11px !important; line-height: 1.3 !important; page-break-inside: avoid !important; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+    <div>
+      <h1 style="margin:0; font-size:24px; color:#0f172a;">⚡ Mohna Express Super Admin</h1>
+      <p style="margin:4px 0 0; color:#64748b; font-size:14px;">Manage Categories, Retail & Wholesale Catalog, Map Zones, and Orders</p>
+    </div>
+    <button class="btn btn-dark" onclick="fetchAllData()">🔄 Refresh Everything</button>
+  </div>
+
+  <div class="grid-2">
+    <!-- CATEGORY MANAGER -->
+    <div class="card">
+      <h3>🏷️ Category / Type Manager</h3>
+      <p style="font-size:12px; color:#64748b; margin-top:0;">These categories filter items across Retail & Wholesale stores.</p>
+
+      <form onsubmit="handleAddCategory(event)" style="display:flex; gap:8px; margin-bottom:14px;">
+        <input type="text" id="newCatName" required placeholder="New Category (e.g. Dairy & Sweets)" style="flex:1; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:13px;" />
+        <button type="submit" class="btn btn-primary">+ Add Type</button>
+      </form>
+
+      <table>
+        <thead>
+          <tr><th>Category Name</th><th>Slug</th><th>Action</th></tr>
+        </thead>
+        <tbody id="catTableBody">
+          <tr><td colspan="3" style="text-align:center; color:#94a3b8;">Loading categories...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- PRODUCT CREATION FORM -->
+    <div class="card">
+      <h3>📦 Add New Product</h3>
+      <form onsubmit="handleAddProduct(event)">
+        <div class="form-group">
+          <label>Product Title / Name</label>
+          <input type="text" id="prodName" required placeholder="e.g. 100% Pure Mustard Oil 1L" />
+        </div>
+        <div class="form-group">
+          <label>Category / Type</label>
+          <select id="prodCategorySelect" required>
+            <option value="">Select Category</option>
+          </select>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+          <div class="form-group">
+            <label>Retail Price (₹)</label>
+            <input type="number" id="prodRetailPrice" required placeholder="e.g. 180" />
+          </div>
+          <div class="form-group">
+            <label>Wholesale Price (₹)</label>
+            <input type="number" id="prodWholesalePrice" required placeholder="e.g. 140" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Image URL</label>
+          <input type="url" id="prodImg" required placeholder="https://images.unsplash.com/..." />
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%; margin-top:6px;">+ Save Product to Catalog</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- INVENTORY TABLE -->
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h3>📋 Current Live Products (Retail & Wholesale)</h3>
+      <span id="prodCountBadge" style="background:#dbeafe; color:#1e40af; font-size:11px; font-weight:bold; padding:3px 8px; border-radius:12px;">0 Items</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Image</th>
+          <th>Product Name</th>
+          <th>Category</th>
+          <th>Retail (1 Unit)</th>
+          <th>Wholesale (Bulk)</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="prodTableBody">
+        <tr><td colspan="6" style="text-align:center; color:#94a3b8;">Loading inventory from Sheets...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- DELIVERY ZONES -->
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+      <h3>🛠️ Delivery Boundaries, Timings & Guarantee</h3>
+      <div style="display:flex; gap:6px;">
+        <button class="btn btn-primary" onclick="saveAllZonesToSheet()">💾 Save Zones</button>
+        <button class="btn btn-danger" onclick="clearAllZones()">🗑️ Clear Map</button>
+      </div>
+    </div>
+    <div id="map"></div>
+  </div>
+
+  <!-- ORDERS TABLE & A4 BATCH PRINT -->
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h3>📦 Orders Management</h3>
+      <button class="btn btn-primary" onclick="printLast24HoursSlips()">🖨️ Print 24h Slips (A4 Inkjet)</button>
+    </div>
+    <table>
+      <thead>
+        <tr><th>Order ID</th><th>Customer</th><th>Phone</th><th>Item / Total</th><th>Status</th><th>Route</th></tr>
+      </thead>
+      <tbody id="ordersBody">
+        <tr><td colspan="6" style="text-align:center; color:#94a3b8;">Loading orders...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<div id="printSection"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.js"></script>
+
+<script>
+  const SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbwbxd5UDMiOh2GJALf1GY9oyXOprgPKAxAiECGmwjSsdZUtD0fMJjiicxyTA5JmekLkzg/exec";
+
+  const map = L.map('map').setView([25.6000, 85.1300], 12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+  map.pm.addControls({ position: 'topleft', drawPolygon: true, drawRectangle: true, editMode: true, removalMode: false });
+  let activeZones = [];
+  let fetchedOrders = [];
+
+  window.onload = function() { fetchAllData(); };
+
+  function fetchAllData() {
+    loadCategories();
+    loadProducts();
+    loadZones();
+    loadOrders();
+  }
+
+  function loadCategories() {
+    fetch(`${SPREADSHEET_API_URL}?action=getCategories`)
+      .then(r => r.json())
+      .then(data => {
+        const cats = data.categories || [];
+        const tbody = document.getElementById('catTableBody');
+        const select = document.getElementById('prodCategorySelect');
+
+        select.innerHTML = '<option value="">Select Category</option>' + 
+          cats.map(c => `<option value="${c.slug}">${c.name}</option>`).join('');
+
+        if (cats.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#94a3b8;">No categories added yet.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = cats.map(c => `
+          <tr>
+            <td><b>${c.name}</b></td>
+            <td><code style="background:#f1f5f9; padding:2px 6px; border-radius:4px;">${c.slug}</code></td>
+            <td><button class="btn btn-del" onclick="deleteCategory('${c.id}', '${c.name}')">🗑️ Delete</button></td>
+          </tr>
+        `).join('');
+      });
+  }
+
+  function handleAddCategory(e) {
+    e.preventDefault();
+    const name = document.getElementById('newCatName').value.trim();
+    if (!name) return;
+
+    fetch(SPREADSHEET_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "addCategory", name: name })
+    }).then(() => {
+      document.getElementById('newCatName').value = "";
+      loadCategories();
+    });
+  }
+
+  function deleteCategory(id, name) {
+    if (!confirm(`Delete category "${name}"?`)) return;
+    fetch(SPREADSHEET_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "deleteCategory", id: id })
+    }).then(() => loadCategories());
+  }
+
+  function loadProducts() {
+    fetch(`${SPREADSHEET_API_URL}?action=getProducts`)
+      .then(r => r.json())
+      .then(data => {
+        const prods = data.products || [];
+        document.getElementById('prodCountBadge').innerText = `${prods.length} Items`;
+        const tbody = document.getElementById('prodTableBody');
+
+        if (prods.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#94a3b8;">No products found in catalog.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = prods.map(p => `
+          <tr>
+            <td><img src="${p.img}" style="width:40px; height:40px; border-radius:6px; object-fit:cover;"></td>
+            <td><b>${p.name}</b><br><small style="color:#64748b">${p.id}</small></td>
+            <td><span style="background:#f1f5f9; padding:2px 6px; border-radius:4px; font-size:11px;">${p.category}</span></td>
+            <td style="color:#4f46e5; font-weight:bold;">₹${p.retailPrice}</td>
+            <td style="color:#e11d48; font-weight:bold;">₹${p.wholesalePrice}</td>
+            <td><button class="btn btn-del" onclick="deleteProduct('${p.id}', '${p.name}')">🗑️ Delete</button></td>
+          </tr>
+        `).join('');
+      });
+  }
+
+  function handleAddProduct(e) {
+    e.preventDefault();
+    const name = document.getElementById('prodName').value.trim();
+    const category = document.getElementById('prodCategorySelect').value;
+    const retailPrice = parseInt(document.getElementById('prodRetailPrice').value);
+    const wholesalePrice = parseInt(document.getElementById('prodWholesalePrice').value);
+    const img = document.getElementById('prodImg').value.trim();
+
+    const payload = { action: "addProduct", name, category, retailPrice, wholesalePrice, img };
+
+    fetch(SPREADSHEET_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
+    }).then(() => {
+      document.getElementById('prodName').value = "";
+      document.getElementById('prodRetailPrice').value = "";
+      document.getElementById('prodWholesalePrice').value = "";
+      document.getElementById('prodImg').value = "";
+      loadProducts();
+    });
+  }
+
+  function deleteProduct(id, name) {
+    if (!confirm(`Delete product "${name}"?`)) return;
+    fetch(SPREADSHEET_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "deleteProduct", id: id })
+    }).then(() => loadProducts());
+  }
+
+  function loadZones() {
+    fetch(`${SPREADSHEET_API_URL}?action=getZone`)
+      .then(r => r.json())
+      .then(data => {
+        if (data && data.zone && data.zone.features) {
+          activeZones.forEach(z => map.removeLayer(z.layer));
+          activeZones = [];
+          data.zone.features.forEach((feature, index) => {
+            const props = feature.properties || {};
+            const layer = L.geoJSON(feature, { style: { color: "#2563eb", weight: 2, fillColor: "#3b82f6", fillOpacity: 0.25 } }).getLayers()[0];
+            map.addLayer(layer);
+            activeZones.push({ id: props.id || "zone_" + index, name: props.name || "Zone " + (index+1), deliveryMinutes: props.deliveryMinutes || 20, lateCashback: props.lateCashback || 25, layer });
+          });
+        }
+      });
+  }
+
+  map.on('pm:create', (e) => {
+    let zoneName = prompt("Enter Zone Name:", `Delivery Zone ${activeZones.length + 1}`) || `Delivery Zone ${activeZones.length + 1}`;
+    let deliveryMinutes = parseInt(prompt(`Enter delivery minutes for "${zoneName}":`, "20")) || 20;
+    let lateCashback = parseInt(prompt(`Enter late refund guarantee (₹):`, "25")) || 25;
+
+    activeZones.push({ id: "zone_" + Date.now(), name: zoneName, deliveryMinutes, lateCashback, layer: e.layer });
+    e.layer.bindTooltip(`${zoneName} (${deliveryMinutes}m | ₹${lateCashback})`, { permanent: true, direction: "center", className: "zone-tooltip" });
+  });
+
+  function saveAllZonesToSheet() {
+    const featureCollection = {
+      type: "FeatureCollection",
+      features: activeZones.map(z => {
+        const geojson = z.layer.toGeoJSON();
+        geojson.properties = { id: z.id, name: z.name, deliveryMinutes: z.deliveryMinutes, lateCashback: z.lateCashback };
+        return geojson;
+      })
+    };
+    fetch(SPREADSHEET_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "saveZone", zone: featureCollection })
+    }).then(() => alert("Zones saved successfully!"));
+  }
+
+  function clearAllZones() {
+    if (!confirm("Clear all delivery zones?")) return;
+    activeZones.forEach(z => map.removeLayer(z.layer));
+    activeZones = [];
+    fetch(SPREADSHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "clearZone" }) });
+  }
+
+  function loadOrders() {
+    fetch(`${SPREADSHEET_API_URL}?action=getOrders`)
+      .then(r => r.json())
+      .then(data => {
+        fetchedOrders = data.orders || [];
+        const tbody = document.getElementById('ordersBody');
+        if (fetchedOrders.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#94a3b8;">No orders found.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = fetchedOrders.map(o => `
+          <tr>
+            <td><b>${o.orderId}</b><br><small style="color:#64748b">${o.date}</small></td>
+            <td>${o.name}</td>
+            <td>${o.phone}</td>
+            <td>${o.item} (x${o.qty})<br><b>${o.amount}</b></td>
+            <td><span style="background:#dcfce7; color:#166534; padding:3px 6px; border-radius:4px; font-weight:bold;">${o.status}</span></td>
+            <td><a href="${o.mapsUrl}" target="_blank" style="background:#059669; color:white; padding:4px 8px; border-radius:4px; text-decoration:none; font-size:11px;">🗺️ Route</a></td>
+          </tr>
+        `).join('');
+      });
+  }
+
+  function printLast24HoursSlips() {
+    const twentyFourHoursAgo = Date.now() - 86400000;
+    const recent = fetchedOrders.filter(o => new Date(o.date).getTime() >= twentyFourHoursAgo);
+    if (recent.length === 0) return alert("No orders found in last 24 hours.");
+
+    document.getElementById('printSection').innerHTML = `
+      <div class="a4-slip-grid">
+        ${recent.map(o => `
+          <div class="a4-slip">
+            <b>⚡ MOHNA EXPRESS - ${o.orderId}</b><br>
+            Date: ${o.date}<br>
+            Customer: ${o.name} (📞 ${o.phone})<br>
+            Address: ${o.address}<br>
+            Item: <b>${o.item}</b> (x${o.qty}) - <b>${o.amount}</b><br>
+            Status: <b>PAID</b>
+          </div>
+        `).join('')}
+      </div>`;
+    window.print();
+  }
+</script>
+</body>
+</html>
