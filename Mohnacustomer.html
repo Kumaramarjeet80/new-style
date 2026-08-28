@@ -13,7 +13,7 @@
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; transition: background 0.3s ease, color 0.3s ease; }
     body { margin: 0; padding: 0; min-height: 100vh; }
 
-    /* DUAL THEME ENGINE */
+    /* DUAL THEME ENGINES */
     body.theme-retail {
       background: linear-gradient(135deg, #e0e7ff 0%, #fae8ff 50%, #ede9fe 100%);
       color: #1e1b4b;
@@ -171,14 +171,17 @@
     <button class="mode-btn" id="btnWholesale" onclick="switchTheme('wholesale')">📦 Wholesale Bulk</button>
   </div>
 
+  <!-- SCOPED CATEGORY FILTER CHIPS -->
   <div class="category-scroll" id="categoryChips">
     <div class="chip active" onclick="filterCategory('all', this)">All Items</div>
   </div>
 
+  <!-- PRODUCT GRID -->
   <div class="product-grid" id="productGrid">
     <div style="grid-column:1/-1; text-align:center; color:#64748b; padding:40px;">Loading catalog from Google Sheets...</div>
   </div>
 
+  <!-- TRACKING CONTAINER -->
   <div id="liveTracker" style="display: none; background: white; border-radius: 16px; padding: 20px; margin-top: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.06);">
     <div style="text-align: center;">
       <span id="trackerBadge" style="background: #dbeafe; color: #1e40af; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 20px; text-transform: uppercase;">
@@ -218,7 +221,7 @@
 
 </div>
 
-<!-- SIGNUP MODAL -->
+<!-- MANDATORY SIGNUP MODAL -->
 <div id="signupModal" class="modal-overlay" style="display: none;">
   <div class="modal-card">
     <h3 style="margin-top:0;">📍 Mandatory Onboarding</h3>
@@ -265,8 +268,8 @@
   let currentTheme = 'retail';
   let activeCategory = 'all';
 
-  let products = [];
-  let categories = [];
+  let rawProducts = [];
+  let rawCategories = [];
   let currentSelectedProduct = null;
   let currentMatchedZoneTiming = 20;
   let currentMatchedZoneCashback = 25;
@@ -314,7 +317,7 @@
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(payload)
     }).then(() => {
-      currentUser = { name, phone, email, ...userCoords };
+      currentUser = { name, phone, email, status: "Active", ...userCoords };
       localStorage.setItem('mohna_user', JSON.stringify(currentUser));
       document.getElementById('signupModal').style.display = 'none';
       updateProfileUI();
@@ -327,7 +330,7 @@
 
   function openProfileOrSignup() {
     if (!currentUser) document.getElementById('signupModal').style.display = 'flex';
-    else alert(`Logged in: ${currentUser.name}\nPhone: ${currentUser.phone}\nEmail: ${currentUser.email}`);
+    else alert(`Logged in: ${currentUser.name}\nPhone: ${currentUser.phone}\nEmail: ${currentUser.email}\nStatus: ${currentUser.status || 'Active'}`);
   }
 
   function fetchCategoriesAndProducts() {
@@ -335,22 +338,28 @@
       fetch(`${SPREADSHEET_API_URL}?action=getCategories`).then(r => r.json()),
       fetch(`${SPREADSHEET_API_URL}?action=getProducts`).then(r => r.json())
     ]).then(([catData, prodData]) => {
-      categories = catData.categories || [];
-      products = prodData.products || [];
-
-      const chipContainer = document.getElementById('categoryChips');
-      chipContainer.innerHTML = '<div class="chip active" onclick="filterCategory(\'all\', this)">All Items</div>' + 
-        categories.map(c => `<div class="chip" onclick="filterCategory('${c.slug}', this)">${c.name}</div>`).join('');
-
+      rawCategories = catData.categories || [];
+      rawProducts = prodData.products || [];
+      renderCategoryChips();
       renderProducts();
     });
   }
 
+  function renderCategoryChips() {
+    const chipContainer = document.getElementById('categoryChips');
+    const scopedCategories = rawCategories.filter(c => c.scope === currentTheme || c.scope === 'both');
+
+    chipContainer.innerHTML = '<div class="chip active" onclick="filterCategory(\'all\', this)">All Items</div>' + 
+      scopedCategories.map(c => `<div class="chip" onclick="filterCategory('${c.slug}', this)">${c.name}</div>`).join('');
+  }
+
   function switchTheme(theme) {
     currentTheme = theme;
+    activeCategory = 'all';
     document.body.className = (theme === 'wholesale') ? 'theme-wholesale' : 'theme-retail';
     document.getElementById('btnRetail').classList.toggle('active', theme === 'retail');
     document.getElementById('btnWholesale').classList.toggle('active', theme === 'wholesale');
+    renderCategoryChips();
     renderProducts();
   }
 
@@ -363,16 +372,21 @@
 
   function renderProducts() {
     const grid = document.getElementById('productGrid');
-    const filtered = (activeCategory === 'all') ? products : products.filter(p => p.category === activeCategory);
+    const validSlugs = rawCategories.filter(c => c.scope === currentTheme || c.scope === 'both').map(c => c.slug);
+    
+    let filtered = rawProducts.filter(p => validSlugs.includes(p.category));
+    if (activeCategory !== 'all') {
+      filtered = filtered.filter(p => p.category === activeCategory);
+    }
 
     if (filtered.length === 0) {
-      grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#64748b; padding:40px;">No products available in this category.</div>';
+      grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#64748b; padding:40px;">No products available in this section.</div>';
       return;
     }
 
     grid.innerHTML = filtered.map(p => {
       const price = (currentTheme === 'wholesale') ? p.wholesalePrice : p.retailPrice;
-      const tag = (currentTheme === 'wholesale') ? 'Bulk Price (Min 5)' : 'Retail Unit';
+      const tag = (currentTheme === 'wholesale') ? 'Bulk Wholesale (Min 5)' : 'Retail Unit';
 
       return `
         <div class="product-card">
@@ -398,7 +412,19 @@
   function initiateCheckout(productId) {
     if (!currentUser) { document.getElementById('signupModal').style.display = 'flex'; return; }
 
-    currentSelectedProduct = products.find(p => p.id === productId);
+    // Live Block Check
+    fetch(`${SPREADSHEET_API_URL}?action=getUsers`).then(r => r.json()).then(data => {
+      const liveUser = (data.users || []).find(u => u.phone == currentUser.phone);
+      if (liveUser && liveUser.status === "Blocked") {
+        alert("⛔ Your account has been temporarily blocked by store administration. You cannot place orders.");
+        return;
+      }
+      openCheckoutModal(productId);
+    });
+  }
+
+  function openCheckoutModal(productId) {
+    currentSelectedProduct = rawProducts.find(p => p.id === productId);
     const amount = (currentTheme === 'wholesale') ? currentSelectedProduct.wholesalePrice : currentSelectedProduct.retailPrice;
     document.getElementById('checkoutTotalDisplay').innerText = `₹${amount}`;
     document.getElementById('checkoutModal').style.display = 'flex';
