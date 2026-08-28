@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin - Named Multi-Zone Manager & Live Orders</title>
+  
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.css" />
+  
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { margin: 0; padding: 20px; background: #f1f5f9; }
+    .container { max-width: 1150px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+    .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    h2 { margin: 0 0 8px 0; color: #0f172a; }
+    
+    .grid-layout { display: grid; grid-template-columns: 1fr 340px; gap: 20px; }
+    @media (max-width: 850px) { .grid-layout { grid-template-columns: 1fr; } }
+    
+    #map { height: 460px; width: 100%; border-radius: 8px; border: 1px solid #cbd5e1; }
+    
+    .btn { padding: 10px 14px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 13px; }
+    .btn-save { background: #2563eb; color: white; width: 100%; }
+    .btn-clear { background: #ef4444; color: white; width: 100%; }
+    .btn-refresh { background: #0f172a; color: white; }
+    .btn-print { background: #7c3aed; color: white; }
+    .btn-zoom { background: #0284c7; color: white; padding: 4px 8px; font-size: 11px; }
+    .btn-del-single { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; padding: 4px 8px; font-size: 11px; }
+    .btn-del-single:hover { background: #ef4444; color: white; }
+    .btn-map { background: #059669; color: white; text-decoration: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; display: inline-block; }
+    
+    /* Zone List Styles */
+    .zone-panel { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; display: flex; flex-direction: column; height: 460px; }
+    .zone-list { list-style: none; padding: 0; margin: 10px 0 0 0; overflow-y: auto; flex-grow: 1; display: flex; flex-direction: column; gap: 8px; }
+    .zone-item { background: white; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+    .zone-item b { color: #0f172a; font-size: 13px; display: block; }
+    .zone-item small { color: #64748b; font-size: 11px; }
+
+    /* Custom Leaflet Tooltip */
+    .zone-tooltip { background: #1e40af; color: white; font-weight: bold; border-radius: 4px; padding: 3px 8px; border: none; font-size: 12px; }
+
+    /* Orders Table */
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13px; }
+    th, td { text-align: left; padding: 10px; border-bottom: 1px solid #e2e8f0; }
+    th { background: #f8fafc; color: #475569; }
+    .badge-paid { background: #dcfce7; color: #166534; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
+
+    /* ================================================= */
+    /* PRINT STYLING (Visible ONLY during printing)     */
+    /* ================================================= */
+    #printSection { display: none; }
+
+    @media print {
+      body * { visibility: hidden; }
+      #printSection, #printSection * { visibility: visible; }
+      #printSection {
+        display: block !important;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        background: white;
+      }
+      .slip {
+        width: 80mm; /* Standard 3-inch POS Thermal Printer roll */
+        margin: 0 auto 20px auto;
+        padding: 12px;
+        border: 1px dashed #000;
+        font-family: monospace;
+        font-size: 12px;
+        page-break-after: always;
+        break-after: page;
+      }
+      .slip-header { text-align: center; border-bottom: 1px solid #000; padding-bottom: 6px; margin-bottom: 8px; }
+      .slip-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+      .slip-total { border-top: 1px solid #000; padding-top: 6px; font-weight: bold; font-size: 14px; margin-top: 8px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- ZONE CONFIGURATION CARD -->
+  <div class="card">
+    <h2>🛠️ Multi-Zone Manager with Custom Names</h2>
+    <p style="color:#64748b; font-size:14px; margin: 0 0 16px 0;">
+      Draw delivery boundaries with the polygon tool. Give each zone a custom name to manage or delete it separately.
+    </p>
+
+    <div class="grid-layout">
+      <!-- MAP VIEW -->
+      <div id="map"></div>
+
+      <!-- SIDEBAR ZONE LIST -->
+      <div class="zone-panel">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h3 style="margin:0; font-size:15px; color:#0f172a;">Active Delivery Zones</h3>
+          <span id="zoneCounter" style="background:#dbeafe; color:#1e40af; font-size:11px; font-weight:bold; padding:2px 8px; border-radius:12px;">0 Zones</span>
+        </div>
+        
+        <ul id="zoneList" class="zone-list">
+          <li style="text-align:center; color:#94a3b8; font-size:13px; margin-top:20px;">No zones created yet.<br>Draw on the map to begin.</li>
+        </ul>
+
+        <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 6px;">
+          <button class="btn btn-save" onclick="saveAllZonesToSheet()">💾 Save All Zones to Sheet</button>
+          <button class="btn btn-clear" onclick="clearAllZones()">🗑️ Clear Everything</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIVE ORDERS & BATCH PRINT ACTION CARD -->
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <h2>📦 Order Management</h2>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-print" onclick="printLast24HoursSlips()">🖨️ Print Last 24h Slips (1-Click)</button>
+        <button class="btn btn-refresh" onclick="loadOrders()">🔄 Refresh Orders</button>
+      </div>
+    </div>
+    
+    <table id="ordersTable">
+      <thead>
+        <tr>
+          <th>Order & Payment ID</th>
+          <th>Customer</th>
+          <th>Contact</th>
+          <th>Address</th>
+          <th>Item / Total</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="ordersBody">
+        <tr><td colspan="7" style="text-align:center; color:#94a3b8;">Loading orders from Google Sheets...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- CONTAINER FOR GENERATED PRINT SLIPS -->
+<div id="printSection"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.js"></script>
+
+<script>
+  const SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbwHo1NbKb8621yOmU6mizBhS0JOdmxZoVnweKA3pAAm5MF_cOk9AI9fS8Q1kUNQ3Sna/exec";
+
+  let fetchedOrders = [];
+  const map = L.map('map').setView([25.6000, 85.1300], 12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+  map.pm.addControls({
+    position: 'topleft',
+    drawPolygon: true,
+    drawRectangle: true,
+    editMode: true,
+    dragMode: false,
+    removalMode: false
+  });
+
+  // Array to store active zone objects: [{ id, name, layer }]
+  let activeZones = [];
+
+  // 1. Fetch Existing Named Zones from Google Sheets
+  fetch(`${SPREADSHEET_API_URL}?action=getZone`)
+    .then(res => res.json())
+    .then(data => {
+      if (data && data.zone) {
+        const parsed = (typeof data.zone === 'string') ? JSON.parse(data.zone) : data.zone;
+        
+        if (parsed.type === "FeatureCollection" && parsed.features) {
+          parsed.features.forEach((feature, index) => {
+            const zoneName = (feature.properties && feature.properties.name) ? feature.properties.name : `Zone ${index + 1}`;
+            const zoneId = (feature.properties && feature.properties.id) ? feature.properties.id : "zone_" + Date.now() + "_" + Math.random().toString(36).substr(2, 4);
+
+            const layer = L.geoJSON(feature, {
+              style: { color: "#2563eb", weight: 2, fillColor: "#3b82f6", fillOpacity: 0.25 }
+            }).getLayers()[0];
+
+            layer.bindTooltip(zoneName, { permanent: true, direction: "center", className: "zone-tooltip" });
+            map.addLayer(layer);
+
+            activeZones.push({ id: zoneId, name: zoneName, layer: layer });
+          });
+        }
+        
+        renderZoneList();
+        if (activeZones.length > 0) {
+          const group = L.featureGroup(activeZones.map(z => z.layer));
+          map.fitBounds(group.getBounds());
+        }
+      }
+    });
+
+  // 2. Handle New Drawn Zone + Name Prompt
+  map.on('pm:create', (e) => {
+    const layer = e.layer;
+    
+    let zoneName = prompt("Enter a Name for this Delivery Zone:", `Delivery Zone ${activeZones.length + 1}`);
+    if (!zoneName || zoneName.trim() === "") {
+      zoneName = `Delivery Zone ${activeZones.length + 1}`;
+    }
+    zoneName = zoneName.trim();
+
+    const zoneId = "zone_" + Date.now();
+
+    layer.bindTooltip(zoneName, { permanent: true, direction: "center", className: "zone-tooltip" });
+
+    activeZones.push({
+      id: zoneId,
+      name: zoneName,
+      layer: layer
+    });
+
+    renderZoneList();
+  });
+
+  // 3. Render Zone Items into the Sidebar
+  function renderZoneList() {
+    const listContainer = document.getElementById('zoneList');
+    document.getElementById('zoneCounter').innerText = `${activeZones.length} Zones`;
+
+    if (activeZones.length === 0) {
+      listContainer.innerHTML = `<li style="text-align:center; color:#94a3b8; font-size:13px; margin-top:20px;">No zones created yet.<br>Draw on the map to begin.</li>`;
+      return;
+    }
+
+    listContainer.innerHTML = activeZones.map(z => `
+      <li class="zone-item">
+        <div>
+          <b>📍 ${z.name}</b>
+          <small>ID: ${z.id.slice(-6)}</small>
+        </div>
+        <div style="display:flex; gap:4px;">
+          <button class="btn btn-zoom" onclick="zoomToZone('${z.id}')" title="Zoom to zone">🎯</button>
+          <button class="btn btn-del-single" onclick="deleteSingleZone('${z.id}')" title="Delete this zone">🗑️ Delete</button>
+        </div>
+      </li>
+    `).join('');
+  }
+
+  // 4. Delete Single Zone by ID & Name
+  function deleteSingleZone(zoneId) {
+    const zoneIndex = activeZones.findIndex(z => z.id === zoneId);
+    if (zoneIndex === -1) return;
+
+    const zone = activeZones[zoneIndex];
+    if (confirm(`Are you sure you want to delete "${zone.name}"?`)) {
+      map.removeLayer(zone.layer);
+      activeZones.splice(zoneIndex, 1);
+      renderZoneList();
+    }
+  }
+
+  // 5. Zoom to Specific Zone
+  function zoomToZone(zoneId) {
+    const zone = activeZones.find(z => z.id === zoneId);
+    if (zone) {
+      map.fitBounds(zone.layer.getBounds(), { padding: [20, 20] });
+    }
+  }
+
+  // 6. Save All Named Zones to Google Sheets
+  function saveAllZonesToSheet() {
+    if (activeZones.length === 0) {
+      return alert("No delivery zones to save. Please draw at least one zone.");
+    }
+
+    const featureCollection = {
+      type: "FeatureCollection",
+      features: activeZones.map(z => {
+        const geojson = z.layer.toGeoJSON();
+        geojson.properties = {
+          id: z.id,
+          name: z.name
+        };
+        return geojson;
+      })
+    };
+
+    fetch(SPREADSHEET_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "saveZone", zone: featureCollection })
+    })
+    .then(() => alert(`✅ Successfully saved ${activeZones.length} named delivery zone(s) to Google Sheets!`))
+    .catch(() => alert("❌ Failed to save zones to Google Sheets."));
+  }
+
+  // 7. Clear Everything
+  function clearAllZones() {
+    if (!confirm("Are you sure you want to clear ALL delivery zones?")) return;
+
+    activeZones.forEach(z => map.removeLayer(z.layer));
+    activeZones = [];
+    renderZoneList();
+
+    fetch(SPREADSHEET_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "clearZone" })
+    }).then(() => alert("All zones cleared from Google Sheets."));
+  }
+
+  // 8. Order Management Functions
+  function loadOrders() {
+    const tbody = document.getElementById('ordersBody');
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#94a3b8;">Fetching latest rows from Sheet...</td></tr>';
+
+    fetch(`${SPREADSHEET_API_URL}?action=getOrders`)
+      .then(res => res.json())
+      .then(data => {
+        fetchedOrders = data.orders || [];
+        if (fetchedOrders.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#94a3b8;">No orders found in sheet.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = fetchedOrders.map(o => `
+          <tr>
+            <td>
+              <b>${o.orderId}</b><br>
+              <small style="color:#2563eb">${o.paymentId || 'N/A'}</small><br>
+              <small style="color:#64748b">${o.date}</small>
+            </td>
+            <td>${o.name}</td>
+            <td>📞 ${o.phone}<br>✉️ ${o.email || 'N/A'}</td>
+            <td>${o.address}</td>
+            <td>${o.item} (x${o.qty})<br><b>${o.amount}</b></td>
+            <td><span class="badge-paid">${o.status || 'PAID'}</span></td>
+            <td>
+              <div style="display:flex; flex-direction:column; gap:4px;">
+                <button onclick="printSingleSlip('${o.orderId}')" style="background:#475569; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px;">🖨️ Slip</button>
+                <a href="${o.mapsUrl}" target="_blank" class="btn-map">🗺️ Route</a>
+              </div>
+            </td>
+          </tr>
+        `).join('');
+      });
+  }
+
+  // 9. Batch Print Engine (Last 24 Hours)
+  function printLast24HoursSlips() {
+    if (!fetchedOrders || fetchedOrders.length === 0) {
+      alert("No orders available to print. Please refresh orders first.");
+      return;
+    }
+
+    const now = new Date().getTime();
+    const twentyFourHoursAgo = now - (24 * 60 * 60 * 1000);
+
+    const recentOrders = fetchedOrders.filter(order => {
+      const orderTimestamp = new Date(order.date).getTime();
+      return isNaN(orderTimestamp) ? true : (orderTimestamp >= twentyFourHoursAgo);
+    });
+
+    if (recentOrders.length === 0) {
+      alert("No orders found in the last 24 hours.");
+      return;
+    }
+
+    renderAndTriggerPrint(recentOrders);
+  }
+
+  function printSingleSlip(orderId) {
+    const order = fetchedOrders.find(o => o.orderId === orderId);
+    if (order) renderAndTriggerPrint([order]);
+  }
+
+  function renderAndTriggerPrint(ordersToPrint) {
+    const printContainer = document.getElementById('printSection');
+    printContainer.innerHTML = ordersToPrint.map(o => `
+      <div class="slip">
+        <div class="slip-header">
+          <h3 style="margin:0;">⚡ MOHNA EXPRESS</h3>
+          <p style="margin:2px 0 0 0; font-size:10px;">Dispatch & Packing Slip</p>
+        </div>
+        <div class="slip-row"><span><b>Order ID:</b></span><span>${o.orderId}</span></div>
+        <div class="slip-row"><span><b>Date:</b></span><span>${o.date}</span></div>
+        <div class="slip-row"><span><b>Customer:</b></span><span>${o.name}</span></div>
+        <div class="slip-row"><span><b>Phone:</b></span><span>${o.phone}</span></div>
+        <div style="margin:6px 0;"><b>Address:</b><br>${o.address}</div>
+        <div class="slip-row" style="border-top:1px dashed #000; padding-top:4px;">
+          <span><b>${o.item}</b> (x${o.qty})</span>
+          <span><b>${o.amount}</b></span>
+        </div>
+        <div class="slip-row slip-total">
+          <span>PAID AMOUNT:</span>
+          <span>${o.amount}</span>
+        </div>
+        <div style="text-align:center; font-size:10px; margin-top:8px;">
+          Payment Ref: ${o.paymentId || 'N/A'}<br>
+          -- PACKED & VERIFIED --
+        </div>
+      </div>
+    `).join('');
+
+    window.print();
+  }
+
+  loadOrders();
+</script>
+</body>
+</html>
