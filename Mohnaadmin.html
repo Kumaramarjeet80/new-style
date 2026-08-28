@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin Dashboard - Users, Products, Categories, Zones & Reports</title>
+  <title>Admin Dashboard - Live Search, Users, Inventory & Zones</title>
   
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.css" />
@@ -12,13 +12,53 @@
   <style>
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { margin: 0; padding: 20px; background: #f1f5f9; }
-    .container { max-width: 1280px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+    .container { max-width: 1300px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
     .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
     h2, h3 { margin: 0; color: #0f172a; }
     
     .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
     @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    /* MASTER & LOCAL SEARCH STYLES */
+    .master-search-container {
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      color: white;
+      padding: 16px 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .master-search-input {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 8px;
+      border: 1px solid #475569;
+      background: #334155;
+      color: white;
+      font-size: 15px;
+      outline: none;
+      transition: border 0.2s;
+    }
+    .master-search-input:focus {
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+    }
+    .local-search-input {
+      padding: 6px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 12px;
+      outline: none;
+      width: 220px;
+      background: #f8fafc;
+    }
+    .local-search-input:focus {
+      border-color: #2563eb;
+      background: white;
+    }
 
     .form-group { margin-bottom: 10px; }
     .form-group label { display: block; font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 4px; }
@@ -51,40 +91,40 @@
     .zone-list { list-style: none; padding: 0; margin: 8px 0 0; overflow-y: auto; flex-grow: 1; display: flex; flex-direction: column; gap: 6px; }
     .zone-item { background: white; padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
 
-    /* REPORT PDF RENDER CONTAINER (OFF-SCREEN) */
-    #reportPdfTemplate {
-      display: none;
-      background: white;
-      padding: 30px;
-      font-family: Arial, sans-serif;
-      color: #0f172a;
-    }
+    #reportPdfTemplate { display: none; background: white; padding: 30px; font-family: Arial, sans-serif; color: #0f172a; }
   </style>
 </head>
 <body>
 
 <div class="container">
 
-  <!-- TOP HEADER & MASTER REFRESH -->
+  <!-- TOP HEADER -->
   <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
     <div>
       <h1 style="margin:0; font-size:24px; color:#0f172a;">⚡ Mohna Express Control Hub</h1>
-      <p style="margin:4px 0 0; color:#64748b; font-size:14px;">User Management, Inventory, Scoped Categories, Zones & Dual PDF/CSV Reports</p>
+      <p style="margin:4px 0 0; color:#64748b; font-size:14px;">Master Live Search, Scoped Catalog, User Controls, Zones & Reports</p>
     </div>
     <button class="btn btn-dark" onclick="fetchAllData()">🔄 Master Refresh (All)</button>
   </div>
 
-  <!-- SECTION 1: REPORT GENERATION (CSV & PDF) -->
+  <!-- MASTER GLOBAL SEARCH BAR (SEARCHES ACROSS ALL DATASETS SIMULTANEOUSLY) -->
+  <div class="master-search-container">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <span style="font-weight:700; font-size:13px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px;">🔍 Global Master Omnisearch</span>
+      <span id="masterSearchCount" style="font-size:12px; color:#38bdf8;">All tables active</span>
+    </div>
+    <input type="text" id="masterSearchInput" class="master-search-input" placeholder="Type any word to search Users, Products, Categories, Zones, or Orders..." oninput="handleMasterSearch(this.value)" />
+  </div>
+
+  <!-- REPORT CENTER -->
   <div class="card" style="border-left: 5px solid #059669;">
     <div class="card-header">
       <div>
-        <h3>📊 Report Center (Instant CSV & PDF Downloads)</h3>
-        <p style="margin:2px 0 0; font-size:12px; color:#64748b;">Export complete datasets with one click in structured formats</p>
+        <h3>📊 Export & Report Center (Instant CSV & PDF)</h3>
+        <p style="margin:2px 0 0; font-size:12px; color:#64748b;">Export filtered or full datasets with one click</p>
       </div>
     </div>
-    
     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:10px;">
-      <!-- Users Report -->
       <div style="background:#f8fafc; padding:10px; border-radius:8px; border:1px solid #e2e8f0;">
         <b>👥 Registered Users</b>
         <div style="display:flex; gap:6px; margin-top:6px;">
@@ -92,7 +132,6 @@
           <button class="btn btn-report-pdf" style="flex:1;" onclick="exportReport('users', 'pdf')">📄 PDF</button>
         </div>
       </div>
-      <!-- Products Report -->
       <div style="background:#f8fafc; padding:10px; border-radius:8px; border:1px solid #e2e8f0;">
         <b>📦 Products & Stock</b>
         <div style="display:flex; gap:6px; margin-top:6px;">
@@ -100,7 +139,6 @@
           <button class="btn btn-report-pdf" style="flex:1;" onclick="exportReport('products', 'pdf')">📄 PDF</button>
         </div>
       </div>
-      <!-- Categories Report -->
       <div style="background:#f8fafc; padding:10px; border-radius:8px; border:1px solid #e2e8f0;">
         <b>🏷️ Scoped Categories</b>
         <div style="display:flex; gap:6px; margin-top:6px;">
@@ -108,7 +146,6 @@
           <button class="btn btn-report-pdf" style="flex:1;" onclick="exportReport('categories', 'pdf')">📄 PDF</button>
         </div>
       </div>
-      <!-- Orders Report -->
       <div style="background:#f8fafc; padding:10px; border-radius:8px; border:1px solid #e2e8f0;">
         <b>🧾 Order History</b>
         <div style="display:flex; gap:6px; margin-top:6px;">
@@ -119,16 +156,17 @@
     </div>
   </div>
 
-  <!-- SECTION 2: REGISTERED USERS MANAGEMENT (BLOCK / UNBLOCK) -->
+  <!-- REGISTERED USERS MANAGEMENT -->
   <div class="card">
     <div class="card-header">
       <div>
         <h3>👥 Registered Users Management</h3>
-        <p style="margin:2px 0 0; font-size:12px; color:#64748b;">View GPS-registered users. Blocked users cannot place orders.</p>
+        <p style="margin:2px 0 0; font-size:12px; color:#64748b;">View GPS-registered users and toggle access permission</p>
       </div>
-      <div style="display:flex; gap:8px; align-items:center;">
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <input type="text" id="userSearchInput" class="local-search-input" placeholder="🔍 Search users (Name, Phone, ID)..." oninput="renderUsersTable(this.value)" />
         <span id="userCountBadge" style="background:#dbeafe; color:#1e40af; font-size:11px; font-weight:bold; padding:4px 8px; border-radius:12px;">0 Users</span>
-        <button class="btn btn-refresh" onclick="loadUsers()">🔄 Refresh Users</button>
+        <button class="btn btn-refresh" onclick="loadUsers()">🔄 Refresh</button>
       </div>
     </div>
     <table>
@@ -150,13 +188,16 @@
     </table>
   </div>
 
-  <!-- SECTION 3: CATEGORY & PRODUCT MANAGEMENT -->
+  <!-- CATEGORY & PRODUCT MANAGEMENT -->
   <div class="grid-2">
     <!-- SCOPED CATEGORY MANAGER -->
     <div class="card">
       <div class="card-header">
         <h3>🏷️ Category / Type Manager</h3>
-        <button class="btn btn-refresh" onclick="loadCategories()">🔄 Refresh Types</button>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <input type="text" id="catSearchInput" class="local-search-input" style="width:160px;" placeholder="🔍 Search types..." oninput="renderCategoriesTable(this.value)" />
+          <button class="btn btn-refresh" onclick="loadCategories()">🔄</button>
+        </div>
       </div>
       <p style="font-size:12px; color:#64748b; margin-top:0;">Create separate categories designated for <b>Retail</b> or <b>Wholesale</b> store.</p>
 
@@ -221,13 +262,14 @@
     </div>
   </div>
 
-  <!-- SECTION 4: INVENTORY TABLE -->
+  <!-- LIVE INVENTORY TABLE -->
   <div class="card">
     <div class="card-header">
       <div>
         <h3>📋 Live Inventory Catalog (Stock Visible to Admin Only)</h3>
       </div>
-      <div style="display:flex; gap:8px; align-items:center;">
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <input type="text" id="prodSearchInput" class="local-search-input" placeholder="🔍 Search products (Name, Price, Category)..." oninput="renderProductsTable(this.value)" />
         <span id="prodCountBadge" style="background:#dbeafe; color:#1e40af; font-size:11px; font-weight:bold; padding:4px 8px; border-radius:12px;">0 Items</span>
         <button class="btn btn-refresh" onclick="loadProducts()">🔄 Refresh Products</button>
       </div>
@@ -250,17 +292,18 @@
     </table>
   </div>
 
-  <!-- SECTION 5: MULTI-ZONE DELIVERY BOUNDARIES -->
+  <!-- MULTI-ZONE DELIVERY BOUNDARIES -->
   <div class="card">
     <div class="card-header">
       <div>
         <h3>🛠️ Delivery Boundaries, Timings & Late Guarantee Setup</h3>
         <p style="margin:2px 0 0; font-size:12px; color:#64748b;">Draw multiple areas. Manage or delete each zone individually or clear all.</p>
       </div>
-      <div style="display:flex; gap:6px;">
+      <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+        <input type="text" id="zoneSearchInput" class="local-search-input" style="width:180px;" placeholder="🔍 Search zones..." oninput="renderZoneSidebar(this.value)" />
         <button class="btn btn-primary" onclick="saveAllZonesToSheet()">💾 Save All Zones</button>
         <button class="btn btn-danger" onclick="clearAllZones()">🗑️ Clear All Zones</button>
-        <button class="btn btn-refresh" onclick="loadZones()">🔄 Refresh Map</button>
+        <button class="btn btn-refresh" onclick="loadZones()">🔄 Refresh</button>
       </div>
     </div>
 
@@ -278,13 +321,15 @@
     </div>
   </div>
 
-  <!-- SECTION 6: ORDERS MANAGEMENT -->
+  <!-- ORDERS MANAGEMENT -->
   <div class="card">
     <div class="card-header">
       <div>
         <h3>📦 Orders Management</h3>
       </div>
-      <div style="display:flex; gap:8px;">
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <input type="text" id="orderSearchInput" class="local-search-input" placeholder="🔍 Search orders (ID, Customer, Phone, Item)..." oninput="renderOrdersTable(this.value)" />
+        <button class="btn btn-primary" onclick="printLast24HoursSlips()">🖨️ Print 24h Slips (A4 Inkjet)</button>
         <button class="btn btn-refresh" onclick="loadOrders()">🔄 Refresh Orders</button>
       </div>
     </div>
@@ -300,7 +345,6 @@
 
 </div>
 
-<!-- HIDDEN CONTAINER FOR PDF REPORT GENERATION -->
 <div id="reportPdfTemplate"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -309,6 +353,7 @@
 <script>
   const SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbwbxd5UDMiOh2GJALf1GY9oyXOprgPKAxAiECGmwjSsdZUtD0fMJjiicxyTA5JmekLkzg/exec";
 
+  // MAP ENGINE
   const map = L.map('map').setView([25.6000, 85.1300], 12);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
   map.pm.addControls({ position: 'topleft', drawPolygon: true, drawRectangle: true, editMode: true, removalMode: false });
@@ -329,40 +374,79 @@
     loadOrders();
   }
 
-  // --- USER MANAGEMENT (VIEW & BLOCK/UNBLOCK) ---
+  // ==========================================
+  // MASTER GLOBAL OMNISEARCH ENGINE
+  // ==========================================
+  function handleMasterSearch(query) {
+    const q = query.trim().toLowerCase();
+    
+    // Sync local search inputs
+    document.getElementById('userSearchInput').value = query;
+    document.getElementById('catSearchInput').value = query;
+    document.getElementById('prodSearchInput').value = query;
+    document.getElementById('zoneSearchInput').value = query;
+    document.getElementById('orderSearchInput').value = query;
+
+    // Filter all sections
+    renderUsersTable(q);
+    renderCategoriesTable(q);
+    renderProductsTable(q);
+    renderZoneSidebar(q);
+    renderOrdersTable(q);
+
+    document.getElementById('masterSearchCount').innerText = q ? `Filtered by "${query}"` : `All tables active`;
+  }
+
+  // ==========================================
+  // USERS SECTION
+  // ==========================================
   function loadUsers() {
     fetch(`${SPREADSHEET_API_URL}?action=getUsers`)
       .then(r => r.json())
       .then(data => {
         cachedUsers = data.users || [];
-        document.getElementById('userCountBadge').innerText = `${cachedUsers.length} Users`;
-        const tbody = document.getElementById('userTableBody');
-
-        if (cachedUsers.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#94a3b8;">No registered users found.</td></tr>';
-          return;
-        }
-
-        tbody.innerHTML = cachedUsers.map(u => {
-          const isBlocked = u.status === "Blocked";
-          return `
-            <tr>
-              <td><b>${u.id}</b></td>
-              <td><small style="color:#64748b">${u.date}</small></td>
-              <td><b>${u.name}</b></td>
-              <td>📞 ${u.phone}</td>
-              <td>${u.email}</td>
-              <td><a href="${u.mapsUrl}" target="_blank" style="color:#2563eb; text-decoration:none; font-size:12px;">🗺️ ${u.coords}</a></td>
-              <td><span class="${isBlocked ? 'badge-blocked' : 'badge-active'}">${u.status}</span></td>
-              <td>
-                <button class="btn ${isBlocked ? 'btn-unblock' : 'btn-block'}" onclick="toggleUserStatus('${u.id}', '${u.phone}', '${isBlocked ? 'Active' : 'Blocked'}')">
-                  ${isBlocked ? '🔓 Unblock' : '🚫 Block'}
-                </button>
-              </td>
-            </tr>
-          `;
-        }).join('');
+        renderUsersTable();
       });
+  }
+
+  function renderUsersTable(filterQuery = "") {
+    const q = filterQuery.trim().toLowerCase();
+    const filtered = q ? cachedUsers.filter(u => 
+      (u.id && u.id.toLowerCase().includes(q)) ||
+      (u.name && u.name.toLowerCase().includes(q)) ||
+      (u.phone && u.phone.toString().includes(q)) ||
+      (u.email && u.email.toLowerCase().includes(q)) ||
+      (u.coords && u.coords.toLowerCase().includes(q)) ||
+      (u.status && u.status.toLowerCase().includes(q))
+    ) : cachedUsers;
+
+    document.getElementById('userCountBadge').innerText = `${filtered.length} Users`;
+    const tbody = document.getElementById('userTableBody');
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#94a3b8;">No matching users found.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(u => {
+      const isBlocked = u.status === "Blocked";
+      return `
+        <tr>
+          <td><b>${u.id}</b></td>
+          <td><small style="color:#64748b">${u.date}</small></td>
+          <td><b>${u.name}</b></td>
+          <td>📞 ${u.phone}</td>
+          <td>${u.email}</td>
+          <td><a href="${u.mapsUrl}" target="_blank" style="color:#2563eb; text-decoration:none; font-size:12px;">🗺️ ${u.coords}</a></td>
+          <td><span class="${isBlocked ? 'badge-blocked' : 'badge-active'}">${u.status}</span></td>
+          <td>
+            <button class="btn ${isBlocked ? 'btn-unblock' : 'btn-block'}" onclick="toggleUserStatus('${u.id}', '${u.phone}', '${isBlocked ? 'Active' : 'Blocked'}')">
+              ${isBlocked ? '🔓 Unblock' : '🚫 Block'}
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
   }
 
   function toggleUserStatus(userId, phone, newStatus) {
@@ -375,31 +459,43 @@
     }).then(() => loadUsers());
   }
 
-  // --- CATEGORIES LOGIC ---
+  // ==========================================
+  // CATEGORIES SECTION
+  // ==========================================
   function loadCategories() {
     fetch(`${SPREADSHEET_API_URL}?action=getCategories`)
       .then(r => r.json())
       .then(data => {
         cachedCategories = data.categories || [];
-        const tbody = document.getElementById('catTableBody');
         const select = document.getElementById('prodCategorySelect');
-
         select.innerHTML = '<option value="">Select Category</option>' + 
           cachedCategories.map(c => `<option value="${c.slug}">${c.name} (${c.scope.toUpperCase()})</option>`).join('');
 
-        if (cachedCategories.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#94a3b8;">No categories added yet.</td></tr>';
-          return;
-        }
-
-        tbody.innerHTML = cachedCategories.map(c => `
-          <tr>
-            <td><b>${c.name}</b></td>
-            <td><span class="${c.scope === 'wholesale' ? 'badge-wholesale' : 'badge-retail'}">${c.scope}</span></td>
-            <td><button class="btn btn-del" onclick="deleteCategory('${c.id}', '${c.name}')">🗑️</button></td>
-          </tr>
-        `).join('');
+        renderCategoriesTable();
       });
+  }
+
+  function renderCategoriesTable(filterQuery = "") {
+    const q = filterQuery.trim().toLowerCase();
+    const filtered = q ? cachedCategories.filter(c => 
+      (c.name && c.name.toLowerCase().includes(q)) ||
+      (c.slug && c.slug.toLowerCase().includes(q)) ||
+      (c.scope && c.scope.toLowerCase().includes(q))
+    ) : cachedCategories;
+
+    const tbody = document.getElementById('catTableBody');
+    if (filtered.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#94a3b8;">No matching categories found.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(c => `
+      <tr>
+        <td><b>${c.name}</b></td>
+        <td><span class="${c.scope === 'wholesale' ? 'badge-wholesale' : 'badge-retail'}">${c.scope}</span></td>
+        <td><button class="btn btn-del" onclick="deleteCategory('${c.id}', '${c.name}')">🗑️</button></td>
+      </tr>
+    `).join('');
   }
 
   function handleAddCategory(e) {
@@ -427,32 +523,48 @@
     }).then(() => loadCategories());
   }
 
-  // --- PRODUCTS LOGIC ---
+  // ==========================================
+  // PRODUCTS SECTION
+  // ==========================================
   function loadProducts() {
     fetch(`${SPREADSHEET_API_URL}?action=getProducts`)
       .then(r => r.json())
       .then(data => {
         cachedProducts = data.products || [];
-        document.getElementById('prodCountBadge').innerText = `${cachedProducts.length} Items`;
-        const tbody = document.getElementById('prodTableBody');
-
-        if (cachedProducts.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#94a3b8;">No products found in catalog.</td></tr>';
-          return;
-        }
-
-        tbody.innerHTML = cachedProducts.map(p => `
-          <tr>
-            <td><img src="${p.img}" style="width:40px; height:40px; border-radius:6px; object-fit:cover;"></td>
-            <td><b>${p.name}</b><br><small style="color:#64748b">${p.id}</small></td>
-            <td><span style="background:#f1f5f9; padding:2px 6px; border-radius:4px; font-size:11px;">${p.category}</span></td>
-            <td style="color:#4f46e5; font-weight:bold;">₹${p.retailPrice}</td>
-            <td style="color:#e11d48; font-weight:bold;">₹${p.wholesalePrice}</td>
-            <td><span class="badge-stock">📦 ${p.stockQty || 0} Units</span></td>
-            <td><button class="btn btn-del" onclick="deleteProduct('${p.id}', '${p.name}')">🗑️</button></td>
-          </tr>
-        `).join('');
+        renderProductsTable();
       });
+  }
+
+  function renderProductsTable(filterQuery = "") {
+    const q = filterQuery.trim().toLowerCase();
+    const filtered = q ? cachedProducts.filter(p => 
+      (p.name && p.name.toLowerCase().includes(q)) ||
+      (p.id && p.id.toLowerCase().includes(q)) ||
+      (p.category && p.category.toLowerCase().includes(q)) ||
+      (p.retailPrice && p.retailPrice.toString().includes(q)) ||
+      (p.wholesalePrice && p.wholesalePrice.toString().includes(q)) ||
+      (p.stockQty && p.stockQty.toString().includes(q))
+    ) : cachedProducts;
+
+    document.getElementById('prodCountBadge').innerText = `${filtered.length} Items`;
+    const tbody = document.getElementById('prodTableBody');
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#94a3b8;">No matching products found.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(p => `
+      <tr>
+        <td><img src="${p.img}" style="width:40px; height:40px; border-radius:6px; object-fit:cover;"></td>
+        <td><b>${p.name}</b><br><small style="color:#64748b">${p.id}</small></td>
+        <td><span style="background:#f1f5f9; padding:2px 6px; border-radius:4px; font-size:11px;">${p.category}</span></td>
+        <td style="color:#4f46e5; font-weight:bold;">₹${p.retailPrice}</td>
+        <td style="color:#e11d48; font-weight:bold;">₹${p.wholesalePrice}</td>
+        <td><span class="badge-stock">📦 ${p.stockQty || 0} Units</span></td>
+        <td><button class="btn btn-del" onclick="deleteProduct('${p.id}', '${p.name}')">🗑️ Delete</button></td>
+      </tr>
+    `).join('');
   }
 
   function handleAddProduct(e) {
@@ -489,7 +601,9 @@
     }).then(() => loadProducts());
   }
 
-  // --- ZONES LOGIC ---
+  // ==========================================
+  // ZONES SECTION
+  // ==========================================
   function loadZones() {
     fetch(`${SPREADSHEET_API_URL}?action=getZone`)
       .then(r => r.json())
@@ -520,16 +634,23 @@
     renderZoneSidebar();
   });
 
-  function renderZoneSidebar() {
-    document.getElementById('zoneCounter').innerText = `${activeZones.length} Zones`;
+  function renderZoneSidebar(filterQuery = "") {
+    const q = filterQuery.trim().toLowerCase();
+    const filtered = q ? activeZones.filter(z => 
+      (z.name && z.name.toLowerCase().includes(q)) ||
+      (z.deliveryMinutes && z.deliveryMinutes.toString().includes(q)) ||
+      (z.lateCashback && z.lateCashback.toString().includes(q))
+    ) : activeZones;
+
+    document.getElementById('zoneCounter').innerText = `${filtered.length} Zones`;
     const list = document.getElementById('zoneList');
 
-    if (activeZones.length === 0) {
-      list.innerHTML = `<li style="text-align:center; color:#94a3b8; font-size:12px; margin-top:20px;">No zones drawn.<br>Use polygon tool on map.</li>`;
+    if (filtered.length === 0) {
+      list.innerHTML = `<li style="text-align:center; color:#94a3b8; font-size:12px; margin-top:20px;">No matching zones found.</li>`;
       return;
     }
 
-    list.innerHTML = activeZones.map(z => `
+    list.innerHTML = filtered.map(z => `
       <li class="zone-item">
         <div>
           <b>📍 ${z.name}</b><br>
@@ -575,33 +696,55 @@
     activeZones.forEach(z => map.removeLayer(z.layer));
     activeZones = [];
     renderZoneSidebar();
-    fetch(SPREADSHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "clearZone" }) });
+    fetch(SPREADSHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "clearZone" }) })
+      .then(() => alert("All delivery zones cleared from database."));
   }
 
+  // ==========================================
+  // ORDERS SECTION
+  // ==========================================
   function loadOrders() {
     fetch(`${SPREADSHEET_API_URL}?action=getOrders`)
       .then(r => r.json())
       .then(data => {
         cachedOrders = data.orders || [];
-        const tbody = document.getElementById('ordersBody');
-        if (cachedOrders.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#94a3b8;">No orders found.</td></tr>';
-          return;
-        }
-        tbody.innerHTML = cachedOrders.map(o => `
-          <tr>
-            <td><b>${o.orderId}</b><br><small style="color:#64748b">${o.date}</small></td>
-            <td>${o.name}</td>
-            <td>${o.phone}</td>
-            <td>${o.item} (x${o.qty})<br><b>${o.amount}</b></td>
-            <td><span style="background:#dcfce7; color:#166534; padding:3px 6px; border-radius:4px; font-weight:bold;">${o.status}</span></td>
-            <td><a href="${o.mapsUrl}" target="_blank" style="background:#059669; color:white; padding:4px 8px; border-radius:4px; text-decoration:none; font-size:11px;">🗺️ Route</a></td>
-          </tr>
-        `).join('');
+        renderOrdersTable();
       });
   }
 
-  // --- DUAL REPORT GENERATOR (CSV & PDF) ---
+  function renderOrdersTable(filterQuery = "") {
+    const q = filterQuery.trim().toLowerCase();
+    const filtered = q ? cachedOrders.filter(o => 
+      (o.orderId && o.orderId.toLowerCase().includes(q)) ||
+      (o.name && o.name.toLowerCase().includes(q)) ||
+      (o.phone && o.phone.toString().includes(q)) ||
+      (o.item && o.item.toLowerCase().includes(q)) ||
+      (o.amount && o.amount.toLowerCase().includes(q)) ||
+      (o.status && o.status.toLowerCase().includes(q)) ||
+      (o.address && o.address.toLowerCase().includes(q))
+    ) : cachedOrders;
+
+    const tbody = document.getElementById('ordersBody');
+    if (filtered.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#94a3b8;">No matching orders found.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(o => `
+      <tr>
+        <td><b>${o.orderId}</b><br><small style="color:#64748b">${o.date}</small></td>
+        <td>${o.name}</td>
+        <td>${o.phone}</td>
+        <td>${o.item} (x${o.qty})<br><b>${o.amount}</b></td>
+        <td><span style="background:#dcfce7; color:#166534; padding:3px 6px; border-radius:4px; font-weight:bold;">${o.status}</span></td>
+        <td><a href="${o.mapsUrl}" target="_blank" style="background:#059669; color:white; padding:4px 8px; border-radius:4px; text-decoration:none; font-size:11px;">🗺️ Route</a></td>
+      </tr>
+    `).join('');
+  }
+
+  // ==========================================
+  // REPORT GENERATOR (CSV & PDF)
+  // ==========================================
   function exportReport(type, format) {
     let title = "";
     let headers = [];
@@ -627,7 +770,7 @@
 
     if (rows.length === 0) return alert(`No ${type} records available to export.`);
 
-    // 1. CSV EXPORT
+    // CSV FORMAT
     if (format === 'csv') {
       const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(r => r.map(cell => `"${cell}"`).join(","))].join("\n");
       const link = document.createElement("a");
@@ -639,7 +782,7 @@
       return;
     }
 
-    // 2. PDF EXPORT (Formatted A4 Report)
+    // PDF FORMAT
     if (format === 'pdf') {
       const pdfContainer = document.getElementById('reportPdfTemplate');
       pdfContainer.innerHTML = `
@@ -685,6 +828,27 @@
         pdfContainer.style.display = "none";
       });
     }
+  }
+
+  function printLast24HoursSlips() {
+    const twentyFourHoursAgo = Date.now() - 86400000;
+    const recent = cachedOrders.filter(o => new Date(o.date).getTime() >= twentyFourHoursAgo);
+    if (recent.length === 0) return alert("No orders found in last 24 hours.");
+
+    document.getElementById('printSection').innerHTML = `
+      <div class="a4-slip-grid">
+        ${recent.map(o => `
+          <div class="a4-slip">
+            <b>⚡ MOHNA EXPRESS - ${o.orderId}</b><br>
+            Date: ${o.date}<br>
+            Customer: ${o.name} (📞 ${o.phone})<br>
+            Address: ${o.address}<br>
+            Item: <b>${o.item}</b> (x${o.qty}) - <b>${o.amount}</b><br>
+            Status: <b>PAID</b>
+          </div>
+        `).join('')}
+      </div>`;
+    window.print();
   }
 </script>
 </body>
