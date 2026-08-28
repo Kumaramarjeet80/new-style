@@ -34,7 +34,18 @@
     .modal-content { background: white; padding: 24px; border-radius: 12px; max-width: 400px; width: 100%; text-align: center; }
     #qrcode { display: flex; justify-content: center; margin: 16px 0; }
 
-    #invoiceBill { display: none; padding: 24px; border: 1px solid #e2e8f0; border-radius: 8px; background: white; margin-top: 20px; }
+    /* INVOICE BILL CONTAINER (Fixed for Clean PDF Capture) */
+    #invoiceBill {
+      display: none;
+      padding: 24px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      background-color: #ffffff !important;
+      color: #0f172a;
+      margin-top: 20px;
+      box-sizing: border-box;
+      width: 100%;
+    }
     .bill-header { border-bottom: 2px solid #0f172a; padding-bottom: 10px; margin-bottom: 12px; }
     .bill-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 14px; }
     .bill-total { border-top: 1px solid #cbd5e1; padding-top: 8px; font-weight: bold; font-size: 16px; }
@@ -151,11 +162,11 @@
     </div>
   </div>
 
-  <!-- PDF BILL CONTAINER -->
+  <!-- FIXED INVOICE BILL CONTAINER -->
   <div id="invoiceBill">
     <div class="bill-header">
       <h2 style="margin:0; color:#1e40af;">⚡ Mohna Express Delivery</h2>
-      <p style="margin:4px 0 0 0; color:#64748b;">Official Tax Invoice</p>
+      <p style="margin:4px 0 0 0; color:#64748b;">Official Tax Invoice & Delivery Voucher</p>
     </div>
     <div class="bill-row"><span><b>Order ID:</b></span><span id="billOrderId"></span></div>
     <div class="bill-row"><span><b>Payment Ref ID:</b></span><span id="billPaymentId" style="color:#2563eb; font-weight:600;"></span></div>
@@ -178,7 +189,7 @@
   </div>
 
   <button id="downloadPdfBtn" class="btn btn-pdf" style="display:none;" onclick="downloadPDF()">
-    📄 Download Paid PDF Invoice
+    📄 Download Paid PDF Invoice (Crisp & Aligned)
   </button>
   
   <a id="whatsappBtn" class="btn btn-wa" style="display:none;" target="_blank">
@@ -373,7 +384,7 @@
       // Start 15-Min Live Delivery Countdown
       startDeliveryCountdown(15);
 
-      // Construct Professional WhatsApp Receipt
+      // WhatsApp receipt
       const cleanPhone = currentOrderPayload.phone.replace(/[^0-9]/g, "");
       const formattedPhone = cleanPhone.length === 10 ? "91" + cleanPhone : cleanPhone;
 
@@ -407,7 +418,7 @@ _Thank you for ordering with Mohna Express!_`
     });
   }
 
-  // Live 15-Minute Countdown Engine
+  // 15-Minute Countdown Engine
   let countdownInterval = null;
   function startDeliveryCountdown(durationMinutes = 15) {
     const display = document.getElementById('timerDisplay');
@@ -464,15 +475,28 @@ _Thank you for ordering with Mohna Express!_`
     }, 1000);
   }
 
+  // =========================================================================
+  // FIXED PDF DOWNLOAD (Resolves Scroll Gap, Viewport Shift & Blank Area Bug)
+  // =========================================================================
   function downloadPDF() {
     const element = document.getElementById('invoiceBill');
-    html2pdf().from(element).set({
-      margin: 10,
-      filename: `Paid_Invoice_${document.getElementById('billOrderId').innerText}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2 },
-      jsPDF: { unit: 'mm', format: 'a5', orientation: 'portrait' }
-    }).save();
+    const orderId = document.getElementById('billOrderId').innerText || 'Receipt';
+
+    const opt = {
+      margin:       [8, 8, 8, 8], // 8mm uniform margin
+      filename:     `Paid_Invoice_${orderId}.pdf`,
+      image:        { type: 'jpeg', quality: 1.0 },
+      html2canvas:  { 
+        scale: 2,           // 2x HD resolution
+        useCORS: true, 
+        scrollY: 0,         // Resets vertical scroll offset to eliminate blank top space
+        scrollX: 0,
+        backgroundColor: '#ffffff'
+      },
+      jsPDF:        { unit: 'mm', format: 'a5', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opt).from(element).save();
   }
 </script>
 </body>
