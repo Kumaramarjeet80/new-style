@@ -3,47 +3,61 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin Dashboard - Products, Categories, Zones & Orders</title>
+  <title>Admin Dashboard - Users, Products, Categories, Zones & Reports</title>
   
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   
   <style>
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { margin: 0; padding: 20px; background: #f1f5f9; }
-    .container { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+    .container { max-width: 1280px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
     .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
-    h2, h3 { margin: 0 0 10px 0; color: #0f172a; }
+    h2, h3 { margin: 0; color: #0f172a; }
     
+    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-    @media (max-width: 850px) { .grid-2 { grid-template-columns: 1fr; } }
+    @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
 
     .form-group { margin-bottom: 10px; }
     .form-group label { display: block; font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 4px; }
     .form-group input, .form-group select { width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; }
 
-    .btn { padding: 8px 14px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px; }
+    .btn { padding: 8px 12px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px; display: inline-flex; align-items: center; gap: 4px; }
     .btn-primary { background: #2563eb; color: white; }
     .btn-danger { background: #ef4444; color: white; }
     .btn-dark { background: #0f172a; color: white; }
+    .btn-refresh { background: #f8fafc; border: 1px solid #cbd5e1; color: #334155; font-size: 12px; }
+    .btn-refresh:hover { background: #e2e8f0; }
+    .btn-report { background: #059669; color: white; }
+    .btn-report-pdf { background: #7c3aed; color: white; }
     .btn-del { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; padding: 4px 8px; font-size: 11px; }
+    .btn-block { background: #fee2e2; color: #991b1b; padding: 4px 8px; font-size: 11px; }
+    .btn-unblock { background: #dcfce7; color: #166534; padding: 4px 8px; font-size: 11px; }
+
+    .badge-retail { background: #e0e7ff; color: #4338ca; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+    .badge-wholesale { background: #ffe4e6; color: #be123c; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+    .badge-stock { background: #fef3c7; color: #b45309; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 11px; }
+    .badge-active { background: #dcfce7; color: #166534; padding: 3px 6px; border-radius: 4px; font-weight: bold; font-size: 11px; }
+    .badge-blocked { background: #fee2e2; color: #991b1b; padding: 3px 6px; border-radius: 4px; font-weight: bold; font-size: 11px; }
 
     table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
     th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
-    th { background: #f8fafc; color: #475569; }
+    th { background: #f8fafc; color: #475569; font-size: 12px; }
 
-    #map { height: 380px; width: 100%; border-radius: 8px; border: 1px solid #cbd5e1; }
-    .zone-tooltip { background: #1e40af; color: white; font-weight: bold; border-radius: 4px; padding: 3px 6px; border: none; font-size: 11px; }
+    #map { height: 400px; width: 100%; border-radius: 8px; border: 1px solid #cbd5e1; }
+    .zone-panel { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; height: 400px; display: flex; flex-direction: column; }
+    .zone-list { list-style: none; padding: 0; margin: 8px 0 0; overflow-y: auto; flex-grow: 1; display: flex; flex-direction: column; gap: 6px; }
+    .zone-item { background: white; padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
 
-    #printSection { display: none; }
-    @media print {
-      @page { size: A4 portrait; margin: 8mm; }
-      body { margin: 0 !important; padding: 0 !important; background: white !important; }
-      body * { visibility: hidden; }
-      #printSection, #printSection * { visibility: visible; }
-      #printSection { display: block !important; position: absolute; left: 0; top: 0; width: 100%; }
-      .a4-slip-grid { display: grid !important; grid-template-columns: repeat(2, 1fr) !important; gap: 6mm !important; width: 100% !important; }
-      .a4-slip { border: 1.5px dashed #334155 !important; border-radius: 6px !important; padding: 8px 10px !important; font-size: 11px !important; line-height: 1.3 !important; page-break-inside: avoid !important; }
+    /* REPORT PDF RENDER CONTAINER (OFF-SCREEN) */
+    #reportPdfTemplate {
+      display: none;
+      background: white;
+      padding: 30px;
+      font-family: Arial, sans-serif;
+      color: #0f172a;
     }
   </style>
 </head>
@@ -51,28 +65,115 @@
 
 <div class="container">
 
-  <div style="display:flex; justify-content:space-between; align-items:center;">
+  <!-- TOP HEADER & MASTER REFRESH -->
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
     <div>
-      <h1 style="margin:0; font-size:24px; color:#0f172a;">⚡ Mohna Express Super Admin</h1>
-      <p style="margin:4px 0 0; color:#64748b; font-size:14px;">Manage Categories, Retail & Wholesale Catalog, Map Zones, and Orders</p>
+      <h1 style="margin:0; font-size:24px; color:#0f172a;">⚡ Mohna Express Control Hub</h1>
+      <p style="margin:4px 0 0; color:#64748b; font-size:14px;">User Management, Inventory, Scoped Categories, Zones & Dual PDF/CSV Reports</p>
     </div>
-    <button class="btn btn-dark" onclick="fetchAllData()">🔄 Refresh Everything</button>
+    <button class="btn btn-dark" onclick="fetchAllData()">🔄 Master Refresh (All)</button>
   </div>
 
-  <div class="grid-2">
-    <!-- CATEGORY MANAGER -->
-    <div class="card">
-      <h3>🏷️ Category / Type Manager</h3>
-      <p style="font-size:12px; color:#64748b; margin-top:0;">These categories filter items across Retail & Wholesale stores.</p>
+  <!-- SECTION 1: REPORT GENERATION (CSV & PDF) -->
+  <div class="card" style="border-left: 5px solid #059669;">
+    <div class="card-header">
+      <div>
+        <h3>📊 Report Center (Instant CSV & PDF Downloads)</h3>
+        <p style="margin:2px 0 0; font-size:12px; color:#64748b;">Export complete datasets with one click in structured formats</p>
+      </div>
+    </div>
+    
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:10px;">
+      <!-- Users Report -->
+      <div style="background:#f8fafc; padding:10px; border-radius:8px; border:1px solid #e2e8f0;">
+        <b>👥 Registered Users</b>
+        <div style="display:flex; gap:6px; margin-top:6px;">
+          <button class="btn btn-report" style="flex:1;" onclick="exportReport('users', 'csv')">📥 CSV</button>
+          <button class="btn btn-report-pdf" style="flex:1;" onclick="exportReport('users', 'pdf')">📄 PDF</button>
+        </div>
+      </div>
+      <!-- Products Report -->
+      <div style="background:#f8fafc; padding:10px; border-radius:8px; border:1px solid #e2e8f0;">
+        <b>📦 Products & Stock</b>
+        <div style="display:flex; gap:6px; margin-top:6px;">
+          <button class="btn btn-report" style="flex:1;" onclick="exportReport('products', 'csv')">📥 CSV</button>
+          <button class="btn btn-report-pdf" style="flex:1;" onclick="exportReport('products', 'pdf')">📄 PDF</button>
+        </div>
+      </div>
+      <!-- Categories Report -->
+      <div style="background:#f8fafc; padding:10px; border-radius:8px; border:1px solid #e2e8f0;">
+        <b>🏷️ Scoped Categories</b>
+        <div style="display:flex; gap:6px; margin-top:6px;">
+          <button class="btn btn-report" style="flex:1;" onclick="exportReport('categories', 'csv')">📥 CSV</button>
+          <button class="btn btn-report-pdf" style="flex:1;" onclick="exportReport('categories', 'pdf')">📄 PDF</button>
+        </div>
+      </div>
+      <!-- Orders Report -->
+      <div style="background:#f8fafc; padding:10px; border-radius:8px; border:1px solid #e2e8f0;">
+        <b>🧾 Order History</b>
+        <div style="display:flex; gap:6px; margin-top:6px;">
+          <button class="btn btn-report" style="flex:1;" onclick="exportReport('orders', 'csv')">📥 CSV</button>
+          <button class="btn btn-report-pdf" style="flex:1;" onclick="exportReport('orders', 'pdf')">📄 PDF</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
-      <form onsubmit="handleAddCategory(event)" style="display:flex; gap:8px; margin-bottom:14px;">
-        <input type="text" id="newCatName" required placeholder="New Category (e.g. Dairy & Sweets)" style="flex:1; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:13px;" />
-        <button type="submit" class="btn btn-primary">+ Add Type</button>
+  <!-- SECTION 2: REGISTERED USERS MANAGEMENT (BLOCK / UNBLOCK) -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h3>👥 Registered Users Management</h3>
+        <p style="margin:2px 0 0; font-size:12px; color:#64748b;">View GPS-registered users. Blocked users cannot place orders.</p>
+      </div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <span id="userCountBadge" style="background:#dbeafe; color:#1e40af; font-size:11px; font-weight:bold; padding:4px 8px; border-radius:12px;">0 Users</span>
+        <button class="btn btn-refresh" onclick="loadUsers()">🔄 Refresh Users</button>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>User ID</th>
+          <th>Registered Date</th>
+          <th>Name</th>
+          <th>Phone</th>
+          <th>Email</th>
+          <th>GPS Location</th>
+          <th>Status</th>
+          <th>Access Action</th>
+        </tr>
+      </thead>
+      <tbody id="userTableBody">
+        <tr><td colspan="8" style="text-align:center; color:#94a3b8;">Loading user database...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- SECTION 3: CATEGORY & PRODUCT MANAGEMENT -->
+  <div class="grid-2">
+    <!-- SCOPED CATEGORY MANAGER -->
+    <div class="card">
+      <div class="card-header">
+        <h3>🏷️ Category / Type Manager</h3>
+        <button class="btn btn-refresh" onclick="loadCategories()">🔄 Refresh Types</button>
+      </div>
+      <p style="font-size:12px; color:#64748b; margin-top:0;">Create separate categories designated for <b>Retail</b> or <b>Wholesale</b> store.</p>
+
+      <form onsubmit="handleAddCategory(event)" style="display:flex; flex-direction:column; gap:8px; margin-bottom:14px;">
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="newCatName" required placeholder="Category Name (e.g. Bulk Pulses)" style="flex:1; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:13px;" />
+          <select id="newCatScope" required style="width:130px; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:13px;">
+            <option value="retail">🛍️ Retail Only</option>
+            <option value="wholesale">📦 Wholesale Only</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;">+ Add Scoped Category</button>
       </form>
 
       <table>
         <thead>
-          <tr><th>Category Name</th><th>Slug</th><th>Action</th></tr>
+          <tr><th>Category</th><th>Scope</th><th>Action</th></tr>
         </thead>
         <tbody id="catTableBody">
           <tr><td colspan="3" style="text-align:center; color:#94a3b8;">Loading categories...</td></tr>
@@ -80,44 +181,56 @@
       </table>
     </div>
 
-    <!-- PRODUCT CREATION FORM -->
+    <!-- PRODUCT CREATION FORM (With Stock Qty) -->
     <div class="card">
-      <h3>📦 Add New Product</h3>
+      <div class="card-header">
+        <h3>📦 Add Product to Catalog</h3>
+        <button class="btn btn-refresh" onclick="loadCategories()">🔄 Sync Category List</button>
+      </div>
       <form onsubmit="handleAddProduct(event)">
         <div class="form-group">
           <label>Product Title / Name</label>
           <input type="text" id="prodName" required placeholder="e.g. 100% Pure Mustard Oil 1L" />
         </div>
         <div class="form-group">
-          <label>Category / Type</label>
+          <label>Assigned Category</label>
           <select id="prodCategorySelect" required>
             <option value="">Select Category</option>
           </select>
         </div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
           <div class="form-group">
             <label>Retail Price (₹)</label>
-            <input type="number" id="prodRetailPrice" required placeholder="e.g. 180" />
+            <input type="number" id="prodRetailPrice" required placeholder="180" />
           </div>
           <div class="form-group">
-            <label>Wholesale Price (₹)</label>
-            <input type="number" id="prodWholesalePrice" required placeholder="e.g. 140" />
+            <label>Wholesale (₹)</label>
+            <input type="number" id="prodWholesalePrice" required placeholder="140" />
+          </div>
+          <div class="form-group">
+            <label>Stock Qty (Admin Only)</label>
+            <input type="number" id="prodStockQty" required placeholder="100" />
           </div>
         </div>
         <div class="form-group">
           <label>Image URL</label>
           <input type="url" id="prodImg" required placeholder="https://images.unsplash.com/..." />
         </div>
-        <button type="submit" class="btn btn-primary" style="width:100%; margin-top:6px;">+ Save Product to Catalog</button>
+        <button type="submit" class="btn btn-primary" style="width:100%; margin-top:4px;">+ Save Product to Inventory</button>
       </form>
     </div>
   </div>
 
-  <!-- INVENTORY TABLE -->
+  <!-- SECTION 4: INVENTORY TABLE -->
   <div class="card">
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-      <h3>📋 Current Live Products (Retail & Wholesale)</h3>
-      <span id="prodCountBadge" style="background:#dbeafe; color:#1e40af; font-size:11px; font-weight:bold; padding:3px 8px; border-radius:12px;">0 Items</span>
+    <div class="card-header">
+      <div>
+        <h3>📋 Live Inventory Catalog (Stock Visible to Admin Only)</h3>
+      </div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <span id="prodCountBadge" style="background:#dbeafe; color:#1e40af; font-size:11px; font-weight:bold; padding:4px 8px; border-radius:12px;">0 Items</span>
+        <button class="btn btn-refresh" onclick="loadProducts()">🔄 Refresh Products</button>
+      </div>
     </div>
     <table>
       <thead>
@@ -125,34 +238,55 @@
           <th>Image</th>
           <th>Product Name</th>
           <th>Category</th>
-          <th>Retail (1 Unit)</th>
-          <th>Wholesale (Bulk)</th>
+          <th>Retail Price</th>
+          <th>Wholesale Price</th>
+          <th>Stock Balance</th>
           <th>Action</th>
         </tr>
       </thead>
       <tbody id="prodTableBody">
-        <tr><td colspan="6" style="text-align:center; color:#94a3b8;">Loading inventory from Sheets...</td></tr>
+        <tr><td colspan="7" style="text-align:center; color:#94a3b8;">Loading inventory from Sheets...</td></tr>
       </tbody>
     </table>
   </div>
 
-  <!-- DELIVERY ZONES -->
+  <!-- SECTION 5: MULTI-ZONE DELIVERY BOUNDARIES -->
   <div class="card">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-      <h3>🛠️ Delivery Boundaries, Timings & Guarantee</h3>
+    <div class="card-header">
+      <div>
+        <h3>🛠️ Delivery Boundaries, Timings & Late Guarantee Setup</h3>
+        <p style="margin:2px 0 0; font-size:12px; color:#64748b;">Draw multiple areas. Manage or delete each zone individually or clear all.</p>
+      </div>
       <div style="display:flex; gap:6px;">
-        <button class="btn btn-primary" onclick="saveAllZonesToSheet()">💾 Save Zones</button>
-        <button class="btn btn-danger" onclick="clearAllZones()">🗑️ Clear Map</button>
+        <button class="btn btn-primary" onclick="saveAllZonesToSheet()">💾 Save All Zones</button>
+        <button class="btn btn-danger" onclick="clearAllZones()">🗑️ Clear All Zones</button>
+        <button class="btn btn-refresh" onclick="loadZones()">🔄 Refresh Map</button>
       </div>
     </div>
-    <div id="map"></div>
+
+    <div class="grid-2" style="grid-template-columns: 1fr 320px;">
+      <div id="map"></div>
+      <div class="zone-panel">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h4 style="margin:0; font-size:14px;">Active Delivery Zones</h4>
+          <span id="zoneCounter" style="background:#dbeafe; color:#1e40af; font-size:11px; font-weight:bold; padding:2px 6px; border-radius:10px;">0 Zones</span>
+        </div>
+        <ul id="zoneList" class="zone-list">
+          <li style="text-align:center; color:#94a3b8; font-size:12px; margin-top:20px;">No zones drawn.<br>Use polygon tool on map.</li>
+        </ul>
+      </div>
+    </div>
   </div>
 
-  <!-- ORDERS TABLE & A4 BATCH PRINT -->
+  <!-- SECTION 6: ORDERS MANAGEMENT -->
   <div class="card">
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-      <h3>📦 Orders Management</h3>
-      <button class="btn btn-primary" onclick="printLast24HoursSlips()">🖨️ Print 24h Slips (A4 Inkjet)</button>
+    <div class="card-header">
+      <div>
+        <h3>📦 Orders Management</h3>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-refresh" onclick="loadOrders()">🔄 Refresh Orders</button>
+      </div>
     </div>
     <table>
       <thead>
@@ -166,7 +300,8 @@
 
 </div>
 
-<div id="printSection"></div>
+<!-- HIDDEN CONTAINER FOR PDF REPORT GENERATION -->
+<div id="reportPdfTemplate"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.js"></script>
@@ -177,39 +312,91 @@
   const map = L.map('map').setView([25.6000, 85.1300], 12);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
   map.pm.addControls({ position: 'topleft', drawPolygon: true, drawRectangle: true, editMode: true, removalMode: false });
+  
   let activeZones = [];
-  let fetchedOrders = [];
+  let cachedProducts = [];
+  let cachedCategories = [];
+  let cachedOrders = [];
+  let cachedUsers = [];
 
   window.onload = function() { fetchAllData(); };
 
   function fetchAllData() {
+    loadUsers();
     loadCategories();
     loadProducts();
     loadZones();
     loadOrders();
   }
 
+  // --- USER MANAGEMENT (VIEW & BLOCK/UNBLOCK) ---
+  function loadUsers() {
+    fetch(`${SPREADSHEET_API_URL}?action=getUsers`)
+      .then(r => r.json())
+      .then(data => {
+        cachedUsers = data.users || [];
+        document.getElementById('userCountBadge').innerText = `${cachedUsers.length} Users`;
+        const tbody = document.getElementById('userTableBody');
+
+        if (cachedUsers.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#94a3b8;">No registered users found.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = cachedUsers.map(u => {
+          const isBlocked = u.status === "Blocked";
+          return `
+            <tr>
+              <td><b>${u.id}</b></td>
+              <td><small style="color:#64748b">${u.date}</small></td>
+              <td><b>${u.name}</b></td>
+              <td>📞 ${u.phone}</td>
+              <td>${u.email}</td>
+              <td><a href="${u.mapsUrl}" target="_blank" style="color:#2563eb; text-decoration:none; font-size:12px;">🗺️ ${u.coords}</a></td>
+              <td><span class="${isBlocked ? 'badge-blocked' : 'badge-active'}">${u.status}</span></td>
+              <td>
+                <button class="btn ${isBlocked ? 'btn-unblock' : 'btn-block'}" onclick="toggleUserStatus('${u.id}', '${u.phone}', '${isBlocked ? 'Active' : 'Blocked'}')">
+                  ${isBlocked ? '🔓 Unblock' : '🚫 Block'}
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      });
+  }
+
+  function toggleUserStatus(userId, phone, newStatus) {
+    if (!confirm(`Are you sure you want to set user status to ${newStatus}?`)) return;
+
+    fetch(SPREADSHEET_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "toggleUserStatus", userId, phone, newStatus })
+    }).then(() => loadUsers());
+  }
+
+  // --- CATEGORIES LOGIC ---
   function loadCategories() {
     fetch(`${SPREADSHEET_API_URL}?action=getCategories`)
       .then(r => r.json())
       .then(data => {
-        const cats = data.categories || [];
+        cachedCategories = data.categories || [];
         const tbody = document.getElementById('catTableBody');
         const select = document.getElementById('prodCategorySelect');
 
         select.innerHTML = '<option value="">Select Category</option>' + 
-          cats.map(c => `<option value="${c.slug}">${c.name}</option>`).join('');
+          cachedCategories.map(c => `<option value="${c.slug}">${c.name} (${c.scope.toUpperCase()})</option>`).join('');
 
-        if (cats.length === 0) {
+        if (cachedCategories.length === 0) {
           tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#94a3b8;">No categories added yet.</td></tr>';
           return;
         }
 
-        tbody.innerHTML = cats.map(c => `
+        tbody.innerHTML = cachedCategories.map(c => `
           <tr>
             <td><b>${c.name}</b></td>
-            <td><code style="background:#f1f5f9; padding:2px 6px; border-radius:4px;">${c.slug}</code></td>
-            <td><button class="btn btn-del" onclick="deleteCategory('${c.id}', '${c.name}')">🗑️ Delete</button></td>
+            <td><span class="${c.scope === 'wholesale' ? 'badge-wholesale' : 'badge-retail'}">${c.scope}</span></td>
+            <td><button class="btn btn-del" onclick="deleteCategory('${c.id}', '${c.name}')">🗑️</button></td>
           </tr>
         `).join('');
       });
@@ -218,12 +405,13 @@
   function handleAddCategory(e) {
     e.preventDefault();
     const name = document.getElementById('newCatName').value.trim();
+    const scope = document.getElementById('newCatScope').value;
     if (!name) return;
 
     fetch(SPREADSHEET_API_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: "addCategory", name: name })
+      body: JSON.stringify({ action: "addCategory", name, scope })
     }).then(() => {
       document.getElementById('newCatName').value = "";
       loadCategories();
@@ -235,31 +423,33 @@
     fetch(SPREADSHEET_API_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: "deleteCategory", id: id })
+      body: JSON.stringify({ action: "deleteCategory", id })
     }).then(() => loadCategories());
   }
 
+  // --- PRODUCTS LOGIC ---
   function loadProducts() {
     fetch(`${SPREADSHEET_API_URL}?action=getProducts`)
       .then(r => r.json())
       .then(data => {
-        const prods = data.products || [];
-        document.getElementById('prodCountBadge').innerText = `${prods.length} Items`;
+        cachedProducts = data.products || [];
+        document.getElementById('prodCountBadge').innerText = `${cachedProducts.length} Items`;
         const tbody = document.getElementById('prodTableBody');
 
-        if (prods.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#94a3b8;">No products found in catalog.</td></tr>';
+        if (cachedProducts.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#94a3b8;">No products found in catalog.</td></tr>';
           return;
         }
 
-        tbody.innerHTML = prods.map(p => `
+        tbody.innerHTML = cachedProducts.map(p => `
           <tr>
             <td><img src="${p.img}" style="width:40px; height:40px; border-radius:6px; object-fit:cover;"></td>
             <td><b>${p.name}</b><br><small style="color:#64748b">${p.id}</small></td>
             <td><span style="background:#f1f5f9; padding:2px 6px; border-radius:4px; font-size:11px;">${p.category}</span></td>
             <td style="color:#4f46e5; font-weight:bold;">₹${p.retailPrice}</td>
             <td style="color:#e11d48; font-weight:bold;">₹${p.wholesalePrice}</td>
-            <td><button class="btn btn-del" onclick="deleteProduct('${p.id}', '${p.name}')">🗑️ Delete</button></td>
+            <td><span class="badge-stock">📦 ${p.stockQty || 0} Units</span></td>
+            <td><button class="btn btn-del" onclick="deleteProduct('${p.id}', '${p.name}')">🗑️</button></td>
           </tr>
         `).join('');
       });
@@ -271,9 +461,10 @@
     const category = document.getElementById('prodCategorySelect').value;
     const retailPrice = parseInt(document.getElementById('prodRetailPrice').value);
     const wholesalePrice = parseInt(document.getElementById('prodWholesalePrice').value);
+    const stockQty = parseInt(document.getElementById('prodStockQty').value) || 0;
     const img = document.getElementById('prodImg').value.trim();
 
-    const payload = { action: "addProduct", name, category, retailPrice, wholesalePrice, img };
+    const payload = { action: "addProduct", name, category, retailPrice, wholesalePrice, stockQty, img };
 
     fetch(SPREADSHEET_API_URL, {
       method: "POST",
@@ -283,6 +474,7 @@
       document.getElementById('prodName').value = "";
       document.getElementById('prodRetailPrice').value = "";
       document.getElementById('prodWholesalePrice').value = "";
+      document.getElementById('prodStockQty').value = "";
       document.getElementById('prodImg').value = "";
       loadProducts();
     });
@@ -293,17 +485,19 @@
     fetch(SPREADSHEET_API_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: "deleteProduct", id: id })
+      body: JSON.stringify({ action: "deleteProduct", id })
     }).then(() => loadProducts());
   }
 
+  // --- ZONES LOGIC ---
   function loadZones() {
     fetch(`${SPREADSHEET_API_URL}?action=getZone`)
       .then(r => r.json())
       .then(data => {
+        activeZones.forEach(z => map.removeLayer(z.layer));
+        activeZones = [];
+
         if (data && data.zone && data.zone.features) {
-          activeZones.forEach(z => map.removeLayer(z.layer));
-          activeZones = [];
           data.zone.features.forEach((feature, index) => {
             const props = feature.properties || {};
             const layer = L.geoJSON(feature, { style: { color: "#2563eb", weight: 2, fillColor: "#3b82f6", fillOpacity: 0.25 } }).getLayers()[0];
@@ -311,19 +505,56 @@
             activeZones.push({ id: props.id || "zone_" + index, name: props.name || "Zone " + (index+1), deliveryMinutes: props.deliveryMinutes || 20, lateCashback: props.lateCashback || 25, layer });
           });
         }
+        renderZoneSidebar();
       });
   }
 
   map.on('pm:create', (e) => {
-    let zoneName = prompt("Enter Zone Name:", `Delivery Zone ${activeZones.length + 1}`) || `Delivery Zone ${activeZones.length + 1}`;
-    let deliveryMinutes = parseInt(prompt(`Enter delivery minutes for "${zoneName}":`, "20")) || 20;
-    let lateCashback = parseInt(prompt(`Enter late refund guarantee (₹):`, "25")) || 25;
+    let zoneName = prompt("1. Enter Zone Name:", `Delivery Zone ${activeZones.length + 1}`) || `Delivery Zone ${activeZones.length + 1}`;
+    let deliveryMinutes = parseInt(prompt(`2. Delivery duration (Minutes) for "${zoneName}":`, "20")) || 20;
+    let lateCashback = parseInt(prompt(`3. Late guarantee cashback refund (₹):`, "25")) || 25;
 
-    activeZones.push({ id: "zone_" + Date.now(), name: zoneName, deliveryMinutes, lateCashback, layer: e.layer });
-    e.layer.bindTooltip(`${zoneName} (${deliveryMinutes}m | ₹${lateCashback})`, { permanent: true, direction: "center", className: "zone-tooltip" });
+    const newZone = { id: "zone_" + Date.now(), name: zoneName, deliveryMinutes, lateCashback, layer: e.layer };
+    activeZones.push(newZone);
+    e.layer.bindTooltip(`${zoneName} (${deliveryMinutes}m | ₹${lateCashback})`, { permanent: true, direction: "center" });
+    renderZoneSidebar();
   });
 
+  function renderZoneSidebar() {
+    document.getElementById('zoneCounter').innerText = `${activeZones.length} Zones`;
+    const list = document.getElementById('zoneList');
+
+    if (activeZones.length === 0) {
+      list.innerHTML = `<li style="text-align:center; color:#94a3b8; font-size:12px; margin-top:20px;">No zones drawn.<br>Use polygon tool on map.</li>`;
+      return;
+    }
+
+    list.innerHTML = activeZones.map(z => `
+      <li class="zone-item">
+        <div>
+          <b>📍 ${z.name}</b><br>
+          <small style="color:#047857; font-weight:bold;">⚡ ${z.deliveryMinutes}m | 🛡️ ₹${z.lateCashback}</small>
+        </div>
+        <div style="display:flex; gap:4px;">
+          <button class="btn btn-refresh" style="padding:2px 6px;" onclick="map.fitBounds(activeZones.find(x => x.id === '${z.id}').layer.getBounds())">🎯</button>
+          <button class="btn btn-del" onclick="deleteSingleZone('${z.id}', '${z.name}')">🗑️</button>
+        </div>
+      </li>
+    `).join('');
+  }
+
+  function deleteSingleZone(id, name) {
+    if (!confirm(`Delete "${name}"?`)) return;
+    const idx = activeZones.findIndex(z => z.id === id);
+    if (idx !== -1) {
+      map.removeLayer(activeZones[idx].layer);
+      activeZones.splice(idx, 1);
+      renderZoneSidebar();
+    }
+  }
+
   function saveAllZonesToSheet() {
+    if (activeZones.length === 0) return alert("No zones drawn to save.");
     const featureCollection = {
       type: "FeatureCollection",
       features: activeZones.map(z => {
@@ -336,13 +567,14 @@
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({ action: "saveZone", zone: featureCollection })
-    }).then(() => alert("Zones saved successfully!"));
+    }).then(() => alert("All delivery zones saved successfully!"));
   }
 
   function clearAllZones() {
-    if (!confirm("Clear all delivery zones?")) return;
+    if (!confirm("Are you sure you want to delete ALL delivery zones?")) return;
     activeZones.forEach(z => map.removeLayer(z.layer));
     activeZones = [];
+    renderZoneSidebar();
     fetch(SPREADSHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "clearZone" }) });
   }
 
@@ -350,13 +582,13 @@
     fetch(`${SPREADSHEET_API_URL}?action=getOrders`)
       .then(r => r.json())
       .then(data => {
-        fetchedOrders = data.orders || [];
+        cachedOrders = data.orders || [];
         const tbody = document.getElementById('ordersBody');
-        if (fetchedOrders.length === 0) {
+        if (cachedOrders.length === 0) {
           tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#94a3b8;">No orders found.</td></tr>';
           return;
         }
-        tbody.innerHTML = fetchedOrders.map(o => `
+        tbody.innerHTML = cachedOrders.map(o => `
           <tr>
             <td><b>${o.orderId}</b><br><small style="color:#64748b">${o.date}</small></td>
             <td>${o.name}</td>
@@ -369,25 +601,90 @@
       });
   }
 
-  function printLast24HoursSlips() {
-    const twentyFourHoursAgo = Date.now() - 86400000;
-    const recent = fetchedOrders.filter(o => new Date(o.date).getTime() >= twentyFourHoursAgo);
-    if (recent.length === 0) return alert("No orders found in last 24 hours.");
+  // --- DUAL REPORT GENERATOR (CSV & PDF) ---
+  function exportReport(type, format) {
+    let title = "";
+    let headers = [];
+    let rows = [];
 
-    document.getElementById('printSection').innerHTML = `
-      <div class="a4-slip-grid">
-        ${recent.map(o => `
-          <div class="a4-slip">
-            <b>⚡ MOHNA EXPRESS - ${o.orderId}</b><br>
-            Date: ${o.date}<br>
-            Customer: ${o.name} (📞 ${o.phone})<br>
-            Address: ${o.address}<br>
-            Item: <b>${o.item}</b> (x${o.qty}) - <b>${o.amount}</b><br>
-            Status: <b>PAID</b>
+    if (type === 'users') {
+      title = "Registered Users & Access Report";
+      headers = ["User ID", "Date", "Name", "Phone", "Email", "Coordinates", "Status"];
+      rows = cachedUsers.map(u => [u.id, u.date, u.name, u.phone, u.email, u.coords, u.status]);
+    } else if (type === 'products') {
+      title = "Product Inventory & Stock Report";
+      headers = ["Product ID", "Product Name", "Category", "Retail (INR)", "Wholesale (INR)", "Stock Qty"];
+      rows = cachedProducts.map(p => [p.id, p.name, p.category, `Rs. ${p.retailPrice}`, `Rs. ${p.wholesalePrice}`, `${p.stockQty || 0} Units`]);
+    } else if (type === 'categories') {
+      title = "Scoped Category Catalog Report";
+      headers = ["Category ID", "Category Name", "Slug", "Scope"];
+      rows = cachedCategories.map(c => [c.id, c.name, c.slug, c.scope.toUpperCase()]);
+    } else if (type === 'orders') {
+      title = "Order History & Sales Report";
+      headers = ["Order ID", "Date", "Customer Name", "Phone", "Item", "Qty", "Amount", "Status"];
+      rows = cachedOrders.map(o => [o.orderId, o.date, o.name, o.phone, o.item, o.qty, o.amount, o.status]);
+    }
+
+    if (rows.length === 0) return alert(`No ${type} records available to export.`);
+
+    // 1. CSV EXPORT
+    if (format === 'csv') {
+      const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(r => r.map(cell => `"${cell}"`).join(","))].join("\n");
+      const link = document.createElement("a");
+      link.setAttribute("href", encodeURI(csvContent));
+      link.setAttribute("download", `Mohna_${type}_Report_${Date.now()}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      return;
+    }
+
+    // 2. PDF EXPORT (Formatted A4 Report)
+    if (format === 'pdf') {
+      const pdfContainer = document.getElementById('reportPdfTemplate');
+      pdfContainer.innerHTML = `
+        <div style="padding:10px;">
+          <div style="border-bottom: 2px solid #2563eb; padding-bottom: 8px; margin-bottom: 14px; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <h2 style="margin:0; color:#1e40af;">⚡ MOHNA EXPRESS</h2>
+              <p style="margin:2px 0 0; color:#64748b; font-size:12px;">Official System Report: <b>${title}</b></p>
+            </div>
+            <div style="text-align:right; font-size:11px; color:#64748b;">
+              Generated: ${new Date().toLocaleString()}<br>
+              Total Records: ${rows.length}
+            </div>
           </div>
-        `).join('')}
-      </div>`;
-    window.print();
+
+          <table style="width:100%; border-collapse:collapse; font-size:11px;">
+            <thead>
+              <tr style="background:#f1f5f9; border-bottom:2px solid #cbd5e1;">
+                ${headers.map(h => `<th style="padding:6px; text-align:left; color:#334155;">${h}</th>`).join('')}
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.map((r, i) => `
+                <tr style="border-bottom:1px solid #e2e8f0; background:${i % 2 === 0 ? '#ffffff' : '#f8fafc'};">
+                  ${r.map(cell => `<td style="padding:6px;">${cell}</td>`).join('')}
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      pdfContainer.style.display = "block";
+      const opt = {
+        margin: [10, 10, 10, 10],
+        filename: `Mohna_${type}_Report_${Date.now()}.pdf`,
+        image: { type: 'jpeg', quality: 1.0 },
+        html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+      };
+
+      html2pdf().set(opt).from(pdfContainer).save().then(() => {
+        pdfContainer.style.display = "none";
+      });
+    }
   }
 </script>
 </body>
