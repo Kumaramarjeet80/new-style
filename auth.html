@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Auth App</title>
+  <title>Auth System</title>
   <style>
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { max-width: 480px; margin: 40px auto; padding: 0 16px; color: #333; }
+    body { max-width: 480px; margin: 40px auto; padding: 0 16px; color: #222; }
     nav { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid #ddd; padding-bottom: 12px; }
     button { padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; background: #f8f9fa; cursor: pointer; font-size: 14px; }
     button.primary { background: #0066cc; color: white; border: none; }
@@ -21,6 +21,7 @@
 </head>
 <body>
 
+  <!-- Dynamic Navigation Bar -->
   <nav id="navbar">
     <button id="nav-login" onclick="showView('login-view')">Login</button>
     <button id="nav-signup" onclick="showView('signup-step1-view')">Signup</button>
@@ -30,32 +31,37 @@
 
   <div id="status-box" class="alert hidden"></div>
 
+  <!-- VIEW: Home -->
   <div id="home-view" class="card">
-    <h2>Welcome</h2>
-    <p>Please register or sign in to access your dashboard.</p>
+    <h2>Welcome to Home</h2>
+    <p>Please log in or sign up to access your profile.</p>
   </div>
 
+  <!-- VIEW: Signup Step 1 -->
   <div id="signup-step1-view" class="card hidden">
-    <h3>Sign Up</h3>
+    <h3>Create an Account</h3>
     <input type="text" id="reg-name" placeholder="Full Name" />
     <input type="text" id="reg-mobile" placeholder="Mobile Number" />
     <input type="email" id="reg-email" placeholder="Gmail Address" />
     <button class="primary" id="btn-step1" onclick="handleStep1()">Send OTP</button>
   </div>
 
+  <!-- VIEW: Signup Step 2 (OTP) -->
   <div id="signup-step2-view" class="card hidden">
-    <h3>Enter Verification Code</h3>
-    <p style="font-size: 13px; color: #666;">We sent a 6-digit code to your Gmail address.</p>
-    <input type="text" id="reg-otp" placeholder="6-Digit OTP" />
+    <h3>Verify Email</h3>
+    <p style="font-size: 13px; color: #666;">Enter the 6-digit OTP sent to your Gmail.</p>
+    <input type="text" id="reg-otp" placeholder="6-digit OTP" />
     <button class="primary" id="btn-step2" onclick="handleStep2()">Verify OTP</button>
   </div>
 
+  <!-- VIEW: Signup Step 3 (Set Password) -->
   <div id="signup-step3-view" class="card hidden">
     <h3>Set Password</h3>
-    <input type="password" id="reg-pass" placeholder="New Password" />
-    <button class="primary" id="btn-step3" onclick="handleStep3()">Complete Signup</button>
+    <input type="password" id="reg-pass" placeholder="Create Password" />
+    <button class="primary" id="btn-step3" onclick="handleStep3()">Finish Signup</button>
   </div>
 
+  <!-- VIEW: Login -->
   <div id="login-view" class="card hidden">
     <h3>Login</h3>
     <input type="text" id="login-id" placeholder="Gmail or Mobile Number" />
@@ -63,6 +69,7 @@
     <button class="primary" id="btn-login" onclick="handleLogin()">Login</button>
   </div>
 
+  <!-- VIEW: Profile -->
   <div id="profile-view" class="card hidden">
     <h3>User Profile</h3>
     <p><strong>Name:</strong> <span id="prof-name"></span></p>
@@ -71,10 +78,11 @@
   </div>
 
   <script>
-    // Paste your Google Apps Script deployment URL here
+    // Replace with your Google Apps Script deployment URL
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwWUkiFyHJ2aIFhjyXZ9cNSFrZbzTeevrRFUrtB8GKx6Qp9jtY1CcpKb-VgWgU66eufcg/exec";
 
     let tempEmail = "";
+    let sessionHeartbeatInterval = null;
 
     function showMessage(msg, isError = false) {
       const box = document.getElementById("status-box");
@@ -110,13 +118,45 @@
       return await res.json();
     }
 
-    // Step 1: Submit Details & Send OTP
+    // --- Automatic Heartbeat: Kicks device immediately on multi-login ---
+    function startSessionHeartbeat() {
+      stopSessionHeartbeat();
+      sessionHeartbeatInterval = setInterval(async () => {
+        const email = localStorage.getItem("userEmail");
+        const sessionToken = localStorage.getItem("sessionToken");
+
+        if (!sessionToken || !email) {
+          stopSessionHeartbeat();
+          return;
+        }
+
+        try {
+          const res = await apiRequest({ action: "get-profile", email, sessionToken });
+          if (!res.success) {
+            stopSessionHeartbeat();
+            handleClientLogout();
+            alert("You have been logged out because this account was accessed from another device.");
+          }
+        } catch (e) {
+          // Network issue; continue polling next cycle
+        }
+      }, 3000); // Polls every 3 seconds
+    }
+
+    function stopSessionHeartbeat() {
+      if (sessionHeartbeatInterval) {
+        clearInterval(sessionHeartbeatInterval);
+        sessionHeartbeatInterval = null;
+      }
+    }
+
+    // Step 1: Submit Details
     async function handleStep1() {
       const name = document.getElementById("reg-name").value.trim();
       const mobile = document.getElementById("reg-mobile").value.trim();
       const email = document.getElementById("reg-email").value.trim();
 
-      if (!name || !mobile || !email) return showMessage("Please fill all fields.", true);
+      if (!name || !mobile || !email) return showMessage("Please fill in all fields.", true);
 
       tempEmail = email;
       const btn = document.getElementById("btn-step1");
@@ -156,7 +196,7 @@
           showMessage(res.message, true);
         }
       } catch (e) {
-        showMessage("Verification failed.", true);
+        showMessage("Verification request failed.", true);
       } finally {
         btn.disabled = false;
       }
@@ -177,6 +217,7 @@
           localStorage.setItem("userEmail", res.user.email);
           updateNav();
           renderProfile(res.user);
+          startSessionHeartbeat();
         } else {
           showMessage(res.message, true);
         }
@@ -192,7 +233,7 @@
       const identifier = document.getElementById("login-id").value.trim();
       const password = document.getElementById("login-pass").value.trim();
 
-      if (!identifier || !password) return showMessage("Enter all fields.", true);
+      if (!identifier || !password) return showMessage("Please fill in all fields.", true);
 
       const btn = document.getElementById("btn-login");
       btn.disabled = true;
@@ -204,6 +245,7 @@
           localStorage.setItem("userEmail", res.user.email);
           updateNav();
           renderProfile(res.user);
+          startSessionHeartbeat();
         } else {
           showMessage(res.message, true);
         }
@@ -214,7 +256,7 @@
       }
     }
 
-    // Validate active session against the Google Sheet
+    // Profile Check
     async function checkProfile() {
       const email = localStorage.getItem("userEmail");
       const sessionToken = localStorage.getItem("sessionToken");
@@ -229,7 +271,7 @@
         if (res.success) {
           renderProfile(res.user);
         } else {
-          alert(res.message); // Displays notification if logged in on another device
+          alert(res.message);
           handleClientLogout();
         }
       } catch (e) {
@@ -246,6 +288,7 @@
 
     // Logout
     async function logout() {
+      stopSessionHeartbeat();
       const email = localStorage.getItem("userEmail");
       if (email) {
         await apiRequest({ action: "logout", email });
@@ -254,16 +297,18 @@
     }
 
     function handleClientLogout() {
+      stopSessionHeartbeat();
       localStorage.removeItem("sessionToken");
       localStorage.removeItem("userEmail");
       updateNav();
       showView("home-view");
     }
 
-    // On Initial Load
+    // App Initialization
     updateNav();
     if (localStorage.getItem("sessionToken")) {
       checkProfile();
+      startSessionHeartbeat();
     } else {
       showView("home-view");
     }
