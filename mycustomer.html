@@ -83,6 +83,13 @@
     #mapModal { height: 200px; width: 100%; border-radius: 8px; margin: 10px 0; border: 1px solid #cbd5e1; }
     .bill-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 14px; }
 
+    /* PERSISTENT LIVE TIMER BANNER */
+    .live-timer-banner {
+      background: #0f172a; color: white; border-radius: 16px; padding: 20px; margin-bottom: 16px;
+      box-shadow: 0 8px 25px rgba(15,23,42,0.25); border: 2px solid #38bdf8; text-align: center;
+    }
+    .timer-clock { font-size: 44px; font-weight: 900; font-family: monospace; color: #38bdf8; margin: 8px 0; }
+
     /* BOTTOM NAV */
     .bottom-nav {
       position: fixed; bottom: 0; left: 0; right: 0; height: 62px; background: rgba(255, 255, 255, 0.95);
@@ -93,7 +100,7 @@
     .nav-item.active { color: #2563eb; }
     .nav-item span { font-size: 18px; }
 
-    /* AUTH MODAL TABS */
+    /* AUTH MODAL */
     .modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 16px; }
     .modal-card { background: white; border-radius: 16px; width: 100%; max-width: 440px; padding: 24px; max-height: 90vh; overflow-y: auto; }
     .auth-tab-btn { flex: 1; padding: 8px; border: none; background: #f1f5f9; font-weight: bold; cursor: pointer; border-radius: 6px; font-size: 13px; color: #64748b; }
@@ -110,7 +117,6 @@
       <span>⚡</span> Mohna Express
     </div>
     <div id="authHeaderContainer">
-      <!-- Injected via JavaScript based on login state -->
       <div class="auth-pill auth-logged-out" onclick="openAuthModal('signup')">
         🔑 Login / Signup
       </div>
@@ -118,7 +124,7 @@
   </header>
 
   <!-- ========================================================= -->
-  <!-- PAGE 1: 🏠 HOME (CATALOG & PRODUCT CARDS)                 -->
+  <!-- PAGE 1: 🏠 HOME (CATALOG & PRODUCTS)                      -->
   <!-- ========================================================= -->
   <div id="homePage" class="page-view active-page">
     <div class="mode-toggle-container">
@@ -138,7 +144,7 @@
   </div>
 
   <!-- ========================================================= -->
-  <!-- PAGE 2: 💳 CHECKOUT & VERIFICATION                       -->
+  <!-- PAGE 2: 💳 CHECKOUT (GPS & COUPONS)                       -->
   <!-- ========================================================= -->
   <div id="checkoutPage" class="page-view">
     <div class="card">
@@ -156,7 +162,6 @@
         <input type="text" id="orderAddress" required placeholder="House No, Landmark, Sector / Mohalla" />
       </div>
 
-      <!-- COUPON BOX -->
       <div style="background:#f8fafc; border:1px dashed #cbd5e1; padding:10px; border-radius:8px; margin-bottom:14px;">
         <label style="font-size:12px; font-weight:bold; color:#475569; display:block; margin-bottom:4px;">Have a Promo Coupon?</label>
         <div style="display:flex; gap:6px;">
@@ -177,19 +182,21 @@
   </div>
 
   <!-- ========================================================= -->
-  <!-- PAGE 3: 📦 MY ORDERS (HISTORY & ZONE TIMERS)              -->
+  <!-- PAGE 3: 📦 MY ORDERS (PERSISTENT COUNTDOWN ON LOGIN)      -->
   <!-- ========================================================= -->
   <div id="ordersPage" class="page-view">
-    <!-- Active Live Zone Timer -->
-    <div id="liveTracker" style="display: none; background: white; border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.06);">
-      <div style="text-align: center;">
-        <span id="trackerBadge" style="background: #dbeafe; color: #1e40af; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 20px;">⚡ Active Dispatch</span>
-        <h1 id="timerDisplay" style="margin: 10px 0 2px; font-size: 42px; font-weight: 800; font-family: monospace;">15:00</h1>
-        <p id="timerSubtext" style="color: #64748b; font-size: 13px; margin: 0;">Arrival countdown</p>
-      </div>
+    
+    <!-- PERSISTENT LIVE COUNTDOWN BANNER (Survives Logout/Login) -->
+    <div id="persistentTrackerBox" style="display: none;" class="live-timer-banner">
+      <span style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; font-size: 11px; font-weight: 800; padding: 4px 12px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px;">
+        ⚡ LIVE DISPATCH COUNTDOWN ACTIVE
+      </span>
+      <div id="activeOrderIdDisplay" style="font-size: 13px; color: #94a3b8; margin-top: 8px;">Order: MHN-XXXXXX</div>
+      <div id="persistentTimerDisplay" class="timer-clock">15:00</div>
+      <p id="timerSubtext" style="color: #cbd5e1; font-size: 12.5px; margin: 0;">Synchronized with Mohna Express Dispatch Hub</p>
     </div>
 
-    <!-- Active Invoice View -->
+    <!-- Active Invoice Card -->
     <div class="card" id="invoiceBill" style="display:none;">
       <h3 style="margin-top:0; color:#1e40af;">⚡ Official Paid Invoice</h3>
       <div class="bill-row"><span><b>Order ID:</b></span><span id="billOrderId"></span></div>
@@ -201,7 +208,7 @@
 
     <div class="card">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <h3 style="margin:0;">📦 My Recent Orders</h3>
+        <h3 style="margin:0;">📦 My Order History</h3>
         <button class="btn-submit" style="width:auto; padding:6px 12px; font-size:12px; background:#0f172a;" onclick="loadCustomerOrders()">🔄 Refresh</button>
       </div>
       <div id="customerOrdersList">
@@ -219,7 +226,7 @@
       <div class="form-group"><label>Full Name</label><input type="text" id="profName" readonly /></div>
       <div class="form-group"><label>Mobile Number</label><input type="tel" id="profPhone" readonly /></div>
       <div class="form-group"><label>Email Address</label><input type="email" id="profEmail" readonly /></div>
-      <div class="form-group"><label>Registered GPS Location</label><input type="text" id="profCoords" readonly /></div>
+      <div class="form-group"><label>Registered GPS Coordinates</label><input type="text" id="profCoords" readonly /></div>
       <div class="form-group"><label>Account Status</label><input type="text" id="profStatus" readonly style="font-weight:bold; color:#15803d;" /></div>
       <button class="btn-submit" style="background:#ef4444; margin-top:10px;" onclick="logoutCustomer()">🚪 Log Out</button>
     </div>
@@ -227,7 +234,7 @@
 
 </div>
 
-<!-- DEDICATED LOGIN / SIGNUP MODAL -->
+<!-- AUTHENTICATION MODAL -->
 <div id="authModal" class="modal-overlay" style="display: none;">
   <div class="modal-card">
     <div style="display:flex; gap:6px; margin-bottom:14px;">
@@ -254,7 +261,7 @@
   </div>
 </div>
 
-<!-- BOTTOM MULTI-PAGE NAVIGATION BAR -->
+<!-- BOTTOM NAV -->
 <nav class="bottom-nav">
   <button class="nav-item active" id="navHome" onclick="switchPage('homePage')"><span>🏠</span> Home</button>
   <button class="nav-item" id="navCheckout" onclick="switchPage('checkoutPage')"><span>💳</span> Checkout</button>
@@ -287,8 +294,8 @@
 
   let modalMap = null;
   let modalUserMarker = null;
+  let persistentTimerInterval = null;
 
-  // MULTI-PAGE ROUTER
   function switchPage(pageId) {
     document.querySelectorAll('.page-view').forEach(p => p.classList.remove('active-page'));
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -319,10 +326,12 @@
 
     if (!currentUser) {
       openAuthModal('signup');
+    } else {
+      // Auto-resume timer check on login
+      checkAndResumeActiveOrderTimer();
     }
   };
 
-  // AUTH UI CONTROLLER
   function updateHeaderAuthUI() {
     const container = document.getElementById('authHeaderContainer');
     if (currentUser && currentUser.name) {
@@ -365,8 +374,7 @@
           document.getElementById('gpsStatus').innerText = `✅ GPS Locked (${userCoords.lat.toFixed(4)}, ${userCoords.lng.toFixed(4)})`;
           document.getElementById('regSubmitBtn').disabled = false;
         },
-        () => { document.getElementById('gpsStatus').innerText = `❌ GPS permission required.`; },
-        { enableHighAccuracy: true }
+        () => { document.getElementById('gpsStatus').innerText = `❌ GPS permission required.`; }
       );
     }
   }
@@ -395,6 +403,7 @@
           localStorage.setItem('mohna_user', JSON.stringify(currentUser));
           closeAuthModal();
           updateHeaderAuthUI();
+          checkAndResumeActiveOrderTimer();
         }
       });
   }
@@ -415,6 +424,7 @@
         localStorage.setItem('mohna_user', JSON.stringify(currentUser));
         closeAuthModal();
         updateHeaderAuthUI();
+        checkAndResumeActiveOrderTimer();
       } else {
         alert(res.message);
       }
@@ -627,16 +637,64 @@
     };
 
     fetch(SPREADSHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) })
-      .then(() => {
+      .then(r => r.json())
+      .then((res) => {
         document.getElementById('billOrderId').innerText = orderId;
         document.getElementById('billItem').innerText = payload.item;
         document.getElementById('billDiscount').innerText = `₹${discountAmount} (${appliedDiscountPercent}%)`;
         document.getElementById('billAmount').innerText = payload.amount;
         document.getElementById('invoiceBill').style.display = 'block';
 
-        startDeliveryCountdown(currentMatchedZoneTiming);
+        // Start Live Synchronized Timer against Absolute Server Timestamp
+        startPersistentCountdown(res.expiryTimestamp, orderId);
         switchPage('ordersPage');
       });
+  }
+
+  // =========================================================================
+  // PERSISTENT COUNTDOWN ENGINE (Runs Across Logins & Page Reloads)
+  // =========================================================================
+  function checkAndResumeActiveOrderTimer() {
+    if (!currentUser) return;
+    fetch(`${SPREADSHEET_API_URL}?action=getOrders`).then(r => r.json()).then(data => {
+      const myOrders = (data.orders || []).filter(o => o.phone.toString().includes(currentUser.phone.toString().slice(-10)));
+      if (myOrders.length > 0) {
+        const latestOrder = myOrders[0];
+        const expiryMs = parseInt(latestOrder.expiryTimestamp) || (new Date(latestOrder.date).getTime() + (latestOrder.etaMinutes || 20) * 60000);
+        
+        // If order was placed within reasonable window, resume live clock
+        if (expiryMs > Date.now() - (60 * 60 * 1000)) {
+          startPersistentCountdown(expiryMs, latestOrder.orderId);
+        }
+      }
+    });
+  }
+
+  function startPersistentCountdown(targetExpiryTimestamp, orderId) {
+    const box = document.getElementById('persistentTrackerBox');
+    const clock = document.getElementById('persistentTimerDisplay');
+    const orderDisplay = document.getElementById('activeOrderIdDisplay');
+
+    box.style.display = 'block';
+    orderDisplay.innerText = `Order ID: ${orderId}`;
+
+    clearInterval(persistentTimerInterval);
+    persistentTimerInterval = setInterval(() => {
+      const remainingMs = targetExpiryTimestamp - Date.now();
+
+      if (remainingMs <= 0) {
+        clearInterval(persistentTimerInterval);
+        clock.innerText = "00:00";
+        clock.style.color = "#ef4444";
+        document.getElementById('timerSubtext').innerHTML = "⚡ <b style='color:#ef4444;'>Delivery Time Guarantee Reached</b> (Cashback Triggered)";
+        return;
+      }
+
+      const totalSec = Math.floor(remainingMs / 1000);
+      const mins = Math.floor(totalSec / 60);
+      const secs = totalSec % 60;
+      clock.innerText = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }, 1000);
   }
 
   function loadCustomerOrders() {
@@ -664,27 +722,6 @@
         </div>
       `).join('');
     });
-  }
-
-  let countdownInterval = null;
-  function startDeliveryCountdown(durationMinutes) {
-    document.getElementById('liveTracker').style.display = 'block';
-    const totalSeconds = durationMinutes * 60;
-    const targetTime = Date.now() + totalSeconds * 1000;
-
-    clearInterval(countdownInterval);
-    countdownInterval = setInterval(() => {
-      const remainingMs = targetTime - Date.now();
-      const remainingSeconds = Math.max(0, Math.floor(remainingMs / 1000));
-      const minutes = Math.floor(remainingSeconds / 60);
-      const seconds = remainingSeconds % 60;
-      document.getElementById('timerDisplay').innerText = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-
-      if (remainingSeconds === 0) {
-        clearInterval(countdownInterval);
-        document.getElementById('timerDisplay').style.color = "#dc2626";
-      }
-    }, 1000);
   }
 
   function downloadPDF() {
