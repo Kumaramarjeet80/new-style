@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mohna Express - Unified Super Hub</title>
+
+  <!-- Leaflet & Extensions -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { margin: 0; padding: 0 0 75px 0; min-height: 100vh; background: #f8fafc; color: #0f172a; transition: background 0.3s; }
+    
+    /* Store Themes */
+    body.theme-retail { background: linear-gradient(135deg, #e0e7ff 0%, #fae8ff 50%, #ede9fe 100%); }
+    body.theme-wholesale { background: linear-gradient(135deg, #ffe4e6 0%, #fff1f2 40%, #fce7f3 100%); }
+
+    .app-container { max-width: 1200px; margin: 0 auto; padding: 16px; }
+
+    /* Top Bar */
+    .top-header {
+      display: flex; justify-content: space-between; align-items: center; background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px); padding: 12px 20px; border-radius: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 16px;
+    }
+    .brand { font-size: 18px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+    .brand span { background: #2563eb; color: white; padding: 3px 8px; border-radius: 6px; font-size: 13px; }
+    
+    .nav-toggle-btn { background: #0f172a; color: white; border: none; padding: 8px 14px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 12px; }
+
+    /* Mode Toggles */
+    .mode-toggle-container { display: flex; gap: 10px; background: rgba(255, 255, 255, 0.7); padding: 6px; border-radius: 30px; margin-bottom: 16px; }
+    .mode-btn { flex: 1; border: none; padding: 10px 16px; border-radius: 25px; font-weight: 700; font-size: 14px; cursor: pointer; background: transparent; color: #64748b; }
+    .theme-retail .mode-btn.active { background: linear-gradient(135deg, #4f46e5, #7c3aed); color: white; }
+    .theme-wholesale .mode-btn.active { background: linear-gradient(135deg, #e11d48, #be123c); color: white; }
+
+    .search-bar { width: 100%; background: white; border: 1px solid #cbd5e1; border-radius: 10px; padding: 12px 16px; font-size: 14px; outline: none; margin-bottom: 14px; }
+
+    /* Chips & Product Grid */
+    .category-scroll { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 16px; }
+    .chip { padding: 6px 16px; border-radius: 20px; background: white; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; border: 1px solid #e2e8f0; }
+    .chip.active { background: #0f172a; color: white; }
+
+    .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+    .product-card { background: white; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
+    .product-img { width: 100%; height: 140px; object-fit: cover; border-radius: 10px; background: #f8fafc; }
+    .product-title { font-size: 15px; font-weight: 700; margin: 10px 0 4px; }
+    .product-price { font-size: 16px; font-weight: 800; color: #2563eb; }
+
+    .btn { padding: 10px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 13px; }
+    .btn-primary { background: #2563eb; color: white; }
+    .btn-danger { background: #ef4444; color: white; }
+    .btn-dark { background: #0f172a; color: white; }
+
+    .card { background: white; border-radius: 14px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 16px; }
+    .page-view { display: none; }
+    .page-view.active-page { display: block; }
+
+    /* Admin Dashboard Layout */
+    .admin-tab-nav { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 14px; }
+    .admin-tab-btn { padding: 8px 14px; border: none; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; background: #e2e8f0; color: #475569; white-space: nowrap; }
+    .admin-tab-btn.active { background: #0f172a; color: white; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #e2e8f0; }
+    th { background: #f8fafc; color: #475569; font-size: 12px; }
+
+    /* Live Timer Badges */
+    .timer-badge-active { background: #0f172a; color: #38bdf8; font-family: monospace; font-weight: 800; font-size: 12px; padding: 4px 8px; border-radius: 6px; border: 1px solid #38bdf8; }
+    .timer-badge-expired { background: #fee2e2; color: #b91c1c; font-family: monospace; font-weight: 800; font-size: 12px; padding: 4px 8px; border-radius: 6px; border: 1px solid #f87171; }
+
+    .live-timer-banner { background: #0f172a; color: white; border-radius: 16px; padding: 20px; margin-bottom: 16px; border: 2px solid #38bdf8; text-align: center; }
+    .timer-clock { font-size: 40px; font-weight: 900; font-family: monospace; color: #38bdf8; margin: 6px 0; }
+
+    /* Profile Avatar */
+    .profile-avatar-wrap { display: flex; flex-direction: column; align-items: center; margin-bottom: 15px; }
+    .profile-avatar { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; border: 2px solid #2563eb; background: #e2e8f0; margin-bottom: 8px; }
+
+    /* Bottom Nav */
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-top: 1px solid #e2e8f0; display: flex; justify-content: space-around; align-items: center; z-index: 1000; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 11px; font-weight: 700; color: #64748b; cursor: pointer; border: none; background: transparent; }
+    .nav-item.active { color: #2563eb; }
+
+    /* Modal */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 16px; }
+    .modal-card { background: white; border-radius: 16px; width: 100%; max-width: 440px; padding: 24px; max-height: 90vh; overflow-y: auto; }
+    .form-group { margin-bottom: 10px; }
+    .form-group label { display: block; font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 4px; }
+    .form-group input, .form-group select { width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; }
+    #checkoutMap, #adminMap { height: 260px; width: 100%; border-radius: 8px; margin: 10px 0; border: 1px solid #cbd5e1; }
+  </style>
+</head>
+<body class="theme-retail">
+
+<div class="app-container">
+
+  <!-- TOP HEADER -->
+  <header class="top-header">
+    <div class="brand" onclick="switchMainPage('homePage')">
+      <span>⚡</span> Mohna Express Hub
+    </div>
+    <div style="display:flex; gap:8px;">
+      <button class="nav-toggle-btn" id="btnToggleAdmin" onclick="toggleAdminPanel()">🛠️ Admin Control</button>
+      <div id="userPillContainer"></div>
+    </div>
+  </header>
+
+  <!-- ========================================================= -->
+  <!-- CLIENT VIEW 1: HOME (CATALOG)                             -->
+  <!-- ========================================================= -->
+  <div id="homePage" class="page-view active-page">
+    <div class="mode-toggle-container">
+      <button class="mode-btn active" id="btnRetail" onclick="switchTheme('retail')">🛍️ Retail Store</button>
+      <button class="mode-btn" id="btnWholesale" onclick="switchTheme('wholesale')">📦 Wholesale Bulk</button>
+    </div>
+
+    <input type="text" id="liveSearchInput" class="search-bar" placeholder="🔍 Search catalog..." oninput="handleSearch(this.value)" />
+
+    <div class="category-scroll" id="categoryChips">
+      <div class="chip active" onclick="filterCategory('all', this)">All Items</div>
+    </div>
+
+    <div class="product-grid" id="productGrid">
+      <div style="grid-column:1/-1; text-align:center; color:#64748b; padding:40px;">Loading catalog...</div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- CLIENT VIEW 2: CHECKOUT                                   -->
+  <!-- ========================================================= -->
+  <div id="checkoutPage" class="page-view">
+    <div class="card">
+      <h3>💳 Checkout & GPS Zone Verification</h3>
+      <div id="checkoutItemDetails" style="background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #e2e8f0; margin-top:8px;">
+        <b id="chkItemName">No item selected</b><br><small id="chkItemType" style="color:#64748b;">Select item from Store</small>
+      </div>
+
+      <div id="checkoutMap"></div>
+      <div id="modalCoverageStatus" style="padding:8px; border-radius:6px; font-size:12px; font-weight:600; margin-bottom:12px; background:#e2e8f0;">Validating live GPS location...</div>
+
+      <div class="form-group">
+        <label>Delivery Street Address</label>
+        <input type="text" id="orderAddress" placeholder="House No, Landmark, Mohalla" />
+      </div>
+
+      <div style="background:#f8fafc; border:1px dashed #cbd5e1; padding:10px; border-radius:8px; margin-bottom:14px;">
+        <label style="font-size:12px; font-weight:bold; color:#475569;">Have a Coupon?</label>
+        <div style="display:flex; gap:6px; margin-top:4px;">
+          <input type="text" id="couponCodeInput" placeholder="PROMO20" style="flex:1; text-transform:uppercase;" />
+          <button type="button" class="btn btn-primary" onclick="applyCouponCode()">Apply</button>
+        </div>
+        <div id="couponStatusMsg" style="font-size:11px; margin-top:4px; font-weight:bold;"></div>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; font-size:16px; font-weight:bold; margin-bottom:12px;">
+        <span>Total Payable:</span><span id="checkoutTotalDisplay" style="color:#16a34a;">₹0</span>
+      </div>
+
+      <div id="qrcode" style="display:flex; justify-content:center; margin-bottom:14px;"></div>
+      <button type="button" id="confirmPayBtn" class="btn btn-primary" style="width:100%; background:#16a34a;" onclick="processOrderSuccess()">✅ Complete UPI Payment</button>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- CLIENT VIEW 3: ORDERS & LIVE COUNTDOWNS                   -->
+  <!-- ========================================================= -->
+  <div id="ordersPage" class="page-view">
+    <div id="persistentTrackerBox" style="display: none;" class="live-timer-banner">
+      <span style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; font-size: 11px; font-weight: 800; padding: 4px 12px; border-radius: 20px;">
+        ⚡ LIVE DISPATCH COUNTDOWN ACTIVE
+      </span>
+      <div id="activeOrderIdDisplay" style="font-size: 13px; color: #94a3b8; margin-top: 8px;">Order: MHN-XXXXXX</div>
+      <div id="persistentTimerDisplay" class="timer-clock">15:00</div>
+      <p id="timerSubtext" style="color: #cbd5e1; font-size: 12.5px; margin: 0;">Synchronized with Mohna Express Dispatch Hub</p>
+    </div>
+
+    <div class="card" id="invoiceBill" style="display:none;">
+      <h3 style="margin:0 0 10px 0; color:#1e40af;">⚡ Official Paid Invoice</h3>
+      <div><b>Order ID:</b> <span id="billOrderId"></span></div>
+      <div><b>Item:</b> <span id="billItem"></span></div>
+      <div><b>Discount:</b> <span id="billDiscount" style="color:#16a34a;">₹0</span></div>
+      <div><b>Grand Total:</b> <span id="billAmount" style="color:#15803d; font-weight:bold;"></span></div>
+      <button class="btn btn-primary" style="margin-top:12px; width:100%;" onclick="downloadPDF()">📄 Download PDF Tax Invoice</button>
+    </div>
+
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <h3 style="margin:0;">📦 Order History</h3>
+        <button class="btn btn-dark" style="padding:4px 10px; font-size:12px;" onclick="loadCustomerOrders()">🔄 Refresh</button>
+      </div>
+      <div id="customerOrdersList"></div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- CLIENT VIEW 4: PROFILE & DRIVE AVATAR                     -->
+  <!-- ========================================================= -->
+  <div id="profilePage" class="page-view">
+    <div class="card">
+      <div class="profile-avatar-wrap">
+        <img id="prof-img" class="profile-avatar" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23999'><circle cx='12' cy='8' r='4'/><path d='M12 14c-6.1 0-8 4-8 4v2h16v-2s-1.9-4-8-4z'/></svg>" />
+        <input type="file" id="avatarInput" accept="image/*" onchange="uploadAvatarToDrive(event)" style="font-size:12px;" />
+        <span id="uploadStatus" style="font-size:11px; color:#2563eb; margin-top:4px;"></span>
+      </div>
+
+      <div class="form-group"><label>Full Name</label><input type="text" id="profName" readonly /></div>
+      <div class="form-group"><label>Mobile</label><input type="text" id="profPhone" readonly /></div>
+      <div class="form-group"><label>Gmail</label><input type="text" id="profEmail" readonly /></div>
+      <div class="form-group"><label>GPS Coordinates</label><input type="text" id="profCoords" readonly /></div>
+      <div class="form-group"><label>Status</label><input type="text" id="profStatus" readonly style="font-weight:bold; color:#166534;" /></div>
+      <button class="btn btn-danger" style="width:100%; margin-top:10px;" onclick="logout()">🚪 Log Out</button>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- ADMIN DASHBOARD PANEL                                     -->
+  <!-- ========================================================= -->
+  <div id="adminPanel" class="page-view">
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h2>🛠️ Admin Control Hub</h2>
+        <button class="btn btn-dark" onclick="fetchAllAdminData()">🔄 Master Refresh</button>
+      </div>
+
+      <nav class="admin-tab-nav">
+        <button class="admin-tab-btn active" onclick="switchAdminTab('admOrders', this)">🧾 Orders & Timers</button>
+        <button class="admin-tab-btn" onclick="switchAdminTab('admUsers', this)">👥 Users</button>
+        <button class="admin-tab-btn" onclick="switchAdminTab('admReports', this)">📊 Reports</button>
+        <button class="admin-tab-btn" onclick="switchAdminTab('admCoupons', this)">🎟️ Coupons</button>
+        <button class="admin-tab-btn" onclick="switchAdminTab('admProducts', this)">📦 Products</button>
+        <button class="admin-tab-btn" onclick="switchAdminTab('admCategories', this)">🏷️ Categories</button>
+        <button class="admin-tab-btn" onclick="switchAdminTab('admZones', this)">🛠️ Zones</button>
+      </nav>
+
+      <!-- ADM TAB 1: ORDERS -->
+      <div id="admOrders" class="admin-sub-view">
+        <table>
+          <thead>
+            <tr><th>Order ID</th><th>Customer</th><th>Phone</th><th>Amount</th><th>ETA</th><th>⏱️ Live Timer</th><th>Status</th><th>Route</th></tr>
+          </thead>
+          <tbody id="admOrdersBody"></tbody>
+        </table>
+      </div>
+
+      <!-- ADM TAB 2: USERS -->
+      <div id="admUsers" class="admin-sub-view" style="display:none;">
+        <table>
+          <thead><tr><th>ID</th><th>Registered</th><th>Name</th><th>Phone</th><th>GPS</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody id="admUsersBody"></tbody>
+        </table>
+      </div>
+
+      <!-- ADM TAB 3: REPORTS -->
+      <div id="admReports" class="admin-sub-view" style="display:none;">
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px;">
+          <div style="background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #e2e8f0;">
+            <b>👥 Users Database</b>
+            <div style="display:flex; gap:6px; margin-top:8px;">
+              <button class="btn btn-primary" style="flex:1;" onclick="exportReport('users', 'csv')">CSV</button>
+              <button class="btn btn-dark" style="flex:1;" onclick="exportReport('users', 'pdf')">PDF</button>
+            </div>
+          </div>
+          <div style="background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #e2e8f0;">
+            <b>🧾 Orders</b>
+            <div style="display:flex; gap:6px; margin-top:8px;">
+              <button class="btn btn-primary" style="flex:1;" onclick="exportReport('orders', 'csv')">CSV</button>
+              <button class="btn btn-dark" style="flex:1;" onclick="exportReport('orders', 'pdf')">PDF</button>
+            </div>
+          </div>
+          <div style="background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #e2e8f0;">
+            <b>📦 Inventory</b>
+            <div style="display:flex; gap:6px; margin-top:8px;">
+              <button class="btn btn-primary" style="flex:1;" onclick="exportReport('products', 'csv')">CSV</button>
+              <button class="btn btn-dark" style="flex:1;" onclick="exportReport('products', 'pdf')">PDF</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADM TAB 4: COUPONS -->
+      <div id="admCoupons" class="admin-sub-view" style="display:none;">
+        <form onsubmit="handleAddCoupon(event)" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:6px; margin-bottom:12px;">
+          <input type="text" id="cpnCode" placeholder="CODE" required style="text-transform:uppercase;" />
+          <input type="number" id="cpnPercent" placeholder="Discount %" required min="1" max="99" />
+          <input type="date" id="cpnExpiry" required />
+          <select id="cpnZoneSelect"><option value="all">🌍 All Zones</option></select>
+          <button type="submit" class="btn btn-primary">+ Add</button>
+        </form>
+        <table>
+          <thead><tr><th>Code</th><th>Discount</th><th>Expires</th><th>Zone</th><th>Action</th></tr></thead>
+          <tbody id="admCouponsBody"></tbody>
+        </table>
+      </div>
+
+      <!-- ADM TAB 5: PRODUCTS -->
+      <div id="admProducts" class="admin-sub-view" style="display:none;">
+        <form onsubmit="handleAddProduct(event)" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:6px; margin-bottom:12px;">
+          <input type="text" id="pName" placeholder="Product Title" required />
+          <select id="pCategorySelect" required></select>
+          <input type="number" id="pRetail" placeholder="Retail ₹" required />
+          <input type="number" id="pWholesale" placeholder="Wholesale ₹" required />
+          <input type="number" id="pStock" placeholder="Stock Qty" required />
+          <input type="url" id="pImg" placeholder="Image URL" required />
+          <button type="submit" class="btn btn-primary">+ Save Product</button>
+        </form>
+        <table>
+          <thead><tr><th>Image</th><th>Name</th><th>Retail</th><th>Wholesale</th><th>Stock</th><th>Action</th></tr></thead>
+          <tbody id="admProductsBody"></tbody>
+        </table>
+      </div>
+
+      <!-- ADM TAB 6: CATEGORIES -->
+      <div id="admCategories" class="admin-sub-view" style="display:none;">
+        <form onsubmit="handleAddCategory(event)" style="display:flex; gap:6px; margin-bottom:12px;">
+          <input type="text" id="catName" placeholder="Category Name" required style="flex:1;" />
+          <select id="catScope"><option value="retail">🛍️ Retail</option><option value="wholesale">📦 Wholesale</option></select>
+          <button type="submit" class="btn btn-primary">+ Add</button>
+        </form>
+        <table>
+          <thead><tr><th>Name</th><th>Scope</th><th>Action</th></tr></thead>
+          <tbody id="admCategoriesBody"></tbody>
+        </table>
+      </div>
+
+      <!-- ADM TAB 7: ZONES -->
+      <div id="admZones" class="admin-sub-view" style="display:none;">
+        <div style="display:flex; gap:6px; margin-bottom:8px;">
+          <button class="btn btn-primary" onclick="saveAllZonesToSheet()">💾 Save Zones</button>
+          <button class="btn btn-danger" onclick="clearAllZones()">🗑️ Clear Map</button>
+        </div>
+        <div id="adminMap"></div>
+        <ul id="adminZoneList" style="list-style:none; padding:0; display:flex; flex-direction:column; gap:4px;"></ul>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- AUTHENTICATION MULTI-STEP MODAL -->
+<div id="authModal" class="modal-overlay" style="display:none;">
+  <div class="modal-card">
+    <div style="display:flex; gap:6px; margin-bottom:14px;">
+      <button class="btn btn-primary" id="btnTabSignup" style="flex:1;" onclick="toggleAuthTab('signup')">Sign Up</button>
+      <button class="btn btn-dark" id="btnTabLogin" style="flex:1; background:#f1f5f9; color:#475569;" onclick="toggleAuthTab('login')">Log In</button>
+    </div>
+
+    <div id="authAlert" style="display:none; padding:8px; border-radius:6px; font-size:12px; margin-bottom:10px;"></div>
+
+    <!-- SIGNUP STEP 1 -->
+    <div id="signupStep1">
+      <p style="font-size:12px; color:#64748b; margin-top:0;">⚠️ GPS location access is strictly mandatory.</p>
+      <div class="form-group"><label>Full Name</label><input type="text" id="regName" placeholder="Rahul Kumar" required /></div>
+      <div class="form-group"><label>Mobile Number</label><input type="tel" id="regPhone" placeholder="10-digit number" required /></div>
+      <div class="form-group"><label>Gmail Address</label><input type="email" id="regEmail" placeholder="user@gmail.com" required /></div>
+      <button class="btn btn-primary" id="btnStep1" style="width:100%; margin-top:6px;" onclick="handleSignupStep1()">Allow Location & Send OTP</button>
+    </div>
+
+    <!-- SIGNUP STEP 2: OTP -->
+    <div id="signupStep2" style="display:none;">
+      <p style="font-size:12px; color:#64748b;">Enter the 6-digit OTP sent to your Gmail.</p>
+      <div class="form-group"><label>Gmail OTP</label><input type="text" id="regOtp" placeholder="6-digit OTP" /></div>
+      <button class="btn btn-primary" id="btnStep2" style="width:100%;" onclick="handleVerifyOtp()">Verify OTP</button>
+    </div>
+
+    <!-- SIGNUP STEP 3: SET PASSWORD -->
+    <div id="signupStep3" style="display:none;">
+      <div class="form-group"><label>Create Password</label><input type="password" id="regPass" placeholder="Enter password" /></div>
+      <button class="btn btn-primary" id="btnStep3" style="width:100%;" onclick="handleSetPassword()">Complete Registration</button>
+    </div>
+
+    <!-- LOGIN FORM -->
+    <div id="loginForm" style="display:none;">
+      <div class="form-group"><label>Gmail or Mobile</label><input type="text" id="loginId" placeholder="Registered Gmail or Phone" /></div>
+      <div class="form-group"><label>Password</label><input type="password" id="loginPass" placeholder="Password" /></div>
+      <button class="btn btn-primary" id="btnLogin" style="width:100%; margin-top:6px;" onclick="handleLogin()">Log In</button>
+    </div>
+
+    <button type="button" style="background:none; border:none; color:#64748b; font-size:12px; width:100%; text-align:center; margin-top:12px; cursor:pointer;" onclick="closeAuthModal()">✕ Cancel</button>
+  </div>
+</div>
+
+<!-- CLIENT BOTTOM NAV -->
+<nav class="bottom-nav">
+  <button class="nav-item active" id="navHome" onclick="switchMainPage('homePage')"><span>🏠</span> Home</button>
+  <button class="nav-item" id="navCheckout" onclick="switchMainPage('checkoutPage')"><span>💳</span> Checkout</button>
+  <button class="nav-item" id="navOrders" onclick="switchMainPage('ordersPage')"><span>📦</span> Orders</button>
+  <button class="nav-item" id="navProfile" onclick="switchMainPage('profilePage')"><span>👤</span> Profile</button>
+</nav>
+
+<div id="reportPdfTemplate" style="display:none; padding:20px; font-family:sans-serif;"></div>
+
+<script>
+  const SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbyr17hZpm2XMpHuDnRXGa7-QIZqxCqYmSZJsZDLynqrfLh0E8DfsnZUMVRd5ioZtWn_/exec";
+  const DEFAULT_UPI_ID = "mohnaexpress@upi";
+
+  let currentUser = JSON.parse(localStorage.getItem('mhn_user')) || null;
+  let sessionHeartbeatInterval = null;
+  let persistentTimerInterval = null;
+  let adminOrdersInterval = null;
+
+  let currentTheme = 'retail';
+  let activeCategory = 'all';
+  let rawProducts = [], rawCategories = [], rawCoupons = [], rawOrders = [], rawUsers = [];
+  let currentSelectedProduct = null, userCoords = null, adminZonesData = null;
+  let currentMatchedZoneTiming = 20, appliedDiscountPercent = 0, baseAmount = 0;
+
+  let checkoutMap = null, checkoutMarker = null, adminMap = null;
+  let activeZones = [];
+
+  window.onload = function() {
+    updateAuthHeaderUI();
+    fetchStoreData();
+    if (currentUser) {
+      startSessionHeartbeat();
+      checkAndResumeActiveOrderTimer();
+    }
+  };
+
+  function switchMainPage(pageId) {
+    document.querySelectorAll('.page-view').forEach(p => p.classList.remove('active-page'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+    document.getElementById(pageId).classList.add('active-page');
+    if (pageId === 'homePage') document.getElementById('navHome').classList.add('active');
+    if (pageId === 'checkoutPage') { document.getElementById('navCheckout').classList.add('active'); initCheckoutMap(); }
+    if (pageId === 'ordersPage') { document.getElementById('navOrders').classList.add('active'); loadCustomerOrders(); }
+    if (pageId === 'profilePage') { document.getElementById('navProfile').classList.add('active'); renderProfilePage(); }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function toggleAdminPanel() {
+    const isVisible = document.getElementById('adminPanel').classList.contains('active-page');
+    if (isVisible) {
+      switchMainPage('homePage');
+    } else {
+      document.querySelectorAll('.page-view').forEach(p => p.classList.remove('active-page'));
+      document.getElementById('adminPanel').classList.add('active-page');
+      initAdminMap();
+      fetchAllAdminData();
+    }
+  }
+
+  // =========================================================================
+  // MANDATORY LOCATION & 3-STEP AUTHENTICATION
+  // =========================================================================
+  function updateAuthHeaderUI() {
+    const container = document.getElementById('userPillContainer');
+    if (currentUser) {
+      container.innerHTML = `
+        <button class="nav-toggle-btn" style="background:#dcfce7; color:#166534; border:1px solid #bbf7d0;" onclick="switchMainPage('profilePage')">
+          👤 ${currentUser.name.split(' ')[0]}
+        </button>
+      `;
+    } else {
+      container.innerHTML = `<button class="nav-toggle-btn" style="background:#2563eb;" onclick="openAuthModal('signup')">🔑 Login / Signup</button>`;
+    }
+  }
+
+  function openAuthModal(mode) {
+    document.getElementById('authModal').style.display = 'flex';
+    toggleAuthTab(mode);
+  }
+  function closeAuthModal() { document.getElementById('authModal').style.display = 'none'; }
+
+  function toggleAuthTab(tab) {
+    const isSignup = tab === 'signup';
+    document.getElementById('btnTabSignup').style.background = isSignup ? '#2563eb' : '#f1f5f9';
+    document.getElementById('btnTabSignup').style.color = isSignup ? 'white' : '#475569';
+    document.getElementById('btnTabLogin').style.background = !isSignup ? '#2563eb' : '#f1f5f9';
+    document.getElementById('btnTabLogin').style.color = !isSignup ? 'white' : '#475569';
+    document.getElementById('signupStep1').style.display = isSignup ? 'block' : 'none';
+    document.getElementById('signupStep2').style.display = 'none';
+    document.getElementById('signupStep3').style.display = 'none';
+    document.getElementById('loginForm').style.display = !isSignup ? 'block' : 'none';
+  }
+
+  function showAuthAlert(msg, isError = false) {
+    const el = document.getElementById('authAlert');
+    el.style.display = 'block';
+    el.style.background = isError ? '#ffeef0' : '#dcffe4';
+    el.style.color = isError ? '#b31d28' : '#165c26';
+    el.innerText = msg;
+  }
+
+  function getUserLocation() {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) reject(new Error("Geolocation unsupported."));
+      else {
+        navigator.geolocation.getCurrentPosition(
+          pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+          err => reject(new Error("Location permission denied. Mandatory for signup.")),
+          { timeout: 10000, enableHighAccuracy: true }
+        );
+      }
+    });
+  }
+
+  let tempSignupEmail = "";
+
+  async function handleSignupStep1() {
+    const name = document.getElementById('regName').value.trim();
+    const phone = document.getElementById('regPhone').value.trim();
+    const email = document.getElementById('regEmail').value.trim();
+
+    if (!name || !phone || !email) return showAuthAlert("Fill all fields.", true);
+
+    const btn = document.getElementById('btnStep1');
+    btn.disabled = true;
+    btn.innerText = "Locking GPS...";
+
+    let coords = null;
+    try {
+      coords = await getUserLocation();
+      userCoords = coords;
+    } catch (e) {
+      btn.disabled = false;
+      btn.innerText = "Allow Location & Send OTP";
+      return showAuthAlert(e.message, true);
+    }
+
+    btn.innerText = "Sending OTP...";
+    tempSignupEmail = email;
+
+    const res = await apiPost({ action: "signup-step1", name, phone, email, lat: coords.lat, lng: coords.lng });
+    btn.disabled = false;
+    btn.innerText = "Allow Location & Send OTP";
+
+    if (res.success) {
+      showAuthAlert(res.message);
+      document.getElementById('signupStep1').style.display = 'none';
+      document.getElementById('signupStep2').style.display = 'block';
+    } else {
+      showAuthAlert(res.message, true);
+    }
+  }
+
+  async function handleVerifyOtp() {
+    const otp = document.getElementById('regOtp').value.trim();
+    if (!otp) return showAuthAlert("Enter OTP.", true);
+
+    const res = await apiPost({ action: "verify-otp", email: tempSignupEmail, otp });
+    if (res.success) {
+      showAuthAlert(res.message);
+      document.getElementById('signupStep2').style.display = 'none';
+      document.getElementById('signupStep3').style.display = 'block';
+    } else {
+      showAuthAlert(res.message, true);
+    }
+  }
+
+  async function handleSetPassword() {
+    const password = document.getElementById('regPass').value.trim();
+    if (!password) return showAuthAlert("Enter password.", true);
+
+    const res = await apiPost({ action: "set-password", email: tempSignupEmail, password });
+    if (res.success) {
+      saveSession(res.user, res.sessionToken);
+      closeAuthModal();
+      switchMainPage('homePage');
+    } else {
+      showAuthAlert(res.message, true);
+    }
+  }
+
+  async function handleLogin() {
+    const identifier = document.getElementById('loginId').value.trim();
+    const password = document.getElementById('loginPass').value.trim();
+    if (!identifier || !password) return showAuthAlert("Enter credentials.", true);
+
+    const res = await apiPost({ action: "login", identifier, password });
+    if (res.success) {
+      saveSession(res.user, res.sessionToken);
+      closeAuthModal();
+      switchMainPage('homePage');
+    } else {
+      showAuthAlert(res.message, true);
+    }
+  }
+
+  function saveSession(user, token) {
+    currentUser = user;
+    localStorage.setItem('mhn_user', JSON.stringify(user));
+    localStorage.setItem('mhn_token', token);
+    updateAuthHeaderUI();
+    startSessionHeartbeat();
+    checkAndResumeActiveOrderTimer();
+  }
+
+  // --- Real-time Single Device Poller (Instant Logout) ---
+  function startSessionHeartbeat() {
+    stopSessionHeartbeat();
+    sessionHeartbeatInterval = setInterval(async () => {
+      const token = localStorage.getItem('mhn_token');
+      if (!currentUser || !token) return stopSessionHeartbeat();
+
+      try {
+        const res = await apiPost({ action: "get-profile", email: currentUser.email, sessionToken: token });
+        if (!res.success) {
+          stopSessionHeartbeat();
+          logoutClientLocally();
+          alert("Logged out: You logged in from another device.");
+        }
+      } catch (err) {}
+    }, 3000);
+  }
+
+  function stopSessionHeartbeat() {
+    if (sessionHeartbeatInterval) { clearInterval(sessionHeartbeatInterval); sessionHeartbeatInterval = null; }
+  }
+
+  async function logout() {
+    const token = localStorage.getItem('mhn_token');
+    if (currentUser && token) await apiPost({ action: "logout", email: currentUser.email });
+    logoutClientLocally();
+  }
+
+  function logoutClientLocally() {
+    stopSessionHeartbeat();
+    localStorage.removeItem('mhn_user');
+    localStorage.removeItem('mhn_token');
+    currentUser = null;
+    updateAuthHeaderUI();
+    switchMainPage('homePage');
+  }
+
+  // =========================================================================
+  // PROFILE & GOOGLE DRIVE AVATAR
+  // =========================================================================
+  function renderProfilePage() {
+    if (!currentUser) { openAuthModal('signup'); return; }
+    document.getElementById('profName').value = currentUser.name || "";
+    document.getElementById('profPhone').value = currentUser.phone || "";
+    document.getElementById('profEmail').value = currentUser.email || "";
+    document.getElementById('profCoords').value = currentUser.coords || "";
+    document.getElementById('profStatus').value = currentUser.status || "Active";
+    if (currentUser.avatar) document.getElementById('prof-img').src = currentUser.avatar;
+  }
+
+  function uploadAvatarToDrive(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) return alert("Image must be under 2MB.");
+
+    const reader = new FileReader();
+    const status = document.getElementById('uploadStatus');
+    status.innerText = "Uploading to Google Drive...";
+
+    reader.onload = async function(e) {
+      const token = localStorage.getItem('mhn_token');
+      const res = await apiPost({
+        action: "update-avatar",
+        email: currentUser.email,
+        sessionToken: token,
+        avatarData: e.target.result,
+        mimeType: file.type
+      });
+
+      if (res.success) {
+        currentUser.avatar = res.avatarUrl;
+        localStorage.setItem('mhn_user', JSON.stringify(currentUser));
+        document.getElementById('prof-img').src = res.avatarUrl;
+        status.innerText = "Saved to Google Drive!";
+        setTimeout(() => status.innerText = "", 3000);
+      } else {
+        alert(res.message);
+        status.innerText = "";
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // =========================================================================
+  // STOREFRONT (CATALOG, CHECKOUT, UPI, LIVE COUNTDOWN)
+  // =========================================================================
+  async function fetchStoreData() {
+    const [catRes, prodRes, cpnRes, zoneRes] = await Promise.all([
+      apiGet("getCategories"), apiGet("getProducts"), apiGet("getCoupons"), apiGet("getZone")
+    ]);
+    rawCategories = catRes.categories || [];
+    rawProducts = prodRes.products || [];
+    rawCoupons = cpnRes.coupons || [];
+    if (zoneRes && zoneRes.zone) adminZonesData = (typeof zoneRes.zone === 'string') ? JSON.parse(zoneRes.zone) : zoneRes.zone;
+
+    renderCategoryChips();
+    renderProducts();
+  }
+
+  function switchTheme(theme) {
+    currentTheme = theme;
+    activeCategory = 'all';
+    document.body.className = (theme === 'wholesale') ? 'theme-wholesale' : 'theme-retail';
+    document.getElementById('btnRetail').classList.toggle('active', theme === 'retail');
+    document.getElementById('btnWholesale').classList.toggle('active', theme === 'wholesale');
+    renderCategoryChips();
+    renderProducts();
+  }
+
+  function renderCategoryChips() {
+    const container = document.getElementById('categoryChips');
+    const scoped = rawCategories.filter(c => c.scope === currentTheme || c.scope === 'both');
+    container.innerHTML = '<div class="chip active" onclick="filterCategory(\'all', this\)">All Items</div>' +
+      scoped.map(c => `<div class="chip" onclick="filterCategory('${c.slug}', this)">${c.name}</div>`).join('');
+  }
+
+  function filterCategory(slug, el) {
+    activeCategory = slug;
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    renderProducts();
+  }
+
+  function handleSearch(q) { renderProducts(q.trim().toLowerCase()); }
+
+  function renderProducts(query = "") {
+    const grid = document.getElementById('productGrid');
+    const validSlugs = rawCategories.filter(c => c.scope === currentTheme || c.scope === 'both').map(c => c.slug);
+    let filtered = rawProducts.filter(p => validSlugs.includes(p.category));
+    if (activeCategory !== 'all') filtered = filtered.filter(p => p.category === activeCategory);
+    if (query) filtered = filtered.filter(p => p.name.toLowerCase().includes(query));
+
+    if (filtered.length === 0) { grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#64748b; padding:40px;">No products found.</div>'; return; }
+
+    grid.innerHTML = filtered.map(p => {
+      const price = (currentTheme === 'wholesale') ? p.wholesalePrice : p.retailPrice;
+      const tag = (currentTheme === 'wholesale') ? 'Wholesale Bulk (5 Units)' : 'Retail Single Unit';
+      return `
+        <div class="product-card">
+          <img src="${p.img}" class="product-img">
+          <div class="product-title">${p.name}</div>
+          <small style="color:#64748b; font-size:11px;">${tag}</small>
+          <div class="product-price">₹${price}</div>
+          <button class="btn btn-primary" style="margin-top:8px; width:100%;" onclick="selectProductForCheckout('${p.id}')">⚡ Buy Now</button>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function selectProductForCheckout(id) {
+    if (!currentUser) return openAuthModal('signup');
+    currentSelectedProduct = rawProducts.find(p => p.id === id);
+    baseAmount = (currentTheme === 'wholesale') ? currentSelectedProduct.wholesalePrice : currentSelectedProduct.retailPrice;
+    appliedDiscountPercent = 0;
+
+    document.getElementById('chkItemName').innerText = currentSelectedProduct.name;
+    document.getElementById('chkItemType').innerText = (currentTheme === 'wholesale') ? "Wholesale Bulk (5 Units)" : "Retail Single Unit";
+    document.getElementById('checkoutTotalDisplay').innerText = `₹${baseAmount}`;
+    switchMainPage('checkoutPage');
+  }
+
+  function initCheckoutMap() {
+    setTimeout(() => {
+      if (!checkoutMap) {
+        checkoutMap = L.map('checkoutMap').setView([25.6000, 85.1300], 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(checkoutMap);
+        if (adminZonesData) L.geoJSON(adminZonesData, { style: { color: "#2563eb", fillColor: "#3b82f6", fillOpacity: 0.25 } }).addTo(checkoutMap);
+      }
+
+      navigator.geolocation.getCurrentPosition((pos) => {
+        const lat = pos.coords.latitude, lng = pos.coords.longitude;
+        userCoords = { lat, lng };
+        checkoutMap.setView([lat, lng], 14);
+        if (checkoutMarker) checkoutMarker.setLatLng([lat, lng]);
+        else checkoutMarker = L.marker([lat, lng]).addTo(checkoutMap);
+        evaluateCheckoutZone(lat, lng);
+      });
+      renderQrCode(baseAmount);
+    }, 200);
+  }
+
+  function evaluateCheckoutZone(lat, lng) {
+    const statusBox = document.getElementById('modalCoverageStatus');
+    const point = turf.point([lng, lat]);
+    let isDeliverable = false;
+
+    if (adminZonesData && adminZonesData.features) {
+      for (let feature of adminZonesData.features) {
+        if (turf.booleanPointInPolygon(point, feature)) {
+          isDeliverable = true;
+          const props = feature.properties || {};
+          currentMatchedZoneTiming = props.deliveryMinutes || 20;
+          statusBox.style.background = "#dcfce7"; statusBox.style.color = "#166534";
+          statusBox.innerHTML = `✅ In ${props.name || 'Zone'} (${currentMatchedZoneTiming}m Delivery ETA)`;
+          document.getElementById('confirmPayBtn').disabled = false;
+          break;
+        }
+      }
+    }
+    if (!isDeliverable) {
+      statusBox.style.background = "#fee2e2"; statusBox.style.color = "#991b1b";
+      statusBox.innerHTML = `❌ Outside Delivery Boundaries.`;
+      document.getElementById('confirmPayBtn').disabled = true;
+    }
+  }
+
+  function applyCouponCode() {
+    const code = document.getElementById('couponCodeInput').value.trim().toUpperCase();
+    const msg = document.getElementById('couponStatusMsg');
+    const cpn = rawCoupons.find(c => c.code.toUpperCase() === code);
+
+    if (!cpn) { msg.style.color = "#ef4444"; msg.innerText = "❌ Invalid coupon"; return; }
+    appliedDiscountPercent = parseInt(cpn.discountPercent) || 0;
+    const discount = Math.round((baseAmount * appliedDiscountPercent) / 100);
+    const finalAmount = Math.max(0, baseAmount - discount);
+
+    msg.style.color = "#16a34a";
+    msg.innerText = `✅ "${cpn.code}" applied! ${appliedDiscountPercent}% OFF (-₹${discount})`;
+    document.getElementById('checkoutTotalDisplay').innerText = `₹${finalAmount}`;
+    renderQrCode(finalAmount);
+  }
+
+  function renderQrCode(amount) {
+    const orderId = "MHN-" + Math.floor(100000 + Math.random() * 900000);
+    const upi = `upi://pay?pa=${DEFAULT_UPI_ID}&pn=MohnaExpress&am=${amount}&cu=INR&tn=${orderId}`;
+    const box = document.getElementById('qrcode');
+    box.innerHTML = "";
+    new QRCode(box, { text: upi, width: 130, height: 130 });
+  }
+
+  async function processOrderSuccess() {
+    const discount = Math.round((baseAmount * appliedDiscountPercent) / 100);
+    const finalAmount = Math.max(0, baseAmount - discount);
+    const orderId = "MHN-" + Math.floor(100000 + Math.random() * 900000);
+
+    const payload = {
+      action: "saveOrder", orderId, name: currentUser.name, email: currentUser.email, phone: currentUser.phone,
+      address: document.getElementById('orderAddress').value || "GPS Address",
+      item: currentSelectedProduct.name, qty: (currentTheme === 'wholesale') ? 5 : 1, amount: "₹" + finalAmount,
+      lat: userCoords.lat, lng: userCoords.lng, etaMinutes: currentMatchedZoneTiming
+    };
+
+    const res = await apiPost(payload);
+    if (res.success) {
+      document.getElementById('billOrderId').innerText = orderId;
+      document.getElementById('billItem').innerText = payload.item;
+      document.getElementById('billDiscount').innerText = `₹${discount}`;
+      document.getElementById('billAmount').innerText = payload.amount;
+      document.getElementById('invoiceBill').style.display = 'block';
+
+      startPersistentCountdown(res.expiryTimestamp, orderId);
+      switchMainPage('ordersPage');
+    }
+  }
+
+  async function checkAndResumeActiveOrderTimer() {
+    if (!currentUser) return;
+    const res = await apiGet("getOrders");
+    const myOrders = (res.orders || []).filter(o => String(o.phone).includes(String(currentUser.phone).slice(-10)));
+    if (myOrders.length > 0) {
+      const latest = myOrders[0];
+      const expiry = parseInt(latest.expiryTimestamp);
+      if (expiry > Date.now() - (60 * 60 * 1000)) startPersistentCountdown(expiry, latest.orderId);
+    }
+  }
+
+  function startPersistentCountdown(expiry, orderId) {
+    const box = document.getElementById('persistentTrackerBox');
+    const clock = document.getElementById('persistentTimerDisplay');
+    box.style.display = 'block';
+    document.getElementById('activeOrderIdDisplay').innerText = `Order: ${orderId}`;
+
+    clearInterval(persistentTimerInterval);
+    persistentTimerInterval = setInterval(() => {
+      const diff = expiry - Date.now();
+      if (diff <= 0) {
+        clearInterval(persistentTimerInterval);
+        clock.innerText = "00:00 (EXPIRED)";
+        clock.style.color = "#ef4444";
+      } else {
+        const total = Math.floor(diff / 1000);
+        clock.innerText = `${String(Math.floor(total/60)).padStart(2,'0')}:${String(total%60).padStart(2,'0')}`;
+      }
+    }, 1000);
+  }
+
+  async function loadCustomerOrders() {
+    if (!currentUser) return;
+    const res = await apiGet("getOrders");
+    const myOrders = (res.orders || []).filter(o => String(o.phone).includes(String(currentUser.phone).slice(-10)));
+    const c = document.getElementById('customerOrdersList');
+    c.innerHTML = myOrders.map(o => `
+      <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:10px; border-radius:8px; margin-bottom:8px;">
+        <div style="display:flex; justify-content:space-between;"><b>${o.orderId}</b><span style="color:#166534; font-weight:bold;">${o.status}</span></div>
+        <small>${o.item} | ${o.date}</small><div style="font-weight:bold; margin-top:4px;">${o.amount}</div>
+      </div>
+    `).join('');
+  }
+
+  function downloadPDF() {
+    html2pdf().from(document.getElementById('invoiceBill')).save('Invoice.pdf');
+  }
+
+  // =========================================================================
+  // ADMIN DASHBOARD IMPLEMENTATION
+  // =========================================================================
+  function switchAdminTab(viewId, btn) {
+    document.querySelectorAll('.admin-sub-view').forEach(v => v.style.display = 'none');
+    document.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(viewId).style.display = 'block';
+    btn.classList.add('active');
+    if (viewId === 'admZones') setTimeout(() => adminMap.invalidateSize(), 200);
+  }
+
+  function fetchAllAdminData() {
+    loadAdminOrders();
+    loadAdminUsers();
+    loadAdminCoupons();
+    loadAdminProducts();
+    loadAdminCategories();
+    loadAdminZones();
+  }
+
+  async function loadAdminOrders() {
+    const res = await apiGet("getOrders");
+    rawOrders = res.orders || [];
+    document.getElementById('admOrdersBody').innerHTML = rawOrders.map(o => `
+      <tr>
+        <td><b>${o.orderId}</b></td><td>${o.name}</td><td>${o.phone}</td><td>${o.amount}</td>
+        <td>⚡ ${o.etaMinutes}m</td>
+        <td><span id="adm_timer_${o.orderId}" data-expiry="${o.expiryTimestamp}" class="timer-badge-active">Loading...</span></td>
+        <td><b>${o.status}</b></td>
+        <td><a href="${o.mapsUrl}" target="_blank">🗺️ Route</a></td>
+      </tr>
+    `).join('');
+    startAdminOrdersTicker();
+  }
+
+  function startAdminOrdersTicker() {
+    clearInterval(adminOrdersInterval);
+    adminOrdersInterval = setInterval(() => {
+      const now = Date.now();
+      document.querySelectorAll('[id^="adm_timer_"]').forEach(el => {
+        const diff = parseInt(el.getAttribute('data-expiry')) - now;
+        if (diff <= 0) { el.className = "timer-badge-expired"; el.innerText = "00:00"; }
+        else {
+          el.className = "timer-badge-active";
+          const sec = Math.floor(diff / 1000);
+          el.innerText = `${String(Math.floor(sec/60)).padStart(2,'0')}:${String(sec%60).padStart(2,'0')}`;
+        }
+      });
+    }, 1000);
+  }
+
+  async function loadAdminUsers() {
+    const res = await apiGet("getUsers");
+    rawUsers = res.users || [];
+    document.getElementById('admUsersBody').innerHTML = rawUsers.map(u => `
+      <tr>
+        <td>${u.id}</td><td>${u.date}</td><td><b>${u.name}</b></td><td>${u.phone}</td><td>${u.coords}</td>
+        <td><b>${u.status}</b></td>
+        <td><button class="btn btn-danger" style="padding:2px 6px; font-size:11px;" onclick="toggleUserStatus('${u.id}','${u.phone}','${u.status==='Blocked'?'Active':'Blocked'}')">${u.status==='Blocked'?'Unblock':'Block'}</button></td>
+      </tr>
+    `).join('');
+  }
+
+  async function toggleUserStatus(userId, phone, newStatus) {
+    await apiPost({ action: "toggleUserStatus", userId, phone, newStatus });
+    loadAdminUsers();
+  }
+
+  async function loadAdminCoupons() {
+    const res = await apiGet("getCoupons");
+    rawCoupons = res.coupons || [];
+    document.getElementById('admCouponsBody').innerHTML = rawCoupons.map(c => `
+      <tr><td>${c.code}</td><td>${c.discountPercent}%</td><td>${c.validUntil}</td><td>${c.zoneScope}</td>
+      <td><button class="btn btn-danger" style="padding:2px 6px; font-size:11px;" onclick="deleteCoupon('${c.id}')">🗑️</button></td></tr>
+    `).join('');
+  }
+
+  async function handleAddCoupon(e) {
+    e.preventDefault();
+    await apiPost({
+      action: "addCoupon",
+      code: document.getElementById('cpnCode').value.trim().toUpperCase(),
+      discountPercent: document.getElementById('cpnPercent').value,
+      validUntil: document.getElementById('cpnExpiry').value,
+      zoneScope: document.getElementById('cpnZoneSelect').value
+    });
+    e.target.reset();
+    loadAdminCoupons();
+  }
+
+  async function deleteCoupon(id) {
+    if (confirm("Delete coupon?")) { await apiPost({ action: "deleteCoupon", id }); loadAdminCoupons(); }
+  }
+
+  async function loadAdminProducts() {
+    const res = await apiGet("getProducts");
+    rawProducts = res.products || [];
+    document.getElementById('admProductsBody').innerHTML = rawProducts.map(p => `
+      <tr>
+        <td><img src="${p.img}" style="width:30px; height:30px; border-radius:4px;"></td>
+        <td>${p.name}</td><td>₹${p.retailPrice}</td><td>₹${p.wholesalePrice}</td><td>${p.stockQty}</td>
+        <td><button class="btn btn-danger" style="padding:2px 6px; font-size:11px;" onclick="deleteProduct('${p.id}')">🗑️</button></td>
+      </tr>
+    `).join('');
+  }
+
+  async function handleAddProduct(e) {
+    e.preventDefault();
+    await apiPost({
+      action: "addProduct",
+      name: document.getElementById('pName').value.trim(),
+      category: document.getElementById('pCategorySelect').value,
+      retailPrice: document.getElementById('pRetail').value,
+      wholesalePrice: document.getElementById('pWholesale').value,
+      stockQty: document.getElementById('pStock').value,
+      img: document.getElementById('pImg').value.trim()
+    });
+    e.target.reset();
+    loadAdminProducts();
+  }
+
+  async function deleteProduct(id) {
+    if (confirm("Delete product?")) { await apiPost({ action: "deleteProduct", id }); loadAdminProducts(); }
+  }
+
+  async function loadAdminCategories() {
+    const res = await apiGet("getCategories");
+    rawCategories = res.categories || [];
+    document.getElementById('pCategorySelect').innerHTML = rawCategories.map(c => `<option value="${c.slug}">${c.name}</option>`).join('');
+    document.getElementById('admCategoriesBody').innerHTML = rawCategories.map(c => `
+      <tr><td>${c.name}</td><td>${c.scope}</td>
+      <td><button class="btn btn-danger" style="padding:2px 6px; font-size:11px;" onclick="deleteCategory('${c.id}')">🗑️</button></td></tr>
+    `).join('');
+  }
+
+  async function handleAddCategory(e) {
+    e.preventDefault();
+    await apiPost({ action: "addCategory", name: document.getElementById('catName').value.trim(), scope: document.getElementById('catScope').value });
+    document.getElementById('catName').value = "";
+    loadAdminCategories();
+  }
+
+  async function deleteCategory(id) {
+    if (confirm("Delete category?")) { await apiPost({ action: "deleteCategory", id }); loadAdminCategories(); }
+  }
+
+  function initAdminMap() {
+    if (!adminMap) {
+      adminMap = L.map('adminMap').setView([25.6000, 85.1300], 12);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(adminMap);
+      adminMap.pm.addControls({ position: 'topleft', drawPolygon: true, drawRectangle: true, editMode: true, removalMode: false });
+      adminMap.on('pm:create', (e) => {
+        let name = prompt("Zone Name:", `Zone ${activeZones.length + 1}`);
+        let deliveryMinutes = parseInt(prompt("ETA Minutes:", "20")) || 20;
+        activeZones.push({ id: "z_" + Date.now(), name, deliveryMinutes, layer: e.layer });
+        renderAdminZoneList();
+      });
+    }
+  }
+
+  async function loadAdminZones() {
+    const res = await apiGet("getZone");
+    activeZones.forEach(z => adminMap.removeLayer(z.layer));
+    activeZones = [];
+    if (res && res.zone && res.zone.features) {
+      res.zone.features.forEach((f, i) => {
+        const layer = L.geoJSON(f, { style: { color: "#2563eb", weight: 2, fillOpacity: 0.25 } }).getLayers()[0];
+        adminMap.addLayer(layer);
+        activeZones.push({ id: f.properties.id || "z_" + i, name: f.properties.name, deliveryMinutes: f.properties.deliveryMinutes, layer });
+      });
+    }
+    renderAdminZoneList();
+  }
+
+  function renderAdminZoneList() {
+    document.getElementById('adminZoneList').innerHTML = activeZones.map((z, i) => `
+      <li style="display:flex; justify-content:space-between; background:#f8fafc; padding:6px 10px; border-radius:6px; border:1px solid #e2e8f0;">
+        <span>📍 <b>${z.name}</b> (⚡ ${z.deliveryMinutes}m)</span>
+        <button class="btn btn-danger" style="padding:2px 6px; font-size:11px;" onclick="removeZone(${i})">🗑️</button>
+      </li>
+    `).join('');
+  }
+
+  function removeZone(i) {
+    adminMap.removeLayer(activeZones[i].layer);
+    activeZones.splice(i, 1);
+    renderAdminZoneList();
+  }
+
+  async function saveAllZonesToSheet() {
+    const geoJson = { type: "FeatureCollection", features: activeZones.map(z => { const g = z.layer.toGeoJSON(); g.properties = { id: z.id, name: z.name, deliveryMinutes: z.deliveryMinutes }; return g; }) };
+    await apiPost({ action: "saveZone", zone: geoJson });
+    alert("Zones saved successfully!");
+  }
+
+  async function clearAllZones() {
+    if (confirm("Clear all zones?")) {
+      activeZones.forEach(z => adminMap.removeLayer(z.layer));
+      activeZones = [];
+      renderAdminZoneList();
+      await apiPost({ action: "clearZone" });
+    }
+  }
+
+  // Reports Export Engine
+  function exportReport(type, format) {
+    let headers = [], rows = [];
+    if (type === 'users') { headers = ["ID", "Date", "Name", "Phone", "Status"]; rows = rawUsers.map(u => [u.id, u.date, u.name, u.phone, u.status]); }
+    if (type === 'orders') { headers = ["Order ID", "Date", "Name", "Amount", "Status"]; rows = rawOrders.map(o => [o.orderId, o.date, o.name, o.amount, o.status]); }
+    if (type === 'products') { headers = ["ID", "Name", "Retail", "Wholesale", "Stock"]; rows = rawProducts.map(p => [p.id, p.name, p.retailPrice, p.wholesalePrice, p.stockQty]); }
+
+    if (format === 'csv') {
+      const csv = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+      const a = document.createElement("a"); a.href = encodeURI(csv); a.download = `${type}_report.csv`; a.click();
+    } else {
+      const el = document.getElementById('reportPdfTemplate');
+      el.innerHTML = `<h3>${type.toUpperCase()} REPORT</h3><table border="1" style="width:100%; border-collapse:collapse;"><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>${rows.map(r => `<tr>${r.map(d => `<td>${d}</td>`).join('')}</tr>`).join('')}</table>`;
+      el.style.display = "block";
+      html2pdf().from(el).save(`${type}_report.pdf`).then(() => el.style.display = "none");
+    }
+  }
+
+  // HTTP Helpers
+  async function apiGet(action) { const r = await fetch(`${SPREADSHEET_API_URL}?action=${action}`); return await r.json(); }
+  async function apiPost(data) { const r = await fetch(SPREADSHEET_API_URL, { method: "POST", body: JSON.stringify(data) }); return await r.json(); }
+</script>
+</body>
+</html>
