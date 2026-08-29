@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mohna Express - Customer App</title>
+
+  <!-- LEAFLET & LIBRARIES -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; transition: background 0.3s ease, color 0.3s ease; }
+    body { margin: 0; padding: 0 0 75px 0; min-height: 100vh; }
+
+    /* DUAL THEME ENGINES */
+    body.theme-retail { background: linear-gradient(135deg, #e0e7ff 0%, #fae8ff 50%, #ede9fe 100%); color: #1e1b4b; }
+    body.theme-wholesale { background: linear-gradient(135deg, #ffe4e6 0%, #fff1f2 40%, #fce7f3 100%); color: #881337; }
+
+    .app-container { max-width: 900px; margin: 0 auto; padding: 16px; }
+
+    /* TOP HEADER */
+    .app-header {
+      display: flex; justify-content: space-between; align-items: center; background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(10px); padding: 12px 18px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 16px;
+    }
+    .brand-logo { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 18px; }
+    .brand-logo span { background: #2563eb; color: white; border-radius: 8px; padding: 4px 8px; font-size: 14px; }
+    .profile-pill { display: flex; align-items: center; gap: 8px; background: #f1f5f9; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; }
+
+    /* RETAIL / WHOLESALE TOGGLE */
+    .mode-toggle-container { display: flex; gap: 10px; background: rgba(255, 255, 255, 0.7); padding: 6px; border-radius: 30px; margin-bottom: 16px; }
+    .mode-btn { flex: 1; border: none; padding: 10px 16px; border-radius: 25px; font-weight: 700; font-size: 14px; cursor: pointer; background: transparent; color: #64748b; }
+    .theme-retail .mode-btn.active { background: linear-gradient(135deg, #4f46e5, #7c3aed); color: white; }
+    .theme-wholesale .mode-btn.active { background: linear-gradient(135deg, #e11d48, #be123c); color: white; }
+
+    /* CATEGORY CHIPS */
+    .category-scroll { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 16px; }
+    .chip { padding: 6px 16px; border-radius: 20px; background: rgba(255,255,255,0.8); font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; border: 1px solid rgba(0,0,0,0.06); }
+    .chip.active { background: #0f172a; color: white; }
+
+    /* PRODUCT GRID */
+    .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+    .product-card { background: rgba(255, 255, 255, 0.95); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid rgba(255,255,255,0.8); }
+    .product-img { width: 100%; height: 140px; object-fit: cover; border-radius: 10px; background: #f8fafc; }
+    .product-title { font-size: 15px; font-weight: 700; margin: 10px 0 4px; }
+    .product-price { font-size: 16px; font-weight: 800; }
+    .theme-retail .product-price { color: #4338ca; }
+    .theme-wholesale .product-price { color: #be123c; }
+
+    .btn-buy-now { width: 100%; padding: 9px; border: none; border-radius: 8px; color: white; font-weight: 700; font-size: 13px; cursor: pointer; margin-top: 10px; }
+    .theme-retail .btn-buy-now { background: #4f46e5; }
+    .theme-wholesale .btn-buy-now { background: #e11d48; }
+
+    /* PAGE VIEW CONTAINERS */
+    .page-view { display: none; }
+    .page-view.active-page { display: block; }
+
+    .card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 16px; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 4px; color: #475569; }
+    .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; }
+    .btn-submit { width: 100%; padding: 12px; border: none; border-radius: 8px; background: #2563eb; color: white; font-weight: 700; cursor: pointer; font-size: 14px; }
+
+    #mapModal { height: 200px; width: 100%; border-radius: 8px; margin: 10px 0; border: 1px solid #cbd5e1; }
+    .bill-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 14px; }
+
+    /* BOTTOM NAVIGATION BAR */
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0; height: 62px; background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px); border-top: 1px solid #e2e8f0; display: flex; justify-content: space-around;
+      align-items: center; z-index: 1000; box-shadow: 0 -4px 12px rgba(0,0,0,0.04);
+    }
+    .nav-item { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; font-weight: 700; color: #64748b; cursor: pointer; border: none; background: transparent; padding: 6px 12px; border-radius: 8px; }
+    .nav-item.active { color: #2563eb; }
+    .nav-item span { font-size: 18px; }
+
+    /* MODAL */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 16px; }
+    .modal-card { background: white; border-radius: 16px; width: 100%; max-width: 440px; padding: 24px; max-height: 90vh; overflow-y: auto; }
+  </style>
+</head>
+<body class="theme-retail">
+
+<div class="app-container">
+  
+  <!-- APP HEADER -->
+  <header class="app-header">
+    <div class="brand-logo" onclick="switchPage('homePage')">
+      <span>⚡</span> Mohna Express
+    </div>
+    <div class="profile-pill" onclick="switchPage('profilePage')">
+      👤 <span id="profileText">Login / Sign Up</span>
+    </div>
+  </header>
+
+  <!-- ========================================================= -->
+  <!-- PAGE 1: 🏠 HOME (CATALOG, CATEGORIES, RETAIL/WHOLESALE)    -->
+  <!-- ========================================================= -->
+  <div id="homePage" class="page-view active-page">
+    <div class="mode-toggle-container">
+      <button class="mode-btn active" id="btnRetail" onclick="switchTheme('retail')">🛍️ Retail Store</button>
+      <button class="mode-btn" id="btnWholesale" onclick="switchTheme('wholesale')">📦 Wholesale Bulk</button>
+    </div>
+
+    <!-- Category Chips -->
+    <div class="category-scroll" id="categoryChips">
+      <div class="chip active" onclick="filterCategory('all', this)">All Items</div>
+    </div>
+
+    <!-- Product Grid -->
+    <div class="product-grid" id="productGrid">
+      <div style="grid-column:1/-1; text-align:center; color:#64748b; padding:40px;">Loading catalog from Google Sheets...</div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- PAGE 2: 💳 CHECKOUT (GPS COVERAGE, PROMO CODES & UPI QR)  -->
+  <!-- ========================================================= -->
+  <div id="checkoutPage" class="page-view">
+    <div class="card">
+      <h3 style="margin-top:0;">💳 Checkout & Delivery Verification</h3>
+      <p style="font-size:13px; color:#64748b; margin-top:0;">Live GPS map validation ensures your order arrives in 15-20 mins.</p>
+
+      <div id="checkoutItemDetails" style="background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:12px;">
+        <p style="margin:0; font-weight:bold; color:#0f172a;" id="chkItemName">No item selected</p>
+        <small style="color:#64748b;" id="chkItemType">Select a product from the Home tab</small>
+      </div>
+
+      <div id="mapModal"></div>
+      <div id="modalCoverageStatus" style="padding:8px; border-radius:6px; font-size:12px; font-weight:600; margin-bottom:12px; background:#e2e8f0;">Validating live GPS location...</div>
+
+      <div class="form-group">
+        <label>Delivery Street Address</label>
+        <input type="text" id="orderAddress" required placeholder="House No, Landmark, Ward / Sector" />
+      </div>
+
+      <!-- COUPON / PROMO CODE BOX -->
+      <div style="background:#f8fafc; border:1px dashed #cbd5e1; padding:10px; border-radius:8px; margin-bottom:14px;">
+        <label style="font-size:12px; font-weight:bold; color:#475569; display:block; margin-bottom:4px;">Have a Promo Coupon?</label>
+        <div style="display:flex; gap:6px;">
+          <input type="text" id="couponCodeInput" placeholder="Enter Code (e.g. WELCOME10)" style="flex:1; padding:8px; border:1px solid #cbd5e1; border-radius:6px; text-transform:uppercase; font-size:13px;" />
+          <button type="button" class="btn-submit" style="width:auto; padding:8px 16px; background:#2563eb;" onclick="applyCouponCode()">Apply</button>
+        </div>
+        <div id="couponStatusMsg" style="font-size:11px; margin-top:4px; font-weight:bold;"></div>
+      </div>
+
+      <div class="bill-row" style="font-size:16px; font-weight:bold; margin-bottom:12px;">
+        <span>Total Payable:</span>
+        <span id="checkoutTotalDisplay" style="color:#16a34a;">₹0</span>
+      </div>
+
+      <div id="qrcode" style="display:flex; justify-content:center; margin-bottom:14px;"></div>
+      <button type="button" id="confirmPayBtn" class="btn-submit" style="background:#16a34a;" onclick="processOrderSuccess()">✅ Complete UPI Payment</button>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- PAGE 3: 📦 MY ORDERS (HISTORY, TIMERS & DOWNLOAD INVOICES) -->
+  <!-- ========================================================= -->
+  <div id="ordersPage" class="page-view">
+    <!-- Live Countdown Tracker -->
+    <div id="liveTracker" style="display: none; background: white; border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.06);">
+      <div style="text-align: center;">
+        <span id="trackerBadge" style="background: #dbeafe; color: #1e40af; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 20px;">⚡ Active Dispatch</span>
+        <h1 id="timerDisplay" style="margin: 10px 0 2px; font-size: 42px; font-weight: 800; font-family: monospace;">15:00</h1>
+        <p id="timerSubtext" style="color: #64748b; font-size: 13px; margin: 0;">Arrival countdown</p>
+      </div>
+    </div>
+
+    <!-- Active Invoice Card -->
+    <div class="card" id="invoiceBill" style="display:none;">
+      <h3 style="margin-top:0; color:#1e40af;">⚡ Official Paid Invoice</h3>
+      <div class="bill-row"><span><b>Order ID:</b></span><span id="billOrderId"></span></div>
+      <div class="bill-row"><span><b>Item:</b></span><span id="billItem"></span></div>
+      <div class="bill-row"><span><b>Discount:</b></span><span id="billDiscount" style="color:#16a34a; font-weight:bold;">₹0</span></div>
+      <div class="bill-row" style="border-top:1px solid #e2e8f0; padding-top:6px;"><span><b>Grand Total Paid:</b></span><span id="billAmount" style="font-weight:bold; color:#15803d;"></span></div>
+      <button class="btn-submit" style="background:#4f46e5; margin-top:12px;" onclick="downloadPDF()">📄 Download PDF Tax Invoice</button>
+      <a id="whatsappBtn" class="btn-submit" style="background:#25D366; text-decoration:none; display:none; text-align:center; margin-top:8px;" target="_blank">💬 Open on WhatsApp</a>
+    </div>
+
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <h3 style="margin:0;">📦 My Recent Orders</h3>
+        <button class="btn-submit" style="width:auto; padding:6px 12px; font-size:12px; background:#0f172a;" onclick="loadCustomerOrders()">🔄 Refresh</button>
+      </div>
+      <div id="customerOrdersList">
+        <p style="text-align:center; color:#94a3b8; font-size:13px;">No orders found yet. Place your first order from Home!</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- PAGE 4: 👤 PROFILE (USER DETAILS, GPS COORDINATES & STATUS) -->
+  <!-- ========================================================= -->
+  <div id="profilePage" class="page-view">
+    <div class="card">
+      <h3 style="margin-top:0;">👤 Account Profile</h3>
+      <div id="profileDetailsContainer">
+        <div class="form-group"><label>Full Name</label><input type="text" id="profName" readonly /></div>
+        <div class="form-group"><label>Mobile Number</label><input type="tel" id="profPhone" readonly /></div>
+        <div class="form-group"><label>Email Address</label><input type="email" id="profEmail" readonly /></div>
+        <div class="form-group"><label>Registered GPS Location</label><input type="text" id="profCoords" readonly /></div>
+        <div class="form-group"><label>Account Status</label><input type="text" id="profStatus" readonly style="font-weight:bold; color:#15803d;" /></div>
+        <button class="btn-submit" style="background:#ef4444; margin-top:10px;" onclick="logoutCustomer()">🚪 Log Out / Change Account</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- MANDATORY SIGNUP / ONBOARDING MODAL -->
+<div id="signupModal" class="modal-overlay" style="display: none;">
+  <div class="modal-card">
+    <h3 style="margin-top:0;">📍 Mandatory Onboarding</h3>
+    <p style="color:#64748b; font-size:13px; margin-top:0;">Location access is required to register your account and verify delivery coverage.</p>
+    <form onsubmit="handleSignup(event)">
+      <div class="form-group"><label>Full Name</label><input type="text" id="regName" required placeholder="e.g. Rahul Kumar" /></div>
+      <div class="form-group"><label>Mobile Number</label><input type="tel" id="regPhone" required placeholder="10-digit mobile number" /></div>
+      <div class="form-group"><label>Email Address</label><input type="email" id="regEmail" required placeholder="name@gmail.com" /></div>
+      <div id="gpsStatus" style="font-size:12px; color:#2563eb; margin-bottom:10px;">Acquiring live GPS coordinates...</div>
+      <button type="submit" id="regSubmitBtn" class="btn-submit" disabled>Allow Location & Register</button>
+    </form>
+  </div>
+</div>
+
+<!-- BOTTOM MULTI-PAGE NAVIGATION BAR -->
+<nav class="bottom-nav">
+  <button class="nav-item active" id="navHome" onclick="switchPage('homePage')">
+    <span>🏠</span> Home
+  </button>
+  <button class="nav-item" id="navCheckout" onclick="switchPage('checkoutPage')">
+    <span>💳</span> Checkout
+  </button>
+  <button class="nav-item" id="navOrders" onclick="switchPage('ordersPage')">
+    <span>📦</span> My Orders
+  </button>
+  <button class="nav-item" id="navProfile" onclick="switchPage('profilePage')">
+    <span>👤</span> Profile
+  </button>
+</nav>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js"></script>
+
+<script>
+  const SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbwbxd5UDMiOh2GJALf1GY9oyXOprgPKAxAiECGmwjSsdZUtD0fMJjiicxyTA5JmekLkzg/exec";
+  const DEFAULT_UPI_ID = "mohnaexpress@upi";
+
+  let currentUser = JSON.parse(localStorage.getItem('mohna_user')) || null;
+  let userCoords = null;
+  let adminZonesData = null;
+  let currentTheme = 'retail';
+  let activeCategory = 'all';
+
+  let rawProducts = [];
+  let rawCategories = [];
+  let rawCoupons = [];
+  let currentSelectedProduct = null;
+  let currentMatchedZoneId = "all";
+  let currentMatchedZoneTiming = 20;
+  let currentMatchedZoneCashback = 25;
+  let appliedDiscountPercent = 0;
+  let baseAmount = 0;
+
+  let modalMap = null;
+  let modalUserMarker = null;
+
+  // ==========================================
+  // MULTI-PAGE ROUTING CONTROLLER
+  // ==========================================
+  function switchPage(pageId) {
+    document.querySelectorAll('.page-view').forEach(p => p.classList.remove('active-page'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+    document.getElementById(pageId).classList.add('active-page');
+
+    if (pageId === 'homePage') document.getElementById('navHome').classList.add('active');
+    if (pageId === 'checkoutPage') {
+      document.getElementById('navCheckout').classList.add('active');
+      initCheckoutMap();
+    }
+    if (pageId === 'ordersPage') {
+      document.getElementById('navOrders').classList.add('active');
+      loadCustomerOrders();
+    }
+    if (pageId === 'profilePage') {
+      document.getElementById('navProfile').classList.add('active');
+      renderProfilePage();
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  window.onload = function() {
+    updateProfileUI();
+    fetchCategoriesAndProducts();
+    fetchZones();
+    fetchCoupons();
+
+    if (!currentUser) {
+      document.getElementById('signupModal').style.display = 'flex';
+      requestUserGPS();
+    }
+  };
+
+  // --- GPS ONBOARDING ---
+  function requestUserGPS() {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          userCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          document.getElementById('gpsStatus').innerText = `✅ GPS Locked (${userCoords.lat.toFixed(4)}, ${userCoords.lng.toFixed(4)})`;
+          document.getElementById('regSubmitBtn').disabled = false;
+        },
+        () => { document.getElementById('gpsStatus').innerText = `❌ GPS permission is required.`; }
+      );
+    }
+  }
+
+  function handleSignup(e) {
+    e.preventDefault();
+    const payload = {
+      action: "registerUser",
+      name: document.getElementById('regName').value,
+      phone: document.getElementById('regPhone').value,
+      email: document.getElementById('regEmail').value,
+      lat: userCoords.lat.toFixed(5),
+      lng: userCoords.lng.toFixed(5)
+    };
+    fetch(SPREADSHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) })
+      .then(() => {
+        currentUser = { ...payload, status: "Active" };
+        localStorage.setItem('mohna_user', JSON.stringify(currentUser));
+        document.getElementById('signupModal').style.display = 'none';
+        updateProfileUI();
+      });
+  }
+
+  function updateProfileUI() {
+    if (currentUser) {
+      document.getElementById('profileText').innerText = `Hi, ${currentUser.name.split(' ')[0]}`;
+    }
+  }
+
+  function renderProfilePage() {
+    if (!currentUser) {
+      document.getElementById('signupModal').style.display = 'flex';
+      return;
+    }
+    document.getElementById('profName').value = currentUser.name || "";
+    document.getElementById('profPhone').value = currentUser.phone || "";
+    document.getElementById('profEmail').value = currentUser.email || "";
+    document.getElementById('profCoords').value = `${currentUser.lat}, ${currentUser.lng}`;
+    document.getElementById('profStatus').value = currentUser.status || "Active";
+  }
+
+  function logoutCustomer() {
+    if (confirm("Log out from this device?")) {
+      localStorage.removeItem('mohna_user');
+      location.reload();
+    }
+  }
+
+  // --- CATALOG & THEMES ---
+  function fetchCategoriesAndProducts() {
+    Promise.all([
+      fetch(`${SPREADSHEET_API_URL}?action=getCategories`).then(r => r.json()),
+      fetch(`${SPREADSHEET_API_URL}?action=getProducts`).then(r => r.json())
+    ]).then(([catData, prodData]) => {
+      rawCategories = catData.categories || [];
+      rawProducts = prodData.products || [];
+      renderCategoryChips();
+      renderProducts();
+    });
+  }
+
+  function fetchCoupons() {
+    fetch(`${SPREADSHEET_API_URL}?action=getCoupons`).then(r => r.json()).then(data => {
+      rawCoupons = data.coupons || [];
+    });
+  }
+
+  function renderCategoryChips() {
+    const chipContainer = document.getElementById('categoryChips');
+    const scopedCategories = rawCategories.filter(c => c.scope === currentTheme || c.scope === 'both');
+    chipContainer.innerHTML = '<div class="chip active" onclick="filterCategory(\'all\', this)">All Items</div>' + 
+      scopedCategories.map(c => `<div class="chip" onclick="filterCategory('${c.slug}', this)">${c.name}</div>`).join('');
+  }
+
+  function switchTheme(theme) {
+    currentTheme = theme;
+    activeCategory = 'all';
+    document.body.className = (theme === 'wholesale') ? 'theme-wholesale' : 'theme-retail';
+    document.getElementById('btnRetail').classList.toggle('active', theme === 'retail');
+    document.getElementById('btnWholesale').classList.toggle('active', theme === 'wholesale');
+    renderCategoryChips();
+    renderProducts();
+  }
+
+  function filterCategory(cat, chipEl) {
+    activeCategory = cat;
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    chipEl.classList.add('active');
+    renderProducts();
+  }
+
+  function renderProducts() {
+    const grid = document.getElementById('productGrid');
+    const validSlugs = rawCategories.filter(c => c.scope === currentTheme || c.scope === 'both').map(c => c.slug);
+    let filtered = rawProducts.filter(p => validSlugs.includes(p.category));
+    if (activeCategory !== 'all') filtered = filtered.filter(p => p.category === activeCategory);
+
+    if (filtered.length === 0) {
+      grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#64748b; padding:40px;">No products available.</div>';
+      return;
+    }
+
+    grid.innerHTML = filtered.map(p => {
+      const price = (currentTheme === 'wholesale') ? p.wholesalePrice : p.retailPrice;
+      const tag = (currentTheme === 'wholesale') ? 'Bulk Wholesale (Min 5)' : 'Retail Unit';
+      return `
+        <div class="product-card">
+          <img src="${p.img}" class="product-img">
+          <div class="product-title">${p.name}</div>
+          <small style="color:#64748b; font-size:11px;">${tag}</small>
+          <div class="product-price">₹${price}</div>
+          <button class="btn-buy-now" onclick="selectProductForCheckout('${p.id}')">⚡ Buy Now</button>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function fetchZones() {
+    fetch(`${SPREADSHEET_API_URL}?action=getZone`).then(r => r.json()).then(data => {
+      if (data && data.zone) adminZonesData = (typeof data.zone === 'string') ? JSON.parse(data.zone) : data.zone;
+    });
+  }
+
+  // --- CHECKOUT FLOW ---
+  function selectProductForCheckout(productId) {
+    if (!currentUser) { document.getElementById('signupModal').style.display = 'flex'; return; }
+
+    currentSelectedProduct = rawProducts.find(p => p.id === productId);
+    baseAmount = (currentTheme === 'wholesale') ? currentSelectedProduct.wholesalePrice : currentSelectedProduct.retailPrice;
+    appliedDiscountPercent = 0;
+
+    document.getElementById('chkItemName').innerText = currentSelectedProduct.name;
+    document.getElementById('chkItemType').innerText = (currentTheme === 'wholesale') ? "Wholesale Bulk Order (5 Units)" : "Retail Single Unit";
+    document.getElementById('couponCodeInput').value = "";
+    document.getElementById('couponStatusMsg').innerText = "";
+    document.getElementById('checkoutTotalDisplay').innerText = `₹${baseAmount}`;
+
+    switchPage('checkoutPage');
+  }
+
+  function initCheckoutMap() {
+    setTimeout(() => {
+      if (!modalMap) {
+        modalMap = L.map('mapModal').setView([25.6000, 85.1300], 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(modalMap);
+        if (adminZonesData) L.geoJSON(adminZonesData, { style: { color: "#2563eb", fillColor: "#3b82f6", fillOpacity: 0.25 } }).addTo(modalMap);
+      }
+
+      navigator.geolocation.getCurrentPosition((pos) => {
+        const lat = pos.coords.latitude, lng = pos.coords.longitude;
+        userCoords = { lat, lng };
+        modalMap.setView([lat, lng], 14);
+        if (modalUserMarker) modalUserMarker.setLatLng([lat, lng]);
+        else modalUserMarker = L.marker([lat, lng]).addTo(modalMap);
+        evaluateCheckoutZone(lat, lng);
+      });
+
+      renderQrCode(baseAmount || 199);
+    }, 200);
+  }
+
+  function evaluateCheckoutZone(lat, lng) {
+    const statusBox = document.getElementById('modalCoverageStatus');
+    const point = turf.point([lng, lat]);
+    let isDeliverable = false;
+
+    if (adminZonesData && adminZonesData.type === "FeatureCollection" && adminZonesData.features) {
+      for (let feature of adminZonesData.features) {
+        if (turf.booleanPointInPolygon(point, feature)) {
+          isDeliverable = true;
+          const props = feature.properties || {};
+          currentMatchedZoneId = props.id || "all";
+          currentMatchedZoneTiming = props.deliveryMinutes || 20;
+          currentMatchedZoneCashback = props.lateCashback || 25;
+          statusBox.style.background = "#dcfce7"; statusBox.style.color = "#166534";
+          statusBox.innerHTML = `✅ <b>Deliverable Area!</b> Covered by ${props.name || 'Zone'} (${currentMatchedZoneTiming}m ETA | ₹${currentMatchedZoneCashback} Late Guarantee)`;
+          document.getElementById('confirmPayBtn').disabled = false;
+          break;
+        }
+      }
+    }
+
+    if (!isDeliverable) {
+      statusBox.style.background = "#fee2e2"; statusBox.style.color = "#991b1b";
+      statusBox.innerHTML = `❌ <b>Outside Delivery Zone.</b> Deliveries are unavailable here.`;
+      document.getElementById('confirmPayBtn').disabled = true;
+    }
+  }
+
+  function applyCouponCode() {
+    const inputCode = document.getElementById('couponCodeInput').value.trim().toUpperCase();
+    const msg = document.getElementById('couponStatusMsg');
+
+    if (!inputCode) { msg.innerText = "Please enter a promo code."; msg.style.color = "#ef4444"; return; }
+    const coupon = rawCoupons.find(c => c.code.toUpperCase() === inputCode);
+
+    if (!coupon) { msg.innerText = "❌ Invalid coupon code."; msg.style.color = "#ef4444"; return; }
+
+    const today = new Date().toISOString().split('T')[0];
+    if (coupon.validUntil && coupon.validUntil < today) { msg.innerText = `❌ Expired on ${coupon.validUntil}`; msg.style.color = "#ef4444"; return; }
+    if (coupon.zoneScope !== "all" && coupon.zoneScope !== currentMatchedZoneId) { msg.innerText = "❌ Not applicable in your zone."; msg.style.color = "#ef4444"; return; }
+
+    appliedDiscountPercent = parseInt(coupon.discountPercent) || 0;
+    const discountAmount = Math.round((baseAmount * appliedDiscountPercent) / 100);
+    const finalAmount = Math.max(0, baseAmount - discountAmount);
+
+    msg.style.color = "#16a34a";
+    msg.innerText = `✅ "${coupon.code}" applied! ${appliedDiscountPercent}% OFF (-₹${discountAmount})`;
+    document.getElementById('checkoutTotalDisplay').innerText = `₹${finalAmount}`;
+    renderQrCode(finalAmount);
+  }
+
+  function renderQrCode(amount) {
+    const orderId = "MHN-" + Math.floor(100000 + Math.random() * 900000);
+    const upiString = `upi://pay?pa=${DEFAULT_UPI_ID}&pn=MohnaExpress&am=${amount}&cu=INR&tn=${orderId}`;
+    const qrContainer = document.getElementById('qrcode');
+    qrContainer.innerHTML = "";
+    new QRCode(qrContainer, { text: upiString, width: 140, height: 140 });
+  }
+
+  function processOrderSuccess() {
+    const discountAmount = Math.round((baseAmount * appliedDiscountPercent) / 100);
+    const finalAmount = Math.max(0, baseAmount - discountAmount);
+    const orderId = "MHN-" + Math.floor(100000 + Math.random() * 900000);
+
+    const payload = {
+      action: "saveOrder", orderId, paymentId: "pay_upi_" + Math.random().toString(36).substring(2, 9),
+      name: currentUser.name, email: currentUser.email, phone: currentUser.phone,
+      address: document.getElementById('orderAddress').value || "Customer GPS Coordinates",
+      item: `${currentSelectedProduct.name} (Disc: ${appliedDiscountPercent}%)`,
+      qty: (currentTheme === 'wholesale') ? 5 : 1, amount: "₹" + finalAmount,
+      lat: userCoords.lat.toFixed(5), lng: userCoords.lng.toFixed(5)
+    };
+
+    fetch(SPREADSHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) })
+      .then(() => {
+        document.getElementById('billOrderId').innerText = orderId;
+        document.getElementById('billItem').innerText = payload.item;
+        document.getElementById('billDiscount').innerText = `₹${discountAmount} (${appliedDiscountPercent}%)`;
+        document.getElementById('billAmount').innerText = payload.amount;
+        document.getElementById('invoiceBill').style.display = 'block';
+
+        startDeliveryCountdown(currentMatchedZoneTiming, currentMatchedZoneCashback);
+
+        const cleanPhone = currentUser.phone.replace(/[^0-9]/g, "");
+        const waBtn = document.getElementById('whatsappBtn');
+        waBtn.href = `https://wa.me/91${cleanPhone.slice(-10)}?text=${encodeURIComponent("⚡ Order Confirmed: " + orderId + " (" + payload.amount + ")")}`;
+        waBtn.style.display = 'block';
+
+        switchPage('ordersPage');
+      });
+  }
+
+  // --- ORDERS HISTORY & TIMER ---
+  function loadCustomerOrders() {
+    if (!currentUser) return;
+    fetch(`${SPREADSHEET_API_URL}?action=getOrders`).then(r => r.json()).then(data => {
+      const myOrders = (data.orders || []).filter(o => o.phone.includes(currentUser.phone.slice(-10)));
+      const container = document.getElementById('customerOrdersList');
+
+      if (myOrders.length === 0) {
+        container.innerHTML = '<p style="text-align:center; color:#94a3b8; font-size:13px;">No past orders found.</p>';
+        return;
+      }
+
+      container.innerHTML = myOrders.map(o => `
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px; margin-bottom:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <b>${o.orderId}</b>
+            <span style="background:#dcfce7; color:#166534; font-size:11px; font-weight:bold; padding:2px 8px; border-radius:12px;">${o.status || 'PAID'}</span>
+          </div>
+          <p style="margin:4px 0; font-size:13px; color:#334155;">${o.item} (Qty: ${o.qty})</p>
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#64748b;">
+            <span>📅 ${o.date}</span>
+            <b style="color:#0f172a; font-size:14px;">${o.amount}</b>
+          </div>
+        </div>
+      `).join('');
+    });
+  }
+
+  let countdownInterval = null;
+  function startDeliveryCountdown(durationMinutes, cashbackAmount) {
+    document.getElementById('liveTracker').style.display = 'block';
+    const totalSeconds = durationMinutes * 60;
+    const targetTime = Date.now() + totalSeconds * 1000;
+
+    clearInterval(countdownInterval);
+    countdownInterval = setInterval(() => {
+      const remainingMs = targetTime - Date.now();
+      const remainingSeconds = Math.max(0, Math.floor(remainingMs / 1000));
+      const minutes = Math.floor(remainingSeconds / 60);
+      const seconds = remainingSeconds % 60;
+      document.getElementById('timerDisplay').innerText = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+      if (remainingSeconds === 0) {
+        clearInterval(countdownInterval);
+        document.getElementById('timerDisplay').style.color = "#dc2626";
+      }
+    }, 1000);
+  }
+
+  function downloadPDF() {
+    const element = document.getElementById('invoiceBill');
+    html2pdf().set({ margin: [8, 8, 8, 8], filename: 'Invoice.pdf', jsPDF: { unit: 'mm', format: 'a5' } }).from(element).save();
+  }
+</script>
+</body>
+</html>
