@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Auth System</title>
+  <title>Secure Auth System</title>
   <style>
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { max-width: 480px; margin: 40px auto; padding: 0 16px; color: #222; }
@@ -17,11 +17,17 @@
     .alert { padding: 10px; border-radius: 4px; margin-bottom: 15px; font-size: 14px; }
     .alert.error { background: #ffeef0; color: #b31d28; }
     .alert.success { background: #dcffe4; color: #165c26; }
+    .location-notice { font-size: 12px; color: #666; margin-bottom: 12px; }
+    
+    /* Profile styling */
+    .profile-header { display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; }
+    .profile-avatar { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 2px solid #0066cc; margin-bottom: 10px; background: #eef2f5; }
+    .avatar-upload { font-size: 13px; }
   </style>
 </head>
 <body>
 
-  <!-- Dynamic Navigation Bar -->
+  <!-- Navigation Bar -->
   <nav id="navbar">
     <button id="nav-login" onclick="showView('login-view')">Login</button>
     <button id="nav-signup" onclick="showView('signup-step1-view')">Signup</button>
@@ -40,10 +46,11 @@
   <!-- VIEW: Signup Step 1 -->
   <div id="signup-step1-view" class="card hidden">
     <h3>Create an Account</h3>
+    <p class="location-notice">⚠️ <strong>Location access is mandatory.</strong> You will be prompted for location permission upon submission.</p>
     <input type="text" id="reg-name" placeholder="Full Name" />
     <input type="text" id="reg-mobile" placeholder="Mobile Number" />
     <input type="email" id="reg-email" placeholder="Gmail Address" />
-    <button class="primary" id="btn-step1" onclick="handleStep1()">Send OTP</button>
+    <button class="primary" id="btn-step1" onclick="handleStep1()">Allow Location & Send OTP</button>
   </div>
 
   <!-- VIEW: Signup Step 2 (OTP) -->
@@ -54,7 +61,7 @@
     <button class="primary" id="btn-step2" onclick="handleStep2()">Verify OTP</button>
   </div>
 
-  <!-- VIEW: Signup Step 3 (Set Password) -->
+  <!-- VIEW: Signup Step 3 (Password) -->
   <div id="signup-step3-view" class="card hidden">
     <h3>Set Password</h3>
     <input type="password" id="reg-pass" placeholder="Create Password" />
@@ -71,14 +78,20 @@
 
   <!-- VIEW: Profile -->
   <div id="profile-view" class="card hidden">
-    <h3>User Profile</h3>
+    <div class="profile-header">
+      <img id="prof-img" class="profile-avatar" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23999'><circle cx='12' cy='8' r='4'/><path d='M12 14c-6.1 0-8 4-8 4v2h16v-2s-1.9-4-8-4z'/></svg>" alt="Avatar" />
+      <input type="file" id="avatar-input" class="avatar-upload" accept="image/*" onchange="uploadAvatarToDrive(event)" />
+      <span id="upload-status" style="font-size: 12px; color: #0066cc; margin-top: 6px;"></span>
+    </div>
+
+    <h3>User Details</h3>
     <p><strong>Name:</strong> <span id="prof-name"></span></p>
     <p><strong>Mobile:</strong> <span id="prof-mobile"></span></p>
     <p><strong>Email:</strong> <span id="prof-email"></span></p>
   </div>
 
   <script>
-    // Replace with your Google Apps Script deployment URL
+    // Paste your Google Apps Script Deployment URL here
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwWUkiFyHJ2aIFhjyXZ9cNSFrZbzTeevrRFUrtB8GKx6Qp9jtY1CcpKb-VgWgU66eufcg/exec";
 
     let tempEmail = "";
@@ -118,7 +131,30 @@
       return await res.json();
     }
 
-    // --- Automatic Heartbeat: Kicks device immediately on multi-login ---
+    // Geolocation Helper
+    function getUserLocation() {
+      return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+          reject(new Error("Geolocation is not supported by your browser."));
+        } else {
+          navigator.geolocation.getCurrentPosition(
+            position => resolve({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude
+            }),
+            error => {
+              let msg = "Location permission denied. You must grant location access to register.";
+              if (error.code === error.POSITION_UNAVAILABLE) msg = "Location information is unavailable.";
+              if (error.code === error.TIMEOUT) msg = "Location request timed out.";
+              reject(new Error(msg));
+            },
+            { timeout: 10000, enableHighAccuracy: true }
+          );
+        }
+      });
+    }
+
+    // Instant multi-device kick poller
     function startSessionHeartbeat() {
       stopSessionHeartbeat();
       sessionHeartbeatInterval = setInterval(async () => {
@@ -135,12 +171,12 @@
           if (!res.success) {
             stopSessionHeartbeat();
             handleClientLogout();
-            alert("You have been logged out because this account was accessed from another device.");
+            alert("Logged out: Your account was accessed on another device.");
           }
         } catch (e) {
-          // Network issue; continue polling next cycle
+          // Network hiccup; retry next tick
         }
-      }, 3000); // Polls every 3 seconds
+      }, 3000);
     }
 
     function stopSessionHeartbeat() {
@@ -150,7 +186,7 @@
       }
     }
 
-    // Step 1: Submit Details
+    // Step 1: Enforce Location + Send OTP
     async function handleStep1() {
       const name = document.getElementById("reg-name").value.trim();
       const mobile = document.getElementById("reg-mobile").value.trim();
@@ -158,13 +194,32 @@
 
       if (!name || !mobile || !email) return showMessage("Please fill in all fields.", true);
 
-      tempEmail = email;
       const btn = document.getElementById("btn-step1");
       btn.disabled = true;
+      btn.innerText = "Requesting location...";
+
+      let coords = null;
+      try {
+        coords = await getUserLocation();
+      } catch (locErr) {
+        btn.disabled = false;
+        btn.innerText = "Allow Location & Send OTP";
+        return showMessage(locErr.message, true);
+      }
+
       btn.innerText = "Sending OTP...";
+      tempEmail = email;
 
       try {
-        const res = await apiRequest({ action: "signup-step1", name, mobile, email });
+        const res = await apiRequest({ 
+          action: "signup-step1", 
+          name, 
+          mobile, 
+          email, 
+          latitude: coords.latitude, 
+          longitude: coords.longitude 
+        });
+
         if (res.success) {
           showMessage(res.message);
           showView("signup-step2-view");
@@ -175,7 +230,7 @@
         showMessage("Failed to connect to server.", true);
       } finally {
         btn.disabled = false;
-        btn.innerText = "Send OTP";
+        btn.innerText = "Allow Location & Send OTP";
       }
     }
 
@@ -196,7 +251,7 @@
           showMessage(res.message, true);
         }
       } catch (e) {
-        showMessage("Verification request failed.", true);
+        showMessage("Verification failed.", true);
       } finally {
         btn.disabled = false;
       }
@@ -256,7 +311,7 @@
       }
     }
 
-    // Profile Check
+    // Check & Render Profile
     async function checkProfile() {
       const email = localStorage.getItem("userEmail");
       const sessionToken = localStorage.getItem("sessionToken");
@@ -283,7 +338,54 @@
       document.getElementById("prof-name").innerText = user.name;
       document.getElementById("prof-mobile").innerText = user.mobile;
       document.getElementById("prof-email").innerText = user.email;
+
+      const defaultAvatar = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23999'><circle cx='12' cy='8' r='4'/><path d='M12 14c-6.1 0-8 4-8 4v2h16v-2s-1.9-4-8-4z'/></svg>";
+      document.getElementById("prof-img").src = user.avatar && user.avatar.trim() !== "" ? user.avatar : defaultAvatar;
       showView("profile-view");
+    }
+
+    // Upload & Store Image directly to Google Drive
+    function uploadAvatarToDrive(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      if (file.size > 2 * 1024 * 1024) {
+        return alert("Please select an image smaller than 2MB.");
+      }
+
+      const reader = new FileReader();
+      const status = document.getElementById("upload-status");
+      status.innerText = "Saving to Google Drive...";
+
+      reader.onload = async function(e) {
+        const base64Data = e.target.result;
+        const email = localStorage.getItem("userEmail");
+        const sessionToken = localStorage.getItem("sessionToken");
+
+        try {
+          const res = await apiRequest({
+            action: "update-avatar",
+            email,
+            sessionToken,
+            avatarData: base64Data,
+            mimeType: file.type
+          });
+
+          if (res.success) {
+            document.getElementById("prof-img").src = res.avatarUrl;
+            status.innerText = "Saved to Google Drive!";
+            setTimeout(() => { status.innerText = ""; }, 3000);
+          } else {
+            status.innerText = "";
+            alert(res.message);
+          }
+        } catch (err) {
+          status.innerText = "";
+          alert("Failed to upload avatar.");
+        }
+      };
+
+      reader.readAsDataURL(file);
     }
 
     // Logout
@@ -304,7 +406,7 @@
       showView("home-view");
     }
 
-    // App Initialization
+    // App Init
     updateNav();
     if (localStorage.getItem("sessionToken")) {
       checkProfile();
