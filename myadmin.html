@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin Dashboard - Users, Orders & Synchronized Timings</title>
+  <title>Admin Dashboard - Live Countdown, Users & Orders</title>
   
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.css" />
@@ -16,7 +16,7 @@
     .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
     h2, h3 { margin: 0; color: #0f172a; }
     
-    /* MULTI-PAGE ADMIN TABS */
+    /* TABS */
     .admin-tab-nav {
       display: flex; gap: 8px; overflow-x: auto; background: white; padding: 10px; border-radius: 12px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.05);
@@ -52,6 +52,10 @@
     .btn-refresh { background: #f8fafc; border: 1px solid #cbd5e1; color: #334155; font-size: 12px; }
     .btn-del { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; padding: 4px 8px; font-size: 11px; }
 
+    /* LIVE ORDER TIMER BADGES IN TABLE */
+    .timer-badge-active { background: #0f172a; color: #38bdf8; font-family: monospace; font-weight: 800; font-size: 12px; padding: 4px 8px; border-radius: 6px; border: 1px solid #38bdf8; }
+    .timer-badge-expired { background: #fee2e2; color: #b91c1c; font-family: monospace; font-weight: 800; font-size: 12px; padding: 4px 8px; border-radius: 6px; border: 1px solid #f87171; }
+
     table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
     th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
     th { background: #f8fafc; color: #475569; font-size: 12px; }
@@ -68,31 +72,75 @@
 
 <div class="container">
 
-  <!-- TOP HEADER -->
   <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
     <div>
       <h1 style="margin:0; font-size:24px; color:#0f172a;">⚡ Mohna Express Control Hub</h1>
-      <p style="margin:4px 0 0; color:#64748b; font-size:14px;">User Records, Synchronized ETAs, Catalog & Reports</p>
+      <p style="margin:4px 0 0; color:#64748b; font-size:14px;">Live Synchronized Orders, Delivery Timers & Customer Database</p>
     </div>
     <button class="btn btn-dark" onclick="fetchAllData()">🔄 Master Refresh (All)</button>
   </div>
 
-  <!-- MULTI-PAGE TAB NAVIGATION -->
+  <!-- NAVIGATION TABS -->
   <nav class="admin-tab-nav">
-    <button class="admin-tab-btn active-tab" id="tabBtnReports" onclick="switchAdminTab('viewReports')">📊 Reports</button>
-    <button class="admin-tab-btn" id="tabBtnUsers" onclick="switchAdminTab('viewUsers')">👥 Users</button>
-    <button class="admin-tab-btn" id="tabBtnOrders" onclick="switchAdminTab('viewOrders')">🧾 Orders & Timings</button>
+    <button class="admin-tab-btn active-tab" id="tabBtnOrders" onclick="switchAdminTab('viewOrders')">🧾 Orders & Live Countdowns</button>
+    <button class="admin-tab-btn" id="tabBtnUsers" onclick="switchAdminTab('viewUsers')">👥 Users Database</button>
+    <button class="admin-tab-btn" id="tabBtnReports" onclick="switchAdminTab('viewReports')">📊 Reports (CSV & PDF)</button>
     <button class="admin-tab-btn" id="tabBtnCoupons" onclick="switchAdminTab('viewCoupons')">🎟️ Coupons</button>
     <button class="admin-tab-btn" id="tabBtnProducts" onclick="switchAdminTab('viewProducts')">📦 Products & Stock</button>
     <button class="admin-tab-btn" id="tabBtnCategories" onclick="switchAdminTab('viewCategories')">🏷️ Categories</button>
     <button class="admin-tab-btn" id="tabBtnZones" onclick="switchAdminTab('viewZones')">🛠️ Delivery Zones</button>
   </nav>
 
-  <!-- MASTER SEARCH -->
   <input type="text" id="masterAdminSearch" class="master-search-input" placeholder="🔍 Omnisearch across all tabs (Names, Phone numbers, Order IDs, Coordinates)..." oninput="handleAdminOmniSearch(this.value)" />
 
-  <!-- TAB 1: 📊 REPORTS -->
-  <div id="viewReports" class="admin-page-view active-view">
+  <!-- TAB 1: 🧾 ORDERS WITH LIVE TICKING COUNTDOWN CLOCKS -->
+  <div id="viewOrders" class="admin-page-view active-view">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h3>🧾 Orders & Synchronized Zone ETA Tracking</h3>
+          <p style="margin:2px 0 0; font-size:12px; color:#64748b;">Live ticking countdown timers for every order synced with customer devices.</p>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-primary" onclick="printLast24HoursSlips()">🖨️ A4 Slip Print</button>
+          <button class="btn btn-refresh" onclick="loadOrders()">🔄 Refresh</button>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Order ID</th>
+            <th>Order Timestamp</th>
+            <th>Customer</th>
+            <th>Phone</th>
+            <th>Total Paid</th>
+            <th>Zone ETA</th>
+            <th>⏱️ Live Countdown</th>
+            <th>Status</th>
+            <th>Route</th>
+          </tr>
+        </thead>
+        <tbody id="ordersBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TAB 2: 👥 USERS DATABASE -->
+  <div id="viewUsers" class="admin-page-view">
+    <div class="card">
+      <div class="card-header">
+        <div><h3>👥 Registered Customers</h3></div>
+        <button class="btn btn-refresh" onclick="loadUsers()">🔄 Refresh</button>
+      </div>
+      <table>
+        <thead><tr><th>User ID</th><th>Registered Date</th><th>Name</th><th>Phone</th><th>GPS Coordinates</th><th>Status</th><th>Access Action</th></tr></thead>
+        <tbody id="userTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TAB 3: 📊 REPORTS -->
+  <div id="viewReports" class="admin-page-view">
     <div class="card" style="border-left:5px solid #059669;">
       <h3>📊 Instant CSV & PDF Reports Center</h3>
       <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:10px; margin-top:10px;">
@@ -118,40 +166,6 @@
           </div>
         </div>
       </div>
-    </div>
-  </div>
-
-  <!-- TAB 2: 👥 REGISTERED USERS MANAGEMENT -->
-  <div id="viewUsers" class="admin-page-view">
-    <div class="card">
-      <div class="card-header">
-        <div><h3>👥 Registered Customers (Synced with App)</h3></div>
-        <button class="btn btn-refresh" onclick="loadUsers()">🔄 Refresh</button>
-      </div>
-      <table>
-        <thead><tr><th>User ID</th><th>Registered Date</th><th>Name</th><th>Phone</th><th>GPS Coordinates</th><th>Status</th><th>Access</th></tr></thead>
-        <tbody id="userTableBody"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- TAB 3: 🧾 ORDERS WITH SYNCHRONIZED ETAS & TIMESTAMPS -->
-  <div id="viewOrders" class="admin-page-view">
-    <div class="card">
-      <div class="card-header">
-        <div>
-          <h3>🧾 Orders & Synchronized Zone ETA Tracking</h3>
-          <p style="margin:2px 0 0; font-size:12px; color:#64748b;">Displays live order timestamps and matched zone delivery duration.</p>
-        </div>
-        <div style="display:flex; gap:8px;">
-          <button class="btn btn-primary" onclick="printLast24HoursSlips()">🖨️ A4 Slip Print</button>
-          <button class="btn btn-refresh" onclick="loadOrders()">🔄 Refresh</button>
-        </div>
-      </div>
-      <table>
-        <thead><tr><th>Order ID</th><th>Order Timestamp</th><th>Customer</th><th>Phone</th><th>Total</th><th>Zone ETA</th><th>Status</th><th>Route</th></tr></thead>
-        <tbody id="ordersBody"></tbody>
-      </table>
     </div>
   </div>
 
@@ -261,9 +275,9 @@
 
     document.getElementById(viewId).classList.add('active-view');
 
-    if (viewId === 'viewReports') document.getElementById('tabBtnReports').classList.add('active-tab');
-    if (viewId === 'viewUsers') document.getElementById('tabBtnUsers').classList.add('active-tab');
     if (viewId === 'viewOrders') document.getElementById('tabBtnOrders').classList.add('active-tab');
+    if (viewId === 'viewUsers') document.getElementById('tabBtnUsers').classList.add('active-tab');
+    if (viewId === 'viewReports') document.getElementById('tabBtnReports').classList.add('active-tab');
     if (viewId === 'viewCoupons') document.getElementById('tabBtnCoupons').classList.add('active-tab');
     if (viewId === 'viewProducts') document.getElementById('tabBtnProducts').classList.add('active-tab');
     if (viewId === 'viewCategories') document.getElementById('tabBtnCategories').classList.add('active-tab');
@@ -283,26 +297,105 @@
   let cachedOrders = [];
   let cachedUsers = [];
   let cachedCoupons = [];
+  let adminOrdersInterval = null;
 
   window.onload = function() { fetchAllData(); };
 
   function fetchAllData() {
-    loadCoupons();
+    loadOrders();
     loadUsers();
+    loadCoupons();
     loadCategories();
     loadProducts();
     loadZones();
-    loadOrders();
   }
 
   function handleAdminOmniSearch(q) {
     const query = q.trim().toLowerCase();
-    renderCouponsTable(query);
+    renderOrdersTable(query);
     renderUsersTable(query);
+    renderCouponsTable(query);
     renderCategoriesTable(query);
     renderProductsTable(query);
     renderZoneSidebar(query);
-    renderOrdersTable(query);
+  }
+
+  // ==========================================
+  // ORDERS WITH LIVE COUNTDOWN TICKERS
+  // ==========================================
+  function loadOrders() {
+    fetch(`${SPREADSHEET_API_URL}?action=getOrders`).then(r => r.json()).then(data => {
+      cachedOrders = data.orders || [];
+      renderOrdersTable();
+      startAdminLiveCountdownTicker();
+    });
+  }
+
+  function renderOrdersTable(q = "") {
+    const filtered = q ? cachedOrders.filter(o => o.orderId.toLowerCase().includes(q) || o.name.toLowerCase().includes(q) || o.phone.toString().includes(q)) : cachedOrders;
+    
+    document.getElementById('ordersBody').innerHTML = filtered.map(o => {
+      const expiryMs = parseInt(o.expiryTimestamp) || (new Date(o.date).getTime() + (o.etaMinutes || 20) * 60000);
+      return `
+        <tr>
+          <td><b>${o.orderId}</b></td>
+          <td><small>${o.date}</small></td>
+          <td>${o.name}</td>
+          <td>${o.phone}</td>
+          <td><b>${o.amount}</b></td>
+          <td><span style="background:#dbeafe; color:#1e40af; padding:2px 6px; border-radius:4px; font-weight:bold;">⚡ ${o.etaMinutes || 20}m</span></td>
+          <td><span id="admin_timer_${o.orderId}" data-expiry="${expiryMs}" class="timer-badge-active">Loading...</span></td>
+          <td><span style="background:#dcfce7; color:#166534; padding:2px 6px; border-radius:4px; font-weight:bold;">${o.status}</span></td>
+          <td><a href="${o.mapsUrl}" target="_blank" style="color:#2563eb; font-size:12px;">🗺️ Route</a></td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function startAdminLiveCountdownTicker() {
+    clearInterval(adminOrdersInterval);
+    adminOrdersInterval = setInterval(() => {
+      const now = Date.now();
+      document.querySelectorAll('[id^="admin_timer_"]').forEach(el => {
+        const expiry = parseInt(el.getAttribute('data-expiry'));
+        const diff = expiry - now;
+
+        if (diff <= 0) {
+          el.className = "timer-badge-expired";
+          el.innerText = "00:00 (EXPIRED)";
+        } else {
+          el.className = "timer-badge-active";
+          const totalSec = Math.floor(diff / 1000);
+          const mins = Math.floor(totalSec / 60);
+          const secs = totalSec % 60;
+          el.innerText = `⏱️ ${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+      });
+    }, 1000);
+  }
+
+  // USERS
+  function loadUsers() {
+    fetch(`${SPREADSHEET_API_URL}?action=getUsers`).then(r => r.json()).then(data => {
+      cachedUsers = data.users || [];
+      renderUsersTable();
+    });
+  }
+
+  function renderUsersTable(q = "") {
+    const filtered = q ? cachedUsers.filter(u => u.name.toLowerCase().includes(q) || u.phone.includes(q)) : cachedUsers;
+    document.getElementById('userTableBody').innerHTML = filtered.map(u => `
+      <tr>
+        <td><b>${u.id}</b></td><td><small>${u.date}</small></td><td><b>${u.name}</b></td><td>📞 ${u.phone}</td><td>${u.coords}</td>
+        <td><span style="background:#dcfce7; color:#166534; padding:2px 6px; border-radius:4px; font-weight:bold;">${u.status}</span></td>
+        <td><button class="btn btn-del" onclick="toggleUserStatus('${u.id}', '${u.phone}', '${u.status === 'Blocked' ? 'Active' : 'Blocked'}')">${u.status === 'Blocked' ? '🔓 Unblock' : '🚫 Block'}</button></td>
+      </tr>
+    `).join('');
+  }
+
+  function toggleUserStatus(userId, phone, newStatus) {
+    fetch(SPREADSHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "toggleUserStatus", userId, phone, newStatus }) })
+      .then(() => loadUsers());
   }
 
   // COUPONS
@@ -340,54 +433,6 @@
     if (!confirm(`Delete coupon "${code}"?`)) return;
     fetch(SPREADSHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "deleteCoupon", id, code }) })
       .then(() => loadCoupons());
-  }
-
-  // USERS
-  function loadUsers() {
-    fetch(`${SPREADSHEET_API_URL}?action=getUsers`).then(r => r.json()).then(data => {
-      cachedUsers = data.users || [];
-      renderUsersTable();
-    });
-  }
-
-  function renderUsersTable(q = "") {
-    const filtered = q ? cachedUsers.filter(u => u.name.toLowerCase().includes(q) || u.phone.includes(q)) : cachedUsers;
-    document.getElementById('userTableBody').innerHTML = filtered.map(u => `
-      <tr>
-        <td><b>${u.id}</b></td><td><small>${u.date}</small></td><td><b>${u.name}</b></td><td>📞 ${u.phone}</td><td>${u.coords}</td>
-        <td><span style="background:#dcfce7; color:#166534; padding:2px 6px; border-radius:4px; font-weight:bold;">${u.status}</span></td>
-        <td><button class="btn btn-del" onclick="toggleUserStatus('${u.id}', '${u.phone}', '${u.status === 'Blocked' ? 'Active' : 'Blocked'}')">${u.status === 'Blocked' ? '🔓 Unblock' : '🚫 Block'}</button></td>
-      </tr>
-    `).join('');
-  }
-
-  function toggleUserStatus(userId, phone, newStatus) {
-    fetch(SPREADSHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "toggleUserStatus", userId, phone, newStatus }) })
-      .then(() => loadUsers());
-  }
-
-  // ORDERS & SYNCHRONIZED ETAS
-  function loadOrders() {
-    fetch(`${SPREADSHEET_API_URL}?action=getOrders`).then(r => r.json()).then(data => {
-      cachedOrders = data.orders || [];
-      renderOrdersTable();
-    });
-  }
-
-  function renderOrdersTable(q = "") {
-    const filtered = q ? cachedOrders.filter(o => o.orderId.toLowerCase().includes(q) || o.name.toLowerCase().includes(q)) : cachedOrders;
-    document.getElementById('ordersBody').innerHTML = filtered.map(o => `
-      <tr>
-        <td><b>${o.orderId}</b></td>
-        <td><small>${o.date}</small></td>
-        <td>${o.name}</td>
-        <td>${o.phone}</td>
-        <td><b>${o.amount}</b></td>
-        <td><span style="background:#dbeafe; color:#1e40af; padding:2px 6px; border-radius:4px; font-weight:bold;">⚡ ${o.etaMinutes || 20} Mins</span></td>
-        <td><span style="background:#dcfce7; color:#166534; padding:2px 6px; border-radius:4px; font-weight:bold;">${o.status}</span></td>
-        <td><a href="${o.mapsUrl}" target="_blank" style="color:#2563eb; font-size:12px;">🗺️ Route</a></td>
-      </tr>
-    `).join('');
   }
 
   // PRODUCTS
