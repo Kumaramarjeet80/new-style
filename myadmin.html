@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Super Admin - Multi-Section Operations Hub</title>
+  <title>Admin Dashboard - Users, Orders & Synchronized Timings</title>
   
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.css" />
@@ -72,7 +72,7 @@
   <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
     <div>
       <h1 style="margin:0; font-size:24px; color:#0f172a;">⚡ Mohna Express Control Hub</h1>
-      <p style="margin:4px 0 0; color:#64748b; font-size:14px;">Multi-Section Operations, Inventory, Access & Reporting</p>
+      <p style="margin:4px 0 0; color:#64748b; font-size:14px;">User Records, Synchronized ETAs, Catalog & Reports</p>
     </div>
     <button class="btn btn-dark" onclick="fetchAllData()">🔄 Master Refresh (All)</button>
   </div>
@@ -80,24 +80,22 @@
   <!-- MULTI-PAGE TAB NAVIGATION -->
   <nav class="admin-tab-nav">
     <button class="admin-tab-btn active-tab" id="tabBtnReports" onclick="switchAdminTab('viewReports')">📊 Reports</button>
-    <button class="admin-tab-btn" id="tabBtnCoupons" onclick="switchAdminTab('viewCoupons')">🎟️ Coupons</button>
     <button class="admin-tab-btn" id="tabBtnUsers" onclick="switchAdminTab('viewUsers')">👥 Users</button>
+    <button class="admin-tab-btn" id="tabBtnOrders" onclick="switchAdminTab('viewOrders')">🧾 Orders & Timings</button>
+    <button class="admin-tab-btn" id="tabBtnCoupons" onclick="switchAdminTab('viewCoupons')">🎟️ Coupons</button>
     <button class="admin-tab-btn" id="tabBtnProducts" onclick="switchAdminTab('viewProducts')">📦 Products & Stock</button>
     <button class="admin-tab-btn" id="tabBtnCategories" onclick="switchAdminTab('viewCategories')">🏷️ Categories</button>
     <button class="admin-tab-btn" id="tabBtnZones" onclick="switchAdminTab('viewZones')">🛠️ Delivery Zones</button>
-    <button class="admin-tab-btn" id="tabBtnOrders" onclick="switchAdminTab('viewOrders')">🧾 Orders & Print</button>
   </nav>
 
   <!-- MASTER SEARCH -->
-  <input type="text" id="masterAdminSearch" class="master-search-input" placeholder="🔍 Omnisearch across all active views (Names, IDs, Codes, Coordinates)..." oninput="handleAdminOmniSearch(this.value)" />
+  <input type="text" id="masterAdminSearch" class="master-search-input" placeholder="🔍 Omnisearch across all tabs (Names, Phone numbers, Order IDs, Coordinates)..." oninput="handleAdminOmniSearch(this.value)" />
 
-  <!-- ========================================================= -->
-  <!-- TAB 1: 📊 REPORTS (INSTANT CSV & PDF GENERATORS)          -->
-  <!-- ========================================================= -->
+  <!-- TAB 1: 📊 REPORTS -->
   <div id="viewReports" class="admin-page-view active-view">
     <div class="card" style="border-left:5px solid #059669;">
-      <h3 style="margin-bottom:12px;">📊 Instant Data Export & Report Center</h3>
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:10px;">
+      <h3>📊 Instant CSV & PDF Reports Center</h3>
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:10px; margin-top:10px;">
         <div style="background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #e2e8f0;">
           <b>👥 Users Database</b>
           <div style="display:flex; gap:6px; margin-top:8px;">
@@ -106,42 +104,67 @@
           </div>
         </div>
         <div style="background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #e2e8f0;">
-          <b>📦 Product Inventory & Stock</b>
-          <div style="display:flex; gap:6px; margin-top:8px;">
-            <button class="btn btn-primary" style="flex:1;" onclick="exportReport('products', 'csv')">📥 CSV</button>
-            <button class="btn btn-dark" style="flex:1;" onclick="exportReport('products', 'pdf')">📄 PDF</button>
-          </div>
-        </div>
-        <div style="background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #e2e8f0;">
-          <b>🏷️ Scoped Categories</b>
-          <div style="display:flex; gap:6px; margin-top:8px;">
-            <button class="btn btn-primary" style="flex:1;" onclick="exportReport('categories', 'csv')">📥 CSV</button>
-            <button class="btn btn-dark" style="flex:1;" onclick="exportReport('categories', 'pdf')">📄 PDF</button>
-          </div>
-        </div>
-        <div style="background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #e2e8f0;">
-          <b>🧾 Order History</b>
+          <b>🧾 Orders & Timestamps</b>
           <div style="display:flex; gap:6px; margin-top:8px;">
             <button class="btn btn-primary" style="flex:1;" onclick="exportReport('orders', 'csv')">📥 CSV</button>
             <button class="btn btn-dark" style="flex:1;" onclick="exportReport('orders', 'pdf')">📄 PDF</button>
+          </div>
+        </div>
+        <div style="background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #e2e8f0;">
+          <b>📦 Inventory & Stock</b>
+          <div style="display:flex; gap:6px; margin-top:8px;">
+            <button class="btn btn-primary" style="flex:1;" onclick="exportReport('products', 'csv')">📥 CSV</button>
+            <button class="btn btn-dark" style="flex:1;" onclick="exportReport('products', 'pdf')">📄 PDF</button>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ========================================================= -->
-  <!-- TAB 2: 🎟️ COUPONS (DISCOUNT MANAGER)                      -->
-  <!-- ========================================================= -->
+  <!-- TAB 2: 👥 REGISTERED USERS MANAGEMENT -->
+  <div id="viewUsers" class="admin-page-view">
+    <div class="card">
+      <div class="card-header">
+        <div><h3>👥 Registered Customers (Synced with App)</h3></div>
+        <button class="btn btn-refresh" onclick="loadUsers()">🔄 Refresh</button>
+      </div>
+      <table>
+        <thead><tr><th>User ID</th><th>Registered Date</th><th>Name</th><th>Phone</th><th>GPS Coordinates</th><th>Status</th><th>Access</th></tr></thead>
+        <tbody id="userTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TAB 3: 🧾 ORDERS WITH SYNCHRONIZED ETAS & TIMESTAMPS -->
+  <div id="viewOrders" class="admin-page-view">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h3>🧾 Orders & Synchronized Zone ETA Tracking</h3>
+          <p style="margin:2px 0 0; font-size:12px; color:#64748b;">Displays live order timestamps and matched zone delivery duration.</p>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-primary" onclick="printLast24HoursSlips()">🖨️ A4 Slip Print</button>
+          <button class="btn btn-refresh" onclick="loadOrders()">🔄 Refresh</button>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>Order ID</th><th>Order Timestamp</th><th>Customer</th><th>Phone</th><th>Total</th><th>Zone ETA</th><th>Status</th><th>Route</th></tr></thead>
+        <tbody id="ordersBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TAB 4: 🎟️ COUPONS -->
   <div id="viewCoupons" class="admin-page-view">
     <div class="grid-2">
       <div class="card">
         <h3>🎟️ Create Zone Coupon</h3>
         <form onsubmit="handleAddCoupon(event)" style="margin-top:10px;">
-          <div class="form-group"><label>Promo Code</label><input type="text" id="cpnCode" required placeholder="e.g. SAVE20" style="text-transform:uppercase;" /></div>
-          <div class="form-group"><label>Discount Percent (%)</label><input type="number" id="cpnPercent" required min="1" max="90" placeholder="20" /></div>
+          <div class="form-group"><label>Promo Code</label><input type="text" id="cpnCode" required placeholder="e.g. FESTIVAL20" style="text-transform:uppercase;" /></div>
+          <div class="form-group"><label>Discount (%)</label><input type="number" id="cpnPercent" required min="1" max="90" placeholder="20" /></div>
           <div class="form-group"><label>Expiry Date</label><input type="date" id="cpnExpiry" required /></div>
-          <div class="form-group"><label>Target Delivery Zone</label><select id="cpnZoneSelect" required><option value="all">🌍 All Zones</option></select></div>
+          <div class="form-group"><label>Delivery Zone</label><select id="cpnZoneSelect" required><option value="all">🌍 All Zones</option></select></div>
           <button type="submit" class="btn btn-primary" style="width:100%;">+ Publish Coupon</button>
         </form>
       </div>
@@ -155,25 +178,7 @@
     </div>
   </div>
 
-  <!-- ========================================================= -->
-  <!-- TAB 3: 👥 USERS (ACCESS CONTROL & GPS)                    -->
-  <!-- ========================================================= -->
-  <div id="viewUsers" class="admin-page-view">
-    <div class="card">
-      <div class="card-header">
-        <h3>👥 Registered Customers</h3>
-        <button class="btn btn-refresh" onclick="loadUsers()">🔄 Refresh</button>
-      </div>
-      <table>
-        <thead><tr><th>User ID</th><th>Date</th><th>Name</th><th>Phone</th><th>GPS</th><th>Status</th><th>Action</th></tr></thead>
-        <tbody id="userTableBody"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- ========================================================= -->
-  <!-- TAB 4: 📦 PRODUCTS & STOCK                                -->
-  <!-- ========================================================= -->
+  <!-- TAB 5: 📦 PRODUCTS & STOCK -->
   <div id="viewProducts" class="admin-page-view">
     <div class="grid-2">
       <div class="card">
@@ -191,7 +196,7 @@
         </form>
       </div>
       <div class="card">
-        <div class="card-header"><h3>📋 Inventory & Stock</h3><button class="btn btn-refresh" onclick="loadProducts()">🔄</button></div>
+        <div class="card-header"><h3>📋 Inventory</h3><button class="btn btn-refresh" onclick="loadProducts()">🔄</button></div>
         <table>
           <thead><tr><th>Image</th><th>Name</th><th>Retail</th><th>Wholesale</th><th>Stock</th><th>Action</th></tr></thead>
           <tbody id="prodTableBody"></tbody>
@@ -200,9 +205,7 @@
     </div>
   </div>
 
-  <!-- ========================================================= -->
-  <!-- TAB 5: 🏷️ CATEGORIES                                      -->
-  <!-- ========================================================= -->
+  <!-- TAB 6: 🏷️ CATEGORIES -->
   <div id="viewCategories" class="admin-page-view">
     <div class="card">
       <div class="card-header"><h3>🏷️ Scoped Categories</h3><button class="btn btn-refresh" onclick="loadCategories()">🔄</button></div>
@@ -221,13 +224,11 @@
     </div>
   </div>
 
-  <!-- ========================================================= -->
-  <!-- TAB 6: 🛠️ DELIVERY ZONES                                 -->
-  <!-- ========================================================= -->
+  <!-- TAB 7: 🛠️ DELIVERY ZONES -->
   <div id="viewZones" class="admin-page-view">
     <div class="card">
       <div class="card-header">
-        <h3>🛠️ Delivery Zones, Timings & Guarantee</h3>
+        <h3>🛠️ Delivery Boundaries, Timings & Guarantee</h3>
         <div style="display:flex; gap:6px;">
           <button class="btn btn-primary" onclick="saveAllZonesToSheet()">💾 Save Zones</button>
           <button class="btn btn-danger" onclick="clearAllZones()">🗑️ Clear Map</button>
@@ -244,25 +245,6 @@
     </div>
   </div>
 
-  <!-- ========================================================= -->
-  <!-- TAB 7: 🧾 ORDERS & PRINT                                  -->
-  <!-- ========================================================= -->
-  <div id="viewOrders" class="admin-page-view">
-    <div class="card">
-      <div class="card-header">
-        <h3>🧾 Order History & A4 Slips</h3>
-        <div style="display:flex; gap:8px;">
-          <button class="btn btn-primary" onclick="printLast24HoursSlips()">🖨️ A4 Slip Print</button>
-          <button class="btn btn-refresh" onclick="loadOrders()">🔄</button>
-        </div>
-      </div>
-      <table>
-        <thead><tr><th>Order ID</th><th>Customer</th><th>Phone</th><th>Total</th><th>Status</th><th>Route</th></tr></thead>
-        <tbody id="ordersBody"></tbody>
-      </table>
-    </div>
-  </div>
-
 </div>
 
 <div id="reportPdfTemplate"></div>
@@ -273,9 +255,6 @@
 <script>
   const SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbwbxd5UDMiOh2GJALf1GY9oyXOprgPKAxAiECGmwjSsdZUtD0fMJjiicxyTA5JmekLkzg/exec";
 
-  // ==========================================
-  // MULTI-PAGE ADMIN TAB CONTROLLER
-  // ==========================================
   function switchAdminTab(viewId) {
     document.querySelectorAll('.admin-page-view').forEach(v => v.classList.remove('active-view'));
     document.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.remove('active-tab'));
@@ -283,18 +262,17 @@
     document.getElementById(viewId).classList.add('active-view');
 
     if (viewId === 'viewReports') document.getElementById('tabBtnReports').classList.add('active-tab');
-    if (viewId === 'viewCoupons') document.getElementById('tabBtnCoupons').classList.add('active-tab');
     if (viewId === 'viewUsers') document.getElementById('tabBtnUsers').classList.add('active-tab');
+    if (viewId === 'viewOrders') document.getElementById('tabBtnOrders').classList.add('active-tab');
+    if (viewId === 'viewCoupons') document.getElementById('tabBtnCoupons').classList.add('active-tab');
     if (viewId === 'viewProducts') document.getElementById('tabBtnProducts').classList.add('active-tab');
     if (viewId === 'viewCategories') document.getElementById('tabBtnCategories').classList.add('active-tab');
     if (viewId === 'viewZones') {
       document.getElementById('tabBtnZones').classList.add('active-tab');
       setTimeout(() => map.invalidateSize(), 200);
     }
-    if (viewId === 'viewOrders') document.getElementById('tabBtnOrders').classList.add('active-tab');
   }
 
-  // MAP ENGINE
   const map = L.map('map').setView([25.6000, 85.1300], 12);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
   map.pm.addControls({ position: 'topleft', drawPolygon: true, drawRectangle: true, editMode: true, removalMode: false });
@@ -327,7 +305,7 @@
     renderOrdersTable(query);
   }
 
-  // --- COUPONS ---
+  // COUPONS
   function loadCoupons() {
     fetch(`${SPREADSHEET_API_URL}?action=getCoupons`).then(r => r.json()).then(data => {
       cachedCoupons = data.coupons || [];
@@ -364,7 +342,7 @@
       .then(() => loadCoupons());
   }
 
-  // --- USERS ---
+  // USERS
   function loadUsers() {
     fetch(`${SPREADSHEET_API_URL}?action=getUsers`).then(r => r.json()).then(data => {
       cachedUsers = data.users || [];
@@ -376,8 +354,8 @@
     const filtered = q ? cachedUsers.filter(u => u.name.toLowerCase().includes(q) || u.phone.includes(q)) : cachedUsers;
     document.getElementById('userTableBody').innerHTML = filtered.map(u => `
       <tr>
-        <td>${u.id}</td><td><small>${u.date}</small></td><td><b>${u.name}</b></td><td>${u.phone}</td><td>${u.coords}</td>
-        <td><b>${u.status}</b></td>
+        <td><b>${u.id}</b></td><td><small>${u.date}</small></td><td><b>${u.name}</b></td><td>📞 ${u.phone}</td><td>${u.coords}</td>
+        <td><span style="background:#dcfce7; color:#166534; padding:2px 6px; border-radius:4px; font-weight:bold;">${u.status}</span></td>
         <td><button class="btn btn-del" onclick="toggleUserStatus('${u.id}', '${u.phone}', '${u.status === 'Blocked' ? 'Active' : 'Blocked'}')">${u.status === 'Blocked' ? '🔓 Unblock' : '🚫 Block'}</button></td>
       </tr>
     `).join('');
@@ -388,7 +366,31 @@
       .then(() => loadUsers());
   }
 
-  // --- PRODUCTS ---
+  // ORDERS & SYNCHRONIZED ETAS
+  function loadOrders() {
+    fetch(`${SPREADSHEET_API_URL}?action=getOrders`).then(r => r.json()).then(data => {
+      cachedOrders = data.orders || [];
+      renderOrdersTable();
+    });
+  }
+
+  function renderOrdersTable(q = "") {
+    const filtered = q ? cachedOrders.filter(o => o.orderId.toLowerCase().includes(q) || o.name.toLowerCase().includes(q)) : cachedOrders;
+    document.getElementById('ordersBody').innerHTML = filtered.map(o => `
+      <tr>
+        <td><b>${o.orderId}</b></td>
+        <td><small>${o.date}</small></td>
+        <td>${o.name}</td>
+        <td>${o.phone}</td>
+        <td><b>${o.amount}</b></td>
+        <td><span style="background:#dbeafe; color:#1e40af; padding:2px 6px; border-radius:4px; font-weight:bold;">⚡ ${o.etaMinutes || 20} Mins</span></td>
+        <td><span style="background:#dcfce7; color:#166534; padding:2px 6px; border-radius:4px; font-weight:bold;">${o.status}</span></td>
+        <td><a href="${o.mapsUrl}" target="_blank" style="color:#2563eb; font-size:12px;">🗺️ Route</a></td>
+      </tr>
+    `).join('');
+  }
+
+  // PRODUCTS
   function loadProducts() {
     fetch(`${SPREADSHEET_API_URL}?action=getProducts`).then(r => r.json()).then(data => {
       cachedProducts = data.products || [];
@@ -427,7 +429,7 @@
     fetch(SPREADSHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "deleteProduct", id }) }).then(() => loadProducts());
   }
 
-  // --- CATEGORIES ---
+  // CATEGORIES
   function loadCategories() {
     fetch(`${SPREADSHEET_API_URL}?action=getCategories`).then(r => r.json()).then(data => {
       cachedCategories = data.categories || [];
@@ -456,11 +458,11 @@
   }
 
   function deleteCategory(id, name) {
-    if (!confirm(`Delete "${name}"?`)) return;
+    if (!confirm(`Delete category "${name}"?`)) return;
     fetch(SPREADSHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "deleteCategory", id }) }).then(() => loadCategories());
   }
 
-  // --- ZONES ---
+  // ZONES
   function loadZones() {
     fetch(`${SPREADSHEET_API_URL}?action=getZone`).then(r => r.json()).then(data => {
       activeZones.forEach(z => map.removeLayer(z.layer));
@@ -490,7 +492,7 @@
     const filtered = q ? activeZones.filter(z => z.name.toLowerCase().includes(q)) : activeZones;
     document.getElementById('zoneList').innerHTML = filtered.map(z => `
       <li class="zone-item">
-        <div><b>📍 ${z.name}</b><br><small>${z.deliveryMinutes}m | ₹${z.lateCashback}</small></div>
+        <div><b>📍 ${z.name}</b><br><small>⚡ ${z.deliveryMinutes}m | 🛡️ ₹${z.lateCashback}</small></div>
         <button class="btn btn-del" onclick="deleteSingleZone('${z.id}', '${z.name}')">🗑️</button>
       </li>
     `).join('');
@@ -515,32 +517,12 @@
     fetch(SPREADSHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "clearZone" }) });
   }
 
-  // --- ORDERS ---
-  function loadOrders() {
-    fetch(`${SPREADSHEET_API_URL}?action=getOrders`).then(r => r.json()).then(data => {
-      cachedOrders = data.orders || [];
-      renderOrdersTable();
-    });
-  }
-
-  function renderOrdersTable(q = "") {
-    const filtered = q ? cachedOrders.filter(o => o.orderId.toLowerCase().includes(q) || o.name.toLowerCase().includes(q)) : cachedOrders;
-    document.getElementById('ordersBody').innerHTML = filtered.map(o => `
-      <tr>
-        <td><b>${o.orderId}</b></td><td>${o.name}</td><td>${o.phone}</td><td>${o.amount}</td>
-        <td><b>${o.status}</b></td>
-        <td><a href="${o.mapsUrl}" target="_blank" style="color:#2563eb;">🗺️ Route</a></td>
-      </tr>
-    `).join('');
-  }
-
-  // --- REPORTS ---
+  // REPORTS
   function exportReport(type, format) {
     let headers = [], rows = [], title = type.toUpperCase();
     if (type === 'users') { headers = ["ID", "Date", "Name", "Phone", "Status"]; rows = cachedUsers.map(u => [u.id, u.date, u.name, u.phone, u.status]); }
+    if (type === 'orders') { headers = ["Order ID", "Date", "Name", "Amount", "ETA (Mins)", "Status"]; rows = cachedOrders.map(o => [o.orderId, o.date, o.name, o.amount, o.etaMinutes || 20, o.status]); }
     if (type === 'products') { headers = ["ID", "Name", "Retail", "Wholesale", "Stock"]; rows = cachedProducts.map(p => [p.id, p.name, p.retailPrice, p.wholesalePrice, p.stockQty || 0]); }
-    if (type === 'categories') { headers = ["ID", "Name", "Scope"]; rows = cachedCategories.map(c => [c.id, c.name, c.scope]); }
-    if (type === 'orders') { headers = ["Order ID", "Date", "Name", "Amount", "Status"]; rows = cachedOrders.map(o => [o.orderId, o.date, o.name, o.amount, o.status]); }
 
     if (format === 'csv') {
       const csv = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
