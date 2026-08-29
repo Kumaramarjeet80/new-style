@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin Dashboard - Live Search, Users, Inventory & Zones</title>
+  <title>Admin Dashboard - Zone Coupons, Inventory, Zones & Reports</title>
   
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.css" />
@@ -20,7 +20,6 @@
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
     @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
 
-    /* MASTER & LOCAL SEARCH STYLES */
     .master-search-container {
       background: linear-gradient(135deg, #1e293b, #0f172a);
       color: white;
@@ -40,24 +39,17 @@
       color: white;
       font-size: 15px;
       outline: none;
-      transition: border 0.2s;
     }
-    .master-search-input:focus {
-      border-color: #38bdf8;
-      box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
-    }
+    .master-search-input:focus { border-color: #38bdf8; }
+    
     .local-search-input {
       padding: 6px 12px;
       border: 1px solid #cbd5e1;
       border-radius: 6px;
       font-size: 12px;
       outline: none;
-      width: 220px;
+      width: 200px;
       background: #f8fafc;
-    }
-    .local-search-input:focus {
-      border-color: #2563eb;
-      background: white;
     }
 
     .form-group { margin-bottom: 10px; }
@@ -69,18 +61,13 @@
     .btn-danger { background: #ef4444; color: white; }
     .btn-dark { background: #0f172a; color: white; }
     .btn-refresh { background: #f8fafc; border: 1px solid #cbd5e1; color: #334155; font-size: 12px; }
-    .btn-refresh:hover { background: #e2e8f0; }
     .btn-report { background: #059669; color: white; }
     .btn-report-pdf { background: #7c3aed; color: white; }
     .btn-del { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; padding: 4px 8px; font-size: 11px; }
-    .btn-block { background: #fee2e2; color: #991b1b; padding: 4px 8px; font-size: 11px; }
-    .btn-unblock { background: #dcfce7; color: #166534; padding: 4px 8px; font-size: 11px; }
 
     .badge-retail { background: #e0e7ff; color: #4338ca; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
     .badge-wholesale { background: #ffe4e6; color: #be123c; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
-    .badge-stock { background: #fef3c7; color: #b45309; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 11px; }
-    .badge-active { background: #dcfce7; color: #166534; padding: 3px 6px; border-radius: 4px; font-weight: bold; font-size: 11px; }
-    .badge-blocked { background: #fee2e2; color: #991b1b; padding: 3px 6px; border-radius: 4px; font-weight: bold; font-size: 11px; }
+    .badge-coupon { background: #fef3c7; color: #b45309; font-weight: bold; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
 
     table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
     th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
@@ -102,244 +89,186 @@
   <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
     <div>
       <h1 style="margin:0; font-size:24px; color:#0f172a;">⚡ Mohna Express Control Hub</h1>
-      <p style="margin:4px 0 0; color:#64748b; font-size:14px;">Master Live Search, Scoped Catalog, User Controls, Zones & Reports</p>
+      <p style="margin:4px 0 0; color:#64748b; font-size:14px;">Coupons & Discounts, Inventory, Scoped Categories, Zones & Reports</p>
     </div>
     <button class="btn btn-dark" onclick="fetchAllData()">🔄 Master Refresh (All)</button>
   </div>
 
-  <!-- MASTER GLOBAL SEARCH BAR (SEARCHES ACROSS ALL DATASETS SIMULTANEOUSLY) -->
+  <!-- MASTER SEARCH BAR -->
   <div class="master-search-container">
     <div style="display:flex; justify-content:space-between; align-items:center;">
-      <span style="font-weight:700; font-size:13px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px;">🔍 Global Master Omnisearch</span>
+      <span style="font-weight:700; font-size:13px; color:#94a3b8; text-transform:uppercase;">🔍 Global Master Search</span>
       <span id="masterSearchCount" style="font-size:12px; color:#38bdf8;">All tables active</span>
     </div>
-    <input type="text" id="masterSearchInput" class="master-search-input" placeholder="Type any word to search Users, Products, Categories, Zones, or Orders..." oninput="handleMasterSearch(this.value)" />
+    <input type="text" id="masterSearchInput" class="master-search-input" placeholder="Type any keyword to filter Coupons, Users, Products, Categories, Zones, or Orders..." oninput="handleMasterSearch(this.value)" />
   </div>
 
-  <!-- REPORT CENTER -->
-  <div class="card" style="border-left: 5px solid #059669;">
-    <div class="card-header">
-      <div>
-        <h3>📊 Export & Report Center (Instant CSV & PDF)</h3>
-        <p style="margin:2px 0 0; font-size:12px; color:#64748b;">Export filtered or full datasets with one click</p>
+  <!-- SECTION 1: ZONE-WISE DISCOUNT & COUPON MANAGER -->
+  <div class="grid-2">
+    <!-- CREATE COUPON -->
+    <div class="card" style="border-top: 4px solid #f59e0b;">
+      <div class="card-header">
+        <h3>🎟️ Create Zone-Wise Discount Coupon</h3>
       </div>
+      <form onsubmit="handleAddCoupon(event)">
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+          <div class="form-group">
+            <label>Coupon Promo Code</label>
+            <input type="text" id="cpnCode" required placeholder="e.g. FESTIVAL25" style="text-transform:uppercase;" />
+          </div>
+          <div class="form-group">
+            <label>Discount Percentage (%)</label>
+            <input type="number" id="cpnPercent" required min="1" max="90" placeholder="e.g. 20" />
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+          <div class="form-group">
+            <label>Validity Expiry Date</label>
+            <input type="date" id="cpnExpiry" required />
+          </div>
+          <div class="form-group">
+            <label>Target Delivery Zone</label>
+            <select id="cpnZoneSelect" required>
+              <option value="all">🌍 All Delivery Zones (City-wide)</option>
+            </select>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width:100%; margin-top:4px;">+ Publish Coupon Code</button>
+      </form>
     </div>
-    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:10px;">
-      <div style="background:#f8fafc; padding:10px; border-radius:8px; border:1px solid #e2e8f0;">
-        <b>👥 Registered Users</b>
-        <div style="display:flex; gap:6px; margin-top:6px;">
-          <button class="btn btn-report" style="flex:1;" onclick="exportReport('users', 'csv')">📥 CSV</button>
-          <button class="btn btn-report-pdf" style="flex:1;" onclick="exportReport('users', 'pdf')">📄 PDF</button>
+
+    <!-- COUPON LIST TABLE -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h3>📋 Active Discount Coupons</h3>
+        </div>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <input type="text" id="couponSearchInput" class="local-search-input" placeholder="🔍 Search coupons..." oninput="renderCouponsTable(this.value)" />
+          <button class="btn btn-refresh" onclick="loadCoupons()">🔄</button>
         </div>
       </div>
-      <div style="background:#f8fafc; padding:10px; border-radius:8px; border:1px solid #e2e8f0;">
-        <b>📦 Products & Stock</b>
-        <div style="display:flex; gap:6px; margin-top:6px;">
-          <button class="btn btn-report" style="flex:1;" onclick="exportReport('products', 'csv')">📥 CSV</button>
-          <button class="btn btn-report-pdf" style="flex:1;" onclick="exportReport('products', 'pdf')">📄 PDF</button>
-        </div>
-      </div>
-      <div style="background:#f8fafc; padding:10px; border-radius:8px; border:1px solid #e2e8f0;">
-        <b>🏷️ Scoped Categories</b>
-        <div style="display:flex; gap:6px; margin-top:6px;">
-          <button class="btn btn-report" style="flex:1;" onclick="exportReport('categories', 'csv')">📥 CSV</button>
-          <button class="btn btn-report-pdf" style="flex:1;" onclick="exportReport('categories', 'pdf')">📄 PDF</button>
-        </div>
-      </div>
-      <div style="background:#f8fafc; padding:10px; border-radius:8px; border:1px solid #e2e8f0;">
-        <b>🧾 Order History</b>
-        <div style="display:flex; gap:6px; margin-top:6px;">
-          <button class="btn btn-report" style="flex:1;" onclick="exportReport('orders', 'csv')">📥 CSV</button>
-          <button class="btn btn-report-pdf" style="flex:1;" onclick="exportReport('orders', 'pdf')">📄 PDF</button>
-        </div>
-      </div>
+      <table>
+        <thead>
+          <tr><th>Code</th><th>Discount</th><th>Expires</th><th>Zone Scope</th><th>Action</th></tr>
+        </thead>
+        <tbody id="couponTableBody">
+          <tr><td colspan="5" style="text-align:center; color:#94a3b8;">Loading coupons...</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
 
-  <!-- REGISTERED USERS MANAGEMENT -->
+  <!-- SECTION 2: USERS & ACCESS -->
   <div class="card">
     <div class="card-header">
       <div>
         <h3>👥 Registered Users Management</h3>
-        <p style="margin:2px 0 0; font-size:12px; color:#64748b;">View GPS-registered users and toggle access permission</p>
       </div>
       <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-        <input type="text" id="userSearchInput" class="local-search-input" placeholder="🔍 Search users (Name, Phone, ID)..." oninput="renderUsersTable(this.value)" />
+        <input type="text" id="userSearchInput" class="local-search-input" placeholder="🔍 Search users..." oninput="renderUsersTable(this.value)" />
         <span id="userCountBadge" style="background:#dbeafe; color:#1e40af; font-size:11px; font-weight:bold; padding:4px 8px; border-radius:12px;">0 Users</span>
         <button class="btn btn-refresh" onclick="loadUsers()">🔄 Refresh</button>
       </div>
     </div>
     <table>
       <thead>
-        <tr>
-          <th>User ID</th>
-          <th>Registered Date</th>
-          <th>Name</th>
-          <th>Phone</th>
-          <th>Email</th>
-          <th>GPS Location</th>
-          <th>Status</th>
-          <th>Access Action</th>
-        </tr>
+        <tr><th>User ID</th><th>Registered Date</th><th>Name</th><th>Phone</th><th>Email</th><th>GPS Location</th><th>Status</th><th>Action</th></tr>
       </thead>
       <tbody id="userTableBody">
-        <tr><td colspan="8" style="text-align:center; color:#94a3b8;">Loading user database...</td></tr>
+        <tr><td colspan="8" style="text-align:center; color:#94a3b8;">Loading users...</td></tr>
       </tbody>
     </table>
   </div>
 
-  <!-- CATEGORY & PRODUCT MANAGEMENT -->
+  <!-- SECTION 3: CATEGORIES & INVENTORY -->
   <div class="grid-2">
-    <!-- SCOPED CATEGORY MANAGER -->
+    <!-- CATEGORY MANAGER -->
     <div class="card">
       <div class="card-header">
         <h3>🏷️ Category / Type Manager</h3>
-        <div style="display:flex; gap:6px; align-items:center;">
-          <input type="text" id="catSearchInput" class="local-search-input" style="width:160px;" placeholder="🔍 Search types..." oninput="renderCategoriesTable(this.value)" />
-          <button class="btn btn-refresh" onclick="loadCategories()">🔄</button>
-        </div>
+        <button class="btn btn-refresh" onclick="loadCategories()">🔄</button>
       </div>
-      <p style="font-size:12px; color:#64748b; margin-top:0;">Create separate categories designated for <b>Retail</b> or <b>Wholesale</b> store.</p>
-
-      <form onsubmit="handleAddCategory(event)" style="display:flex; flex-direction:column; gap:8px; margin-bottom:14px;">
-        <div style="display:flex; gap:8px;">
-          <input type="text" id="newCatName" required placeholder="Category Name (e.g. Bulk Pulses)" style="flex:1; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:13px;" />
-          <select id="newCatScope" required style="width:130px; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:13px;">
-            <option value="retail">🛍️ Retail Only</option>
-            <option value="wholesale">📦 Wholesale Only</option>
-          </select>
-        </div>
-        <button type="submit" class="btn btn-primary" style="width:100%;">+ Add Scoped Category</button>
+      <form onsubmit="handleAddCategory(event)" style="display:flex; gap:8px; margin-bottom:12px;">
+        <input type="text" id="newCatName" required placeholder="Category Name" style="flex:1; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:13px;" />
+        <select id="newCatScope" required style="width:130px; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:13px;">
+          <option value="retail">🛍️ Retail</option>
+          <option value="wholesale">📦 Wholesale</option>
+        </select>
+        <button type="submit" class="btn btn-primary">+ Add</button>
       </form>
-
       <table>
-        <thead>
-          <tr><th>Category</th><th>Scope</th><th>Action</th></tr>
-        </thead>
-        <tbody id="catTableBody">
-          <tr><td colspan="3" style="text-align:center; color:#94a3b8;">Loading categories...</td></tr>
-        </tbody>
+        <thead><tr><th>Category</th><th>Scope</th><th>Action</th></tr></thead>
+        <tbody id="catTableBody"></tbody>
       </table>
     </div>
 
-    <!-- PRODUCT CREATION FORM (With Stock Qty) -->
+    <!-- PRODUCT FORM -->
     <div class="card">
-      <div class="card-header">
-        <h3>📦 Add Product to Catalog</h3>
-        <button class="btn btn-refresh" onclick="loadCategories()">🔄 Sync Category List</button>
-      </div>
+      <div class="card-header"><h3>📦 Add Product to Catalog</h3></div>
       <form onsubmit="handleAddProduct(event)">
-        <div class="form-group">
-          <label>Product Title / Name</label>
-          <input type="text" id="prodName" required placeholder="e.g. 100% Pure Mustard Oil 1L" />
-        </div>
-        <div class="form-group">
-          <label>Assigned Category</label>
-          <select id="prodCategorySelect" required>
-            <option value="">Select Category</option>
-          </select>
-        </div>
+        <div class="form-group"><label>Product Name</label><input type="text" id="prodName" required placeholder="e.g. 100% Pure Ghee 1L" /></div>
+        <div class="form-group"><label>Category</label><select id="prodCategorySelect" required><option value="">Select Category</option></select></div>
         <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
-          <div class="form-group">
-            <label>Retail Price (₹)</label>
-            <input type="number" id="prodRetailPrice" required placeholder="180" />
-          </div>
-          <div class="form-group">
-            <label>Wholesale (₹)</label>
-            <input type="number" id="prodWholesalePrice" required placeholder="140" />
-          </div>
-          <div class="form-group">
-            <label>Stock Qty (Admin Only)</label>
-            <input type="number" id="prodStockQty" required placeholder="100" />
-          </div>
+          <div class="form-group"><label>Retail (₹)</label><input type="number" id="prodRetailPrice" required placeholder="180" /></div>
+          <div class="form-group"><label>Wholesale (₹)</label><input type="number" id="prodWholesalePrice" required placeholder="140" /></div>
+          <div class="form-group"><label>Stock Qty</label><input type="number" id="prodStockQty" required placeholder="100" /></div>
         </div>
-        <div class="form-group">
-          <label>Image URL</label>
-          <input type="url" id="prodImg" required placeholder="https://images.unsplash.com/..." />
-        </div>
-        <button type="submit" class="btn btn-primary" style="width:100%; margin-top:4px;">+ Save Product to Inventory</button>
+        <div class="form-group"><label>Image URL</label><input type="url" id="prodImg" required placeholder="https://..." /></div>
+        <button type="submit" class="btn btn-primary" style="width:100%;">+ Save Product</button>
       </form>
     </div>
   </div>
 
-  <!-- LIVE INVENTORY TABLE -->
+  <!-- SECTION 4: INVENTORY TABLE -->
   <div class="card">
     <div class="card-header">
-      <div>
-        <h3>📋 Live Inventory Catalog (Stock Visible to Admin Only)</h3>
-      </div>
-      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-        <input type="text" id="prodSearchInput" class="local-search-input" placeholder="🔍 Search products (Name, Price, Category)..." oninput="renderProductsTable(this.value)" />
-        <span id="prodCountBadge" style="background:#dbeafe; color:#1e40af; font-size:11px; font-weight:bold; padding:4px 8px; border-radius:12px;">0 Items</span>
-        <button class="btn btn-refresh" onclick="loadProducts()">🔄 Refresh Products</button>
+      <div><h3>📋 Live Products Inventory</h3></div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <input type="text" id="prodSearchInput" class="local-search-input" placeholder="🔍 Search products..." oninput="renderProductsTable(this.value)" />
+        <button class="btn btn-refresh" onclick="loadProducts()">🔄</button>
       </div>
     </div>
     <table>
-      <thead>
-        <tr>
-          <th>Image</th>
-          <th>Product Name</th>
-          <th>Category</th>
-          <th>Retail Price</th>
-          <th>Wholesale Price</th>
-          <th>Stock Balance</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody id="prodTableBody">
-        <tr><td colspan="7" style="text-align:center; color:#94a3b8;">Loading inventory from Sheets...</td></tr>
-      </tbody>
+      <thead><tr><th>Image</th><th>Product Name</th><th>Category</th><th>Retail</th><th>Wholesale</th><th>Stock</th><th>Action</th></tr></thead>
+      <tbody id="prodTableBody"></tbody>
     </table>
   </div>
 
-  <!-- MULTI-ZONE DELIVERY BOUNDARIES -->
+  <!-- SECTION 5: DELIVERY ZONES -->
   <div class="card">
     <div class="card-header">
-      <div>
-        <h3>🛠️ Delivery Boundaries, Timings & Late Guarantee Setup</h3>
-        <p style="margin:2px 0 0; font-size:12px; color:#64748b;">Draw multiple areas. Manage or delete each zone individually or clear all.</p>
-      </div>
-      <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
-        <input type="text" id="zoneSearchInput" class="local-search-input" style="width:180px;" placeholder="🔍 Search zones..." oninput="renderZoneSidebar(this.value)" />
-        <button class="btn btn-primary" onclick="saveAllZonesToSheet()">💾 Save All Zones</button>
-        <button class="btn btn-danger" onclick="clearAllZones()">🗑️ Clear All Zones</button>
-        <button class="btn btn-refresh" onclick="loadZones()">🔄 Refresh</button>
+      <div><h3>🛠️ Delivery Zones, Timings & Late Guarantee</h3></div>
+      <div style="display:flex; gap:6px;">
+        <button class="btn btn-primary" onclick="saveAllZonesToSheet()">💾 Save Zones</button>
+        <button class="btn btn-danger" onclick="clearAllZones()">🗑️ Clear Map</button>
+        <button class="btn btn-refresh" onclick="loadZones()">🔄</button>
       </div>
     </div>
-
     <div class="grid-2" style="grid-template-columns: 1fr 320px;">
       <div id="map"></div>
       <div class="zone-panel">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <h4 style="margin:0; font-size:14px;">Active Delivery Zones</h4>
-          <span id="zoneCounter" style="background:#dbeafe; color:#1e40af; font-size:11px; font-weight:bold; padding:2px 6px; border-radius:10px;">0 Zones</span>
-        </div>
-        <ul id="zoneList" class="zone-list">
-          <li style="text-align:center; color:#94a3b8; font-size:12px; margin-top:20px;">No zones drawn.<br>Use polygon tool on map.</li>
-        </ul>
+        <h4 style="margin:0 0 8px 0;">Active Zones</h4>
+        <ul id="zoneList" class="zone-list"></ul>
       </div>
     </div>
   </div>
 
-  <!-- ORDERS MANAGEMENT -->
+  <!-- SECTION 6: ORDERS & REPORTS -->
   <div class="card">
     <div class="card-header">
-      <div>
-        <h3>📦 Orders Management</h3>
-      </div>
-      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-        <input type="text" id="orderSearchInput" class="local-search-input" placeholder="🔍 Search orders (ID, Customer, Phone, Item)..." oninput="renderOrdersTable(this.value)" />
-        <button class="btn btn-primary" onclick="printLast24HoursSlips()">🖨️ Print 24h Slips (A4 Inkjet)</button>
-        <button class="btn btn-refresh" onclick="loadOrders()">🔄 Refresh Orders</button>
+      <div><h3>📦 Orders Management</h3></div>
+      <div style="display:flex; gap:8px;">
+        <input type="text" id="orderSearchInput" class="local-search-input" placeholder="🔍 Search orders..." oninput="renderOrdersTable(this.value)" />
+        <button class="btn btn-primary" onclick="printLast24HoursSlips()">🖨️ A4 Slip Print</button>
+        <button class="btn btn-refresh" onclick="loadOrders()">🔄</button>
       </div>
     </div>
     <table>
-      <thead>
-        <tr><th>Order ID</th><th>Customer</th><th>Phone</th><th>Item / Total</th><th>Status</th><th>Route</th></tr>
-      </thead>
-      <tbody id="ordersBody">
-        <tr><td colspan="6" style="text-align:center; color:#94a3b8;">Loading orders...</td></tr>
-      </tbody>
+      <thead><tr><th>Order ID</th><th>Customer</th><th>Phone</th><th>Item / Total</th><th>Status</th><th>Route</th></tr></thead>
+      <tbody id="ordersBody"></tbody>
     </table>
   </div>
 
@@ -353,7 +282,6 @@
 <script>
   const SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbwbxd5UDMiOh2GJALf1GY9oyXOprgPKAxAiECGmwjSsdZUtD0fMJjiicxyTA5JmekLkzg/exec";
 
-  // MAP ENGINE
   const map = L.map('map').setView([25.6000, 85.1300], 12);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
   map.pm.addControls({ position: 'topleft', drawPolygon: true, drawRectangle: true, editMode: true, removalMode: false });
@@ -363,10 +291,12 @@
   let cachedCategories = [];
   let cachedOrders = [];
   let cachedUsers = [];
+  let cachedCoupons = [];
 
   window.onload = function() { fetchAllData(); };
 
   function fetchAllData() {
+    loadCoupons();
     loadUsers();
     loadCategories();
     loadProducts();
@@ -374,84 +304,111 @@
     loadOrders();
   }
 
-  // ==========================================
-  // MASTER GLOBAL OMNISEARCH ENGINE
-  // ==========================================
   function handleMasterSearch(query) {
     const q = query.trim().toLowerCase();
-    
-    // Sync local search inputs
+    document.getElementById('couponSearchInput').value = query;
     document.getElementById('userSearchInput').value = query;
-    document.getElementById('catSearchInput').value = query;
     document.getElementById('prodSearchInput').value = query;
-    document.getElementById('zoneSearchInput').value = query;
     document.getElementById('orderSearchInput').value = query;
 
-    // Filter all sections
+    renderCouponsTable(q);
     renderUsersTable(q);
     renderCategoriesTable(q);
     renderProductsTable(q);
     renderZoneSidebar(q);
     renderOrdersTable(q);
-
-    document.getElementById('masterSearchCount').innerText = q ? `Filtered by "${query}"` : `All tables active`;
   }
 
-  // ==========================================
-  // USERS SECTION
-  // ==========================================
-  function loadUsers() {
-    fetch(`${SPREADSHEET_API_URL}?action=getUsers`)
+  // --- COUPON ACTIONS ---
+  function loadCoupons() {
+    fetch(`${SPREADSHEET_API_URL}?action=getCoupons`)
       .then(r => r.json())
       .then(data => {
-        cachedUsers = data.users || [];
-        renderUsersTable();
+        cachedCoupons = data.coupons || [];
+        renderCouponsTable();
       });
+  }
+
+  function renderCouponsTable(filterQuery = "") {
+    const q = filterQuery.trim().toLowerCase();
+    const filtered = q ? cachedCoupons.filter(c => 
+      (c.code && c.code.toLowerCase().includes(q)) ||
+      (c.zoneScope && c.zoneScope.toLowerCase().includes(q)) ||
+      (c.discountPercent && c.discountPercent.toString().includes(q))
+    ) : cachedCoupons;
+
+    const tbody = document.getElementById('couponTableBody');
+    if (filtered.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#94a3b8;">No coupons created yet.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(c => `
+      <tr>
+        <td><span class="badge-coupon">${c.code}</span></td>
+        <td><b>${c.discountPercent}% OFF</b></td>
+        <td><small>${c.validUntil}</small></td>
+        <td><span style="background:#f1f5f9; padding:2px 6px; border-radius:4px; font-size:11px;">${c.zoneScope === 'all' ? '🌍 All Zones' : c.zoneScope}</span></td>
+        <td><button class="btn btn-del" onclick="deleteCoupon('${c.id}', '${c.code}')">🗑️</button></td>
+      </tr>
+    `).join('');
+  }
+
+  function handleAddCoupon(e) {
+    e.preventDefault();
+    const code = document.getElementById('cpnCode').value.trim().toUpperCase();
+    const discountPercent = parseInt(document.getElementById('cpnPercent').value);
+    const validUntil = document.getElementById('cpnExpiry').value;
+    const zoneScope = document.getElementById('cpnZoneSelect').value;
+
+    fetch(SPREADSHEET_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "addCoupon", code, discountPercent, validUntil, zoneScope })
+    }).then(() => {
+      document.getElementById('cpnCode').value = "";
+      document.getElementById('cpnPercent').value = "";
+      document.getElementById('cpnExpiry').value = "";
+      loadCoupons();
+    });
+  }
+
+  function deleteCoupon(id, code) {
+    if (!confirm(`Delete coupon "${code}"?`)) return;
+    fetch(SPREADSHEET_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "deleteCoupon", id, code })
+    }).then(() => loadCoupons());
+  }
+
+  // --- USER ACCESS ---
+  function loadUsers() {
+    fetch(`${SPREADSHEET_API_URL}?action=getUsers`).then(r => r.json()).then(data => {
+      cachedUsers = data.users || [];
+      renderUsersTable();
+    });
   }
 
   function renderUsersTable(filterQuery = "") {
     const q = filterQuery.trim().toLowerCase();
-    const filtered = q ? cachedUsers.filter(u => 
-      (u.id && u.id.toLowerCase().includes(q)) ||
-      (u.name && u.name.toLowerCase().includes(q)) ||
-      (u.phone && u.phone.toString().includes(q)) ||
-      (u.email && u.email.toLowerCase().includes(q)) ||
-      (u.coords && u.coords.toLowerCase().includes(q)) ||
-      (u.status && u.status.toLowerCase().includes(q))
-    ) : cachedUsers;
-
+    const filtered = q ? cachedUsers.filter(u => u.name.toLowerCase().includes(q) || u.phone.includes(q)) : cachedUsers;
     document.getElementById('userCountBadge').innerText = `${filtered.length} Users`;
-    const tbody = document.getElementById('userTableBody');
-
-    if (filtered.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#94a3b8;">No matching users found.</td></tr>';
-      return;
-    }
-
-    tbody.innerHTML = filtered.map(u => {
-      const isBlocked = u.status === "Blocked";
-      return `
-        <tr>
-          <td><b>${u.id}</b></td>
-          <td><small style="color:#64748b">${u.date}</small></td>
-          <td><b>${u.name}</b></td>
-          <td>📞 ${u.phone}</td>
-          <td>${u.email}</td>
-          <td><a href="${u.mapsUrl}" target="_blank" style="color:#2563eb; text-decoration:none; font-size:12px;">🗺️ ${u.coords}</a></td>
-          <td><span class="${isBlocked ? 'badge-blocked' : 'badge-active'}">${u.status}</span></td>
-          <td>
-            <button class="btn ${isBlocked ? 'btn-unblock' : 'btn-block'}" onclick="toggleUserStatus('${u.id}', '${u.phone}', '${isBlocked ? 'Active' : 'Blocked'}')">
-              ${isBlocked ? '🔓 Unblock' : '🚫 Block'}
-            </button>
-          </td>
-        </tr>
-      `;
-    }).join('');
+    document.getElementById('userTableBody').innerHTML = filtered.map(u => `
+      <tr>
+        <td><b>${u.id}</b></td>
+        <td><small style="color:#64748b">${u.date}</small></td>
+        <td><b>${u.name}</b></td>
+        <td>📞 ${u.phone}</td>
+        <td>${u.email}</td>
+        <td><a href="${u.mapsUrl}" target="_blank" style="color:#2563eb;">🗺️ ${u.coords}</a></td>
+        <td><span class="${u.status === 'Blocked' ? 'badge-wholesale' : 'badge-retail'}">${u.status}</span></td>
+        <td><button class="btn btn-del" onclick="toggleUserStatus('${u.id}', '${u.phone}', '${u.status === 'Blocked' ? 'Active' : 'Blocked'}')">${u.status === 'Blocked' ? '🔓 Unblock' : '🚫 Block'}</button></td>
+      </tr>
+    `).join('');
   }
 
   function toggleUserStatus(userId, phone, newStatus) {
-    if (!confirm(`Are you sure you want to set user status to ${newStatus}?`)) return;
-
     fetch(SPREADSHEET_API_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -459,37 +416,20 @@
     }).then(() => loadUsers());
   }
 
-  // ==========================================
-  // CATEGORIES SECTION
-  // ==========================================
+  // --- CATEGORIES & PRODUCTS ---
   function loadCategories() {
-    fetch(`${SPREADSHEET_API_URL}?action=getCategories`)
-      .then(r => r.json())
-      .then(data => {
-        cachedCategories = data.categories || [];
-        const select = document.getElementById('prodCategorySelect');
-        select.innerHTML = '<option value="">Select Category</option>' + 
-          cachedCategories.map(c => `<option value="${c.slug}">${c.name} (${c.scope.toUpperCase()})</option>`).join('');
-
-        renderCategoriesTable();
-      });
+    fetch(`${SPREADSHEET_API_URL}?action=getCategories`).then(r => r.json()).then(data => {
+      cachedCategories = data.categories || [];
+      document.getElementById('prodCategorySelect').innerHTML = '<option value="">Select Category</option>' + 
+        cachedCategories.map(c => `<option value="${c.slug}">${c.name} (${c.scope.toUpperCase()})</option>`).join('');
+      renderCategoriesTable();
+    });
   }
 
   function renderCategoriesTable(filterQuery = "") {
     const q = filterQuery.trim().toLowerCase();
-    const filtered = q ? cachedCategories.filter(c => 
-      (c.name && c.name.toLowerCase().includes(q)) ||
-      (c.slug && c.slug.toLowerCase().includes(q)) ||
-      (c.scope && c.scope.toLowerCase().includes(q))
-    ) : cachedCategories;
-
-    const tbody = document.getElementById('catTableBody');
-    if (filtered.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#94a3b8;">No matching categories found.</td></tr>';
-      return;
-    }
-
-    tbody.innerHTML = filtered.map(c => `
+    const filtered = q ? cachedCategories.filter(c => c.name.toLowerCase().includes(q)) : cachedCategories;
+    document.getElementById('catTableBody').innerHTML = filtered.map(c => `
       <tr>
         <td><b>${c.name}</b></td>
         <td><span class="${c.scope === 'wholesale' ? 'badge-wholesale' : 'badge-retail'}">${c.scope}</span></td>
@@ -502,161 +442,100 @@
     e.preventDefault();
     const name = document.getElementById('newCatName').value.trim();
     const scope = document.getElementById('newCatScope').value;
-    if (!name) return;
-
-    fetch(SPREADSHEET_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: "addCategory", name, scope })
-    }).then(() => {
-      document.getElementById('newCatName').value = "";
-      loadCategories();
-    });
+    fetch(SPREADSHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "addCategory", name, scope }) })
+      .then(() => { document.getElementById('newCatName').value = ""; loadCategories(); });
   }
 
   function deleteCategory(id, name) {
     if (!confirm(`Delete category "${name}"?`)) return;
-    fetch(SPREADSHEET_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: "deleteCategory", id })
-    }).then(() => loadCategories());
+    fetch(SPREADSHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "deleteCategory", id }) }).then(() => loadCategories());
   }
 
-  // ==========================================
-  // PRODUCTS SECTION
-  // ==========================================
   function loadProducts() {
-    fetch(`${SPREADSHEET_API_URL}?action=getProducts`)
-      .then(r => r.json())
-      .then(data => {
-        cachedProducts = data.products || [];
-        renderProductsTable();
-      });
+    fetch(`${SPREADSHEET_API_URL}?action=getProducts`).then(r => r.json()).then(data => {
+      cachedProducts = data.products || [];
+      renderProductsTable();
+    });
   }
 
   function renderProductsTable(filterQuery = "") {
     const q = filterQuery.trim().toLowerCase();
-    const filtered = q ? cachedProducts.filter(p => 
-      (p.name && p.name.toLowerCase().includes(q)) ||
-      (p.id && p.id.toLowerCase().includes(q)) ||
-      (p.category && p.category.toLowerCase().includes(q)) ||
-      (p.retailPrice && p.retailPrice.toString().includes(q)) ||
-      (p.wholesalePrice && p.wholesalePrice.toString().includes(q)) ||
-      (p.stockQty && p.stockQty.toString().includes(q))
-    ) : cachedProducts;
-
-    document.getElementById('prodCountBadge').innerText = `${filtered.length} Items`;
-    const tbody = document.getElementById('prodTableBody');
-
-    if (filtered.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#94a3b8;">No matching products found.</td></tr>';
-      return;
-    }
-
-    tbody.innerHTML = filtered.map(p => `
+    const filtered = q ? cachedProducts.filter(p => p.name.toLowerCase().includes(q)) : cachedProducts;
+    document.getElementById('prodTableBody').innerHTML = filtered.map(p => `
       <tr>
-        <td><img src="${p.img}" style="width:40px; height:40px; border-radius:6px; object-fit:cover;"></td>
-        <td><b>${p.name}</b><br><small style="color:#64748b">${p.id}</small></td>
-        <td><span style="background:#f1f5f9; padding:2px 6px; border-radius:4px; font-size:11px;">${p.category}</span></td>
+        <td><img src="${p.img}" style="width:36px; height:36px; border-radius:6px; object-fit:cover;"></td>
+        <td><b>${p.name}</b></td>
+        <td>${p.category}</td>
         <td style="color:#4f46e5; font-weight:bold;">₹${p.retailPrice}</td>
         <td style="color:#e11d48; font-weight:bold;">₹${p.wholesalePrice}</td>
-        <td><span class="badge-stock">📦 ${p.stockQty || 0} Units</span></td>
-        <td><button class="btn btn-del" onclick="deleteProduct('${p.id}', '${p.name}')">🗑️ Delete</button></td>
+        <td><span style="background:#fef3c7; padding:2px 6px; border-radius:4px; font-weight:bold;">${p.stockQty || 0} Units</span></td>
+        <td><button class="btn btn-del" onclick="deleteProduct('${p.id}', '${p.name}')">🗑️</button></td>
       </tr>
     `).join('');
   }
 
   function handleAddProduct(e) {
     e.preventDefault();
-    const name = document.getElementById('prodName').value.trim();
-    const category = document.getElementById('prodCategorySelect').value;
-    const retailPrice = parseInt(document.getElementById('prodRetailPrice').value);
-    const wholesalePrice = parseInt(document.getElementById('prodWholesalePrice').value);
-    const stockQty = parseInt(document.getElementById('prodStockQty').value) || 0;
-    const img = document.getElementById('prodImg').value.trim();
-
-    const payload = { action: "addProduct", name, category, retailPrice, wholesalePrice, stockQty, img };
-
-    fetch(SPREADSHEET_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(payload)
-    }).then(() => {
-      document.getElementById('prodName').value = "";
-      document.getElementById('prodRetailPrice').value = "";
-      document.getElementById('prodWholesalePrice').value = "";
-      document.getElementById('prodStockQty').value = "";
-      document.getElementById('prodImg').value = "";
-      loadProducts();
-    });
+    const payload = {
+      action: "addProduct",
+      name: document.getElementById('prodName').value.trim(),
+      category: document.getElementById('prodCategorySelect').value,
+      retailPrice: parseInt(document.getElementById('prodRetailPrice').value),
+      wholesalePrice: parseInt(document.getElementById('prodWholesalePrice').value),
+      stockQty: parseInt(document.getElementById('prodStockQty').value) || 0,
+      img: document.getElementById('prodImg').value.trim()
+    };
+    fetch(SPREADSHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) })
+      .then(() => { e.target.reset(); loadProducts(); });
   }
 
   function deleteProduct(id, name) {
-    if (!confirm(`Delete product "${name}"?`)) return;
-    fetch(SPREADSHEET_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: "deleteProduct", id })
-    }).then(() => loadProducts());
+    if (!confirm(`Delete "${name}"?`)) return;
+    fetch(SPREADSHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "deleteProduct", id }) }).then(() => loadProducts());
   }
 
-  // ==========================================
-  // ZONES SECTION
-  // ==========================================
+  // --- ZONES & DROPDOWN SYNC ---
   function loadZones() {
-    fetch(`${SPREADSHEET_API_URL}?action=getZone`)
-      .then(r => r.json())
-      .then(data => {
-        activeZones.forEach(z => map.removeLayer(z.layer));
-        activeZones = [];
+    fetch(`${SPREADSHEET_API_URL}?action=getZone`).then(r => r.json()).then(data => {
+      activeZones.forEach(z => map.removeLayer(z.layer));
+      activeZones = [];
+      if (data && data.zone && data.zone.features) {
+        data.zone.features.forEach((feature, index) => {
+          const props = feature.properties || {};
+          const layer = L.geoJSON(feature, { style: { color: "#2563eb", weight: 2, fillColor: "#3b82f6", fillOpacity: 0.25 } }).getLayers()[0];
+          map.addLayer(layer);
+          activeZones.push({ id: props.id || "zone_" + index, name: props.name || "Zone " + (index+1), deliveryMinutes: props.deliveryMinutes || 20, lateCashback: props.lateCashback || 25, layer });
+        });
+      }
+      renderZoneSidebar();
+      syncZoneDropdown();
+    });
+  }
 
-        if (data && data.zone && data.zone.features) {
-          data.zone.features.forEach((feature, index) => {
-            const props = feature.properties || {};
-            const layer = L.geoJSON(feature, { style: { color: "#2563eb", weight: 2, fillColor: "#3b82f6", fillOpacity: 0.25 } }).getLayers()[0];
-            map.addLayer(layer);
-            activeZones.push({ id: props.id || "zone_" + index, name: props.name || "Zone " + (index+1), deliveryMinutes: props.deliveryMinutes || 20, lateCashback: props.lateCashback || 25, layer });
-          });
-        }
-        renderZoneSidebar();
-      });
+  function syncZoneDropdown() {
+    const select = document.getElementById('cpnZoneSelect');
+    select.innerHTML = '<option value="all">🌍 All Delivery Zones (City-wide)</option>' + 
+      activeZones.map(z => `<option value="${z.id}">📍 ${z.name}</option>`).join('');
   }
 
   map.on('pm:create', (e) => {
-    let zoneName = prompt("1. Enter Zone Name:", `Delivery Zone ${activeZones.length + 1}`) || `Delivery Zone ${activeZones.length + 1}`;
-    let deliveryMinutes = parseInt(prompt(`2. Delivery duration (Minutes) for "${zoneName}":`, "20")) || 20;
-    let lateCashback = parseInt(prompt(`3. Late guarantee cashback refund (₹):`, "25")) || 25;
+    let zoneName = prompt("Zone Name:", `Zone ${activeZones.length + 1}`) || `Zone ${activeZones.length + 1}`;
+    let deliveryMinutes = parseInt(prompt(`Delivery time (Minutes):`, "20")) || 20;
+    let lateCashback = parseInt(prompt(`Late guarantee (₹):`, "25")) || 25;
 
-    const newZone = { id: "zone_" + Date.now(), name: zoneName, deliveryMinutes, lateCashback, layer: e.layer };
-    activeZones.push(newZone);
+    activeZones.push({ id: "zone_" + Date.now(), name: zoneName, deliveryMinutes, lateCashback, layer: e.layer });
     e.layer.bindTooltip(`${zoneName} (${deliveryMinutes}m | ₹${lateCashback})`, { permanent: true, direction: "center" });
     renderZoneSidebar();
+    syncZoneDropdown();
   });
 
   function renderZoneSidebar(filterQuery = "") {
     const q = filterQuery.trim().toLowerCase();
-    const filtered = q ? activeZones.filter(z => 
-      (z.name && z.name.toLowerCase().includes(q)) ||
-      (z.deliveryMinutes && z.deliveryMinutes.toString().includes(q)) ||
-      (z.lateCashback && z.lateCashback.toString().includes(q))
-    ) : activeZones;
-
-    document.getElementById('zoneCounter').innerText = `${filtered.length} Zones`;
-    const list = document.getElementById('zoneList');
-
-    if (filtered.length === 0) {
-      list.innerHTML = `<li style="text-align:center; color:#94a3b8; font-size:12px; margin-top:20px;">No matching zones found.</li>`;
-      return;
-    }
-
-    list.innerHTML = filtered.map(z => `
+    const filtered = q ? activeZones.filter(z => z.name.toLowerCase().includes(q)) : activeZones;
+    document.getElementById('zoneList').innerHTML = filtered.map(z => `
       <li class="zone-item">
+        <div><b>📍 ${z.name}</b><br><small>⚡ ${z.deliveryMinutes}m | 🛡️ ₹${z.lateCashback}</small></div>
         <div>
-          <b>📍 ${z.name}</b><br>
-          <small style="color:#047857; font-weight:bold;">⚡ ${z.deliveryMinutes}m | 🛡️ ₹${z.lateCashback}</small>
-        </div>
-        <div style="display:flex; gap:4px;">
           <button class="btn btn-refresh" style="padding:2px 6px;" onclick="map.fitBounds(activeZones.find(x => x.id === '${z.id}').layer.getBounds())">🎯</button>
           <button class="btn btn-del" onclick="deleteSingleZone('${z.id}', '${z.name}')">🗑️</button>
         </div>
@@ -665,17 +544,16 @@
   }
 
   function deleteSingleZone(id, name) {
-    if (!confirm(`Delete "${name}"?`)) return;
     const idx = activeZones.findIndex(z => z.id === id);
     if (idx !== -1) {
       map.removeLayer(activeZones[idx].layer);
       activeZones.splice(idx, 1);
       renderZoneSidebar();
+      syncZoneDropdown();
     }
   }
 
   function saveAllZonesToSheet() {
-    if (activeZones.length === 0) return alert("No zones drawn to save.");
     const featureCollection = {
       type: "FeatureCollection",
       features: activeZones.map(z => {
@@ -684,170 +562,42 @@
         return geojson;
       })
     };
-    fetch(SPREADSHEET_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: "saveZone", zone: featureCollection })
-    }).then(() => alert("All delivery zones saved successfully!"));
+    fetch(SPREADSHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "saveZone", zone: featureCollection }) })
+      .then(() => alert("Zones saved successfully!"));
   }
 
   function clearAllZones() {
-    if (!confirm("Are you sure you want to delete ALL delivery zones?")) return;
     activeZones.forEach(z => map.removeLayer(z.layer));
     activeZones = [];
     renderZoneSidebar();
-    fetch(SPREADSHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "clearZone" }) })
-      .then(() => alert("All delivery zones cleared from database."));
+    syncZoneDropdown();
+    fetch(SPREADSHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "clearZone" }) });
   }
 
-  // ==========================================
-  // ORDERS SECTION
-  // ==========================================
+  // --- ORDERS ---
   function loadOrders() {
-    fetch(`${SPREADSHEET_API_URL}?action=getOrders`)
-      .then(r => r.json())
-      .then(data => {
-        cachedOrders = data.orders || [];
-        renderOrdersTable();
-      });
+    fetch(`${SPREADSHEET_API_URL}?action=getOrders`).then(r => r.json()).then(data => {
+      cachedOrders = data.orders || [];
+      renderOrdersTable();
+    });
   }
 
   function renderOrdersTable(filterQuery = "") {
     const q = filterQuery.trim().toLowerCase();
-    const filtered = q ? cachedOrders.filter(o => 
-      (o.orderId && o.orderId.toLowerCase().includes(q)) ||
-      (o.name && o.name.toLowerCase().includes(q)) ||
-      (o.phone && o.phone.toString().includes(q)) ||
-      (o.item && o.item.toLowerCase().includes(q)) ||
-      (o.amount && o.amount.toLowerCase().includes(q)) ||
-      (o.status && o.status.toLowerCase().includes(q)) ||
-      (o.address && o.address.toLowerCase().includes(q))
-    ) : cachedOrders;
-
-    const tbody = document.getElementById('ordersBody');
-    if (filtered.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#94a3b8;">No matching orders found.</td></tr>';
-      return;
-    }
-
-    tbody.innerHTML = filtered.map(o => `
+    const filtered = q ? cachedOrders.filter(o => o.orderId.toLowerCase().includes(q) || o.name.toLowerCase().includes(q)) : cachedOrders;
+    document.getElementById('ordersBody').innerHTML = filtered.map(o => `
       <tr>
-        <td><b>${o.orderId}</b><br><small style="color:#64748b">${o.date}</small></td>
-        <td>${o.name}</td>
-        <td>${o.phone}</td>
+        <td><b>${o.orderId}</b></td><td>${o.name}</td><td>${o.phone}</td>
         <td>${o.item} (x${o.qty})<br><b>${o.amount}</b></td>
         <td><span style="background:#dcfce7; color:#166534; padding:3px 6px; border-radius:4px; font-weight:bold;">${o.status}</span></td>
-        <td><a href="${o.mapsUrl}" target="_blank" style="background:#059669; color:white; padding:4px 8px; border-radius:4px; text-decoration:none; font-size:11px;">🗺️ Route</a></td>
+        <td><a href="${o.mapsUrl}" target="_blank" style="color:#2563eb;">🗺️ Route</a></td>
       </tr>
     `).join('');
   }
 
-  // ==========================================
-  // REPORT GENERATOR (CSV & PDF)
-  // ==========================================
-  function exportReport(type, format) {
-    let title = "";
-    let headers = [];
-    let rows = [];
-
-    if (type === 'users') {
-      title = "Registered Users & Access Report";
-      headers = ["User ID", "Date", "Name", "Phone", "Email", "Coordinates", "Status"];
-      rows = cachedUsers.map(u => [u.id, u.date, u.name, u.phone, u.email, u.coords, u.status]);
-    } else if (type === 'products') {
-      title = "Product Inventory & Stock Report";
-      headers = ["Product ID", "Product Name", "Category", "Retail (INR)", "Wholesale (INR)", "Stock Qty"];
-      rows = cachedProducts.map(p => [p.id, p.name, p.category, `Rs. ${p.retailPrice}`, `Rs. ${p.wholesalePrice}`, `${p.stockQty || 0} Units`]);
-    } else if (type === 'categories') {
-      title = "Scoped Category Catalog Report";
-      headers = ["Category ID", "Category Name", "Slug", "Scope"];
-      rows = cachedCategories.map(c => [c.id, c.name, c.slug, c.scope.toUpperCase()]);
-    } else if (type === 'orders') {
-      title = "Order History & Sales Report";
-      headers = ["Order ID", "Date", "Customer Name", "Phone", "Item", "Qty", "Amount", "Status"];
-      rows = cachedOrders.map(o => [o.orderId, o.date, o.name, o.phone, o.item, o.qty, o.amount, o.status]);
-    }
-
-    if (rows.length === 0) return alert(`No ${type} records available to export.`);
-
-    // CSV FORMAT
-    if (format === 'csv') {
-      const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(r => r.map(cell => `"${cell}"`).join(","))].join("\n");
-      const link = document.createElement("a");
-      link.setAttribute("href", encodeURI(csvContent));
-      link.setAttribute("download", `Mohna_${type}_Report_${Date.now()}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      return;
-    }
-
-    // PDF FORMAT
-    if (format === 'pdf') {
-      const pdfContainer = document.getElementById('reportPdfTemplate');
-      pdfContainer.innerHTML = `
-        <div style="padding:10px;">
-          <div style="border-bottom: 2px solid #2563eb; padding-bottom: 8px; margin-bottom: 14px; display:flex; justify-content:space-between; align-items:center;">
-            <div>
-              <h2 style="margin:0; color:#1e40af;">⚡ MOHNA EXPRESS</h2>
-              <p style="margin:2px 0 0; color:#64748b; font-size:12px;">Official System Report: <b>${title}</b></p>
-            </div>
-            <div style="text-align:right; font-size:11px; color:#64748b;">
-              Generated: ${new Date().toLocaleString()}<br>
-              Total Records: ${rows.length}
-            </div>
-          </div>
-
-          <table style="width:100%; border-collapse:collapse; font-size:11px;">
-            <thead>
-              <tr style="background:#f1f5f9; border-bottom:2px solid #cbd5e1;">
-                ${headers.map(h => `<th style="padding:6px; text-align:left; color:#334155;">${h}</th>`).join('')}
-              </tr>
-            </thead>
-            <tbody>
-              ${rows.map((r, i) => `
-                <tr style="border-bottom:1px solid #e2e8f0; background:${i % 2 === 0 ? '#ffffff' : '#f8fafc'};">
-                  ${r.map(cell => `<td style="padding:6px;">${cell}</td>`).join('')}
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-      `;
-
-      pdfContainer.style.display = "block";
-      const opt = {
-        margin: [10, 10, 10, 10],
-        filename: `Mohna_${type}_Report_${Date.now()}.pdf`,
-        image: { type: 'jpeg', quality: 1.0 },
-        html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
-      };
-
-      html2pdf().set(opt).from(pdfContainer).save().then(() => {
-        pdfContainer.style.display = "none";
-      });
-    }
-  }
-
   function printLast24HoursSlips() {
-    const twentyFourHoursAgo = Date.now() - 86400000;
-    const recent = cachedOrders.filter(o => new Date(o.date).getTime() >= twentyFourHoursAgo);
-    if (recent.length === 0) return alert("No orders found in last 24 hours.");
-
-    document.getElementById('printSection').innerHTML = `
-      <div class="a4-slip-grid">
-        ${recent.map(o => `
-          <div class="a4-slip">
-            <b>⚡ MOHNA EXPRESS - ${o.orderId}</b><br>
-            Date: ${o.date}<br>
-            Customer: ${o.name} (📞 ${o.phone})<br>
-            Address: ${o.address}<br>
-            Item: <b>${o.item}</b> (x${o.qty}) - <b>${o.amount}</b><br>
-            Status: <b>PAID</b>
-          </div>
-        `).join('')}
-      </div>`;
+    const recent = cachedOrders.filter(o => new Date(o.date).getTime() >= (Date.now() - 86400000));
+    document.getElementById('reportPdfTemplate').innerHTML = recent.map(o => `<div style="border:1px dashed #000; padding:10px; margin-bottom:10px;"><b>Order: ${o.orderId}</b><br>Customer: ${o.name} (${o.phone})<br>Total: ${o.amount}</div>`).join('');
     window.print();
   }
 </script>
