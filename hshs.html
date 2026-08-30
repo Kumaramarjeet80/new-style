@@ -3,56 +3,113 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mohna Express - Store</title>
+  <title>Mohna Express - Retail & Wholesale Store</title>
+
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
   <style>
-    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; transition: background 0.3s ease, color 0.3s ease; }
     body { margin: 0; padding: 0 0 75px 0; min-height: 100vh; }
+
+    /* DUAL THEME ENGINES */
     body.theme-retail { background: linear-gradient(135deg, #e0e7ff 0%, #fae8ff 50%, #ede9fe 100%); color: #1e1b4b; }
     body.theme-wholesale { background: linear-gradient(135deg, #ffe4e6 0%, #fff1f2 40%, #fce7f3 100%); color: #881337; }
+
     .app-container { max-width: 900px; margin: 0 auto; padding: 16px; }
-    .app-header { display: flex; justify-content: space-between; align-items: center; background: rgba(255, 255, 255, 0.88); backdrop-filter: blur(10px); padding: 12px 18px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 16px; }
+
+    /* HEADER & AUTH BUTTON */
+    .app-header {
+      display: flex; justify-content: space-between; align-items: center; background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(10px); padding: 12px 18px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 16px;
+    }
     .brand-logo { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 18px; cursor: pointer; }
     .brand-logo span { background: #2563eb; color: white; border-radius: 8px; padding: 4px 8px; font-size: 14px; }
-    .auth-pill { display: flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 700; cursor: pointer; }
+    
+    .auth-pill {
+      display: flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.2s;
+    }
     .auth-logged-in { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
     .auth-logged-out { background: #2563eb; color: white; }
+    .header-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
+
+    /* RETAIL / WHOLESALE TOGGLE */
     .mode-toggle-container { display: flex; gap: 10px; background: rgba(255, 255, 255, 0.7); padding: 6px; border-radius: 30px; margin-bottom: 16px; }
     .mode-btn { flex: 1; border: none; padding: 10px 16px; border-radius: 25px; font-weight: 700; font-size: 14px; cursor: pointer; background: transparent; color: #64748b; }
     .theme-retail .mode-btn.active { background: linear-gradient(135deg, #4f46e5, #7c3aed); color: white; }
     .theme-wholesale .mode-btn.active { background: linear-gradient(135deg, #e11d48, #be123c); color: white; }
-    .search-input-box { width: 100%; background: rgba(255,255,255,0.9); border: 1px solid rgba(0,0,0,0.08); border-radius: 12px; padding: 10px 16px; font-size: 14px; outline: none; margin-bottom: 14px; }
+
+    /* SEARCH BAR */
+    .search-input-box {
+      width: 100%; background: rgba(255,255,255,0.9); border: 1px solid rgba(0,0,0,0.08);
+      border-radius: 12px; padding: 10px 16px; font-size: 14px; outline: none; margin-bottom: 14px;
+    }
+
+    /* CATEGORY CHIPS */
     .category-scroll { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 16px; }
     .chip { padding: 6px 16px; border-radius: 20px; background: rgba(255,255,255,0.8); font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; border: 1px solid rgba(0,0,0,0.06); }
     .chip.active { background: #0f172a; color: white; }
+
+    /* PRODUCT GRID */
     .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
-    .product-card { background: rgba(255, 255, 255, 0.95); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 4px 14px rgba(0,0,0,0.04); }
+    .product-card {
+      background: rgba(255, 255, 255, 0.95); border-radius: 16px; padding: 14px; display: flex;
+      flex-direction: column; justify-content: space-between; border: 1px solid rgba(255,255,255,0.8);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.04);
+    }
     .product-img { width: 100%; height: 140px; object-fit: cover; border-radius: 10px; background: #f8fafc; }
     .product-title { font-size: 15px; font-weight: 700; margin: 10px 0 4px; }
     .product-price { font-size: 16px; font-weight: 800; }
     .theme-retail .product-price { color: #4338ca; }
     .theme-wholesale .product-price { color: #be123c; }
-    .btn-buy-now { width: 100%; padding: 10px; border: none; border-radius: 8px; color: white; font-weight: 700; font-size: 13px; cursor: pointer; margin-top: 10px; }
+
+    .btn-buy-now {
+      width: 100%; padding: 10px; border: none; border-radius: 8px; color: white; font-weight: 700;
+      font-size: 13px; cursor: pointer; margin-top: 10px;
+    }
     .theme-retail .btn-buy-now { background: #4f46e5; }
     .theme-wholesale .btn-buy-now { background: #e11d48; }
+
+    /* PAGE VIEWS */
     .page-view { display: none; }
     .page-view.active-page { display: block; }
+
     .card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 16px; }
     .form-group { margin-bottom: 12px; }
     .form-group label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 4px; color: #475569; }
     .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; }
     .btn-submit { width: 100%; padding: 12px; border: none; border-radius: 8px; background: #2563eb; color: white; font-weight: 700; cursor: pointer; font-size: 14px; }
+
     #mapModal { height: 200px; width: 100%; border-radius: 8px; margin: 10px 0; border: 1px solid #cbd5e1; }
     .bill-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 14px; }
-    .live-timer-banner { background: #0f172a; color: white; border-radius: 16px; padding: 20px; margin-bottom: 16px; border: 2px solid #38bdf8; text-align: center; }
+
+    /* PERSISTENT LIVE TIMER BANNER */
+    .live-timer-banner {
+      background: #0f172a; color: white; border-radius: 16px; padding: 20px; margin-bottom: 16px;
+      box-shadow: 0 8px 25px rgba(15,23,42,0.25); border: 2px solid #38bdf8; text-align: center;
+    }
     .timer-clock { font-size: 44px; font-weight: 900; font-family: monospace; color: #38bdf8; margin: 8px 0; }
-    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 62px; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-top: 1px solid #e2e8f0; display: flex; justify-content: space-around; align-items: center; z-index: 1000; }
-    .nav-item { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; font-weight: 700; color: #64748b; cursor: pointer; border: none; background: transparent; }
+
+    /* PROFILE AVATAR COMPONENTS */
+    .profile-avatar-container { display: flex; flex-direction: column; align-items: center; margin-bottom: 16px; }
+    .profile-img-preview { width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 3px solid #2563eb; background: #f1f5f9; }
+    .profile-photo-actions { display: flex; gap: 8px; margin-top: 10px; }
+    .btn-photo-action { padding: 6px 12px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 12px; font-weight: bold; cursor: pointer; background: #f8fafc; }
+
+    /* BOTTOM NAV */
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0; height: 62px; background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px); border-top: 1px solid #e2e8f0; display: flex; justify-content: space-around;
+      align-items: center; z-index: 1000;
+    }
+    .nav-item { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; font-weight: 700; color: #64748b; cursor: pointer; border: none; background: transparent; padding: 6px 12px; border-radius: 8px; }
     .nav-item.active { color: #2563eb; }
+    .nav-item span { font-size: 18px; }
+
+    /* AUTH MODAL */
     .modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 16px; }
-    .modal-card { background: white; border-radius: 16px; width: 100%; max-width: 420px; padding: 24px; }
+    .modal-card { background: white; border-radius: 16px; width: 100%; max-width: 440px; padding: 24px; max-height: 90vh; overflow-y: auto; }
     .auth-tab-btn { flex: 1; padding: 8px; border: none; background: #f1f5f9; font-weight: bold; cursor: pointer; border-radius: 6px; font-size: 13px; color: #64748b; }
     .auth-tab-btn.active { background: #2563eb; color: white; }
   </style>
@@ -60,97 +117,142 @@
 <body class="theme-retail">
 
 <div class="app-container">
+  
+  <!-- APP HEADER (DYNAMIC AUTH) -->
   <header class="app-header">
-    <div class="brand-logo" onclick="switchPage('homePage')"><span>⚡</span> Mohna Express</div>
-    <div style="display: flex; gap: 8px; align-items: center;">
-      <a href="admin.html" style="font-size: 12px; text-decoration: none; color: #475569; font-weight: bold;">🛠️ Admin</a>
-      <div id="authHeaderContainer">
-        <div class="auth-pill auth-logged-out" onclick="openAuthModal('login')">🔑 Sign In</div>
+    <div class="brand-logo" onclick="switchPage('homePage')">
+      <span>⚡</span> Mohna Express
+    </div>
+    <div id="authHeaderContainer">
+      <div class="auth-pill auth-logged-out" onclick="openAuthModal('login')">
+        🔑 Sign In
       </div>
     </div>
   </header>
 
-  <!-- HOME PAGE -->
+  <!-- ========================================================= -->
+  <!-- PAGE 1: 🏠 HOME (CATALOG & PRODUCTS)                      -->
+  <!-- ========================================================= -->
   <div id="homePage" class="page-view active-page">
     <div class="mode-toggle-container">
       <button class="mode-btn active" id="btnRetail" onclick="switchTheme('retail')">🛍️ Retail Store</button>
       <button class="mode-btn" id="btnWholesale" onclick="switchTheme('wholesale')">📦 Wholesale Bulk</button>
     </div>
-    <input type="text" id="liveSearchInput" class="search-input-box" placeholder="🔍 Search products..." oninput="handleSearch(this.value)" />
-    <div class="category-scroll" id="categoryChips"><div class="chip active" onclick="filterCategory('all', this)">All Items</div></div>
-    <div class="product-grid" id="productGrid"><div style="grid-column:1/-1; text-align:center; color:#64748b; padding:40px;">Loading catalog...</div></div>
+
+    <input type="text" id="liveSearchInput" class="search-input-box" placeholder="🔍 Search products by name, category..." oninput="handleSearch(this.value)" />
+
+    <div class="category-scroll" id="categoryChips">
+      <div class="chip active" onclick="filterCategory('all', this)">All Items</div>
+    </div>
+
+    <div class="product-grid" id="productGrid">
+      <div style="grid-column:1/-1; text-align:center; color:#64748b; padding:40px;">Loading catalog from Google Sheets...</div>
+    </div>
   </div>
 
-  <!-- CHECKOUT PAGE -->
+  <!-- ========================================================= -->
+  <!-- PAGE 2: 💳 CHECKOUT (GPS & COUPONS)                       -->
+  <!-- ========================================================= -->
   <div id="checkoutPage" class="page-view">
     <div class="card">
-      <h3 style="margin-top:0;">💳 Checkout & GPS Verification</h3>
+      <h3 style="margin-top:0;">💳 Checkout & GPS Delivery Verification</h3>
       <div id="checkoutItemDetails" style="background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:12px;">
         <p style="margin:0; font-weight:bold; color:#0f172a;" id="chkItemName">No item selected</p>
         <small style="color:#64748b;" id="chkItemType">Select a product from the Home tab</small>
       </div>
+
       <div id="mapModal"></div>
-      <div id="modalCoverageStatus" style="padding:8px; border-radius:6px; font-size:12px; font-weight:600; margin-bottom:12px; background:#e2e8f0;">Validating location...</div>
+      <div id="modalCoverageStatus" style="padding:8px; border-radius:6px; font-size:12px; font-weight:600; margin-bottom:12px; background:#e2e8f0;">Validating live GPS location...</div>
+
       <div class="form-group">
-        <label>Delivery Address</label>
+        <label>Delivery Street Address</label>
         <input type="text" id="orderAddress" required placeholder="House No, Landmark, Sector / Mohalla" />
       </div>
+
       <div style="background:#f8fafc; border:1px dashed #cbd5e1; padding:10px; border-radius:8px; margin-bottom:14px;">
-        <label style="font-size:12px; font-weight:bold; color:#475569; display:block; margin-bottom:4px;">Promo Coupon</label>
+        <label style="font-size:12px; font-weight:bold; color:#475569; display:block; margin-bottom:4px;">Have a Promo Coupon?</label>
         <div style="display:flex; gap:6px;">
-          <input type="text" id="couponCodeInput" placeholder="e.g. FESTIVAL20" style="flex:1; padding:8px; border:1px solid #cbd5e1; border-radius:6px; text-transform:uppercase; font-size:13px;" />
-          <button type="button" class="btn-submit" style="width:auto; padding:8px 16px;" onclick="applyCouponCode()">Apply</button>
+          <input type="text" id="couponCodeInput" placeholder="Code (e.g. WELCOME10)" style="flex:1; padding:8px; border:1px solid #cbd5e1; border-radius:6px; text-transform:uppercase; font-size:13px;" />
+          <button type="button" class="btn-submit" style="width:auto; padding:8px 16px; background:#2563eb;" onclick="applyCouponCode()">Apply</button>
         </div>
         <div id="couponStatusMsg" style="font-size:11px; margin-top:4px; font-weight:bold;"></div>
       </div>
+
       <div class="bill-row" style="font-size:16px; font-weight:bold; margin-bottom:12px;">
-        <span>Total Payable:</span><span id="checkoutTotalDisplay" style="color:#16a34a;">₹0</span>
+        <span>Total Payable:</span>
+        <span id="checkoutTotalDisplay" style="color:#16a34a;">₹0</span>
       </div>
+
       <div id="qrcode" style="display:flex; justify-content:center; margin-bottom:14px;"></div>
       <button type="button" id="confirmPayBtn" class="btn-submit" style="background:#16a34a;" onclick="processOrderSuccess()">✅ Complete UPI Payment</button>
     </div>
   </div>
 
-  <!-- ORDERS PAGE -->
+  <!-- ========================================================= -->
+  <!-- PAGE 3: 📦 MY ORDERS (PERSISTENT COUNTDOWN ON LOGIN)      -->
+  <!-- ========================================================= -->
   <div id="ordersPage" class="page-view">
+    
+    <!-- PERSISTENT LIVE COUNTDOWN BANNER -->
     <div id="persistentTrackerBox" style="display: none;" class="live-timer-banner">
-      <span style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; font-size: 11px; font-weight: 800; padding: 4px 12px; border-radius: 20px;">⚡ DISPATCH COUNTDOWN ACTIVE</span>
+      <span style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; font-size: 11px; font-weight: 800; padding: 4px 12px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px;">
+        ⚡ LIVE DISPATCH COUNTDOWN ACTIVE
+      </span>
       <div id="activeOrderIdDisplay" style="font-size: 13px; color: #94a3b8; margin-top: 8px;">Order: MHN-XXXXXX</div>
       <div id="persistentTimerDisplay" class="timer-clock">15:00</div>
-      <p id="timerSubtext" style="color: #cbd5e1; font-size: 12.5px; margin: 0;">Synced with Dispatch Hub</p>
+      <p id="timerSubtext" style="color: #cbd5e1; font-size: 12.5px; margin: 0;">Synchronized with Mohna Express Dispatch Hub</p>
     </div>
+
+    <!-- Active Invoice Card -->
     <div class="card" id="invoiceBill" style="display:none;">
       <h3 style="margin-top:0; color:#1e40af;">⚡ Official Paid Invoice</h3>
       <div class="bill-row"><span><b>Order ID:</b></span><span id="billOrderId"></span></div>
       <div class="bill-row"><span><b>Item:</b></span><span id="billItem"></span></div>
-      <div class="bill-row"><span><b>Discount:</b></span><span id="billDiscount" style="color:#16a34a;">₹0</span></div>
+      <div class="bill-row"><span><b>Discount:</b></span><span id="billDiscount" style="color:#16a34a; font-weight:bold;">₹0</span></div>
       <div class="bill-row" style="border-top:1px solid #e2e8f0; padding-top:6px;"><span><b>Grand Total Paid:</b></span><span id="billAmount" style="font-weight:bold; color:#15803d;"></span></div>
-      <button class="btn-submit" style="background:#4f46e5; margin-top:12px;" onclick="downloadPDF()">📄 Download Tax Invoice</button>
+      <button class="btn-submit" style="background:#4f46e5; margin-top:12px;" onclick="downloadPDF()">📄 Download PDF Tax Invoice</button>
     </div>
+
     <div class="card">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <h3 style="margin:0;">📦 Order History</h3>
+        <h3 style="margin:0;">📦 My Order History</h3>
         <button class="btn-submit" style="width:auto; padding:6px 12px; font-size:12px; background:#0f172a;" onclick="loadCustomerOrders()">🔄 Refresh</button>
       </div>
-      <div id="customerOrdersList"><p style="text-align:center; color:#94a3b8; font-size:13px;">Loading orders...</p></div>
+      <div id="customerOrdersList">
+        <p style="text-align:center; color:#94a3b8; font-size:13px;">Loading orders...</p>
+      </div>
     </div>
   </div>
 
-  <!-- PROFILE PAGE -->
+  <!-- ========================================================= -->
+  <!-- PAGE 4: 👤 PROFILE                                        -->
+  <!-- ========================================================= -->
   <div id="profilePage" class="page-view">
     <div class="card">
       <h3 style="margin-top:0;">👤 Account Profile</h3>
+
+      <!-- User Profile Pic Section -->
+      <div class="profile-avatar-container">
+        <img id="profAvatarDisplay" class="profile-img-preview" src="https://via.placeholder.com/90?text=User" alt="Avatar" />
+        <input type="file" id="avatarFileInput" accept="image/*" style="display: none;" onchange="handleAvatarFileSelected(event)" />
+        <div class="profile-photo-actions">
+          <button type="button" class="btn-photo-action" onclick="document.getElementById('avatarFileInput').click()">📸 Change Photo</button>
+          <button type="button" class="btn-photo-action" style="color:#b91c1c;" onclick="deleteAvatarPhoto()">🗑️ Delete</button>
+        </div>
+      </div>
+
       <div class="form-group"><label>Full Name</label><input type="text" id="profName" readonly /></div>
       <div class="form-group"><label>Mobile Number</label><input type="tel" id="profPhone" readonly /></div>
       <div class="form-group"><label>Email Address</label><input type="email" id="profEmail" readonly /></div>
-      <div class="form-group"><label>GPS Coordinates</label><input type="text" id="profCoords" readonly /></div>
+      <div class="form-group"><label>Registered GPS Coordinates</label><input type="text" id="profCoords" readonly /></div>
       <div class="form-group"><label>Account Status</label><input type="text" id="profStatus" readonly style="font-weight:bold; color:#15803d;" /></div>
       <button class="btn-submit" style="background:#ef4444; margin-top:10px;" onclick="logoutCustomer()">🚪 Log Out</button>
     </div>
   </div>
+
 </div>
 
-<!-- EMAIL OTP AUTH MODAL -->
+<!-- AUTHENTICATION MODAL (EMAIL OTP) -->
 <div id="authModal" class="modal-overlay" style="display: none;">
   <div class="modal-card">
     <div style="display:flex; gap:6px; margin-bottom:14px;">
@@ -162,34 +264,36 @@
     <div id="otpStep1">
       <div id="signupFields" style="display:none;">
         <div class="form-group"><label>Full Name</label><input type="text" id="authName" placeholder="e.g. Rahul Kumar" /></div>
-        <div class="form-group"><label>Mobile Number</label><input type="tel" id="authPhone" placeholder="10-digit mobile" /></div>
+        <div class="form-group"><label>Mobile Number</label><input type="tel" id="authPhone" placeholder="10-digit mobile number" /></div>
       </div>
-      <div class="form-group"><label>Email Address</label><input type="email" id="authEmail" required placeholder="name@domain.com" /></div>
-      <div id="gpsStatus" style="font-size:12px; color:#2563eb; margin-bottom:12px; font-weight:bold;">📍 Live GPS Ready</div>
+      <div class="form-group"><label>Email Address</label><input type="email" id="authEmail" required placeholder="name@gmail.com" /></div>
+      <div id="gpsStatus" style="font-size:12px; color:#2563eb; margin-bottom:12px; font-weight:bold;">📍 Acquiring live GPS coordinates...</div>
       <button type="button" class="btn-submit" id="btnSendOtp" onclick="sendOtpCode()">Send Email Verification OTP</button>
     </div>
 
     <!-- Step 2: Verify OTP -->
     <div id="otpStep2" style="display:none;">
-      <p style="font-size:13px; color:#475569; margin: 0 0 10px 0;">Enter the 6-digit code sent to <b id="otpTargetEmail"></b></p>
+      <p style="font-size:13px; color:#475569; margin: 0 0 10px 0;">Enter the 6-digit verification code sent to <b id="otpTargetEmail"></b></p>
       <div class="form-group"><label>6-Digit OTP</label><input type="text" id="authOtpCode" maxlength="6" style="text-align:center; font-size:20px; letter-spacing:4px;" placeholder="••••••" /></div>
-      <button type="button" class="btn-submit" onclick="verifyOtpCode()">Verify & Authenticate</button>
-      <button type="button" style="background:none; border:none; color:#2563eb; font-size:12px; width:100%; text-align:center; margin-top:8px; cursor:pointer;" onclick="toggleAuthStep(1)">← Change Email / Resend</button>
+      <button type="button" class="btn-submit" onclick="verifyOtpCode()">Verify & Complete</button>
+      <button type="button" style="background:none; border:none; color:#2563eb; font-size:12px; width:100%; text-align:center; margin-top:8px; cursor:pointer;" onclick="toggleAuthStep(1)">← Change Email / Resend Code</button>
     </div>
 
     <button type="button" style="background:none; border:none; color:#64748b; font-size:12px; width:100%; text-align:center; margin-top:10px; cursor:pointer;" onclick="closeAuthModal()">✕ Cancel</button>
   </div>
 </div>
 
+<!-- BOTTOM NAV -->
 <nav class="bottom-nav">
   <button class="nav-item active" id="navHome" onclick="switchPage('homePage')"><span>🏠</span> Home</button>
   <button class="nav-item" id="navCheckout" onclick="switchPage('checkoutPage')"><span>💳</span> Checkout</button>
-  <button class="nav-item" id="navOrders" onclick="switchPage('ordersPage')"><span>📦</span> Orders</button>
+  <button class="nav-item" id="navOrders" onclick="switchPage('ordersPage')"><span>📦</span> My Orders</button>
   <button class="nav-item" id="navProfile" onclick="switchPage('profilePage')"><span>👤</span> Profile</button>
 </nav>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js"></script>
+
 <script>
   const SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbyZ11fczqVaeZx8yyL1IXUDkJ92U7cMhX7_AgaqNXygIuj3tMdwkwiYa_lY9a0GR9btsg/exec";
   const DEFAULT_UPI_ID = "mohnaexpress@upi";
@@ -201,19 +305,39 @@
   let currentTheme = 'retail';
   let activeCategory = 'all';
 
-  let rawProducts = [], rawCategories = [], rawCoupons = [];
-  let currentSelectedProduct = null, currentMatchedZoneTiming = 20, appliedDiscountPercent = 0, baseAmount = 0;
-  let modalMap = null, modalUserMarker = null, persistentTimerInterval = null;
+  let rawProducts = [];
+  let rawCategories = [];
+  let rawCoupons = [];
+  let currentSelectedProduct = null;
+  let currentMatchedZoneId = "all";
+  let currentMatchedZoneTiming = 20;
+  let currentMatchedZoneCashback = 25;
+  let appliedDiscountPercent = 0;
+  let baseAmount = 0;
+
+  let modalMap = null;
+  let modalUserMarker = null;
+  let persistentTimerInterval = null;
 
   function switchPage(pageId) {
     document.querySelectorAll('.page-view').forEach(p => p.classList.remove('active-page'));
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
     document.getElementById(pageId).classList.add('active-page');
 
     if (pageId === 'homePage') document.getElementById('navHome').classList.add('active');
-    if (pageId === 'checkoutPage') { document.getElementById('navCheckout').classList.add('active'); initCheckoutMap(); }
-    if (pageId === 'ordersPage') { document.getElementById('navOrders').classList.add('active'); loadCustomerOrders(); }
-    if (pageId === 'profilePage') { document.getElementById('navProfile').classList.add('active'); renderProfilePage(); }
+    if (pageId === 'checkoutPage') {
+      document.getElementById('navCheckout').classList.add('active');
+      initCheckoutMap();
+    }
+    if (pageId === 'ordersPage') {
+      document.getElementById('navOrders').classList.add('active');
+      loadCustomerOrders();
+    }
+    if (pageId === 'profilePage') {
+      document.getElementById('navProfile').classList.add('active');
+      renderProfilePage();
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -222,16 +346,30 @@
     fetchCategoriesAndProducts();
     fetchZones();
     fetchCoupons();
-    if (currentUser) checkAndResumeActiveOrderTimer();
     requestUserGPS();
+
+    if (!currentUser) {
+      openAuthModal('login');
+    } else {
+      checkAndResumeActiveOrderTimer();
+    }
   };
 
   function updateHeaderAuthUI() {
     const container = document.getElementById('authHeaderContainer');
     if (currentUser && currentUser.name) {
-      container.innerHTML = `<div class="auth-pill auth-logged-in" onclick="switchPage('profilePage')">👤 ${currentUser.name.split(' ')[0]}</div>`;
+      const avatarSrc = currentUser.avatar || "https://via.placeholder.com/24?text=U";
+      container.innerHTML = `
+        <div class="auth-pill auth-logged-in" onclick="switchPage('profilePage')">
+          <img src="${avatarSrc}" class="header-avatar" /> Hi, ${currentUser.name.split(' ')[0]}
+        </div>
+      `;
     } else {
-      container.innerHTML = `<div class="auth-pill auth-logged-out" onclick="openAuthModal('login')">🔑 Sign In</div>`;
+      container.innerHTML = `
+        <div class="auth-pill auth-logged-out" onclick="openAuthModal('login')">
+          🔑 Sign In
+        </div>
+      `;
     }
   }
 
@@ -239,9 +377,12 @@
     document.getElementById('authModal').style.display = 'flex';
     toggleAuthStep(1);
     toggleAuthTab(mode);
+    requestUserGPS();
   }
 
-  function closeAuthModal() { document.getElementById('authModal').style.display = 'none'; }
+  function closeAuthModal() {
+    document.getElementById('authModal').style.display = 'none';
+  }
 
   function toggleAuthTab(tab) {
     currentAuthMode = tab;
@@ -257,11 +398,17 @@
 
   function requestUserGPS() {
     if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition((pos) => {
-        userCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        const el = document.getElementById('gpsStatus');
-        if (el) el.innerText = `✅ GPS Locked (${userCoords.lat.toFixed(4)}, ${userCoords.lng.toFixed(4)})`;
-      });
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          userCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          const el = document.getElementById('gpsStatus');
+          if (el) el.innerText = `✅ GPS Locked (${userCoords.lat.toFixed(4)}, ${userCoords.lng.toFixed(4)})`;
+        },
+        () => {
+          const el = document.getElementById('gpsStatus');
+          if (el) el.innerText = `❌ GPS permission required for fast delivery.`;
+        }
+      );
     }
   }
 
@@ -289,14 +436,14 @@
     }).catch(() => {
       btn.innerText = 'Send Email Verification OTP';
       btn.disabled = false;
-      alert('Error sending OTP. Check connection.');
+      alert('Error sending OTP. Check connection and Web App permissions.');
     });
   }
 
   function verifyOtpCode() {
     const email = document.getElementById('authEmail').value.trim();
     const otp = document.getElementById('authOtpCode').value.trim();
-    if (!otp || otp.length < 6) return alert('Enter valid 6-digit OTP code.');
+    if (!otp || otp.length < 6) return alert('Enter a valid 6-digit OTP code.');
 
     const payload = {
       action: 'verifyAuthOtp',
@@ -326,6 +473,51 @@
     });
   }
 
+  function handleAvatarFileSelected(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+      const base64Data = evt.target.result;
+      document.getElementById('profAvatarDisplay').src = base64Data;
+      uploadUserAvatar(base64Data);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function uploadUserAvatar(base64Data) {
+    if (!currentUser) return;
+    fetch(SPREADSHEET_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "updateUserProfilePic", email: currentUser.email, imageBase64: base64Data })
+    }).then(r => r.json()).then(res => {
+      if (res.status === "success") {
+        currentUser.avatar = res.avatarUrl;
+        localStorage.setItem('mohna_user', JSON.stringify(currentUser));
+        updateHeaderAuthUI();
+        alert("Profile picture updated!");
+      }
+    });
+  }
+
+  function deleteAvatarPhoto() {
+    if (!currentUser || !confirm("Delete profile picture?")) return;
+    fetch(SPREADSHEET_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "updateUserProfilePic", email: currentUser.email, imageBase64: "" })
+    }).then(r => r.json()).then(res => {
+      if (res.status === "success") {
+        currentUser.avatar = "";
+        localStorage.setItem('mohna_user', JSON.stringify(currentUser));
+        document.getElementById('profAvatarDisplay').src = "https://via.placeholder.com/90?text=User";
+        updateHeaderAuthUI();
+      }
+    });
+  }
+
   function renderProfilePage() {
     if (!currentUser) { openAuthModal('login'); return; }
     document.getElementById('profName').value = currentUser.name || "";
@@ -333,6 +525,7 @@
     document.getElementById('profEmail').value = currentUser.email || "";
     document.getElementById('profCoords').value = `${currentUser.lat || ''}, ${currentUser.lng || ''}`;
     document.getElementById('profStatus').value = currentUser.status || "Active";
+    document.getElementById('profAvatarDisplay').src = currentUser.avatar || "https://via.placeholder.com/90?text=User";
   }
 
   function logoutCustomer() {
@@ -343,6 +536,7 @@
     }
   }
 
+  // CATALOG & PRODUCTS
   function fetchCategoriesAndProducts() {
     Promise.all([
       fetch(`${SPREADSHEET_API_URL}?action=getCategories`).then(r => r.json()),
@@ -363,9 +557,9 @@
 
   function renderCategoryChips() {
     const chipContainer = document.getElementById('categoryChips');
-    const scoped = rawCategories.filter(c => c.scope === currentTheme || c.scope === 'both');
+    const scopedCategories = rawCategories.filter(c => c.scope === currentTheme || c.scope === 'both');
     chipContainer.innerHTML = '<div class="chip active" onclick="filterCategory(\'all\', this)">All Items</div>' + 
-      scoped.map(c => `<div class="chip" onclick="filterCategory('${c.slug}', this)">${c.name}</div>`).join('');
+      scopedCategories.map(c => `<div class="chip" onclick="filterCategory('${c.slug}', this)">${c.name}</div>`).join('');
   }
 
   function switchTheme(theme) {
@@ -385,7 +579,9 @@
     renderProducts();
   }
 
-  function handleSearch(q) { renderProducts(q.trim().toLowerCase()); }
+  function handleSearch(q) {
+    renderProducts(q.trim().toLowerCase());
+  }
 
   function renderProducts(searchQuery = "") {
     const grid = document.getElementById('productGrid');
@@ -402,6 +598,7 @@
     grid.innerHTML = filtered.map(p => {
       const price = (currentTheme === 'wholesale') ? p.wholesalePrice : p.retailPrice;
       const tag = (currentTheme === 'wholesale') ? 'Bulk Wholesale (Min 5)' : 'Retail Single Unit';
+
       return `
         <div class="product-card">
           <img src="${p.img}" class="product-img" alt="${p.name}">
@@ -422,6 +619,7 @@
 
   function selectProductForCheckout(productId) {
     if (!currentUser) { openAuthModal('login'); return; }
+
     currentSelectedProduct = rawProducts.find(p => p.id === productId);
     baseAmount = (currentTheme === 'wholesale') ? currentSelectedProduct.wholesalePrice : currentSelectedProduct.retailPrice;
     appliedDiscountPercent = 0;
@@ -431,6 +629,7 @@
     document.getElementById('couponCodeInput').value = "";
     document.getElementById('couponStatusMsg').innerText = "";
     document.getElementById('checkoutTotalDisplay').innerText = `₹${baseAmount}`;
+
     switchPage('checkoutPage');
   }
 
@@ -441,6 +640,7 @@
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(modalMap);
         if (adminZonesData) L.geoJSON(adminZonesData, { style: { color: "#2563eb", fillColor: "#3b82f6", fillOpacity: 0.25 } }).addTo(modalMap);
       }
+
       navigator.geolocation.getCurrentPosition((pos) => {
         const lat = pos.coords.latitude, lng = pos.coords.longitude;
         userCoords = { lat, lng };
@@ -449,6 +649,7 @@
         else modalUserMarker = L.marker([lat, lng]).addTo(modalMap);
         evaluateCheckoutZone(lat, lng);
       });
+
       renderQrCode(baseAmount || 199);
     }, 200);
   }
@@ -463,14 +664,17 @@
         if (turf.booleanPointInPolygon(point, feature)) {
           isDeliverable = true;
           const props = feature.properties || {};
+          currentMatchedZoneId = props.id || "all";
           currentMatchedZoneTiming = props.deliveryMinutes || 20;
+          currentMatchedZoneCashback = props.lateCashback || 25;
           statusBox.style.background = "#dcfce7"; statusBox.style.color = "#166534";
-          statusBox.innerHTML = `✅ <b>Deliverable Area!</b> (${currentMatchedZoneTiming}m Delivery)`;
+          statusBox.innerHTML = `✅ <b>Deliverable Area!</b> In ${props.name || 'Zone'} (${currentMatchedZoneTiming}m Delivery)`;
           document.getElementById('confirmPayBtn').disabled = false;
           break;
         }
       }
     }
+
     if (!isDeliverable) {
       statusBox.style.background = "#fee2e2"; statusBox.style.color = "#991b1b";
       statusBox.innerHTML = `❌ <b>Outside Delivery Zone.</b> Fast delivery unavailable.`;
@@ -481,9 +685,12 @@
   function applyCouponCode() {
     const inputCode = document.getElementById('couponCodeInput').value.trim().toUpperCase();
     const msg = document.getElementById('couponStatusMsg');
+
+    if (!inputCode) { msg.innerText = "Please enter a code"; msg.style.color = "#ef4444"; return; }
     const coupon = rawCoupons.find(c => c.code.toUpperCase() === inputCode);
 
     if (!coupon) { msg.innerText = "❌ Invalid coupon code"; msg.style.color = "#ef4444"; return; }
+
     appliedDiscountPercent = parseInt(coupon.discountPercent) || 0;
     const discountAmount = Math.round((baseAmount * appliedDiscountPercent) / 100);
     const finalAmount = Math.max(0, baseAmount - discountAmount);
@@ -525,6 +732,7 @@
         document.getElementById('billDiscount').innerText = `₹${discountAmount} (${appliedDiscountPercent}%)`;
         document.getElementById('billAmount').innerText = payload.amount;
         document.getElementById('invoiceBill').style.display = 'block';
+
         startPersistentCountdown(res.expiryTimestamp, orderId);
         switchPage('ordersPage');
       });
@@ -537,6 +745,7 @@
       if (myOrders.length > 0) {
         const latestOrder = myOrders[0];
         const expiryMs = parseInt(latestOrder.expiryTimestamp) || (new Date(latestOrder.date).getTime() + (latestOrder.etaMinutes || 20) * 60000);
+        
         if (expiryMs > Date.now() - (60 * 60 * 1000)) {
           startPersistentCountdown(expiryMs, latestOrder.orderId);
         }
@@ -555,13 +764,15 @@
     clearInterval(persistentTimerInterval);
     persistentTimerInterval = setInterval(() => {
       const remainingMs = targetExpiryTimestamp - Date.now();
+
       if (remainingMs <= 0) {
         clearInterval(persistentTimerInterval);
         clock.innerText = "00:00";
         clock.style.color = "#ef4444";
-        document.getElementById('timerSubtext').innerHTML = "⚡ <b style='color:#ef4444;'>Delivery Guarantee Reached</b>";
+        document.getElementById('timerSubtext').innerHTML = "⚡ <b style='color:#ef4444;'>Delivery Time Guarantee Reached</b> (Cashback Triggered)";
         return;
       }
+
       const totalSec = Math.floor(remainingMs / 1000);
       const mins = Math.floor(totalSec / 60);
       const secs = totalSec % 60;
@@ -574,10 +785,12 @@
     fetch(`${SPREADSHEET_API_URL}?action=getOrders`).then(r => r.json()).then(data => {
       const myOrders = (data.orders || []).filter(o => o.email.toLowerCase() === currentUser.email.toLowerCase());
       const container = document.getElementById('customerOrdersList');
+
       if (myOrders.length === 0) {
         container.innerHTML = '<p style="text-align:center; color:#94a3b8; font-size:13px;">No past orders found.</p>';
         return;
       }
+
       container.innerHTML = myOrders.map(o => `
         <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px; margin-bottom:10px;">
           <div style="display:flex; justify-content:space-between; align-items:center;">
