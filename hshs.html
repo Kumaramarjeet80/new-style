@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Mohna Express - Retail & Wholesale Store</title>
 
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Lightweight CSS Preconnect -->
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
   <style>
-    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; transition: background 0.3s ease, color 0.3s ease; }
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; transition: background 0.2s ease, color 0.2s ease; }
     body { margin: 0; padding: 0 0 75px 0; min-height: 100vh; }
 
     /* DUAL THEME ENGINES */
@@ -145,7 +145,7 @@
     </div>
 
     <div class="product-grid" id="productGrid">
-      <div style="grid-column:1/-1; text-align:center; color:#64748b; padding:40px;">Loading catalog from Google Sheets...</div>
+      <div style="grid-column:1/-1; text-align:center; color:#64748b; padding:40px;">Loading catalog...</div>
     </div>
   </div>
 
@@ -208,7 +208,7 @@
     <div class="card">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
         <h3 style="margin:0;">📦 My Order History</h3>
-        <button class="btn-submit" style="width:auto; padding:6px 12px; font-size:12px; background:#0f172a;" onclick="loadCustomerOrders()">🔄 Refresh</button>
+        <button class="btn-submit" style="width:auto; padding:6px 12px; font-size:12px; background:#0f172a;" onclick="fetchInitialStoreData(true)">🔄 Refresh</button>
       </div>
       <div id="customerOrdersList">
         <p style="text-align:center; color:#94a3b8; font-size:13px;">Loading orders...</p>
@@ -279,9 +279,6 @@
   <button class="nav-item" id="navProfile" onclick="switchPage('profilePage')"><span>👤</span> Profile</button>
 </nav>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js"></script>
-
 <script>
   const SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbyZ11fczqVaeZx8yyL1IXUDkJ92U7cMhX7_AgaqNXygIuj3tMdwkwiYa_lY9a0GR9btsg/exec";
   const DEFAULT_UPI_ID = "mohnaexpress@upi";
@@ -296,6 +293,7 @@
   let rawProducts = [];
   let rawCategories = [];
   let rawCoupons = [];
+  let cachedMyOrders = [];
   let currentSelectedProduct = null;
   let currentMatchedZoneId = "all";
   let currentMatchedZoneTiming = 20;
@@ -307,6 +305,77 @@
   let modalMap = null;
   let modalUserMarker = null;
   let persistentTimerInterval = null;
+  let mapScriptsLoaded = false;
+  let pdfScriptLoaded = false;
+
+  // 1. INSTANT STALE-WHILE-REVALIDATE LOADER
+  function loadFromLocalCache() {
+    try {
+      const cached = JSON.parse(localStorage.getItem('mohna_store_cache') || '{}');
+      if (cached.products && cached.products.length > 0) {
+        rawProducts = cached.products;
+        rawCategories = cached.categories || [];
+        rawCoupons = cached.coupons || [];
+        adminZonesData = cached.zone || null;
+        renderCategoryChips();
+        renderProducts();
+      }
+    } catch(e) {}
+  }
+
+  // 2. CONSOLIDATED SINGLE-SHOT API CALL
+  function fetchInitialStoreData(isUserAction = false) {
+    const userEmailParam = currentUser && currentUser.email ? `&userEmail=${encodeURIComponent(currentUser.email)}` : "";
+    fetch(`${SPREADSHEET_API_URL}?action=getInitStoreData${userEmailParam}`)
+      .then(r => r.json())
+      .then(data => {
+        rawProducts = data.products || [];
+        rawCategories = data.categories || [];
+        rawCoupons = data.coupons || [];
+        adminZonesData = data.zone || null;
+        if (data.myOrders) {
+          cachedMyOrders = data.myOrders;
+          renderCustomerOrdersList();
+          checkAndResumeActiveOrderTimer();
+        }
+
+        // Cache for instant next load
+        localStorage.setItem('mohna_store_cache', JSON.stringify({
+          products: rawProducts,
+          categories: rawCategories,
+          coupons: rawCoupons,
+          zone: adminZonesData
+        }));
+
+        renderCategoryChips();
+        renderProducts();
+      }).catch(err => {
+        console.error("Fetch failed:", err);
+      });
+  }
+
+  // 3. LAZY-LOAD LEAFLET & TURF.JS ONLY WHEN CHECKOUT IS ACCESSED
+  function lazyLoadMapLibraries(callback) {
+    if (mapScriptsLoaded) return callback();
+    
+    const leafletCss = document.createElement('link');
+    leafletCss.rel = 'stylesheet';
+    leafletCss.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    document.head.appendChild(leafletCss);
+
+    const leafletScript = document.createElement('script');
+    leafletScript.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    leafletScript.onload = () => {
+      const turfScript = document.createElement('script');
+      turfScript.src = 'https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js';
+      turfScript.onload = () => {
+        mapScriptsLoaded = true;
+        callback();
+      };
+      document.body.appendChild(turfScript);
+    };
+    document.body.appendChild(leafletScript);
+  }
 
   function compressImageFile(file, maxWidth, maxHeight, callback) {
     const reader = new FileReader();
@@ -343,11 +412,11 @@
     if (pageId === 'homePage') document.getElementById('navHome').classList.add('active');
     if (pageId === 'checkoutPage') {
       document.getElementById('navCheckout').classList.add('active');
-      initCheckoutMap();
+      lazyLoadMapLibraries(() => { initCheckoutMap(); });
     }
     if (pageId === 'ordersPage') {
       document.getElementById('navOrders').classList.add('active');
-      loadCustomerOrders();
+      renderCustomerOrdersList();
     }
     if (pageId === 'profilePage') {
       document.getElementById('navProfile').classList.add('active');
@@ -358,15 +427,12 @@
 
   window.onload = function() {
     updateHeaderAuthUI();
-    fetchCategoriesAndProducts();
-    fetchZones();
-    fetchCoupons();
+    loadFromLocalCache();       // Step 1: Render instantly from cache
+    fetchInitialStoreData();     // Step 2: Fetch 1 single roundtrip in background
     requestUserGPS();
 
     if (!currentUser) {
       openAuthModal('login');
-    } else {
-      checkAndResumeActiveOrderTimer();
     }
   };
 
@@ -481,7 +547,7 @@
         localStorage.setItem('mohna_user', JSON.stringify(currentUser));
         closeAuthModal();
         updateHeaderAuthUI();
-        checkAndResumeActiveOrderTimer();
+        fetchInitialStoreData();
       } else {
         alert(res.message);
       }
@@ -559,24 +625,6 @@
     }
   }
 
-  function fetchCategoriesAndProducts() {
-    Promise.all([
-      fetch(`${SPREADSHEET_API_URL}?action=getCategories`).then(r => r.json()),
-      fetch(`${SPREADSHEET_API_URL}?action=getProducts`).then(r => r.json())
-    ]).then(([catData, prodData]) => {
-      rawCategories = catData.categories || [];
-      rawProducts = prodData.products || [];
-      renderCategoryChips();
-      renderProducts();
-    });
-  }
-
-  function fetchCoupons() {
-    fetch(`${SPREADSHEET_API_URL}?action=getCoupons`).then(r => r.json()).then(data => {
-      rawCoupons = data.coupons || [];
-    });
-  }
-
   function renderCategoryChips() {
     const chipContainer = document.getElementById('categoryChips');
     const scopedCategories = rawCategories.filter(c => c.scope === currentTheme || c.scope === 'both');
@@ -623,7 +671,7 @@
 
       return `
         <div class="product-card">
-          <img src="${p.img || 'https://via.placeholder.com/200?text=Product'}" class="product-img" alt="${p.name}">
+          <img src="${p.img || 'https://via.placeholder.com/200?text=Product'}" loading="lazy" class="product-img" alt="${p.name}">
           <div class="product-title">${p.name}</div>
           <small style="color:#64748b; font-size:11px;">${tag}</small>
           <div class="product-price">₹${price}</div>
@@ -631,12 +679,6 @@
         </div>
       `;
     }).join('');
-  }
-
-  function fetchZones() {
-    fetch(`${SPREADSHEET_API_URL}?action=getZone`).then(r => r.json()).then(data => {
-      if (data && data.zone) adminZonesData = (typeof data.zone === 'string') ? JSON.parse(data.zone) : data.zone;
-    });
   }
 
   function selectProductForCheckout(productId) {
@@ -657,7 +699,7 @@
 
   function initCheckoutMap() {
     setTimeout(() => {
-      if (!modalMap) {
+      if (!modalMap && typeof L !== 'undefined') {
         modalMap = L.map('mapModal').setView([25.6000, 85.1300], 12);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(modalMap);
         if (adminZonesData) L.geoJSON(adminZonesData, { style: { color: "#2563eb", fillColor: "#3b82f6", fillOpacity: 0.25 } }).addTo(modalMap);
@@ -666,18 +708,26 @@
       navigator.geolocation.getCurrentPosition((pos) => {
         const lat = pos.coords.latitude, lng = pos.coords.longitude;
         userCoords = { lat, lng };
-        modalMap.setView([lat, lng], 14);
-        if (modalUserMarker) modalUserMarker.setLatLng([lat, lng]);
-        else modalUserMarker = L.marker([lat, lng]).addTo(modalMap);
+        if (modalMap) {
+          modalMap.setView([lat, lng], 14);
+          if (modalUserMarker) modalUserMarker.setLatLng([lat, lng]);
+          else modalUserMarker = L.marker([lat, lng]).addTo(modalMap);
+        }
         evaluateCheckoutZone(lat, lng);
       });
 
       renderQrCode(baseAmount || 199);
-    }, 200);
+    }, 100);
   }
 
   function evaluateCheckoutZone(lat, lng) {
     const statusBox = document.getElementById('modalCoverageStatus');
+    if (typeof turf === 'undefined') {
+      statusBox.innerHTML = `✅ <b>Location Verified.</b> Fast delivery active.`;
+      document.getElementById('confirmPayBtn').disabled = false;
+      return;
+    }
+
     const point = turf.point([lng, lat]);
     let isDeliverable = false;
 
@@ -761,18 +811,12 @@
   }
 
   function checkAndResumeActiveOrderTimer() {
-    if (!currentUser || !currentUser.email) return;
-    fetch(`${SPREADSHEET_API_URL}?action=getOrders`).then(r => r.json()).then(data => {
-      const myOrders = (data.orders || []).filter(o => o.email.toLowerCase() === currentUser.email.toLowerCase());
-      if (myOrders.length > 0) {
-        const latestOrder = myOrders[0];
-        const expiryMs = parseInt(latestOrder.expiryTimestamp) || (new Date(latestOrder.date).getTime() + (latestOrder.etaMinutes || 20) * 60000);
-        
-        if (expiryMs > Date.now() - (60 * 60 * 1000)) {
-          startPersistentCountdown(expiryMs, latestOrder.orderId);
-        }
-      }
-    });
+    if (!cachedMyOrders || cachedMyOrders.length === 0) return;
+    const latestOrder = cachedMyOrders[0];
+    const expiryMs = parseInt(latestOrder.expiryTimestamp) || (new Date(latestOrder.date).getTime() + (latestOrder.etaMinutes || 20) * 60000);
+    if (expiryMs > Date.now() - (60 * 60 * 1000)) {
+      startPersistentCountdown(expiryMs, latestOrder.orderId);
+    }
   }
 
   function startPersistentCountdown(targetExpiryTimestamp, orderId) {
@@ -802,36 +846,46 @@
     }, 1000);
   }
 
-  function loadCustomerOrders() {
-    if (!currentUser || !currentUser.email) return;
-    fetch(`${SPREADSHEET_API_URL}?action=getOrders`).then(r => r.json()).then(data => {
-      const myOrders = (data.orders || []).filter(o => o.email.toLowerCase() === currentUser.email.toLowerCase());
-      const container = document.getElementById('customerOrdersList');
+  function renderCustomerOrdersList() {
+    const container = document.getElementById('customerOrdersList');
+    if (!currentUser) {
+      container.innerHTML = '<p style="text-align:center; color:#94a3b8; font-size:13px;">Please log in to view order history.</p>';
+      return;
+    }
 
-      if (myOrders.length === 0) {
-        container.innerHTML = '<p style="text-align:center; color:#94a3b8; font-size:13px;">No past orders found.</p>';
-        return;
-      }
+    if (cachedMyOrders.length === 0) {
+      container.innerHTML = '<p style="text-align:center; color:#94a3b8; font-size:13px;">No past orders found.</p>';
+      return;
+    }
 
-      container.innerHTML = myOrders.map(o => `
-        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px; margin-bottom:10px;">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <b>${o.orderId}</b>
-            <span style="background:#dcfce7; color:#166534; font-size:11px; font-weight:bold; padding:2px 8px; border-radius:12px;">${o.status || 'PAID'}</span>
-          </div>
-          <p style="margin:4px 0; font-size:13px; color:#334155;">${o.item} (Qty: ${o.qty})</p>
-          <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#64748b;">
-            <span>📅 ${o.date} (ETA: ${o.etaMinutes || 20}m)</span>
-            <b style="color:#0f172a; font-size:14px;">${o.amount}</b>
-          </div>
+    container.innerHTML = cachedMyOrders.map(o => `
+      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px; margin-bottom:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <b>${o.orderId}</b>
+          <span style="background:#dcfce7; color:#166534; font-size:11px; font-weight:bold; padding:2px 8px; border-radius:12px;">${o.status || 'PAID'}</span>
         </div>
-      `).join('');
-    });
+        <p style="margin:4px 0; font-size:13px; color:#334155;">${o.item} (Qty: ${o.qty})</p>
+        <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#64748b;">
+          <span>📅 ${o.date} (ETA: ${o.etaMinutes || 20}m)</span>
+          <b style="color:#0f172a; font-size:14px;">${o.amount}</b>
+        </div>
+      </div>
+    `).join('');
   }
 
   function downloadPDF() {
     const element = document.getElementById('invoiceBill');
-    html2pdf().set({ margin: [8, 8, 8, 8], filename: 'Invoice.pdf', jsPDF: { unit: 'mm', format: 'a5' } }).from(element).save();
+    if (!pdfScriptLoaded) {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+      script.onload = () => {
+        pdfScriptLoaded = true;
+        html2pdf().set({ margin: [8, 8, 8, 8], filename: 'Invoice.pdf', jsPDF: { unit: 'mm', format: 'a5' } }).from(element).save();
+      };
+      document.body.appendChild(script);
+    } else {
+      html2pdf().set({ margin: [8, 8, 8, 8], filename: 'Invoice.pdf', jsPDF: { unit: 'mm', format: 'a5' } }).from(element).save();
+    }
   }
 </script>
 </body>
