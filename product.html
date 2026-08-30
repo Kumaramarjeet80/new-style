@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product Details - Mohna Express</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: #fdf2f8; min-height: 100vh; padding: 16px 16px 80px 16px; }
+    .container { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    
+    .top-nav-bar { background: white; border-radius: 16px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
+    .back-btn { background: none; border: none; font-size: 18px; cursor: pointer; color: #0f172a; font-weight: bold; }
+    
+    .detail-card { background: white; border-radius: 20px; padding: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; gap: 12px; }
+    .detail-img { width: 100%; height: 260px; object-fit: cover; border-radius: 16px; }
+    .product-name { font-size: 20px; font-weight: 800; color: #0f172a; }
+    .category-badge { display: inline-block; background: #e0e7ff; color: #3730a3; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; width: fit-content; }
+    
+    .price-box { display: flex; align-items: baseline; gap: 10px; margin-top: 4px; }
+    .current-price { font-size: 24px; font-weight: 800; color: #2563eb; }
+    .original-price { font-size: 16px; text-decoration: line-through; color: #94a3b8; }
+    
+    .desc-box { font-size: 14px; color: #475569; line-height: 1.5; border-top: 1px solid #f1f5f9; padding-top: 12px; }
+    
+    .action-bar { position: fixed; bottom: 0; left: 0; right: 0; max-width: 480px; margin: 0 auto; background: white; padding: 12px 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; box-shadow: 0 -4px 15px rgba(0,0,0,0.05); border-top: 1px solid #f1f5f9; z-index: 100; }
+    .btn-cart { background: #f8fafc; border: 1px solid #cbd5e1; color: #334155; padding: 14px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 14px; }
+    .btn-buy { background: #4f46e5; border: none; color: white; padding: 14px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 14px; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="top-nav-bar">
+    <button class="back-btn" onclick="window.history.back()">← Back</button>
+    <b style="color:#0f172a;">Product View</b>
+    <span style="width:24px;"></span>
+  </div>
+
+  <div class="detail-card" id="productDetails">
+    <div style="text-align:center; padding:40px; color:#64748b;">Loading product details...</div>
+  </div>
+</div>
+
+<div class="action-bar" id="productActions" style="display:none;">
+  <button class="btn-cart" id="btnDetailCart">🛒 Add to Cart</button>
+  <button class="btn-buy" id="btnDetailBuy">⚡ Buy Now</button>
+</div>
+
+<script>
+  const SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbxVDobxg66c0QCfhrPFRj-l4T8cAWLJR_HBrMyrYJgAQESRxNjP7R7ripoFQnSpBe5R/exec";
+  let activeProduct = null;
+
+  window.onload = function() {
+    const params = new URLSearchParams(window.location.search);
+    const prodId = params.get('id');
+    if (!prodId) {
+      window.location.href = "home.html";
+      return;
+    }
+    fetchProduct(prodId);
+  };
+
+  function fetchProduct(id) {
+    fetch(`${SPREADSHEET_API_URL}?action=getProducts`)
+      .then(r => r.json())
+      .then(data => {
+        const prod = (data.products || []).find(p => p.id === id);
+        if (!prod) {
+          document.getElementById('productDetails').innerHTML = `<div style="text-align:center; padding:40px;">Product not found.</div>`;
+          return;
+        }
+        activeProduct = prod;
+        renderDetails();
+      });
+  }
+
+  function renderDetails() {
+    const mrp = Math.round(activeProduct.retailPrice * 1.3);
+    document.getElementById('productDetails').innerHTML = `
+      <img src="${activeProduct.img || 'https://via.placeholder.com/300'}" class="detail-img">
+      <div class="category-badge">${activeProduct.category || 'General'}</div>
+      <div class="product-name">${activeProduct.name}</div>
+      <div class="price-box">
+        <span class="current-price">₹${activeProduct.retailPrice}</span>
+        <span class="original-price">₹${mrp}</span>
+      </div>
+      <div class="desc-box">
+        <b>Description:</b><br>
+        Fastest delivery within administrative zones. Fresh stock verified and guaranteed under express ETA.
+      </div>
+    `;
+
+    document.getElementById('productActions').style.display = 'grid';
+    document.getElementById('btnDetailCart').onclick = () => {
+      let cart = JSON.parse(localStorage.getItem("mohna_cart") || "[]");
+      cart.push({ id: activeProduct.id, name: activeProduct.name, price: activeProduct.retailPrice, img: activeProduct.img, quantity: 1 });
+      localStorage.setItem("mohna_cart", JSON.stringify(cart));
+      alert("Added to cart!");
+    };
+
+    document.getElementById('btnDetailBuy').onclick = () => {
+      let cart = JSON.parse(localStorage.getItem("mohna_cart") || "[]");
+      cart.push({ id: activeProduct.id, name: activeProduct.name, price: activeProduct.retailPrice, img: activeProduct.img, quantity: 1 });
+      localStorage.setItem("mohna_cart", JSON.stringify(cart));
+      window.location.href = "checkout.html";
+    };
+  }
+</script>
+</body>
+</html>

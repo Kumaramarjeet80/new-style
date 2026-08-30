@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Home - Mohna Express</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: #fdf2f8; min-height: 100vh; padding: 16px 16px 80px 16px; }
+    .container { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    
+    /* Dual Top Cards with matching dimensions */
+    .top-bar-box, .store-toggle-box {
+      background: white; border-radius: 20px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 15px rgba(0,0,0,0.03); height: 64px;
+    }
+    .brand-group { display: flex; align-items: center; gap: 10px; }
+    .brand-icon { width: 40px; height: 40px; background: #2563eb; color: #fff; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; }
+    .brand-title { font-size: 16px; font-weight: 800; color: #0f172a; line-height: 1.1; }
+    
+    .user-btn { background: #dcfce7; color: #15803d; border: none; padding: 8px 12px; border-radius: 14px; font-size: 13px; font-weight: 700; cursor: pointer; text-decoration: none; display: flex; align-items: center; gap: 6px; }
+    .login-btn { background: #2563eb; color: white; border: none; padding: 8px 14px; border-radius: 14px; font-size: 13px; font-weight: 700; cursor: pointer; text-decoration: none; }
+
+    /* Store Switcher */
+    .store-toggle-btn { flex: 1; height: 44px; border: none; border-radius: 14px; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; background: transparent; color: #64748b; transition: 0.2s; }
+    .store-toggle-btn.active { background: #4f46e5; color: white; box-shadow: 0 4px 12px rgba(79,70,229,0.3); }
+
+    /* Search Bar */
+    .search-box { background: white; border-radius: 14px; padding: 12px 16px; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+    .search-box input { border: none; outline: none; width: 100%; font-size: 14px; background: transparent; }
+
+    /* Category Pill Badges */
+    .categories-bar { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+    .cat-pill { padding: 8px 16px; background: white; border-radius: 20px; font-size: 13px; font-weight: 600; color: #475569; border: 1px solid #f1f5f9; cursor: pointer; white-space: nowrap; }
+    .cat-pill.active { background: #0f172a; color: white; }
+
+    /* Catalog Cards */
+    .product-list { display: flex; flex-direction: column; gap: 16px; }
+    .product-card { background: white; border-radius: 20px; padding: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; gap: 10px; }
+    .product-img { width: 100%; height: 200px; object-fit: cover; border-radius: 16px; }
+    .product-title { font-size: 16px; font-weight: 800; color: #0f172a; }
+    .product-sub { font-size: 12px; color: #64748b; }
+    .price-row { display: flex; align-items: baseline; gap: 8px; }
+    .active-price { font-size: 18px; font-weight: 800; color: #2563eb; }
+    .strike-price { font-size: 13px; text-decoration: line-through; color: #94a3b8; }
+    
+    .card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .btn-cart { background: #f8fafc; border: 1px solid #cbd5e1; color: #334155; padding: 10px; border-radius: 12px; font-weight: 700; cursor: pointer; }
+    .btn-buy { background: #4f46e5; border: none; color: white; padding: 10px; border-radius: 12px; font-weight: 700; cursor: pointer; }
+
+    /* Bottom Navigation Bar */
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 65px; background: white; display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #f1f5f9; z-index: 100; max-width: 480px; margin: 0 auto; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; text-decoration: none; color: #64748b; font-size: 11px; font-weight: 600; position: relative; }
+    .nav-item.active { color: #2563eb; }
+    .nav-badge { position: absolute; top: -4px; right: -8px; background: #ef4444; color: white; font-size: 10px; font-weight: bold; border-radius: 10px; padding: 1px 6px; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Bar 1: Branding and Auth Header -->
+  <div class="top-bar-box">
+    <div class="brand-group">
+      <div class="brand-icon">⚡</div>
+      <div class="brand-title">Mohna<br>Express</div>
+    </div>
+    <div id="authHeaderArea"></div>
+  </div>
+
+  <!-- Bar 2: Retail vs Wholesale Switcher -->
+  <div class="store-toggle-box">
+    <button class="store-toggle-btn active" id="btnRetail" onclick="switchStore('Retail')">🛍️ Retail Store</button>
+    <button class="store-toggle-btn" id="btnWholesale" onclick="switchStore('Wholesale')">📦 Wholesale Bulk</button>
+  </div>
+
+  <!-- Search Input -->
+  <div class="search-box">
+    <span>🔍</span>
+    <input type="text" id="searchInput" placeholder="Search products by name, description..." oninput="handleSearch(this.value)" />
+  </div>
+
+  <!-- Category List -->
+  <div class="categories-bar" id="categoryBar">
+    <button class="cat-pill active" onclick="filterCategory('all', this)">All Items</button>
+  </div>
+
+  <!-- Product Catalog -->
+  <div class="product-list" id="productGrid"></div>
+</div>
+
+<!-- Bottom Navigation Bar with Synchronized Cart Badge -->
+<nav class="bottom-nav">
+  <a href="home.html" class="nav-item active"><span>🏠</span>Home</a>
+  <a href="checkout.html" class="nav-item">
+    <span>💳</span>Checkout
+    <span class="nav-badge" id="cartBadgeCount" style="display:none;">0</span>
+  </a>
+  <a href="orders.html" class="nav-item"><span>📦</span>My Orders</a>
+  <a href="profile.html" class="nav-item"><span>👤</span>Profile</a>
+</nav>
+
+<script>
+  const SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbxVDobxg66c0QCfhrPFRj-l4T8cAWLJR_HBrMyrYJgAQESRxNjP7R7ripoFQnSpBe5R/exec";
+  let currentStore = "Retail";
+  let activeCategory = "all";
+  let productsCache = [];
+
+  window.onload = function() {
+    verifyUserSession();
+    updateCartBadge();
+    loadCategories();
+    loadCatalog();
+  };
+
+  function verifyUserSession() {
+    const userStr = localStorage.getItem("mohna_user");
+    const container = document.getElementById("authHeaderArea");
+    if (!userStr) {
+      container.innerHTML = `<a href="auth.html" class="login-btn">Login / Register</a>`;
+      return;
+    }
+    const user = JSON.parse(userStr);
+    container.innerHTML = `<a href="profile.html" class="user-btn">👤 Hi, ${user.name.split(' ')[0]}</a>`;
+
+    // Active single-device logout validation
+    fetch(`${SPREADSHEET_API_URL}?action=verifySession&userId=${user.id}&token=${user.sessionToken}`)
+      .then(r => r.json())
+      .then(res => {
+        if (!res.valid) {
+          alert("Your session has expired or you have logged in from another device.");
+          localStorage.removeItem("mohna_user");
+          window.location.href = "auth.html";
+        }
+      });
+  }
+
+  function updateCartBadge() {
+    const cart = JSON.parse(localStorage.getItem("mohna_cart") || "[]");
+    const badge = document.getElementById("cartBadgeCount");
+    if (cart.length > 0) {
+      badge.style.display = "block";
+      badge.innerText = cart.length;
+    } else {
+      badge.style.display = "none";
+    }
+  }
+
+  function switchStore(type) {
+    currentStore = type;
+    document.getElementById("btnRetail").classList.toggle("active", type === "Retail");
+    document.getElementById("btnWholesale").classList.toggle("active", type === "Wholesale");
+    renderProducts();
+  }
+
+  function loadCategories() {
+    fetch(`${SPREADSHEET_API_URL}?action=getCategories`)
+      .then(r => r.json())
+      .then(data => {
+        const bar = document.getElementById("categoryBar");
+        const cats = data.categories || [];
+        bar.innerHTML = `<button class="cat-pill active" onclick="filterCategory('all', this)">All Items</button>` + 
+          cats.map(c => `<button class="cat-pill" onclick="filterCategory('${c.slug}', this)">${c.name}</button>`).join('');
+      });
+  }
+
+  function filterCategory(slug, el) {
+    activeCategory = slug;
+    document.querySelectorAll(".cat-pill").forEach(p => p.classList.remove("active"));
+    el.classList.add("active");
+    renderProducts();
+  }
+
+  function loadCatalog() {
+    fetch(`${SPREADSHEET_API_URL}?action=getProducts`)
+      .then(r => r.json())
+      .then(data => {
+        productsCache = data.products || [];
+        renderProducts();
+      });
+  }
+
+  function renderProducts(query = "") {
+    const container = document.getElementById("productGrid");
+    const filtered = productsCache.filter(p => {
+      const matchCat = activeCategory === "all" || p.category === activeCategory;
+      const matchSearch = p.name.toLowerCase().includes(query.toLowerCase());
+      return matchCat && matchSearch;
+    });
+
+    if (filtered.length === 0) {
+      container.innerHTML = `<div style="text-align:center; padding:30px; color:#94a3b8;">No products found in this category.</div>`;
+      return;
+    }
+
+    container.innerHTML = filtered.map(p => {
+      const price = currentStore === "Retail" ? p.retailPrice : p.wholesalePrice;
+      const mrp = Math.round(price * 1.3);
+      return `
+        <div class="product-card">
+          <img src="${p.img || 'https://via.placeholder.com/300'}" class="product-img" onclick="openProduct('${p.id}')">
+          <div>
+            <div class="product-title" onclick="openProduct('${p.id}')">${p.name}</div>
+            <div class="product-sub">${currentStore} Single Unit</div>
+          </div>
+          <div class="price-row">
+            <span class="active-price">₹${price}</span>
+            <span class="strike-price">₹${mrp}</span>
+          </div>
+          <div class="card-actions">
+            <button class="btn-cart" onclick="addToCart('${p.id}', '${p.name}', ${price}, '${p.img}')">🛒 Add to Cart</button>
+            <button class="btn-buy" onclick="buyNow('${p.id}', '${p.name}', ${price}, '${p.img}')">⚡ Buy Now</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function handleSearch(q) {
+    renderProducts(q);
+  }
+
+  function addToCart(id, name, price, img) {
+    let cart = JSON.parse(localStorage.getItem("mohna_cart") || "[]");
+    cart.push({ id, name, price, img, quantity: 1 });
+    localStorage.setItem("mohna_cart", JSON.stringify(cart));
+    updateCartBadge();
+  }
+
+  function buyNow(id, name, price, img) {
+    addToCart(id, name, price, img);
+    window.location.href = "checkout.html";
+  }
+
+  function openProduct(id) {
+    window.location.href = `product.html?id=${id}`;
+  }
+</script>
+</body>
+</html>

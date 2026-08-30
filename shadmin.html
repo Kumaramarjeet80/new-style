@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard - Mohna Express</title>
+  
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { margin: 0; padding: 20px; background: #f1f5f9; }
+    .container { max-width: 1300px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+    .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+    h2, h3 { margin: 0; color: #0f172a; }
+    
+    .admin-tab-nav { display: flex; gap: 8px; overflow-x: auto; background: white; padding: 10px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .admin-tab-btn { padding: 10px 16px; border: none; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; background: #f8fafc; color: #475569; white-space: nowrap; transition: 0.2s; }
+    .admin-tab-btn.active-tab { background: #0f172a; color: white; box-shadow: 0 2px 8px rgba(15,23,42,0.2); }
+
+    .admin-page-view { display: none; }
+    .admin-page-view.active-view { display: block; }
+
+    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    .master-search-input { width: 100%; padding: 12px 16px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 14px; outline: none; background: white; }
+    .form-group { margin-bottom: 10px; }
+    .form-group label { display: block; font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 4px; }
+    .form-group input, .form-group select { width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; }
+
+    .btn { padding: 8px 12px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px; display: inline-flex; align-items: center; gap: 4px; text-decoration: none; }
+    .btn-primary { background: #2563eb; color: white; }
+    .btn-danger { background: #ef4444; color: white; }
+    .btn-dark { background: #0f172a; color: white; }
+    .btn-refresh { background: #f8fafc; border: 1px solid #cbd5e1; color: #334155; font-size: 12px; }
+    .btn-del { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; padding: 4px 8px; font-size: 11px; }
+
+    .timer-badge-active { background: #0f172a; color: #38bdf8; font-family: monospace; font-weight: 800; font-size: 12px; padding: 4px 8px; border-radius: 6px; border: 1px solid #38bdf8; }
+    .timer-badge-expired { background: #fee2e2; color: #b91c1c; font-family: monospace; font-weight: 800; font-size: 12px; padding: 4px 8px; border-radius: 6px; border: 1px solid #f87171; }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
+    th { background: #f8fafc; color: #475569; font-size: 12px; }
+
+    #map { height: 420px; width: 100%; border-radius: 8px; border: 1px solid #cbd5e1; }
+    .zone-panel { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; height: 420px; display: flex; flex-direction: column; }
+    .zone-list { list-style: none; padding: 0; margin: 8px 0 0; overflow-y: auto; flex-grow: 1; display: flex; flex-direction: column; gap: 6px; }
+    .zone-item { background: white; padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
+    #reportPdfTemplate { display: none; background: white; padding: 30px; font-family: Arial, sans-serif; color: #0f172a; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+    <div>
+      <h1 style="margin:0; font-size:24px; color:#0f172a;">⚡ Mohna Express Control Hub</h1>
+      <p style="margin:4px 0 0; color:#64748b; font-size:14px;">Live Synchronized Orders, Delivery Timers & Customer Database</p>
+    </div>
+    <button class="btn btn-dark" onclick="fetchAllData()">🔄 Master Refresh (All)</button>
+  </div>
+
+  <nav class="admin-tab-nav">
+    <button class="admin-tab-btn active-tab" id="tabBtnOrders" onclick="switchAdminTab('viewOrders')">🧾 Orders & Live Countdowns</button>
+    <button class="admin-tab-btn" id="tabBtnUsers" onclick="switchAdminTab('viewUsers')">👥 Users Database</button>
+    <button class="admin-tab-btn" id="tabBtnReports" onclick="switchAdminTab('viewReports')">📊 Reports (CSV & PDF)</button>
+    <button class="admin-tab-btn" id="tabBtnCoupons" onclick="switchAdminTab('viewCoupons')">🎟️ Coupons</button>
+    <button class="admin-tab-btn" id="tabBtnProducts" onclick="switchAdminTab('viewProducts')">📦 Products & Stock</button>
+    <button class="admin-tab-btn" id="tabBtnCategories" onclick="switchAdminTab('viewCategories')">🏷️ Categories</button>
+    <button class="admin-tab-btn" id="tabBtnZones" onclick="switchAdminTab('viewZones')">🛠️ Delivery Zones</button>
+  </nav>
+
+  <input type="text" id="masterAdminSearch" class="master-search-input" placeholder="🔍 Omnisearch across all tabs (Names, Phone numbers, Order IDs, Coordinates)..." oninput="handleAdminOmniSearch(this.value)" />
+
+  <!-- TAB 1: ORDERS -->
+  <div id="viewOrders" class="admin-page-view active-view">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h3>🧾 Orders & Synchronized Zone ETA Tracking</h3>
+          <p style="margin:2px 0 0; font-size:12px; color:#64748b;">Live ticking countdown timers for every order synced with customer devices.</p>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-primary" onclick="window.print()">🖨️ A4 Slip Print</button>
+          <button class="btn btn-refresh" onclick="loadOrders()">🔄 Refresh</button>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Order ID</th><th>Timestamp</th><th>Customer</th><th>Phone</th><th>Total Paid</th><th>Zone ETA</th><th>⏱️ Live Countdown</th><th>Status</th><th>Route</th>
+          </tr>
+        </thead>
+        <tbody id="ordersBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TAB 2: USERS WITH GPS ROUTE -->
+  <div id="viewUsers" class="admin-page-view">
+    <div class="card">
+      <div class="card-header">
+        <div><h3>👥 Registered Customers</h3></div>
+        <button class="btn btn-refresh" onclick="loadUsers()">🔄 Refresh</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>User ID</th><th>Registered Date</th><th>Name</th><th>Phone</th><th>GPS Coordinates</th><th>Status</th><th>Route</th><th>Access Action</th>
+          </tr>
+        </thead>
+        <tbody id="userTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TAB 3: REPORTS -->
+  <div id="viewReports" class="admin-page-view">
+    <div class="card" style="border-left:5px solid #059669;">
+      <h3>📊 Instant CSV & PDF Reports Center</h3>
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:10px; margin-top:10px;">
+        <div style="background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #e2e8f0;">
+          <b>👥 Users Database</b>
+          <div style="display:flex; gap:6px; margin-top:8px;">
+            <button class="btn btn-primary" style="flex:1;" onclick="exportReport('users', 'csv')">📥 CSV</button>
+            <button class="btn btn-dark" style="flex:1;" onclick="exportReport('users', 'pdf')">📄 PDF</button>
+          </div>
+        </div>
+        <div style="background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #e2e8f0;">
+          <b>🧾 Orders & Timestamps</b>
+          <div style="display:flex; gap:6px; margin-top:8px;">
+            <button class="btn btn-primary" style="flex:1;" onclick="exportReport('orders', 'csv')">📥 CSV</button>
+            <button class="btn btn-dark" style="flex:1;" onclick="exportReport('orders', 'pdf')">📄 PDF</button>
+          </div>
+        </div>
+        <div style="background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #e2e8f0;">
+          <b>📦 Inventory & Stock</b>
+          <div style="display:flex; gap:6px; margin-top:8px;">
+            <button class="btn btn-primary" style="flex:1;" onclick="exportReport('products', 'csv')">📥 CSV</button>
+            <button class="btn btn-dark" style="flex:1;" onclick="exportReport('products', 'pdf')">📄 PDF</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 4: COUPONS -->
+  <div id="viewCoupons" class="admin-page-view">
+    <div class="grid-2">
+      <div class="card">
+        <h3>🎟️ Create Zone Coupon</h3>
+        <form onsubmit="handleAddCoupon(event)" style="margin-top:10px;">
+          <div class="form-group"><label>Promo Code</label><input type="text" id="cpnCode" required placeholder="e.g. FESTIVAL20" style="text-transform:uppercase;" /></div>
+          <div class="form-group"><label>Discount (%)</label><input type="number" id="cpnPercent" required min="1" max="90" placeholder="20" /></div>
+          <div class="form-group"><label>Expiry Date</label><input type="date" id="cpnExpiry" required /></div>
+          <div class="form-group"><label>Delivery Zone</label><select id="cpnZoneSelect" required><option value="all">🌍 All Zones</option></select></div>
+          <button type="submit" class="btn btn-primary" style="width:100%;">+ Publish Coupon</button>
+        </form>
+      </div>
+      <div class="card">
+        <div class="card-header"><h3>📋 Active Coupons</h3><button class="btn btn-refresh" onclick="loadCoupons()">🔄</button></div>
+        <table>
+          <thead><tr><th>Code</th><th>Discount</th><th>Expires</th><th>Zone</th><th>Action</th></tr></thead>
+          <tbody id="couponTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 5: PRODUCTS -->
+  <div id="viewProducts" class="admin-page-view">
+    <div class="grid-2">
+      <div class="card">
+        <h3>📦 Add Product to Catalog</h3>
+        <form onsubmit="handleAddProduct(event)" style="margin-top:10px;">
+          <div class="form-group"><label>Title</label><input type="text" id="prodName" required placeholder="Item Title" /></div>
+          <div class="form-group"><label>Category</label><select id="prodCategorySelect" required></select></div>
+          <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:6px;">
+            <div class="form-group"><label>Retail Price</label><input type="number" id="prodRetailPrice" required placeholder="180" /></div>
+            <div class="form-group"><label>Wholesale</label><input type="number" id="prodWholesalePrice" required placeholder="140" /></div>
+            <div class="form-group"><label>Stock</label><input type="number" id="prodStockQty" required placeholder="100" /></div>
+          </div>
+          <div class="form-group"><label>Image URL</label><input type="url" id="prodImg" required placeholder="https://..." /></div>
+          <button type="submit" class="btn btn-primary" style="width:100%;">+ Save Product</button>
+        </form>
+      </div>
+      <div class="card">
+        <div class="card-header"><h3>📋 Inventory</h3><button class="btn btn-refresh" onclick="loadProducts()">🔄</button></div>
+        <table>
+          <thead><tr><th>Image</th><th>Name</th><th>Retail</th><th>Wholesale</th><th>Stock</th><th>Action</th></tr></thead>
+          <tbody id="prodTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 6: CATEGORIES -->
+  <div id="viewCategories" class="admin-page-view">
+    <div class="card">
+      <div class="card-header"><h3>🏷️ Scoped Categories</h3><button class="btn btn-refresh" onclick="loadCategories()">🔄</button></div>
+      <form onsubmit="handleAddCategory(event)" style="display:flex; gap:8px; margin-bottom:12px;">
+        <input type="text" id="newCatName" required placeholder="Category Name" style="flex:1; padding:8px; border:1px solid #cbd5e1; border-radius:6px;" />
+        <select id="newCatScope" required style="width:140px; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
+          <option value="retail">🛍️ Retail</option>
+          <option value="wholesale">📦 Wholesale</option>
+        </select>
+        <button type="submit" class="btn btn-primary">+ Add</button>
+      </form>
+      <table>
+        <thead><tr><th>Category</th><th>Scope</th><th>Action</th></tr></thead>
+        <tbody id="catTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TAB 7: DELIVERY ZONES -->
+  <div id="viewZones" class="admin-page-view">
+    <div class="card">
+      <div class="card-header">
+        <h3>🛠️ Delivery Boundaries, Timings & Guarantee</h3>
+        <div style="display:flex; gap:6px;">
+          <button class="btn btn-primary" onclick="saveAllZonesToSheet()">💾 Save Zones</button>
+          <button class="btn btn-danger" onclick="clearAllZones()">🗑️ Clear Map</button>
+          <button class="btn btn-refresh" onclick="loadZones()">🔄</button>
+        </div>
+      </div>
+      <div class="grid-2" style="grid-template-columns: 1fr 320px;">
+        <div id="map"></div>
+        <div class="zone-panel">
+          <h4 style="margin:0 0 8px 0;">Active Zones</h4>
+          <ul id="zoneList" class="zone-list"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="reportPdfTemplate"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.js"></script>
+
+<script>
+  const SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbxVDobxg66c0QCfhrPFRj-l4T8cAWLJR_HBrMyrYJgAQESRxNjP7R7ripoFQnSpBe5R/exec";
+
+  function switchAdminTab(viewId) {
+    document.querySelectorAll('.admin-page-view').forEach(v => v.classList.remove('active-view'));
+    document.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.remove('active-tab'));
+    document.getElementById(viewId).classList.add('active-view');
+    const tabMap = {
+      viewOrders: 'tabBtnOrders', viewUsers: 'tabBtnUsers', viewReports: 'tabBtnReports',
+      viewCoupons: 'tabBtnCoupons', viewProducts: 'tabBtnProducts', viewCategories: 'tabBtnCategories', viewZones: 'tabBtnZones'
+    };
+    if (tabMap[viewId]) document.getElementById(tabMap[viewId]).classList.add('active-tab');
+    if (viewId === 'viewZones') setTimeout(() => map.invalidateSize(), 200);
+  }
+
+  const map = L.map('map').setView([25.6000, 85.1300], 12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+  map.pm.addControls({ position: 'topleft', drawPolygon: true, drawRectangle: true, editMode: true, removalMode: false });
+  
+  let activeZones = [];
+  let cachedProducts = [];
+  let cachedCategories = [];
+  let cachedOrders = [];
+  let cachedUsers = [];
+  let cachedCoupons = [];
+  let adminOrdersInterval = null;
+
+  window.onload = function() { fetchAllData(); };
+
+  function fetchAllData() {
+    loadOrders();
+    loadUsers();
+    loadCoupons();
+    loadCategories();
+    loadProducts();
+    loadZones();
+  }
+
+  function handleAdminOmniSearch(q) {
+    const query = q.trim().toLowerCase();
+    renderOrdersTable(query);
+    renderUsersTable(query);
+    renderCouponsTable(query);
+    renderCategoriesTable(query);
+    renderProductsTable(query);
+    renderZoneSidebar(query);
+  }
+
+  function loadOrders() {
+    fetch(`${SPREADSHEET_API_URL}?action=getOrders`).then(r => r.json()).then(data => {
+      cachedOrders = data.orders || [];
+      renderOrdersTable();
+      startAdminLiveCountdownTicker();
+    });
+  }
+
+  function renderOrdersTable(q = "") {
+    const filtered = q ? cachedOrders.filter(o => o.orderId.toLowerCase().includes(q) || o.name.toLowerCase().includes(q) || o.phone.toString().includes(q)) : cachedOrders;
+    document.getElementById('ordersBody').innerHTML = filtered.map(o => {
+      const expiryMs = parseInt(o.expiryTimestamp) || (new Date(o.date).getTime() + (o.etaMinutes || 20) * 60000);
+      return `
+        <tr>
+          <td><b>${o.orderId}</b></td>
+          <td><small>${o.date}</small></td>
+          <td>${o.name}</td>
+          <td>${o.phone}</td>
+          <td><b>₹${o.amount}</b></td>
+          <td><span style="background:#dbeafe; color:#1e40af; padding:2px 6px; border-radius:4px; font-weight:bold;">⚡ ${o.etaMinutes || 20}m</span></td>
+          <td><span id="admin_timer_${o.orderId}" data-expiry="${expiryMs}" class="timer-badge-active">Loading...</span></td>
+          <td><span style="background:#dcfce7; color:#166534; padding:2px 6px; border-radius:4px; font-weight:bold;">${o.status}</span></td>
+          <td><a href="${o.mapsUrl}" target="_blank" class="btn btn-primary" style="font-size:11px; padding:4px 8px;">🗺️ Route</a></td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function startAdminLiveCountdownTicker() {
+    clearInterval(adminOrdersInterval);
+    adminOrdersInterval = setInterval(() => {
+      const now = Date.now();
+      document.querySelectorAll('[id^="admin_timer_"]').forEach(el => {
+        const expiry = parseInt(el.getAttribute('data-expiry'));
+        const diff = expiry - now;
+        if (diff <= 0) {
+          el.className = "timer-badge-expired";
+          el.innerText = "00:00 (EXPIRED)";
+        } else {
+          el.className = "timer-badge-active";
+          const totalSec = Math.floor(diff / 1000);
+          const mins = Math.floor(totalSec / 60);
+          const secs = totalSec % 60;
+          el.innerText = `⏱️ ${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+      });
+    }, 1000);
+  }
+
+  function loadUsers() {
+    fetch(`${SPREADSHEET_API_URL}?action=getUsers`).then(r => r.json()).then(data => {
+      cachedUsers = data.users || [];
+      renderUsersTable();
+    });
+  }
+
+  function renderUsersTable(q = "") {
+    const filtered = q ? cachedUsers.filter(u => u.name.toLowerCase().includes(q) || u.phone.includes(q)) : cachedUsers;
+    document.getElementById('userTableBody').innerHTML = filtered.map(u => {
+      const mapsUrl = u.coords && u.coords !== "N/A" 
+        ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(u.coords.replace(/\s+/g, ''))}` 
+        : "#";
+      return `
+        <tr>
+          <td><b>${u.id}</b></td>
+          <td><small>${u.date}</small></td>
+          <td><b>${u.name}</b></td>
+          <td>📞 ${u.phone}</td>
+          <td>${u.coords || 'N/A'}</td>
+          <td><span style="background:#dcfce7; color:#166534; padding:2px 6px; border-radius:4px; font-weight:bold;">${u.status}</span></td>
+          <td>
+            ${mapsUrl !== "#" ? `<a href="${mapsUrl}" target="_blank" class="btn btn-primary" style="font-size:11px; padding:4px 8px;">🗺️ Route</a>` : `<span style="color:#94a3b8; font-size:11px;">No GPS</span>`}
+          </td>
+          <td><button class="btn btn-del" onclick="toggleUserStatus('${u.id}', '${u.phone}', '${u.status === 'Blocked' ? 'Active' : 'Blocked'}')">${u.status === 'Blocked' ? '🔓 Unblock' : '🚫 Block'}</button></td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function toggleUserStatus(userId, phone, newStatus) {
+    fetch(SPREADSHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "toggleUserStatus", userId, phone, newStatus }) }).then(() => loadUsers());
+  }
+
+  function loadCoupons() {
+    fetch(`${SPREADSHEET_API_URL}?action=getCoupons`).then(r => r.json()).then(data => {
+      cachedCoupons = data.coupons || [];
+      renderCouponsTable();
+    });
+  }
+
+  function renderCouponsTable(q = "") {
+    const filtered = q ? cachedCoupons.filter(c => c.code.toLowerCase().includes(q)) : cachedCoupons;
+    document.getElementById('couponTableBody').innerHTML = filtered.map(c => `
+      <tr>
+        <td><b>${c.code}</b></td><td>${c.discountPercent}%</td><td>${c.validUntil}</td><td>${c.zoneScope}</td>
+        <td><button class="btn btn-del" onclick="deleteCoupon('${c.id}', '${c.code}')">🗑️</button></td>
+      </tr>
+    `).join('');
+  }
+
+  function handleAddCoupon(e) {
+    e.preventDefault();
+    fetch(SPREADSHEET_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        action: "addCoupon",
+        code: document.getElementById('cpnCode').value.trim().toUpperCase(),
+        discountPercent: parseInt(document.getElementById('cpnPercent').value),
+        validUntil: document.getElementById('cpnExpiry').value,
+        zoneScope: document.getElementById('cpnZoneSelect').value
+      })
+    }).then(() => { e.target.reset(); loadCoupons(); });
+  }
+
+  function deleteCoupon(id, code) {
+    if (!confirm(`Delete coupon "${code}"?`)) return;
+    fetch(SPREADSHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "deleteCoupon", id, code }) }).then(() => loadCoupons());
+  }
+
+  function loadProducts() {
+    fetch(`${SPREADSHEET_API_URL}?action=getProducts`).then(r => r.json()).then(data => {
+      cachedProducts = data.products || [];
+      renderProductsTable();
+    });
+  }
+
+  function renderProductsTable(q = "") {
+    const filtered = q ? cachedProducts.filter(p => p.name.toLowerCase().includes(q)) : cachedProducts;
+    document.getElementById('prodTableBody').innerHTML = filtered.map(p => `
+      <tr>
+        <td><img src="${p.img}" style="width:34px; height:34px; border-radius:6px; object-fit:cover;"></td>
+        <td><b>${p.name}</b></td><td>₹${p.retailPrice}</td><td>₹${p.wholesalePrice}</td><td>${p.stockQty || 0}</td>
+        <td><button class="btn btn-del" onclick="deleteProduct('${p.id}', '${p.name}')">🗑️</button></td>
+      </tr>
+    `).join('');
+  }
+
+  function handleAddProduct(e) {
+    e.preventDefault();
+    fetch(SPREADSHEET_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        action: "addProduct",
+        name: document.getElementById('prodName').value.trim(),
+        category: document.getElementById('prodCategorySelect').value,
+        retailPrice: parseInt(document.getElementById('prodRetailPrice').value),
+        wholesalePrice: parseInt(document.getElementById('prodWholesalePrice').value),
+        stockQty: parseInt(document.getElementById('prodStockQty').value) || 0,
+        img: document.getElementById('prodImg').value.trim()
+      })
+    }).then(() => { e.target.reset(); loadProducts(); });
+  }
+
+  function deleteProduct(id, name) {
+    if (!confirm(`Delete product "${name}"?`)) return;
+    fetch(SPREADSHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "deleteProduct", id }) }).then(() => loadProducts());
+  }
+
+  function loadCategories() {
+    fetch(`${SPREADSHEET_API_URL}?action=getCategories`).then(r => r.json()).then(data => {
+      cachedCategories = data.categories || [];
+      document.getElementById('prodCategorySelect').innerHTML = '<option value="">Select Category</option>' + 
+        cachedCategories.map(c => `<option value="${c.slug}">${c.name}</option>`).join('');
+      renderCategoriesTable();
+    });
+  }
+
+  function renderCategoriesTable(q = "") {
+    const filtered = q ? cachedCategories.filter(c => c.name.toLowerCase().includes(q)) : cachedCategories;
+    document.getElementById('catTableBody').innerHTML = filtered.map(c => `
+      <tr>
+        <td><b>${c.name}</b></td><td>${c.scope}</td>
+        <td><button class="btn btn-del" onclick="deleteCategory('${c.id}', '${c.name}')">🗑️</button></td>
+      </tr>
+    `).join('');
+  }
+
+  function handleAddCategory(e) {
+    e.preventDefault();
+    fetch(SPREADSHEET_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "addCategory", name: document.getElementById('newCatName').value.trim(), scope: document.getElementById('newCatScope').value })
+    }).then(() => { document.getElementById('newCatName').value = ""; loadCategories(); });
+  }
+
+  function deleteCategory(id, name) {
+    if (!confirm(`Delete category "${name}"?`)) return;
+    fetch(SPREADSHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "deleteCategory", id }) }).then(() => loadCategories());
+  }
+
+  function loadZones() {
+    fetch(`${SPREADSHEET_API_URL}?action=getZone`).then(r => r.json()).then(data => {
+      activeZones.forEach(z => map.removeLayer(z.layer));
+      activeZones = [];
+      if (data && data.zone && data.zone.features) {
+        data.zone.features.forEach((feature, index) => {
+          const props = feature.properties || {};
+          const layer = L.geoJSON(feature, { style: { color: "#2563eb", weight: 2, fillColor: "#3b82f6", fillOpacity: 0.25 } }).getLayers()[0];
+          map.addLayer(layer);
+          activeZones.push({ id: props.id || "zone_" + index, name: props.name || "Zone " + (index+1), deliveryMinutes: props.deliveryMinutes || 20, lateCashback: props.lateCashback || 25, layer });
+        });
+      }
+      renderZoneSidebar();
+      document.getElementById('cpnZoneSelect').innerHTML = '<option value="all">🌍 All Zones</option>' + activeZones.map(z => `<option value="${z.id}">📍 ${z.name}</option>`).join('');
+    });
+  }
+
+  map.on('pm:create', (e) => {
+    let zoneName = prompt("Zone Name:", `Zone ${activeZones.length + 1}`) || `Zone ${activeZones.length + 1}`;
+    let deliveryMinutes = parseInt(prompt(`Delivery time (Minutes):`, "20")) || 20;
+    let lateCashback = parseInt(prompt(`Late guarantee (₹):`, "25")) || 25;
+    activeZones.push({ id: "zone_" + Date.now(), name: zoneName, deliveryMinutes, lateCashback, layer: e.layer });
+    renderZoneSidebar();
+  });
+
+  function renderZoneSidebar(q = "") {
+    const filtered = q ? activeZones.filter(z => z.name.toLowerCase().includes(q)) : activeZones;
+    document.getElementById('zoneList').innerHTML = filtered.map(z => `
+      <li class="zone-item">
+        <div><b>📍 ${z.name}</b><br><small>⚡ ${z.deliveryMinutes}m | 🛡️ ₹${z.lateCashback}</small></div>
+        <button class="btn btn-del" onclick="deleteSingleZone('${z.id}', '${z.name}')">🗑️</button>
+      </li>
+    `).join('');
+  }
+
+  function deleteSingleZone(id, name) {
+    if (!confirm(`Delete "${name}"?`)) return;
+    const idx = activeZones.findIndex(z => z.id === id);
+    if (idx !== -1) { map.removeLayer(activeZones[idx].layer); activeZones.splice(idx, 1); renderZoneSidebar(); }
+  }
+
+  function saveAllZonesToSheet() {
+    const featureCollection = {
+      type: "FeatureCollection",
+      features: activeZones.map(z => {
+        const g = z.layer.toGeoJSON();
+        g.properties = { id: z.id, name: z.name, deliveryMinutes: z.deliveryMinutes, lateCashback: z.lateCashback };
+        return g;
+      })
+    };
+    fetch(SPREADSHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "saveZone", zone: featureCollection }) }).then(() => alert("Zones saved successfully!"));
+  }
+
+  function clearAllZones() {
+    if (!confirm("Clear all zones?")) return;
+    activeZones.forEach(z => map.removeLayer(z.layer));
+    activeZones = [];
+    renderZoneSidebar();
+    fetch(SPREADSHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "saveZone", zone: { type: "FeatureCollection", features: [] } }) });
+  }
+
+  function exportReport(type, format) {
+    let headers = [], rows = [], title = type.toUpperCase();
+    if (type === 'users') { headers = ["ID", "Date", "Name", "Phone", "Status"]; rows = cachedUsers.map(u => [u.id, u.date, u.name, u.phone, u.status]); }
+    if (type === 'orders') { headers = ["Order ID", "Date", "Name", "Amount", "ETA (Mins)", "Status"]; rows = cachedOrders.map(o => [o.orderId, o.date, o.name, o.amount, o.etaMinutes || 20, o.status]); }
+    if (type === 'products') { headers = ["ID", "Name", "Retail", "Wholesale", "Stock"]; rows = cachedProducts.map(p => [p.id, p.name, p.retailPrice, p.wholesalePrice, p.stockQty || 0]); }
+
+    if (format === 'csv') {
+      const csv = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+      const a = document.createElement("a"); a.href = encodeURI(csv); a.download = `${type}_report.csv`; a.click();
+    } else {
+      const c = document.getElementById('reportPdfTemplate');
+      c.innerHTML = `<h3>${title} REPORT</h3><table border="1" style="width:100%; border-collapse:collapse;"><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>${rows.map(r => `<tr>${r.map(d => `<td>${d}</td>`).join('')}</tr>`).join('')}</table>`;
+      c.style.display = "block";
+      html2pdf().from(c).save(`${type}_report.pdf`).then(() => c.style.display = "none");
+    }
+  }
+</script>
+</body>
+</html>

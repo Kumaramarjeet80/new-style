@@ -1,419 +1,167 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Secure Auth System</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login / Signup - Mohna Express</title>
   <style>
-    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { max-width: 480px; margin: 40px auto; padding: 0 16px; color: #222; }
-    nav { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid #ddd; padding-bottom: 12px; }
-    button { padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; background: #f8f9fa; cursor: pointer; font-size: 14px; }
-    button.primary { background: #0066cc; color: white; border: none; }
-    button:disabled { opacity: 0.6; cursor: not-allowed; }
-    input { width: 100%; padding: 10px; margin-bottom: 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
-    .card { border: 1px solid #e1e4e8; padding: 24px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-    .hidden { display: none; }
-    .alert { padding: 10px; border-radius: 4px; margin-bottom: 15px; font-size: 14px; }
-    .alert.error { background: #ffeef0; color: #b31d28; }
-    .alert.success { background: #dcffe4; color: #165c26; }
-    .location-notice { font-size: 12px; color: #666; margin-bottom: 12px; }
-    
-    /* Profile styling */
-    .profile-header { display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; }
-    .profile-avatar { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 2px solid #0066cc; margin-bottom: 10px; background: #eef2f5; }
-    .avatar-upload { font-size: 13px; }
+    * { margin:0; padding:0; box-sizing:border-box; font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: #fdf2f8; min-height: 100vh; padding: 20px; display: flex; align-items: center; justify-content: center; }
+    .auth-card { background: white; border-radius: 20px; padding: 24px; width: 100%; max-width: 400px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+    h2 { font-size: 20px; color: #0f172a; margin-bottom: 6px; }
+    p { font-size: 13px; color: #64748b; margin-bottom: 16px; }
+    .form-group { margin-bottom: 12px; }
+    label { font-size: 12px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px; }
+    input, select { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; }
+    .btn-auth { width: 100%; padding: 12px; background: #2563eb; color: white; border: none; border-radius: 10px; font-weight: 700; font-size: 14px; cursor: pointer; margin-top: 8px; }
+    .toggle-link { text-align: center; margin-top: 14px; font-size: 13px; color: #2563eb; cursor: pointer; }
+    .status-alert { background: #fef3c7; color: #92400e; padding: 8px 12px; border-radius: 8px; font-size: 12px; margin-bottom: 12px; }
   </style>
 </head>
 <body>
 
-  <!-- Navigation Bar -->
-  <nav id="navbar">
-    <button id="nav-login" onclick="showView('login-view')">Login</button>
-    <button id="nav-signup" onclick="showView('signup-step1-view')">Signup</button>
-    <button id="nav-profile" class="hidden" onclick="checkProfile()">Profile</button>
-    <button id="nav-logout" class="hidden" onclick="logout()">Logout</button>
-  </nav>
-
-  <div id="status-box" class="alert hidden"></div>
-
-  <!-- VIEW: Home -->
-  <div id="home-view" class="card">
-    <h2>Welcome to Home</h2>
-    <p>Please log in or sign up to access your profile.</p>
+<div class="auth-card">
+  <div id="loginSection">
+    <h2>⚡ Customer Sign In</h2>
+    <p>Access your orders and expedited delivery</p>
+    <div class="status-alert" id="geoStatus">📍 Detecting required delivery coordinates...</div>
+    <form onsubmit="handleLogin(event)">
+      <div class="form-group">
+        <label>Mobile Number or Email</label>
+        <input type="text" id="loginIdentifier" required placeholder="Enter phone or email" />
+      </div>
+      <button type="submit" class="btn-auth" id="btnLoginSubmit" disabled>Sign In</button>
+    </form>
+    <div class="toggle-link" onclick="toggleAuth(true)">New User? Register here</div>
   </div>
 
-  <!-- VIEW: Signup Step 1 -->
-  <div id="signup-step1-view" class="card hidden">
-    <h3>Create an Account</h3>
-    <p class="location-notice">⚠️ <strong>Location access is mandatory.</strong> You will be prompted for location permission upon submission.</p>
-    <input type="text" id="reg-name" placeholder="Full Name" />
-    <input type="text" id="reg-mobile" placeholder="Mobile Number" />
-    <input type="email" id="reg-email" placeholder="Gmail Address" />
-    <button class="primary" id="btn-step1" onclick="handleStep1()">Allow Location & Send OTP</button>
-  </div>
+  <div id="registerSection" style="display:none;">
+    <h2>📝 Create Account</h2>
+    <p>Instant access to retail and bulk stores</p>
+    <form onsubmit="handleSendOtp(event)" id="signupForm">
+      <div class="form-group"><label>Full Name</label><input type="text" id="regName" required /></div>
+      <div class="form-group"><label>Mobile Number</label><input type="tel" id="regPhone" required /></div>
+      <div class="form-group"><label>Email Address</label><input type="email" id="regEmail" required /></div>
+      <div class="form-group">
+        <label>Gender</label>
+        <select id="regGender" required>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <button type="submit" class="btn-auth" id="btnOtpSubmit" disabled>Send Email OTP</button>
+    </form>
 
-  <!-- VIEW: Signup Step 2 (OTP) -->
-  <div id="signup-step2-view" class="card hidden">
-    <h3>Verify Email</h3>
-    <p style="font-size: 13px; color: #666;">Enter the 6-digit OTP sent to your Gmail.</p>
-    <input type="text" id="reg-otp" placeholder="6-digit OTP" />
-    <button class="primary" id="btn-step2" onclick="handleStep2()">Verify OTP</button>
-  </div>
-
-  <!-- VIEW: Signup Step 3 (Password) -->
-  <div id="signup-step3-view" class="card hidden">
-    <h3>Set Password</h3>
-    <input type="password" id="reg-pass" placeholder="Create Password" />
-    <button class="primary" id="btn-step3" onclick="handleStep3()">Finish Signup</button>
-  </div>
-
-  <!-- VIEW: Login -->
-  <div id="login-view" class="card hidden">
-    <h3>Login</h3>
-    <input type="text" id="login-id" placeholder="Gmail or Mobile Number" />
-    <input type="password" id="login-pass" placeholder="Password" />
-    <button class="primary" id="btn-login" onclick="handleLogin()">Login</button>
-  </div>
-
-  <!-- VIEW: Profile -->
-  <div id="profile-view" class="card hidden">
-    <div class="profile-header">
-      <img id="prof-img" class="profile-avatar" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23999'><circle cx='12' cy='8' r='4'/><path d='M12 14c-6.1 0-8 4-8 4v2h16v-2s-1.9-4-8-4z'/></svg>" alt="Avatar" />
-      <input type="file" id="avatar-input" class="avatar-upload" accept="image/*" onchange="uploadAvatarToDrive(event)" />
-      <span id="upload-status" style="font-size: 12px; color: #0066cc; margin-top: 6px;"></span>
+    <div id="otpVerificationArea" style="display:none; margin-top: 14px;">
+      <div class="form-group">
+        <label>Enter 6-Digit Email OTP</label>
+        <input type="number" id="otpCode" placeholder="123456" />
+      </div>
+      <button type="button" class="btn-auth" style="background:#16a34a;" onclick="handleVerifyRegister()">Complete Verification</button>
     </div>
 
-    <h3>User Details</h3>
-    <p><strong>Name:</strong> <span id="prof-name"></span></p>
-    <p><strong>Mobile:</strong> <span id="prof-mobile"></span></p>
-    <p><strong>Email:</strong> <span id="prof-email"></span></p>
+    <div class="toggle-link" onclick="toggleAuth(false)">Already registered? Sign In</div>
   </div>
+</div>
 
-  <script>
-    // Paste your Google Apps Script Deployment URL here
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwWUkiFyHJ2aIFhjyXZ9cNSFrZbzTeevrRFUrtB8GKx6Qp9jtY1CcpKb-VgWgU66eufcg/exec";
+<script>
+  const SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbxVDobxg66c0QCfhrPFRj-l4T8cAWLJR_HBrMyrYJgAQESRxNjP7R7ripoFQnSpBe5R/exec";
+  let userCoords = null;
 
-    let tempEmail = "";
-    let sessionHeartbeatInterval = null;
+  window.onload = function() {
+    acquireMandatoryLocation();
+  };
 
-    function showMessage(msg, isError = false) {
-      const box = document.getElementById("status-box");
-      box.className = `alert ${isError ? "error" : "success"}`;
-      box.innerText = msg;
-      box.classList.remove("hidden");
+  function acquireMandatoryLocation() {
+    if (!navigator.geolocation) {
+      document.getElementById("geoStatus").innerText = "❌ Geolocation unsupported on this device.";
+      return;
     }
-
-    function hideMessage() {
-      document.getElementById("status-box").classList.add("hidden");
-    }
-
-    function showView(viewId) {
-      hideMessage();
-      ['home-view', 'signup-step1-view', 'signup-step2-view', 'signup-step3-view', 'login-view', 'profile-view']
-        .forEach(id => document.getElementById(id).classList.add("hidden"));
-      document.getElementById(viewId).classList.remove("hidden");
-    }
-
-    function updateNav() {
-      const isLoggedIn = !!localStorage.getItem("sessionToken");
-      document.getElementById("nav-login").classList.toggle("hidden", isLoggedIn);
-      document.getElementById("nav-signup").classList.toggle("hidden", isLoggedIn);
-      document.getElementById("nav-profile").classList.toggle("hidden", !isLoggedIn);
-      document.getElementById("nav-logout").classList.toggle("hidden", !isLoggedIn);
-    }
-
-    async function apiRequest(payload) {
-      const res = await fetch(SCRIPT_URL, {
-        method: "POST",
-        body: JSON.stringify(payload)
-      });
-      return await res.json();
-    }
-
-    // Geolocation Helper
-    function getUserLocation() {
-      return new Promise((resolve, reject) => {
-        if (!navigator.geolocation) {
-          reject(new Error("Geolocation is not supported by your browser."));
-        } else {
-          navigator.geolocation.getCurrentPosition(
-            position => resolve({
-              latitude: position.coords.latitude,
-              longitude: position.coords.longitude
-            }),
-            error => {
-              let msg = "Location permission denied. You must grant location access to register.";
-              if (error.code === error.POSITION_UNAVAILABLE) msg = "Location information is unavailable.";
-              if (error.code === error.TIMEOUT) msg = "Location request timed out.";
-              reject(new Error(msg));
-            },
-            { timeout: 10000, enableHighAccuracy: true }
-          );
-        }
-      });
-    }
-
-    // Instant multi-device kick poller
-    function startSessionHeartbeat() {
-      stopSessionHeartbeat();
-      sessionHeartbeatInterval = setInterval(async () => {
-        const email = localStorage.getItem("userEmail");
-        const sessionToken = localStorage.getItem("sessionToken");
-
-        if (!sessionToken || !email) {
-          stopSessionHeartbeat();
-          return;
-        }
-
-        try {
-          const res = await apiRequest({ action: "get-profile", email, sessionToken });
-          if (!res.success) {
-            stopSessionHeartbeat();
-            handleClientLogout();
-            alert("Logged out: Your account was accessed on another device.");
-          }
-        } catch (e) {
-          // Network hiccup; retry next tick
-        }
-      }, 3000);
-    }
-
-    function stopSessionHeartbeat() {
-      if (sessionHeartbeatInterval) {
-        clearInterval(sessionHeartbeatInterval);
-        sessionHeartbeatInterval = null;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        userCoords = `${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)}`;
+        document.getElementById("geoStatus").innerText = `✅ GPS Locked: ${userCoords}`;
+        document.getElementById("btnLoginSubmit").disabled = false;
+        document.getElementById("btnOtpSubmit").disabled = false;
+      },
+      () => {
+        document.getElementById("geoStatus").innerText = "⚠️ Location access is mandatory to continue.";
       }
-    }
+    );
+  }
 
-    // Step 1: Enforce Location + Send OTP
-    async function handleStep1() {
-      const name = document.getElementById("reg-name").value.trim();
-      const mobile = document.getElementById("reg-mobile").value.trim();
-      const email = document.getElementById("reg-email").value.trim();
+  function toggleAuth(showRegister) {
+    document.getElementById("loginSection").style.display = showRegister ? "none" : "block";
+    document.getElementById("registerSection").style.display = showRegister ? "block" : "none";
+  }
 
-      if (!name || !mobile || !email) return showMessage("Please fill in all fields.", true);
-
-      const btn = document.getElementById("btn-step1");
-      btn.disabled = true;
-      btn.innerText = "Requesting location...";
-
-      let coords = null;
-      try {
-        coords = await getUserLocation();
-      } catch (locErr) {
-        btn.disabled = false;
-        btn.innerText = "Allow Location & Send OTP";
-        return showMessage(locErr.message, true);
+  function handleLogin(e) {
+    e.preventDefault();
+    if (!userCoords) return alert("Please allow GPS location.");
+    
+    fetch(SPREADSHEET_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        action: "login",
+        identifier: document.getElementById("loginIdentifier").value.trim(),
+        coords: userCoords
+      })
+    })
+    .then(r => r.json())
+    .then(res => {
+      if (res.success) {
+        localStorage.setItem("mohna_user", JSON.stringify(res.user));
+        window.location.href = "home.html";
+      } else {
+        alert(res.message);
       }
+    });
+  }
 
-      btn.innerText = "Sending OTP...";
-      tempEmail = email;
-
-      try {
-        const res = await apiRequest({ 
-          action: "signup-step1", 
-          name, 
-          mobile, 
-          email, 
-          latitude: coords.latitude, 
-          longitude: coords.longitude 
-        });
-
-        if (res.success) {
-          showMessage(res.message);
-          showView("signup-step2-view");
-        } else {
-          showMessage(res.message, true);
-        }
-      } catch (e) {
-        showMessage("Failed to connect to server.", true);
-      } finally {
-        btn.disabled = false;
-        btn.innerText = "Allow Location & Send OTP";
+  function handleSendOtp(e) {
+    e.preventDefault();
+    const email = document.getElementById("regEmail").value.trim();
+    fetch(SPREADSHEET_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "sendOtp", email: email })
+    }).then(r => r.json()).then(res => {
+      if (res.success) {
+        alert("OTP sent to your email!");
+        document.getElementById("otpVerificationArea").style.display = "block";
       }
-    }
+    });
+  }
 
-    // Step 2: Verify OTP
-    async function handleStep2() {
-      const otp = document.getElementById("reg-otp").value.trim();
-      if (!otp) return showMessage("Please enter the OTP.", true);
+  function handleVerifyRegister() {
+    const payload = {
+      action: "verifyOtpAndRegister",
+      name: document.getElementById("regName").value.trim(),
+      phone: document.getElementById("regPhone").value.trim(),
+      email: document.getElementById("regEmail").value.trim(),
+      gender: document.getElementById("regGender").value,
+      coords: userCoords,
+      otp: document.getElementById("otpCode").value.trim()
+    };
 
-      const btn = document.getElementById("btn-step2");
-      btn.disabled = true;
-
-      try {
-        const res = await apiRequest({ action: "verify-otp", email: tempEmail, otp });
-        if (res.success) {
-          showMessage(res.message);
-          showView("signup-step3-view");
-        } else {
-          showMessage(res.message, true);
-        }
-      } catch (e) {
-        showMessage("Verification failed.", true);
-      } finally {
-        btn.disabled = false;
+    fetch(SPREADSHEET_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
+    })
+    .then(r => r.json())
+    .then(res => {
+      if (res.success) {
+        localStorage.setItem("mohna_user", JSON.stringify(res.user));
+        alert("Registration complete!");
+        window.location.href = "home.html";
+      } else {
+        alert(res.message);
       }
-    }
-
-    // Step 3: Set Password
-    async function handleStep3() {
-      const password = document.getElementById("reg-pass").value.trim();
-      if (!password) return showMessage("Please enter a password.", true);
-
-      const btn = document.getElementById("btn-step3");
-      btn.disabled = true;
-
-      try {
-        const res = await apiRequest({ action: "set-password", email: tempEmail, password });
-        if (res.success) {
-          localStorage.setItem("sessionToken", res.sessionToken);
-          localStorage.setItem("userEmail", res.user.email);
-          updateNav();
-          renderProfile(res.user);
-          startSessionHeartbeat();
-        } else {
-          showMessage(res.message, true);
-        }
-      } catch (e) {
-        showMessage("Error setting password.", true);
-      } finally {
-        btn.disabled = false;
-      }
-    }
-
-    // Login
-    async function handleLogin() {
-      const identifier = document.getElementById("login-id").value.trim();
-      const password = document.getElementById("login-pass").value.trim();
-
-      if (!identifier || !password) return showMessage("Please fill in all fields.", true);
-
-      const btn = document.getElementById("btn-login");
-      btn.disabled = true;
-
-      try {
-        const res = await apiRequest({ action: "login", identifier, password });
-        if (res.success) {
-          localStorage.setItem("sessionToken", res.sessionToken);
-          localStorage.setItem("userEmail", res.user.email);
-          updateNav();
-          renderProfile(res.user);
-          startSessionHeartbeat();
-        } else {
-          showMessage(res.message, true);
-        }
-      } catch (e) {
-        showMessage("Login request failed.", true);
-      } finally {
-        btn.disabled = false;
-      }
-    }
-
-    // Check & Render Profile
-    async function checkProfile() {
-      const email = localStorage.getItem("userEmail");
-      const sessionToken = localStorage.getItem("sessionToken");
-
-      if (!sessionToken || !email) {
-        handleClientLogout();
-        return;
-      }
-
-      try {
-        const res = await apiRequest({ action: "get-profile", email, sessionToken });
-        if (res.success) {
-          renderProfile(res.user);
-        } else {
-          alert(res.message);
-          handleClientLogout();
-        }
-      } catch (e) {
-        showMessage("Failed to load profile.", true);
-      }
-    }
-
-    function renderProfile(user) {
-      document.getElementById("prof-name").innerText = user.name;
-      document.getElementById("prof-mobile").innerText = user.mobile;
-      document.getElementById("prof-email").innerText = user.email;
-
-      const defaultAvatar = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23999'><circle cx='12' cy='8' r='4'/><path d='M12 14c-6.1 0-8 4-8 4v2h16v-2s-1.9-4-8-4z'/></svg>";
-      document.getElementById("prof-img").src = user.avatar && user.avatar.trim() !== "" ? user.avatar : defaultAvatar;
-      showView("profile-view");
-    }
-
-    // Upload & Store Image directly to Google Drive
-    function uploadAvatarToDrive(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      if (file.size > 2 * 1024 * 1024) {
-        return alert("Please select an image smaller than 2MB.");
-      }
-
-      const reader = new FileReader();
-      const status = document.getElementById("upload-status");
-      status.innerText = "Saving to Google Drive...";
-
-      reader.onload = async function(e) {
-        const base64Data = e.target.result;
-        const email = localStorage.getItem("userEmail");
-        const sessionToken = localStorage.getItem("sessionToken");
-
-        try {
-          const res = await apiRequest({
-            action: "update-avatar",
-            email,
-            sessionToken,
-            avatarData: base64Data,
-            mimeType: file.type
-          });
-
-          if (res.success) {
-            document.getElementById("prof-img").src = res.avatarUrl;
-            status.innerText = "Saved to Google Drive!";
-            setTimeout(() => { status.innerText = ""; }, 3000);
-          } else {
-            status.innerText = "";
-            alert(res.message);
-          }
-        } catch (err) {
-          status.innerText = "";
-          alert("Failed to upload avatar.");
-        }
-      };
-
-      reader.readAsDataURL(file);
-    }
-
-    // Logout
-    async function logout() {
-      stopSessionHeartbeat();
-      const email = localStorage.getItem("userEmail");
-      if (email) {
-        await apiRequest({ action: "logout", email });
-      }
-      handleClientLogout();
-    }
-
-    function handleClientLogout() {
-      stopSessionHeartbeat();
-      localStorage.removeItem("sessionToken");
-      localStorage.removeItem("userEmail");
-      updateNav();
-      showView("home-view");
-    }
-
-    // App Init
-    updateNav();
-    if (localStorage.getItem("sessionToken")) {
-      checkProfile();
-      startSessionHeartbeat();
-    } else {
-      showView("home-view");
-    }
-  </script>
+    });
+  }
+</script>
 </body>
 </html>

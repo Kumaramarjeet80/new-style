@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Orders - Mohna Express</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: #fdf2f8; min-height: 100vh; padding: 16px 16px 80px 16px; }
+    .container { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .order-card { background: white; border-radius: 16px; padding: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; gap: 8px; }
+    .order-header { display: flex; justify-content: space-between; align-items: center; }
+    .timer-badge { background: #0f172a; color: #38bdf8; font-family: monospace; font-weight: 800; font-size: 13px; padding: 4px 10px; border-radius: 8px; }
+    .btn-receipt { padding: 6px 12px; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; border-radius: 6px; font-weight: 700; font-size: 12px; cursor: pointer; align-self: flex-start; }
+    #receiptPrintModal { display: none; background: white; padding: 20px; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>📦 My Orders & Live Tracking</h2>
+  <div id="ordersList"></div>
+</div>
+
+<div id="receiptPrintModal"></div>
+
+<script>
+  const SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbxVDobxg66c0QCfhrPFRj-l4T8cAWLJR_HBrMyrYJgAQESRxNjP7R7ripoFQnSpBe5R/exec";
+  let userOrders = [];
+
+  window.onload = function() {
+    loadUserOrders();
+  };
+
+  function loadUserOrders() {
+    const user = JSON.parse(localStorage.getItem("mohna_user") || "{}");
+    if (!user.id) {
+      document.getElementById("ordersList").innerHTML = `<div style="text-align:center; padding:40px;">Please login to view orders.</div>`;
+      return;
+    }
+
+    fetch(`${SPREADSHEET_API_URL}?action=getOrders`)
+      .then(r => r.json())
+      .then(data => {
+        userOrders = (data.orders || []).filter(o => o.userId === user.id);
+        renderOrders();
+        startTimerTicker();
+      });
+  }
+
+  function renderOrders() {
+    const container = document.getElementById("ordersList");
+    if (userOrders.length === 0) {
+      container.innerHTML = `<div style="text-align:center; padding:40px; color:#94a3b8;">No previous orders found.</div>`;
+      return;
+    }
+
+    container.innerHTML = userOrders.map(o => {
+      const expiry = parseInt(o.expiryTimestamp) || (new Date(o.date).getTime() + 20 * 60000);
+      return `
+        <div class="order-card">
+          <div class="order-header">
+            <b>${o.orderId}</b>
+            <span class="timer-badge" data-expiry="${expiry}">⏱️ Calculating...</span>
+          </div>
+          <div style="font-size:13px; color:#64748b;">Ordered: ${o.date}</div>
+          <div style="font-size:14px; font-weight:bold;">Total: ₹${o.amount}</div>
+          <button class="btn-receipt" onclick="downloadReceipt('${o.orderId}')">📄 Download Receipt</button>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function startTimerTicker() {
+    setInterval(() => {
+      const now = Date.now();
+      document.querySelectorAll("[data-expiry]").forEach(el => {
+        const expiry = parseInt(el.getAttribute("data-expiry"));
+        const diff = expiry - now;
+        if (diff <= 0) {
+          el.innerText = "00:00 (Delivered/Arrived)";
+          el.style.color = "#4ade80";
+        } else {
+          const totalSec = Math.floor(diff / 1000);
+          const mins = Math.floor(totalSec / 60);
+          const secs = totalSec % 60;
+          el.innerText = `⏱️ ${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+      });
+    }, 1000);
+  }
+
+  function downloadReceipt(orderId) {
+    const o = userOrders.find(item => item.orderId === orderId);
+    const modal = document.getElementById("receiptPrintModal");
+    modal.innerHTML = `
+      <h2>Mohna Express Tax Invoice</h2>
+      <hr><br>
+      <p><b>Order ID:</b> ${o.orderId}</p>
+      <p><b>Date:</b> ${o.date}</p>
+      <p><b>Customer:</b> ${o.name} (${o.phone})</p>
+      <p><b>Total Amount Paid:</b> ₹${o.amount}</p>
+      <p><b>Payment Status:</b> ${o.status}</p>
+    `;
+    modal.style.display = "block";
+    html2pdf().from(modal).save(`Invoice_${orderId}.pdf`).then(() => modal.style.display = "none");
+  }
+</script>
+</body>
+</html>

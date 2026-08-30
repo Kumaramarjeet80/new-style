@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Checkout - Mohna Express</title>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: #fdf2f8; min-height: 100vh; padding: 16px 16px 80px 16px; }
+    .container { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .card { background: white; border-radius: 16px; padding: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
+    h2, h3 { color: #0f172a; margin-bottom: 8px; }
+    .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f1f5f9; }
+    .btn-pay { width: 100%; padding: 14px; background: #2563eb; color: white; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 10px; }
+    .empty-cart { text-align: center; padding: 40px; color: #94a3b8; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>🛒 Checkout Order</h2>
+
+  <div class="card" id="cartContainer">
+    <div id="cartList"></div>
+    <div style="display:flex; justify-content:space-between; margin-top:12px; font-weight:bold; font-size:16px;">
+      <span>Total Amount:</span>
+      <span id="displayPayableAmount">₹0</span>
+    </div>
+  </div>
+
+  <!-- Coupon Box -->
+  <div class="card" style="border: 1px dashed #cbd5e1; background: #f8fafc;">
+    <h3 style="font-size:14px;">🎟️ Apply Zone Coupon</h3>
+    <div style="display:flex; gap:8px; margin-top:6px;">
+      <input type="text" id="couponInput" placeholder="PROMO CODE" style="flex:1; padding:8px; text-transform:uppercase; border:1px solid #cbd5e1; border-radius:6px;" />
+      <button type="button" onclick="applyCouponCode()" style="padding:8px 14px; background:#0f172a; color:white; border:none; border-radius:6px; font-weight:700;">Apply</button>
+    </div>
+    <div id="couponStatusMsg" style="font-size:12px; margin-top:4px;"></div>
+  </div>
+
+  <div class="card">
+    <h3 style="font-size:14px;">📍 Delivery Validation</h3>
+    <div id="zoneValidationText" style="font-size:12px; color:#64748b;">Validating deliverable zone...</div>
+    <button class="btn-pay" id="btnRazorpay" onclick="initiatePayment()" disabled>Proceed to Pay</button>
+  </div>
+</div>
+
+<script>
+  const SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbxVDobxg66c0QCfhrPFRj-l4T8cAWLJR_HBrMyrYJgAQESRxNjP7R7ripoFQnSpBe5R/exec";
+  const RAZORPAY_KEY_ID = "rzp_test_TUjrxJIbpA4EWb";
+  let cart = [];
+  let cartTotal = 0;
+  let finalPayable = 0;
+  let detectedZone = null;
+  let userCoords = null;
+
+  window.onload = function() {
+    cart = JSON.parse(localStorage.getItem("mohna_cart") || "[]");
+    renderCart();
+    checkZoneDeliverability();
+  };
+
+  function renderCart() {
+    const list = document.getElementById("cartList");
+    if (cart.length === 0) {
+      list.innerHTML = `<div class="empty-cart">There is no product in your cart.</div>`;
+      document.getElementById("btnRazorpay").disabled = true;
+      return;
+    }
+    cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    finalPayable = cartTotal;
+    list.innerHTML = cart.map((item, index) => `
+      <div class="cart-item">
+        <div>
+          <b>${item.name}</b><br>
+          <small>₹${item.price}</small>
+        </div>
+        <button onclick="removeItem(${index})" style="color:#ef4444; border:none; background:transparent; cursor:pointer;">🗑️</button>
+      </div>
+    `).join('');
+    document.getElementById("displayPayableAmount").innerText = `₹${finalPayable}`;
+  }
+
+  function removeItem(index) {
+    cart.splice(index, 1);
+    localStorage.setItem("mohna_cart", JSON.stringify(cart));
+    renderCart();
+  }
+
+  function checkZoneDeliverability() {
+    navigator.geolocation.getCurrentPosition((pos) => {
+      userCoords = `${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)}`;
+      fetch(`${SPREADSHEET_API_URL}?action=getZone`)
+        .then(r => r.json())
+        .then(data => {
+          const zones = data.zone.features || [];
+          if (zones.length === 0) {
+            detectedZone = { etaMinutes: 20, name: "Default Express Zone" };
+          } else {
+            detectedZone = { etaMinutes: zones[0].properties.deliveryMinutes || 20, name: zones[0].properties.name };
+          }
+          document.getElementById("zoneValidationText").innerHTML = `<span style="color:#16a34a;">✅ Deliverable in ${detectedZone.name} (ETA: ${detectedZone.etaMinutes}m)</span>`;
+          if (cart.length > 0) document.getElementById("btnRazorpay").disabled = false;
+        });
+    });
+  }
+
+  async function applyCouponCode() {
+    const code = document.getElementById('couponInput').value.trim().toUpperCase();
+    const statusEl = document.getElementById('couponStatusMsg');
+    const res = await fetch(`${SPREADSHEET_API_URL}?action=getCoupons`);
+    const data = await res.json();
+    const coupon = (data.coupons || []).find(c => c.code.toUpperCase() === code);
+
+    if (!coupon) {
+      statusEl.innerHTML = "<span style='color:#ef4444;'>❌ Invalid coupon.</span>";
+      return;
+    }
+    const discount = (cartTotal * coupon.discountPercent) / 100;
+    finalPayable = Math.max(0, cartTotal - discount);
+    statusEl.innerHTML = `<span style='color:#16a34a;'>✅ Applied! Discount: ₹${discount.toFixed(2)}</span>`;
+    document.getElementById('displayPayableAmount').innerText = `₹${finalPayable.toFixed(2)}`;
+  }
+
+  function initiatePayment() {
+    const user = JSON.parse(localStorage.getItem("mohna_user") || "{}");
+    if (!user.id) {
+      alert("Please login to complete your order.");
+      window.location.href = "auth.html";
+      return;
+    }
+
+    const options = {
+      key: RAZORPAY_KEY_ID,
+      amount: finalPayable * 100,
+      currency: "INR",
+      name: "Mohna Express",
+      description: "Fast Delivery Order",
+      handler: function (response) {
+        fetch(SPREADSHEET_API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({
+            action: "createOrder",
+            userId: user.id,
+            name: user.name,
+            phone: user.phone,
+            email: user.email,
+            amount: finalPayable,
+            items: cart,
+            etaMinutes: detectedZone.etaMinutes,
+            coords: userCoords,
+            paymentId: response.razorpay_payment_id
+          })
+        }).then(r => r.json()).then(res => {
+          if (res.success) {
+            localStorage.removeItem("mohna_cart");
+            alert("Order placed successfully! Confirmation email dispatched.");
+            window.location.href = "orders.html";
+          }
+        });
+      },
+      prefill: { name: user.name, email: user.email, contact: user.phone },
+      theme: { color: "#2563eb" }
+    };
+    new Razorpay(options).open();
+  }
+</script>
+</body>
+</html>

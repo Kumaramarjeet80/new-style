@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mohna Express</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: linear-gradient(135deg, #eff6ff, #f3e8ff); height: 100vh; display: flex; align-items: center; justify-content: center; }
+    .splash-card { text-align: center; animation: pulse 1.5s infinite alternate; }
+    .logo-icon { width: 90px; height: 90px; background: #2563eb; color: #fff; font-size: 48px; display: flex; align-items: center; justify-content: center; border-radius: 24px; margin: 0 auto 16px; box-shadow: 0 10px 25px rgba(37,99,235,0.3); }
+    h1 { font-size: 28px; color: #0f172a; margin-bottom: 6px; }
+    p { color: #64748b; font-size: 14px; }
+    @keyframes pulse { from { transform: scale(0.98); } to { transform: scale(1.02); } }
+  </style>
+</head>
+<body>
+  <div class="splash-card">
+    <div class="logo-icon">⚡</div>
+    <h1>Mohna Express</h1>
+    <p>Fastest Retail & Wholesale Express Delivery</p>
+  </div>
+  <script>
+    setTimeout(() => {
+      window.location.href = "home.html";
+    }, 2000);
+  </script>
+</body>
+</html>
