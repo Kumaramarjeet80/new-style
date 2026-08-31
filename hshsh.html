@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin Dashboard - Live Countdown, Users & Orders</title>
+  <title>Admin Dashboard - Mohna Express Control Hub</title>
   
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.css" />
@@ -35,7 +35,7 @@
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
     @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
 
-    /* DATE FILTER BAR */
+    /* MASTER DATE FILTER STRIP */
     .filter-strip {
       display: flex; align-items: center; gap: 8px; background: white; padding: 12px 16px;
       border-radius: 12px; border: 1px solid #cbd5e1; flex-wrap: wrap; box-shadow: 0 2px 8px rgba(0,0,0,0.03);
@@ -51,7 +51,7 @@
 
     .form-group { margin-bottom: 10px; }
     .form-group label { display: block; font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 4px; }
-    .form-group input, .form-group select { width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; }
 
     .btn { padding: 8px 12px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px; display: inline-flex; align-items: center; gap: 4px; }
     .btn-primary { background: #2563eb; color: white; }
@@ -89,12 +89,11 @@
   <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
     <div>
       <h1 style="margin:0; font-size:24px; color:#0f172a;">⚡ Mohna Express Control Hub</h1>
-      <p style="margin:4px 0 0; color:#64748b; font-size:14px;">Live Synchronized Orders, Delivery Timers & Customer Database</p>
+      <p style="margin:4px 0 0; color:#64748b; font-size:14px;">Live Synchronized Orders, Delivery Timers, Customer GPS & Catalogs</p>
     </div>
     <button class="btn btn-dark" onclick="fetchAllData()">🔄 Master Refresh (All)</button>
   </div>
 
-  <!-- NAVIGATION TABS -->
   <nav class="admin-tab-nav">
     <button class="admin-tab-btn active-tab" id="tabBtnOrders" onclick="switchAdminTab('viewOrders')">🧾 Orders & Live Countdowns</button>
     <button class="admin-tab-btn" id="tabBtnUsers" onclick="switchAdminTab('viewUsers')">👥 Users Database</button>
@@ -105,7 +104,7 @@
     <button class="admin-tab-btn" id="tabBtnZones" onclick="switchAdminTab('viewZones')">🛠️ Delivery Zones</button>
   </nav>
 
-  <!-- OMNIPRESENT DATE FILTER STRIP -->
+  <!-- OMNIPRESENT MASTER DATE FILTER STRIP -->
   <div class="filter-strip">
     <span style="font-weight:700; font-size:13px; color:#0f172a;">📅 Master Date Filter:</span>
     <select id="datePresetSelect" onchange="handlePresetChange(this.value)">
@@ -169,13 +168,13 @@
   <div id="viewUsers" class="admin-page-view">
     <div class="card">
       <div class="card-header">
-        <div><h3>👥 Registered Customers</h3></div>
+        <div><h3>👥 Registered Customers (Signup vs Latest Login GPS)</h3></div>
         <button class="btn btn-refresh" onclick="loadUsers()">🔄 Refresh</button>
       </div>
       <table>
-        <thead><tr><th>Photo</th><th>User ID</th><th>Registered Date</th><th>Name</th><th>Email</th><th>Phone</th><th>GPS Coordinates</th><th>Status</th><th>Access Action</th></tr></thead>
+        <thead><tr><th>Photo</th><th>User ID</th><th>Registered Date</th><th>Name</th><th>Email</th><th>Phone</th><th>Registered GPS</th><th>Latest Login GPS</th><th>Status</th><th>Access Action</th></tr></thead>
         <tbody id="userTableBody">
-          <tr><td colspan="9" style="text-align:center; color:#64748b; padding:20px;">Loading users database...</td></tr>
+          <tr><td colspan="10" style="text-align:center; color:#64748b; padding:20px;">Loading users database...</td></tr>
         </tbody>
       </table>
     </div>
@@ -185,7 +184,7 @@
   <div id="viewReports" class="admin-page-view">
     <div class="card" style="border-left:5px solid #059669;">
       <h3>📊 Instant Executive CSV & High-Resolution PDF Reports Center</h3>
-      <p style="margin:4px 0 12px 0; font-size:13px; color:#64748b;">Exports data strictly constrained to the active Master Date Filter above.</p>
+      <p style="margin:4px 0 12px 0; font-size:13px; color:#64748b;">Exports data strictly constrained to the active Master Date Filter with official company headers, seal blocks, and signatures.</p>
       <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:10px; margin-top:10px;">
         <div style="background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #e2e8f0;">
           <b>👥 Users Database</b>
@@ -235,50 +234,68 @@
     </div>
   </div>
 
-  <!-- TAB 5: 📦 PRODUCTS & STOCK -->
+  <!-- TAB 5: 📦 PRODUCTS & STOCK (WITH RICH SPECS & SCOPES) -->
   <div id="viewProducts" class="admin-page-view">
     <div class="grid-2">
       <div class="card">
         <h3>📦 Add Product to Catalog</h3>
         <form onsubmit="handleAddProduct(event)" style="margin-top:10px;">
-          <div class="form-group"><label>Title</label><input type="text" id="prodName" required placeholder="Mustard Oil 1L" /></div>
-          <div class="form-group"><label>Category</label><select id="prodCategorySelect" required></select></div>
-          <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:6px;">
-            <div class="form-group"><label>Retail</label><input type="number" id="prodRetailPrice" required placeholder="180" /></div>
-            <div class="form-group"><label>Wholesale</label><input type="number" id="prodWholesalePrice" required placeholder="140" /></div>
-            <div class="form-group"><label>Stock</label><input type="number" id="prodStockQty" required placeholder="100" /></div>
+          <div class="form-group"><label>Product Title</label><input type="text" id="prodName" required placeholder="e.g. Mustard Oil 1L" /></div>
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
+            <div class="form-group"><label>Category</label><select id="prodCategorySelect" required></select></div>
+            <div class="form-group">
+              <label>Catalog Scope</label>
+              <select id="prodScope" required>
+                <option value="both">🌐 Both (Retail & Wholesale)</option>
+                <option value="retail">🛍️ Retail Only</option>
+                <option value="wholesale">📦 Wholesale Only</option>
+              </select>
+            </div>
           </div>
+          <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:6px;">
+            <div class="form-group"><label>Retail Price (₹)</label><input type="number" id="prodRetailPrice" required placeholder="180" /></div>
+            <div class="form-group"><label>Wholesale Price (₹)</label><input type="number" id="prodWholesalePrice" required placeholder="140" /></div>
+            <div class="form-group"><label>Original MRP (₹)</label><input type="number" id="prodMrp" required placeholder="210" /></div>
+          </div>
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
+            <div class="form-group"><label>Stock Quantity</label><input type="number" id="prodStockQty" required placeholder="100" /></div>
+            <div class="form-group"><label>Delivery Fee (₹ / 0=Free)</label><input type="number" id="prodDeliveryFee" required placeholder="0" /></div>
+          </div>
+          <div class="form-group"><label>Product Description</label><textarea id="prodDescription" rows="2" placeholder="100% Pure cold pressed oil..."></textarea></div>
+          <div class="form-group"><label>Specifications</label><input type="text" id="prodSpecifications" placeholder="Grade A, 1L Bottle, Shelf Life 12M" /></div>
+          <div class="form-group"><label>Terms & Conditions</label><input type="text" id="prodTerms" placeholder="100% Genuine. Check upon delivery." /></div>
           <div class="form-group">
             <label>Upload Product Photo (Saved to Google Drive)</label>
             <input type="file" id="prodFileInput" accept="image/*" required />
           </div>
-          <button type="submit" id="btnSaveProduct" class="btn btn-primary" style="width:100%;">+ Save Product</button>
+          <button type="submit" id="btnSaveProduct" class="btn btn-primary" style="width:100%;">+ Save & Publish Product</button>
         </form>
       </div>
       <div class="card">
-        <div class="card-header"><h3>📋 Inventory</h3><button class="btn btn-refresh" onclick="loadProducts()">🔄</button></div>
+        <div class="card-header"><h3>📋 Inventory Catalog</h3><button class="btn btn-refresh" onclick="loadProducts()">🔄</button></div>
         <table>
-          <thead><tr><th>Image</th><th>Name</th><th>Retail</th><th>Wholesale</th><th>Stock</th><th>Action</th></tr></thead>
+          <thead><tr><th>Image</th><th>Name</th><th>Scope</th><th>Retail</th><th>Wholesale</th><th>Stock</th><th>Action</th></tr></thead>
           <tbody id="prodTableBody"></tbody>
         </table>
       </div>
     </div>
   </div>
 
-  <!-- TAB 6: 🏷️ CATEGORIES -->
+  <!-- TAB 6: 🏷️ CATEGORIES (WITH SCOPES) -->
   <div id="viewCategories" class="admin-page-view">
     <div class="card">
       <div class="card-header"><h3>🏷️ Scoped Categories</h3><button class="btn btn-refresh" onclick="loadCategories()">🔄</button></div>
       <form onsubmit="handleAddCategory(event)" style="display:flex; gap:8px; margin-bottom:12px;">
-        <input type="text" id="newCatName" required placeholder="Category Name" style="flex:1; padding:8px; border:1px solid #cbd5e1; border-radius:6px;" />
-        <select id="newCatScope" required style="width:140px; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
-          <option value="retail">🛍️ Retail</option>
-          <option value="wholesale">📦 Wholesale</option>
+        <input type="text" id="newCatName" required placeholder="Category Name (e.g. Edible Oils)" style="flex:1; padding:8px; border:1px solid #cbd5e1; border-radius:6px;" />
+        <select id="newCatScope" required style="width:180px; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
+          <option value="both">🌐 Both (Retail & Wholesale)</option>
+          <option value="retail">🛍️ Retail Only</option>
+          <option value="wholesale">📦 Wholesale Only</option>
         </select>
-        <button type="submit" class="btn btn-primary">+ Add</button>
+        <button type="submit" class="btn btn-primary">+ Add Category</button>
       </form>
       <table>
-        <thead><tr><th>Category</th><th>Scope</th><th>Action</th></tr></thead>
+        <thead><tr><th>Category</th><th>Scope</th><th>Slug</th><th>Action</th></tr></thead>
         <tbody id="catTableBody"></tbody>
       </table>
     </div>
@@ -317,22 +334,20 @@
 <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.js"></script>
 
 <script>
-  const SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbyZ11fczqVaeZx8yyL1IXUDkJ92U7cMhX7_AgaqNXygIuj3tMdwkwiYa_lY9a0GR9btsg/exec"; // Ensure you paste your latest deployment URL here if different
+  const SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbyZ11fczqVaeZx8yyL1IXUDkJ92U7cMhX7_AgaqNXygIuj3tMdwkwiYa_lY9a0GR9btsg/exec";
 
   let activeZones = [], cachedProducts = [], cachedCategories = [], cachedOrders = [], cachedUsers = [], cachedCoupons = [], adminOrdersInterval = null;
   let activeFilterFromMs = 0, activeFilterToMs = Infinity;
 
-  // ROBUST MULTI-LOCALE DATE PARSER (Fixes DD/MM/YYYY and NaN issues)
+  // MULTI-LOCALE DATE PARSER
   function parseAnyDateToMs(dateStr) {
     if (!dateStr) return 0;
     if (typeof dateStr === "number") return dateStr;
     const s = dateStr.toString().trim();
     
-    // Check standard JS parser first
     const directMs = new Date(s).getTime();
     if (!isNaN(directMs)) return directMs;
 
-    // Handle DD/MM/YYYY, HH:MM:SS format
     const match = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:,\s*(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
     if (match) {
       const day = parseInt(match[1], 10);
@@ -389,9 +404,6 @@
     }
   }
 
-  // ==========================================
-  // MASTER DATE FILTER LOGIC
-  // ==========================================
   function handlePresetChange(preset) {
     const customBox = document.getElementById('customDateContainer');
     customBox.style.display = (preset === 'custom') ? 'flex' : 'none';
@@ -581,14 +593,15 @@
     }
 
     if (filtered.length === 0) {
-      document.getElementById('userTableBody').innerHTML = `<tr><td colspan="9" style="text-align:center; color:#64748b; padding:20px;">No customers found.</td></tr>`;
+      document.getElementById('userTableBody').innerHTML = `<tr><td colspan="10" style="text-align:center; color:#64748b; padding:20px;">No customers found.</td></tr>`;
       return;
     }
 
     document.getElementById('userTableBody').innerHTML = filtered.map(u => `
       <tr>
         <td><img src="${u.avatar || 'https://via.placeholder.com/32?text=U'}" style="width:32px; height:32px; border-radius:50%; object-fit:cover;" /></td>
-        <td><b>${u.id}</b></td><td><small>${u.date}</small></td><td><b>${u.name}</b></td><td>${u.email}</td><td>📞 ${u.phone}</td><td>${u.coords}</td>
+        <td><b>${u.id}</b></td><td><small>${u.date || 'N/A'}</small></td><td><b>${u.name}</b></td><td>${u.email}</td><td>📞 ${u.phone}</td>
+        <td>📍 ${u.regLat ? u.regLat + ', ' + u.regLng : 'N/A'}</td><td>📍 ${u.loginLat ? u.loginLat + ', ' + u.loginLng : 'Same as Reg'}</td>
         <td><span style="background:#dcfce7; color:#166534; padding:2px 6px; border-radius:4px; font-weight:bold;">${u.status}</span></td>
         <td><button class="btn btn-del" onclick="toggleUserStatus('${u.id}', '${u.email}', '${u.status === 'Blocked' ? 'Active' : 'Blocked'}')">${u.status === 'Blocked' ? '🔓 Unblock' : '🚫 Block'}</button></td>
       </tr>
@@ -650,7 +663,8 @@
     document.getElementById('prodTableBody').innerHTML = filtered.map(p => `
       <tr>
         <td><img src="${p.img || 'https://via.placeholder.com/34?text=Item'}" style="width:34px; height:34px; border-radius:6px; object-fit:cover;"></td>
-        <td><b>${p.name}</b></td><td>₹${p.retailPrice}</td><td>₹${p.wholesalePrice}</td><td>${p.stockQty || 0}</td>
+        <td><b>${p.name}</b></td><td><span style="font-size:11px; background:#e0f2fe; color:#0369a1; padding:2px 6px; border-radius:4px; font-weight:bold;">${p.scope || 'both'}</span></td>
+        <td>₹${p.retailPrice}</td><td>₹${p.wholesalePrice}</td><td>${p.stockQty || 0}</td>
         <td><button class="btn btn-del" onclick="deleteProduct('${p.id}', '${p.name}')">🗑️</button></td>
       </tr>
     `).join('');
@@ -670,9 +684,15 @@
         action: "addProduct",
         name: document.getElementById('prodName').value.trim(),
         category: document.getElementById('prodCategorySelect').value,
-        retailPrice: parseInt(document.getElementById('prodRetailPrice').value),
-        wholesalePrice: parseInt(document.getElementById('prodWholesalePrice').value),
+        scope: document.getElementById('prodScope').value,
+        retailPrice: parseInt(document.getElementById('prodRetailPrice').value) || 0,
+        wholesalePrice: parseInt(document.getElementById('prodWholesalePrice').value) || 0,
+        mrp: parseInt(document.getElementById('prodMrp').value) || 0,
         stockQty: parseInt(document.getElementById('prodStockQty').value) || 0,
+        deliveryFee: parseInt(document.getElementById('prodDeliveryFee').value) || 0,
+        description: document.getElementById('prodDescription').value.trim(),
+        specifications: document.getElementById('prodSpecifications').value.trim(),
+        terms: document.getElementById('prodTerms').value.trim(),
         imageBase64: compressedBase64
       };
 
@@ -681,12 +701,12 @@
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify(payload)
       }).then(() => {
-        btn.innerText = "+ Save Product";
+        btn.innerText = "+ Save & Publish Product";
         btn.disabled = false;
         e.target.reset();
         loadProducts();
       }).catch(() => {
-        btn.innerText = "+ Save Product";
+        btn.innerText = "+ Save & Publish Product";
         btn.disabled = false;
         alert("Upload failed. Verify Apps Script Drive permissions.");
       });
@@ -712,7 +732,7 @@
     const filtered = q ? cachedCategories.filter(c => c.name.toLowerCase().includes(q)) : cachedCategories;
     document.getElementById('catTableBody').innerHTML = filtered.map(c => `
       <tr>
-        <td><b>${c.name}</b></td><td>${c.scope}</td>
+        <td><b>${c.name}</b></td><td>${c.scope}</td><td>${c.slug}</td>
         <td><button class="btn btn-del" onclick="deleteCategory('${c.id}', '${c.name}')">🗑️</button></td>
       </tr>
     `).join('');
@@ -786,9 +806,9 @@
     fetch(SPREADSHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "clearZone" }) });
   }
 
-  // ==========================================
-  // EXECUTIVE PDF EXPORTER WITH DATE FILTERS
-  // ==========================================
+  // =========================================================================
+  // 1. ULTRA HIGH-RESOLUTION EXECUTIVE PDF EXPORTER WITH OFFICIAL SEAL & SIGN
+  // =========================================================================
   function exportReport(type, format) {
     let headers = [], rows = [], reportTitle = "";
     const genTimestamp = new Date().toLocaleString();
@@ -801,7 +821,7 @@
         const uTime = parseAnyDateToMs(u.date);
         if (activeFilterFromMs === 0 && activeFilterToMs === Infinity) return true;
         return uTime === 0 || (uTime >= activeFilterFromMs && uTime <= activeFilterToMs);
-      }).map(u => [u.id, u.date, u.name, u.email, u.phone, u.status]);
+      }).map(u => [u.id, u.date || 'N/A', u.name, u.email, u.phone, u.status]);
     } else if (type === 'orders') {
       reportTitle = "EXECUTIVE SALES & DISPATCH AUDIT REPORT";
       headers = ["Order ID", "Timestamp", "Customer Name", "Total Paid", "Guaranteed ETA", "Current Status"];
@@ -812,8 +832,8 @@
       }).map(o => [o.orderId, o.date, o.name, o.amount, (o.etaMinutes || 20) + " Mins", o.status]);
     } else if (type === 'products') {
       reportTitle = "INVENTORY VALUATION & STOCK LEVEL REPORT";
-      headers = ["SKU / Product ID", "Product Name", "Retail Price", "Wholesale Price", "Warehouse Stock Qty"];
-      rows = cachedProducts.map(p => [p.id, p.name, "₹" + p.retailPrice, "₹" + p.wholesalePrice, (p.stockQty || 0) + " Units"]);
+      headers = ["SKU / Product ID", "Product Name", "Catalog Scope", "Retail Price", "Wholesale Price", "Warehouse Stock Qty"];
+      rows = cachedProducts.map(p => [p.id, p.name, p.scope || 'both', "₹" + p.retailPrice, "₹" + p.wholesalePrice, (p.stockQty || 0) + " Units"]);
     }
 
     if (format === 'csv') {
@@ -828,6 +848,8 @@
     const container = document.getElementById('reportPdfTemplate');
     container.innerHTML = `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 40px; background: #ffffff; color: #0f172a; max-width: 820px; margin: 0 auto; -webkit-font-smoothing: antialiased;">
+        
+        <!-- CORPORATE HEADER & LOGO -->
         <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #0284c7; padding-bottom: 20px; margin-bottom: 22px;">
           <div>
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
@@ -846,6 +868,7 @@
           </div>
         </div>
 
+        <!-- REPORT METADATA STRIP -->
         <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-left: 5px solid #0284c7; padding: 12px 16px; border-radius: 8px; margin-bottom: 22px; display: flex; justify-content: space-between; align-items: center;">
           <div>
             <h2 style="margin: 0; font-size: 14.5px; font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">${reportTitle}</h2>
@@ -854,6 +877,7 @@
           <span style="font-size: 11.5px; color: #0369a1; font-weight: 800; background: #e0f2fe; padding: 4px 10px; border-radius: 4px;">Total Records: ${rows.length}</span>
         </div>
 
+        <!-- DATA TABLE -->
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 35px; font-size: 11.5px;">
           <thead>
             <tr style="background: #0f172a; color: #ffffff;">
@@ -869,7 +893,9 @@
           </tbody>
         </table>
 
+        <!-- OFFICIAL THREE-COLUMN SIGN & SEAL VERIFICATION BLOCK -->
         <div style="border-top: 2px solid #cbd5e1; padding-top: 24px; margin-top: 35px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; align-items: flex-end;">
+          
           <div style="text-align: center;">
             <div style="width: 82px; height: 82px; border: 2.5px dashed #0284c7; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0 auto 8px; color: #0284c7;">
               <span style="font-size: 9px; font-weight: 900; letter-spacing: 0.5px;">MOHNA EXPRESS</span>
@@ -894,11 +920,13 @@
             <p style="margin: 0; font-size: 11px; font-weight: 800; color: #0f172a;">Executive Director</p>
             <span style="font-size: 9.5px; color: #64748b; font-weight: 600;">Authorized Signatory</span>
           </div>
+
         </div>
 
         <p style="text-align: center; font-size: 9.5px; color: #94a3b8; margin-top: 25px;">
-          This electronic audit certificate is generated by Mohna Express Automated ERP System.
+          This electronic audit certificate is generated by Mohna Express Automated ERP System and authenticated under digital token authority.
         </p>
+
       </div>
     `;
 
@@ -917,6 +945,9 @@
     });
   }
 
+  // =========================================================================
+  // 2. PROFESSIONAL A4 PACKING & DISPATCH DOCKET PRINTER
+  // =========================================================================
   function printLast24HoursSlips() {
     let filtered = cachedOrders.filter(o => {
       const oTime = parseAnyDateToMs(o.date);
@@ -931,6 +962,8 @@
 
     container.innerHTML = `
       <div style="font-family: Arial, sans-serif; padding: 25px; color: #0f172a; background: white;">
+        
+        <!-- HEADER -->
         <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2.5px solid #0f172a; padding-bottom: 12px; margin-bottom: 18px;">
           <div>
             <h1 style="margin: 0; font-size: 22px; font-weight: 900;">⚡ MOHNA EXPRESS DISPATCH DOCKET</h1>
@@ -942,6 +975,7 @@
           </div>
         </div>
 
+        <!-- MANIFEST TABLE -->
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px; font-size: 11px;" border="1">
           <thead>
             <tr style="background: #f1f5f9; text-align: left;">
@@ -969,6 +1003,7 @@
           </tbody>
         </table>
 
+        <!-- SIGN & SEAL MANIFEST BLOCK -->
         <div style="display: flex; justify-content: space-between; align-items: flex-end; border-top: 1.5px solid #cbd5e1; padding-top: 20px; margin-top: 25px;">
           <div>
             <p style="margin: 0; font-size: 11px; font-weight: bold;">Dispatch Verification Checklist:</p>
@@ -981,6 +1016,7 @@
             <span style="font-size: 9px; color: #64748b;">Seal & Signature</span>
           </div>
         </div>
+
       </div>
     `;
 
