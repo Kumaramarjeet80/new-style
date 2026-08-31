@@ -491,7 +491,6 @@
     renderZoneSidebar(query);
   }
 
-  // ORDERS WITH DATE & SEARCH FILTER
   function loadOrders() {
     fetch(`${SPREADSHEET_API_URL}?action=getOrders`)
       .then(r => r.json())
@@ -573,7 +572,6 @@
     }, 1000);
   }
 
-  // USERS WITH DATE & SEARCH FILTER
   function loadUsers() {
     fetch(`${SPREADSHEET_API_URL}?action=getUsers`).then(r => r.json()).then(data => {
       cachedUsers = data.users || [];
@@ -613,7 +611,6 @@
       .then(() => loadUsers());
   }
 
-  // COUPONS
   function loadCoupons() {
     fetch(`${SPREADSHEET_API_URL}?action=getCoupons`).then(r => r.json()).then(data => {
       cachedCoupons = data.coupons || [];
@@ -650,7 +647,6 @@
       .then(() => loadCoupons());
   }
 
-  // PRODUCTS
   function loadProducts() {
     fetch(`${SPREADSHEET_API_URL}?action=getProducts`).then(r => r.json()).then(data => {
       cachedProducts = data.products || [];
@@ -718,7 +714,6 @@
     fetch(SPREADSHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "deleteProduct", id }) }).then(() => loadProducts());
   }
 
-  // CATEGORIES
   function loadCategories() {
     fetch(`${SPREADSHEET_API_URL}?action=getCategories`).then(r => r.json()).then(data => {
       cachedCategories = data.categories || [];
@@ -751,7 +746,6 @@
     fetch(SPREADSHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "deleteCategory", id }) }).then(() => loadCategories());
   }
 
-  // ZONES
   function loadZones() {
     fetch(`${SPREADSHEET_API_URL}?action=getZone`).then(r => r.json()).then(data => {
       activeZones.forEach(z => map.removeLayer(z.layer));
@@ -806,9 +800,6 @@
     fetch(SPREADSHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "clearZone" }) });
   }
 
-  // =========================================================================
-  // 1. ULTRA HIGH-RESOLUTION EXECUTIVE PDF EXPORTER WITH OFFICIAL SEAL & SIGN
-  // =========================================================================
   function exportReport(type, format) {
     let headers = [], rows = [], reportTitle = "";
     const genTimestamp = new Date().toLocaleString();
@@ -848,8 +839,6 @@
     const container = document.getElementById('reportPdfTemplate');
     container.innerHTML = `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 40px; background: #ffffff; color: #0f172a; max-width: 820px; margin: 0 auto; -webkit-font-smoothing: antialiased;">
-        
-        <!-- CORPORATE HEADER & LOGO -->
         <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #0284c7; padding-bottom: 20px; margin-bottom: 22px;">
           <div>
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
@@ -868,7 +857,6 @@
           </div>
         </div>
 
-        <!-- REPORT METADATA STRIP -->
         <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-left: 5px solid #0284c7; padding: 12px 16px; border-radius: 8px; margin-bottom: 22px; display: flex; justify-content: space-between; align-items: center;">
           <div>
             <h2 style="margin: 0; font-size: 14.5px; font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">${reportTitle}</h2>
@@ -877,7 +865,6 @@
           <span style="font-size: 11.5px; color: #0369a1; font-weight: 800; background: #e0f2fe; padding: 4px 10px; border-radius: 4px;">Total Records: ${rows.length}</span>
         </div>
 
-        <!-- DATA TABLE -->
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 35px; font-size: 11.5px;">
           <thead>
             <tr style="background: #0f172a; color: #ffffff;">
@@ -893,9 +880,7 @@
           </tbody>
         </table>
 
-        <!-- OFFICIAL THREE-COLUMN SIGN & SEAL VERIFICATION BLOCK -->
         <div style="border-top: 2px solid #cbd5e1; padding-top: 24px; margin-top: 35px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; align-items: flex-end;">
-          
           <div style="text-align: center;">
             <div style="width: 82px; height: 82px; border: 2.5px dashed #0284c7; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0 auto 8px; color: #0284c7;">
               <span style="font-size: 9px; font-weight: 900; letter-spacing: 0.5px;">MOHNA EXPRESS</span>
@@ -920,13 +905,11 @@
             <p style="margin: 0; font-size: 11px; font-weight: 800; color: #0f172a;">Executive Director</p>
             <span style="font-size: 9.5px; color: #64748b; font-weight: 600;">Authorized Signatory</span>
           </div>
-
         </div>
 
         <p style="text-align: center; font-size: 9.5px; color: #94a3b8; margin-top: 25px;">
           This electronic audit certificate is generated by Mohna Express Automated ERP System and authenticated under digital token authority.
         </p>
-
       </div>
     `;
 
@@ -945,9 +928,6 @@
     });
   }
 
-  // =========================================================================
-  // 2. PROFESSIONAL A4 PACKING & DISPATCH DOCKET PRINTER
-  // =========================================================================
   function printLast24HoursSlips() {
     let filtered = cachedOrders.filter(o => {
       const oTime = parseAnyDateToMs(o.date);
@@ -962,8 +942,6 @@
 
     container.innerHTML = `
       <div style="font-family: Arial, sans-serif; padding: 25px; color: #0f172a; background: white;">
-        
-        <!-- HEADER -->
         <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2.5px solid #0f172a; padding-bottom: 12px; margin-bottom: 18px;">
           <div>
             <h1 style="margin: 0; font-size: 22px; font-weight: 900;">⚡ MOHNA EXPRESS DISPATCH DOCKET</h1>
@@ -975,7 +953,6 @@
           </div>
         </div>
 
-        <!-- MANIFEST TABLE -->
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px; font-size: 11px;" border="1">
           <thead>
             <tr style="background: #f1f5f9; text-align: left;">
@@ -1003,7 +980,6 @@
           </tbody>
         </table>
 
-        <!-- SIGN & SEAL MANIFEST BLOCK -->
         <div style="display: flex; justify-content: space-between; align-items: flex-end; border-top: 1.5px solid #cbd5e1; padding-top: 20px; margin-top: 25px;">
           <div>
             <p style="margin: 0; font-size: 11px; font-weight: bold;">Dispatch Verification Checklist:</p>
@@ -1016,7 +992,6 @@
             <span style="font-size: 9px; color: #64748b;">Seal & Signature</span>
           </div>
         </div>
-
       </div>
     `;
 
