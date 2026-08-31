@@ -66,8 +66,15 @@
     .zone-list { list-style: none; padding: 0; margin: 8px 0 0; overflow-y: auto; flex-grow: 1; display: flex; flex-direction: column; gap: 6px; }
     .zone-item { background: white; padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
 
-    /* HIDDEN PDF REPORT CONTAINER */
-    #reportPdfTemplate { display: none; }
+    /* HIDDEN TEMPLATES */
+    #reportPdfTemplate, #slipPrintContainer { display: none; }
+
+    /* PRINT MEDIA OVERRIDE */
+    @media print {
+      body * { visibility: hidden; }
+      #slipPrintContainer, #slipPrintContainer * { visibility: visible; }
+      #slipPrintContainer { display: block !important; position: absolute; left: 0; top: 0; width: 100%; }
+    }
   </style>
 </head>
 <body>
@@ -95,7 +102,7 @@
 
   <input type="text" id="masterAdminSearch" class="master-search-input" placeholder="🔍 Omnisearch across all tabs (Names, Phone numbers, Order IDs, Coordinates)..." oninput="handleAdminOmniSearch(this.value)" />
 
-  <!-- TAB 1: 🧾 ORDERS WITH LIVE COUNTDOWNS & DELIVERY DURATION -->
+  <!-- TAB 1: 🧾 ORDERS -->
   <div id="viewOrders" class="admin-page-view active-view">
     <div class="card">
       <div class="card-header">
@@ -104,7 +111,7 @@
           <p style="margin:2px 0 0; font-size:12px; color:#64748b;">Live countdown timers freeze and turn Green/Red when delivered.</p>
         </div>
         <div style="display:flex; gap:8px;">
-          <button class="btn btn-primary" onclick="printLast24HoursSlips()">🖨️ A4 Slip Print</button>
+          <button class="btn btn-primary" onclick="printLast24HoursSlips()">🖨️ Professional A4 Slip Print</button>
           <button class="btn btn-refresh" onclick="loadOrders()">🔄 Refresh</button>
         </div>
       </div>
@@ -146,8 +153,8 @@
   <!-- TAB 3: 📊 REPORTS -->
   <div id="viewReports" class="admin-page-view">
     <div class="card" style="border-left:5px solid #059669;">
-      <h3>📊 Instant Executive CSV & PDF Reports Center</h3>
-      <p style="margin:4px 0 12px 0; font-size:13px; color:#64748b;">Generate high-resolution corporate business statements with official brand headers, metadata, and executive authorization.</p>
+      <h3>📊 Instant Executive CSV & High-Resolution PDF Reports Center</h3>
+      <p style="margin:4px 0 12px 0; font-size:13px; color:#64748b;">Generate high-DPI official corporate statements with company headers, official seal blocks, and authorized executive sign-offs.</p>
       <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:10px; margin-top:10px;">
         <div style="background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #e2e8f0;">
           <b>👥 Users Database</b>
@@ -271,6 +278,9 @@
 
 <!-- HIDDEN HIGH-RES EXECUTIVE PDF TEMPLATE CONTAINER -->
 <div id="reportPdfTemplate"></div>
+
+<!-- HIDDEN PROFESSIONAL A4 PACKING & DISPATCH SLIP CONTAINER -->
+<div id="slipPrintContainer"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.js"></script>
@@ -647,25 +657,25 @@
     fetch(SPREADSHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "clearZone" }) });
   }
 
-  // ==========================================
-  // PROFESSIONAL EXECUTIVE PDF & CSV EXPORTER
-  // ==========================================
+  // =========================================================================
+  // 1. ULTRA HIGH-RESOLUTION EXECUTIVE PDF EXPORTER WITH OFFICIAL SEAL & SIGN
+  // =========================================================================
   function exportReport(type, format) {
     let headers = [], rows = [], reportTitle = "";
     const genTimestamp = new Date().toLocaleString();
     const reportRefNumber = "REP-" + Math.floor(100000 + Math.random() * 900000);
 
     if (type === 'users') {
-      reportTitle = "REGISTERED CUSTOMERS AUDIT REPORT";
-      headers = ["User ID", "Registration Date", "Customer Name", "Email Address", "Phone Number", "Status"];
+      reportTitle = "REGISTERED CUSTOMERS AUDIT STATEMENT";
+      headers = ["User ID", "Registration Date", "Customer Name", "Email Address", "Phone Number", "Account Status"];
       rows = cachedUsers.map(u => [u.id, u.date, u.name, u.email, u.phone, u.status]);
     } else if (type === 'orders') {
-      reportTitle = "EXECUTIVE SALES & DISPATCH REPORT";
-      headers = ["Order ID", "Order Date", "Customer", "Amount Paid", "Guaranteed ETA", "Status"];
+      reportTitle = "EXECUTIVE SALES & DISPATCH AUDIT REPORT";
+      headers = ["Order ID", "Timestamp", "Customer Name", "Total Paid", "Guaranteed ETA", "Current Status"];
       rows = cachedOrders.map(o => [o.orderId, o.date, o.name, o.amount, (o.etaMinutes || 20) + " Mins", o.status]);
     } else if (type === 'products') {
-      reportTitle = "INVENTORY VALUATION & STOCK REPORT";
-      headers = ["Item ID", "Product Name", "Retail (₹)", "Wholesale (₹)", "Current Stock Qty"];
+      reportTitle = "INVENTORY VALUATION & STOCK LEVEL REPORT";
+      headers = ["SKU / Product ID", "Product Name", "Retail Price", "Wholesale Price", "Warehouse Stock Qty"];
       rows = cachedProducts.map(p => [p.id, p.name, "₹" + p.retailPrice, "₹" + p.wholesalePrice, (p.stockQty || 0) + " Units"]);
     }
 
@@ -678,74 +688,109 @@
       return;
     }
 
-    // High-Resolution Executive PDF Generator
+    // High-Resolution Corporate PDF Layout
     const container = document.getElementById('reportPdfTemplate');
     container.innerHTML = `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 32px; background: #ffffff; color: #0f172a; max-width: 800px; margin: 0 auto;">
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 40px; background: #ffffff; color: #0f172a; max-width: 820px; margin: 0 auto; -webkit-font-smoothing: antialiased;">
         
-        <!-- CORPORATE HEADER & METADATA -->
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2.5px solid #0284c7; padding-bottom: 18px; margin-bottom: 20px;">
+        <!-- CORPORATE HEADER & LOGO -->
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #0284c7; padding-bottom: 20px; margin-bottom: 22px;">
           <div>
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-              <span style="background: #0284c7; color: white; padding: 4px 8px; border-radius: 6px; font-weight: 900; font-size: 15px;">⚡</span>
-              <h1 style="margin: 0; font-size: 22px; font-weight: 900; color: #0f172a; letter-spacing: -0.5px;">MOHNA EXPRESS</h1>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+              <div style="background: #0284c7; color: white; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border-radius: 8px; font-weight: 900; font-size: 20px;">⚡</div>
+              <h1 style="margin: 0; font-size: 26px; font-weight: 900; color: #0f172a; letter-spacing: -0.5px;">MOHNA EXPRESS</h1>
             </div>
-            <p style="margin: 0; font-size: 11.5px; color: #64748b; font-weight: 600;">Fast Delivery Network & Logistics Operations</p>
-            <p style="margin: 2px 0 0; font-size: 11px; color: #64748b;">CIN: U63090DL2024PTC128940 | Support: help@mohnaexpress.com</p>
+            <p style="margin: 0; font-size: 12px; color: #475569; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Logistics & Ultra-Fast Delivery Network Private Limited</p>
+            <p style="margin: 4px 0 0; font-size: 11px; color: #64748b;">CIN: U63090DL2024PTC128940 | GSTIN: 10AAECM8762N1ZQ</p>
+            <p style="margin: 2px 0 0; font-size: 11px; color: #64748b;">HQ: Patna - Jamalpur Expressway Hub | Email: corporate@mohnaexpress.com</p>
           </div>
 
           <div style="text-align: right;">
-            <span style="background: #e0f2fe; color: #0369a1; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 800;">OFFICIAL BUSINESS RECORD</span>
-            <p style="margin: 6px 0 0; font-size: 11px; color: #475569;"><b>Doc Ref:</b> ${reportRefNumber}</p>
-            <p style="margin: 2px 0 0; font-size: 11px; color: #475569;"><b>Generated:</b> ${genTimestamp}</p>
+            <span style="background: #e0f2fe; color: #0369a1; padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 800; border: 1px solid #bae6fd; letter-spacing: 0.5px;">OFFICIAL AUDIT RECORD</span>
+            <p style="margin: 8px 0 0; font-size: 11px; color: #475569;"><b>Reference:</b> ${reportRefNumber}</p>
+            <p style="margin: 2px 0 0; font-size: 11px; color: #475569;"><b>Date & Time:</b> ${genTimestamp}</p>
           </div>
         </div>
 
-        <!-- REPORT TITLE STRIP -->
-        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #0284c7; padding: 10px 14px; border-radius: 6px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
-          <h2 style="margin: 0; font-size: 14px; font-weight: 800; color: #0f172a; text-transform: uppercase;">${reportTitle}</h2>
-          <span style="font-size: 11px; color: #64748b; font-weight: 700;">Total Records: <b>${rows.length}</b></span>
+        <!-- REPORT METADATA STRIP -->
+        <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-left: 5px solid #0284c7; padding: 12px 16px; border-radius: 8px; margin-bottom: 22px; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <h2 style="margin: 0; font-size: 14.5px; font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">${reportTitle}</h2>
+            <small style="color: #64748b; font-size: 10.5px;">Executive system-synchronized data export</small>
+          </div>
+          <span style="font-size: 11.5px; color: #0369a1; font-weight: 800; background: #e0f2fe; padding: 4px 10px; border-radius: 4px;">Total Records: ${rows.length}</span>
         </div>
 
         <!-- DATA TABLE -->
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 11.5px;">
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 35px; font-size: 11.5px;">
           <thead>
             <tr style="background: #0f172a; color: #ffffff;">
-              ${headers.map(h => `<th style="padding: 8px 10px; text-align: left; font-weight: 700; font-size: 10.5px; letter-spacing: 0.5px; text-transform: uppercase;">${h}</th>`).join('')}
+              ${headers.map(h => `<th style="padding: 10px 12px; text-align: left; font-weight: 800; font-size: 10.5px; letter-spacing: 0.6px; text-transform: uppercase;">${h}</th>`).join('')}
             </tr>
           </thead>
           <tbody>
             ${rows.map((r, i) => `
               <tr style="background: ${i % 2 === 0 ? '#ffffff' : '#f8fafc'}; border-bottom: 1px solid #e2e8f0;">
-                ${r.map((cell, cIdx) => `<td style="padding: 7px 10px; color: #334155; font-size: 11px; ${cIdx === 0 ? 'font-weight:700; color:#0f172a;' : ''}">${cell}</td>`).join('')}
+                ${r.map((cell, cIdx) => `<td style="padding: 9px 12px; color: #334155; font-size: 11px; ${cIdx === 0 ? 'font-weight:700; color:#0f172a;' : ''}">${cell}</td>`).join('')}
               </tr>
             `).join('')}
           </tbody>
         </table>
 
-        <!-- EXECUTIVE AUTHORIZATION & SIGN-OFF -->
-        <div style="border-top: 1px solid #e2e8f0; padding-top: 16px; margin-top: 24px; display: flex; justify-content: space-between; align-items: flex-end;">
-          <div>
-            <p style="margin: 0; font-size: 11px; font-weight: 700; color: #0f172a;">Mohna Express Operations & Management</p>
-            <p style="margin: 2px 0 0; font-size: 10px; color: #94a3b8;">This document is computer-generated and verified by system administration.</p>
+        <!-- OFFICIAL THREE-COLUMN SIGN & SEAL VERIFICATION BLOCK -->
+        <div style="border-top: 2px solid #cbd5e1; padding-top: 24px; margin-top: 35px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; align-items: flex-end;">
+          
+          <!-- Column 1: Verification Seal -->
+          <div style="text-align: center;">
+            <div style="width: 82px; height: 82px; border: 2.5px dashed #0284c7; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0 auto 8px; color: #0284c7;">
+              <span style="font-size: 9px; font-weight: 900; letter-spacing: 0.5px;">MOHNA EXPRESS</span>
+              <span style="font-size: 16px;">★</span>
+              <span style="font-size: 8px; font-weight: 800;">VERIFIED SEAL</span>
+            </div>
+            <span style="font-size: 10px; color: #64748b; font-weight: 600;">Official Corporate Stamp</span>
           </div>
 
-          <div style="text-align: center; border-top: 1.5px solid #0f172a; padding-top: 4px; min-width: 160px;">
+          <!-- Column 2: Prepared / Dispatch Incharge -->
+          <div style="text-align: center;">
+            <div style="height: 46px; border-bottom: 1.5px solid #0f172a; margin-bottom: 6px; display: flex; align-items: flex-end; justify-content: center;">
+              <span style="font-family: cursive; font-size: 16px; color: #1e40af; font-weight: bold;">Amarjeet Kumar</span>
+            </div>
+            <p style="margin: 0; font-size: 11px; font-weight: 800; color: #0f172a;">Warehouse Dispatcher</p>
+            <span style="font-size: 9.5px; color: #64748b; font-weight: 600;">Logistics Operations Head</span>
+          </div>
+
+          <!-- Column 3: Executive Director / Authorized Signatory -->
+          <div style="text-align: center;">
+            <div style="height: 46px; border-bottom: 1.5px solid #0f172a; margin-bottom: 6px; display: flex; align-items: flex-end; justify-content: center;">
+              <span style="font-family: cursive; font-size: 17px; color: #0f172a; font-weight: bold;">Mohna Management</span>
+            </div>
             <p style="margin: 0; font-size: 11px; font-weight: 800; color: #0f172a;">Executive Director</p>
             <span style="font-size: 9.5px; color: #64748b; font-weight: 600;">Authorized Signatory</span>
           </div>
+
         </div>
+
+        <p style="text-align: center; font-size: 9.5px; color: #94a3b8; margin-top: 25px;">
+          This electronic audit certificate is generated by Mohna Express Automated ERP System and authenticated under digital token authority.
+        </p>
 
       </div>
     `;
 
     container.style.display = "block";
 
+    // High-Resolution Configuration (DPI Scale 3, Crisp A4 Output)
     const opt = {
-      margin: [10, 8, 10, 8],
+      margin: [8, 6, 8, 6],
       filename: `Mohna_Express_${type}_report.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+      image: { type: 'jpeg', quality: 1.0 },
+      html2canvas: { 
+        scale: 3, 
+        useCORS: true, 
+        letterRendering: true, 
+        logging: false, 
+        dpi: 300 
+      },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
@@ -754,8 +799,78 @@
     });
   }
 
+  // =========================================================================
+  // 2. PROFESSIONAL A4 PACKING & DISPATCH DOCKET PRINTER
+  // =========================================================================
   function printLast24HoursSlips() {
+    const activeOrders = cachedOrders.filter(o => !o.status.includes('Delivered'));
+    const ordersToPrint = activeOrders.length > 0 ? activeOrders.slice(0, 8) : cachedOrders.slice(0, 8);
+    const container = document.getElementById('slipPrintContainer');
+    const printTimestamp = new Date().toLocaleString();
+
+    container.innerHTML = `
+      <div style="font-family: Arial, sans-serif; padding: 25px; color: #0f172a; background: white;">
+        
+        <!-- HEADER -->
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2.5px solid #0f172a; padding-bottom: 12px; margin-bottom: 18px;">
+          <div>
+            <h1 style="margin: 0; font-size: 22px; font-weight: 900;">⚡ MOHNA EXPRESS DISPATCH DOCKET</h1>
+            <p style="margin: 2px 0 0; font-size: 11px; color: #475569;">Official Packing Manifest & Rider Assignment Voucher (A4 Master)</p>
+          </div>
+          <div style="text-align: right;">
+            <span style="border: 1.5px solid #0f172a; padding: 3px 8px; font-weight: 800; font-size: 11px;">DISPATCH MASTER</span>
+            <p style="margin: 4px 0 0; font-size: 10.5px; color: #475569;">Printed: ${printTimestamp}</p>
+          </div>
+        </div>
+
+        <!-- MANIFEST TABLE -->
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px; font-size: 11px;" border="1">
+          <thead>
+            <tr style="background: #f1f5f9; text-align: left;">
+              <th style="padding: 8px;">Order ID</th>
+              <th style="padding: 8px;">Customer & Phone</th>
+              <th style="padding: 8px;">Delivery Address / Route</th>
+              <th style="padding: 8px;">Item Description (Qty)</th>
+              <th style="padding: 8px;">Paid Total</th>
+              <th style="padding: 8px;">ETA</th>
+              <th style="padding: 8px; text-align: center;">Checked</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${ordersToPrint.map(o => `
+              <tr>
+                <td style="padding: 8px; font-weight: bold;">${o.orderId}</td>
+                <td style="padding: 8px;"><b>${o.name}</b><br>📞 ${o.phone}</td>
+                <td style="padding: 8px; font-size: 10px;">${o.address}</td>
+                <td style="padding: 8px;">${o.item} (Qty: ${o.qty})</td>
+                <td style="padding: 8px; font-weight: bold; color: #15803d;">${o.amount}</td>
+                <td style="padding: 8px; font-weight: bold;">⚡ ${o.etaMinutes || 20}m</td>
+                <td style="padding: 8px; text-align: center; font-size: 16px;">☐</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <!-- SIGN & SEAL MANIFEST BLOCK -->
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; border-top: 1.5px solid #cbd5e1; padding-top: 20px; margin-top: 25px;">
+          <div>
+            <p style="margin: 0; font-size: 11px; font-weight: bold;">Dispatch Verification Checklist:</p>
+            <p style="margin: 2px 0 0; font-size: 10px; color: #64748b;">✔ All bags packed & checked against barcode SKU.</p>
+            <p style="margin: 2px 0 0; font-size: 10px; color: #64748b;">✔ Rider assigned with GPS turn-by-turn routing.</p>
+          </div>
+
+          <div style="text-align: center; min-width: 140px; border-top: 1.5px solid #0f172a; padding-top: 4px;">
+            <p style="margin: 0; font-size: 11px; font-weight: bold;">Warehouse Incharge</p>
+            <span style="font-size: 9px; color: #64748b;">Seal & Signature</span>
+          </div>
+        </div>
+
+      </div>
+    `;
+
+    container.style.display = "block";
     window.print();
+    setTimeout(() => { container.style.display = "none"; }, 1000);
   }
 </script>
 </body>
