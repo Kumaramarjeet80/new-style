@@ -103,7 +103,6 @@
     <button class="tab-btn" id="tabDone" onclick="filterRiderTab('done')">✅ Delivered (<span id="countDone">0</span>)</button>
   </div>
 
-  <!-- ORDER FEED -->
   <div id="riderOrdersFeed">
     <p style="text-align:center; color:#94a3b8; padding:30px;">Loading live delivery tasks...</p>
   </div>
@@ -186,8 +185,28 @@
     setInterval(fetchRiderFeed, 15000);
   };
 
+  function parseAnyDateToMs(dateStr) {
+    if (!dateStr) return 0;
+    if (typeof dateStr === "number") return dateStr;
+    const s = dateStr.toString().trim();
+    const directMs = new Date(s).getTime();
+    if (!isNaN(directMs)) return directMs;
+
+    const match = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:,\s*(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+    if (match) {
+      const day = parseInt(match[1], 10);
+      const month = parseInt(match[2], 10) - 1;
+      const year = parseInt(match[3], 10);
+      const hours = match[4] ? parseInt(match[4], 10) : 0;
+      const mins = match[5] ? parseInt(match[5], 10) : 0;
+      const secs = match[6] ? parseInt(match[6], 10) : 0;
+      return new Date(year, month, day, hours, mins, secs).getTime();
+    }
+    return 0;
+  }
+
   function calculateDeliveryStatusBadge(orderDateStr, etaMinutes, expiryTimestamp, deliveredTimestamp) {
-    const orderStartMs = new Date(orderDateStr).getTime() || (expiryTimestamp - (etaMinutes * 60000));
+    const orderStartMs = parseAnyDateToMs(orderDateStr) || (expiryTimestamp - (etaMinutes * 60000));
     const endMs = parseInt(deliveredTimestamp) || Date.now();
     const totalElapsedSec = Math.max(0, Math.floor((endMs - orderStartMs) / 1000));
     const elapsedMins = Math.floor(totalElapsedSec / 60);
@@ -248,7 +267,7 @@
     fetch(SPREADSHEET_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: 'sendAuthOtp', email })
+      body: JSON.stringify({ action: 'sendSignupOtp', email })
     }).then(r => r.json()).then(res => {
       btn.innerText = 'Send Verification Code';
       btn.disabled = false;
@@ -273,12 +292,12 @@
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({
-        action: 'verifyAuthOtp',
+        action: 'completeSignup',
         email: email,
         otp: otp,
-        mode: currentRiderAuthMode,
         name: name || "Rider Partner",
-        phone: phone
+        phone: phone,
+        password: "RiderPassword123"
       })
     }).then(r => r.json()).then(res => {
       if (res.status === 'success') {
@@ -358,7 +377,7 @@
     }
 
     feed.innerHTML = filtered.map(o => {
-      const expiryMs = parseInt(o.expiryTimestamp) || (new Date(o.date).getTime() + (o.etaMinutes || 20) * 60000);
+      const expiryMs = parseInt(o.expiryTimestamp) || (parseAnyDateToMs(o.date) + (o.etaMinutes || 20) * 60000);
       const isDelivered = o.status.includes('Delivered');
       const isOut = o.status.includes('OUT');
 
@@ -432,16 +451,12 @@
     });
   }
 
-  // ==========================================
-  // SECURE CUSTOMER DELIVERY OTP SYSTEM
-  // ==========================================
   function triggerCustomerDeliveryOtpModal(orderId) {
     activeOtpVerificationOrderId = orderId;
     document.getElementById('dOtpModalOrderId').innerText = orderId;
     document.getElementById('custDeliveryOtpInput').value = "";
     document.getElementById('deliveryOtpModal').style.display = 'flex';
 
-    // Trigger backend to send 4-digit code to customer email
     fetch(SPREADSHEET_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
