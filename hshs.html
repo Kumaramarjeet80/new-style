@@ -97,6 +97,10 @@
     }
     .order-history-card:hover { transform: translateY(-2px); border-color: #2563eb; }
 
+    /* LIVE ORDER TIMER BADGES IN CARDS */
+    .card-timer-active { background: #0f172a; color: #38bdf8; font-family: monospace; font-weight: 800; font-size: 12px; padding: 4px 10px; border-radius: 6px; border: 1px solid #38bdf8; }
+    .card-timer-expired { background: #fee2e2; color: #b91c1c; font-family: monospace; font-weight: 800; font-size: 12px; padding: 4px 10px; border-radius: 6px; border: 1px solid #f87171; }
+
     /* PROFILE AVATAR COMPONENTS */
     .profile-avatar-container { display: flex; flex-direction: column; align-items: center; margin-bottom: 16px; }
     .profile-img-preview { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; border: 3px solid #2563eb; background: #f1f5f9; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
@@ -341,6 +345,7 @@
   let modalUserMarker = null;
   let persistentTimerInterval = null;
   let modalTimerInterval = null;
+  let cardTickersInterval = null;
   let mapScriptsLoaded = false;
   let pdfScriptLoaded = false;
 
@@ -873,7 +878,7 @@
     }, 1000);
   }
 
-  // RENDER CLICKABLE ORDER LIST
+  // RENDER CLICKABLE ORDER LIST (WITH LIVE TICKING TIMER AT THE MIDDLE)
   function renderCustomerOrdersList() {
     const container = document.getElementById('customerOrdersList');
     if (!currentUser) {
@@ -886,19 +891,48 @@
       return;
     }
 
-    container.innerHTML = cachedMyOrders.map((o, idx) => `
-      <div class="order-history-card" onclick="openOrderModal(${idx})">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <b>${o.orderId}</b>
-          <span style="background:#dcfce7; color:#166534; font-size:11px; font-weight:bold; padding:2px 8px; border-radius:12px;">${o.status || 'PAID'}</span>
+    container.innerHTML = cachedMyOrders.map((o, idx) => {
+      const expiryMs = parseInt(o.expiryTimestamp) || (new Date(o.date).getTime() + (o.etaMinutes || 20) * 60000);
+      return `
+        <div class="order-history-card" onclick="openOrderModal(${idx})">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <b>${o.orderId}</b>
+            <span style="background:#dcfce7; color:#166534; font-size:11px; font-weight:bold; padding:2px 8px; border-radius:12px;">${o.status || 'PAID'}</span>
+          </div>
+          <p style="margin:6px 0 4px; font-size:13.5px; color:#1e293b; font-weight:600;">${o.item} (Qty: ${o.qty})</p>
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; font-size:12px; color:#64748b; margin-top:8px;">
+            <span>🕒 Timestamp: <b style="color:#0f172a;">${o.date}</b></span>
+            <span id="card_timer_${o.orderId}" data-expiry="${expiryMs}" class="card-timer-active">⏱️ Loading...</span>
+            <b style="color:#16a34a; font-size:14px;">${o.amount}</b>
+          </div>
         </div>
-        <p style="margin:6px 0 4px; font-size:13.5px; color:#1e293b; font-weight:600;">${o.item} (Qty: ${o.qty})</p>
-        <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#64748b;">
-          <span>🕒 Timestamp: <b style="color:#0f172a;">${o.date}</b></span>
-          <b style="color:#16a34a; font-size:14px;">${o.amount}</b>
-        </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
+
+    startCardTimersCountdown();
+  }
+
+  // TICK ALL ORDER CARD TIMERS IN REAL-TIME
+  function startCardTimersCountdown() {
+    clearInterval(cardTickersInterval);
+    cardTickersInterval = setInterval(() => {
+      const now = Date.now();
+      document.querySelectorAll('[id^="card_timer_"]').forEach(el => {
+        const expiry = parseInt(el.getAttribute('data-expiry'));
+        const diff = expiry - now;
+
+        if (diff <= 0) {
+          el.className = "card-timer-expired";
+          el.innerText = "00:00 (DELIVERED / EXPIRED)";
+        } else {
+          el.className = "card-timer-active";
+          const totalSec = Math.floor(diff / 1000);
+          const mins = Math.floor(totalSec / 60);
+          const secs = totalSec % 60;
+          el.innerText = `⏱️ ${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+      });
+    }, 1000);
   }
 
   // OPEN MODAL WITH LIVE TICKING TIMER
@@ -916,7 +950,6 @@
     document.getElementById('dtlEta').innerText = `${order.etaMinutes || 20} Minutes`;
     document.getElementById('dtlStatus').innerText = order.status || "PAID";
 
-    // Start Live Countdown Timer inside Details Box
     const expiryMs = parseInt(order.expiryTimestamp) || (new Date(order.date).getTime() + (order.etaMinutes || 20) * 60000);
     const timerBadge = document.getElementById('dtlLiveTimer');
 
