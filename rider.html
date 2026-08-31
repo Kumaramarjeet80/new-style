@@ -92,10 +92,12 @@
     </div>
   </header>
 
+  <!-- PENDING VERIFICATION / BLOCKED BANNER -->
   <div id="verificationAlert" class="verification-alert-banner">
     <b>⏳ Account Verification Required:</b> Your profile has been registered and is awaiting Admin Verification. You will become an active rider once approved by warehouse admin.
   </div>
 
+  <!-- RIDER METRICS -->
   <div class="metrics-grid">
     <div class="metric-card">
       <div id="mActiveCount" class="metric-val">0</div>
@@ -111,6 +113,7 @@
     </div>
   </div>
 
+  <!-- STATUS FILTER TABS -->
   <div class="tab-bar">
     <button class="tab-btn active" id="tabActive" onclick="filterRiderTab('active')">⚡ Active Tasks (<span id="countActive">0</span>)</button>
     <button class="tab-btn" id="tabOut" onclick="filterRiderTab('out')">🛵 In Transit (<span id="countOut">0</span>)</button>
@@ -131,6 +134,7 @@
       <button class="tab-btn" id="btnRTabSignup" style="flex:1;" onclick="toggleRiderAuthTab('signup')">Partner Sign Up (OTP)</button>
     </div>
 
+    <!-- LOGIN VIEW -->
     <div id="rLoginView">
       <div class="form-group">
         <label>Rider Email Address</label>
@@ -143,6 +147,7 @@
       <button type="button" id="btnRiderSubmitLogin" class="btn" style="background:#0284c7; color:white; width:100%; padding:12px; margin-top:6px;" onclick="processRiderPasswordLogin()">🔑 Log In & Go Online</button>
     </div>
 
+    <!-- SIGNUP STEP 1 -->
     <div id="rSignupStep1" style="display:none;">
       <div class="form-group">
         <label>Full Name</label>
@@ -163,6 +168,7 @@
       <button type="button" class="btn" id="btnSendRiderSignupOtp" style="background:#0284c7; color:white; width:100%; padding:12px; margin-top:6px;" onclick="sendRiderSignupOtp()">Send Verification OTP</button>
     </div>
 
+    <!-- SIGNUP STEP 2 -->
     <div id="rSignupStep2" style="display:none;">
       <p style="font-size:13px; color:#94a3b8;">Enter the 6-digit OTP sent to <b id="rTargetEmailDisplay" style="color:#38bdf8;"></b></p>
       <div class="form-group">
@@ -206,13 +212,29 @@
   let tickerInterval = null;
   let activeOtpVerificationOrderId = null;
 
-  // ROBUST GAS POST WRAPPER (AVOIDS PREFLIGHT/CORS REDIRECT FAILURES)
+  // ROBUST GAS NETWORK PIPELINE
   async function postToAppsScript(payload) {
-    const response = await fetch(SPREADSHEET_API_URL, {
-      method: 'POST',
-      body: JSON.stringify(payload)
-    });
-    return await response.json();
+    try {
+      const response = await fetch(SPREADSHEET_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+      const text = await response.text();
+      return JSON.parse(text);
+    } catch (primaryErr) {
+      // Fallback: Use URL-encoded parameters to bypass strict preflight filters
+      const formParams = new URLSearchParams();
+      for (const key in payload) {
+        formParams.append(key, typeof payload[key] === 'object' ? JSON.stringify(payload[key]) : payload[key]);
+      }
+      const fallbackResponse = await fetch(SPREADSHEET_API_URL, {
+        method: 'POST',
+        body: formParams
+      });
+      const fallbackText = await fallbackResponse.text();
+      return JSON.parse(fallbackText);
+    }
   }
 
   window.onload = function() {
@@ -367,7 +389,7 @@
     } catch(err) {
       btn.innerText = "🔑 Log In & Go Online";
       btn.disabled = false;
-      alert("Error contacting server. Please check your internet connection.");
+      alert("Error contacting server. Please check your deployment URL and permissions.");
     }
   }
 
