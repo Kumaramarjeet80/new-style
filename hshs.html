@@ -20,7 +20,6 @@
       min-height: 100vh; 
     }
 
-    /* DUAL THEME ENGINES */
     body.theme-retail { 
       background: linear-gradient(135deg, #e0e7ff 0%, #fae8ff 50%, #ede9fe 100%); 
       color: #1e1b4b; 
@@ -36,7 +35,6 @@
       padding: 16px; 
     }
 
-    /* HEADER & AUTH PILL */
     .app-header {
       display: flex; 
       justify-content: space-between; 
@@ -84,14 +82,7 @@
       background: #2563eb; 
       color: white; 
     }
-    .header-avatar { 
-      width: 24px; 
-      height: 24px; 
-      border-radius: 50%; 
-      object-fit: cover; 
-    }
 
-    /* MODE TOGGLE */
     .mode-toggle-container { 
       display: flex; 
       gap: 10px; 
@@ -120,7 +111,6 @@
       color: white; 
     }
 
-    /* SEARCH BAR */
     .search-input-box {
       width: 100%; 
       background: rgba(255,255,255,0.9); 
@@ -132,7 +122,6 @@
       margin-bottom: 14px;
     }
 
-    /* CATEGORY CHIPS */
     .category-scroll { 
       display: flex; 
       gap: 8px; 
@@ -366,44 +355,6 @@
       border: 1px solid #fca5a5; 
     }
 
-    /* PROFILE AVATAR COMPONENTS */
-    .profile-avatar-container { 
-      display: flex; 
-      flex-direction: column; 
-      align-items: center; 
-      margin-bottom: 16px; 
-    }
-    .profile-img-preview { 
-      width: 96px; 
-      height: 96px; 
-      border-radius: 50%; 
-      object-fit: cover; 
-      border: 3px solid #2563eb; 
-      background: #f1f5f9; 
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08); 
-    }
-    .profile-photo-actions { 
-      display: flex; 
-      gap: 8px; 
-      margin-top: 10px; 
-      flex-wrap: wrap; 
-      justify-content: center; 
-    }
-    .btn-photo-action { 
-      padding: 6px 14px; 
-      border-radius: 6px; 
-      border: 1px solid #cbd5e1; 
-      font-size: 12px; 
-      font-weight: bold; 
-      cursor: pointer; 
-      background: #f8fafc; 
-    }
-    .btn-photo-save { 
-      background: #16a34a; 
-      color: white; 
-      border-color: #15803d; 
-    }
-
     /* CART BADGE */
     .cart-nav-badge {
       position: absolute; 
@@ -489,7 +440,6 @@
       color: white; 
     }
 
-    /* PRODUCT DETAILS MODAL SECTIONS */
     .p-modal-img { 
       width: 100%; 
       height: 220px; 
@@ -603,33 +553,23 @@
         <h3 style="margin:0;">📦 My Order History</h3>
         <button class="btn-submit" style="width:auto; padding:6px 12px; font-size:12px; background:#0f172a;" onclick="fetchInitialStoreData(true)">🔄 Refresh</button>
       </div>
-      <p style="font-size:12px; color:#64748b; margin:0 0 10px 0;">💡 Click any order to view details, live delivery status and download tax receipts.</p>
+      <p style="font-size:12px; color:#64748b; margin:0 0 10px 0;">💡 Click any order to view details, price breakdown, and download tax receipts.</p>
       <div id="customerOrdersList">
         <p style="text-align:center; color:#94a3b8; font-size:13px;">Loading orders...</p>
       </div>
     </div>
   </div>
 
-  <!-- PAGE 4: 👤 PROFILE (WITH GOOGLE DRIVE PHOTO ACTIONS) -->
+  <!-- PAGE 4: 👤 PROFILE -->
   <div id="profilePage" class="page-view">
     <div class="card">
       <h3 style="margin-top:0;">👤 Account Profile</h3>
 
-      <div class="profile-avatar-container">
-        <img id="profAvatarDisplay" class="profile-img-preview" src="https://via.placeholder.com/96?text=User" alt="Avatar" />
-        <input type="file" id="avatarFileInput" accept="image/*" style="display: none;" onchange="handleAvatarFileSelected(event)" />
-        <div class="profile-photo-actions">
-          <button type="button" class="btn-photo-action" onclick="document.getElementById('avatarFileInput').click()">📸 Select Photo</button>
-          <button type="button" id="btnSaveAvatar" class="btn-photo-action btn-photo-save" style="display:none;" onclick="saveSelectedAvatar()">💾 Save Photo</button>
-          <button type="button" class="btn-photo-action" style="color:#b91c1c;" onclick="deleteAvatarPhoto()">🗑️ Delete</button>
-        </div>
-      </div>
-
       <div class="form-group"><label>Full Name</label><input type="text" id="profName" readonly /></div>
       <div class="form-group"><label>Mobile Number</label><input type="tel" id="profPhone" readonly /></div>
       <div class="form-group"><label>Email Address</label><input type="email" id="profEmail" readonly /></div>
-      <div class="form-group"><label>📍 Registered Location (Signup GPS)</label><input type="text" id="profRegCoords" readonly /></div>
-      <div class="form-group"><label>📍 Latest Login Location (Login GPS)</label><input type="text" id="profLoginCoords" readonly /></div>
+      <div class="form-group"><label>📍 Registered Location (Signup)</label><input type="text" id="profRegCoords" readonly /></div>
+      <div class="form-group"><label>📍 Latest Login Location</label><input type="text" id="profLoginCoords" readonly /></div>
       <div class="form-group"><label>Account Status</label><input type="text" id="profStatus" readonly style="font-weight:bold; color:#15803d;" /></div>
       <button class="btn-submit" style="background:#ef4444; margin-top:10px;" onclick="logoutCustomer()">🚪 Log Out</button>
     </div>
@@ -655,7 +595,6 @@
       <span style="background:#fee2e2; color:#dc2626; font-size:11px; font-weight:800; padding:2px 6px; border-radius:4px;" id="modalProdDiscount">0% OFF</span>
     </div>
 
-    <!-- Live ETA & Delivery Price Strip based on User Location -->
     <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:10px; margin-bottom:10px; display:flex; justify-content:space-between; font-size:12.5px;">
       <span>⚡ <b>Delivery ETA:</b> <span id="modalProdEta" style="color:#1d4ed8; font-weight:800;">20 Mins</span></span>
       <span>🚚 <b>Delivery Fee:</b> <span id="modalProdDeliveryFee" style="color:#1d4ed8; font-weight:800;">₹0</span></span>
@@ -683,7 +622,7 @@
   </div>
 </div>
 
-<!-- ORDER DETAILS MODAL -->
+<!-- ORDER DETAILS MODAL WITH FULL PRICE BREAKDOWN & ON-TIME/LATE STATUS -->
 <div id="orderDetailsModal" class="modal-overlay" style="display:none;">
   <div class="modal-card">
     <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:10px; margin-bottom:12px;">
@@ -694,12 +633,23 @@
     <div id="modalOrderDetailsBody">
       <div class="bill-row"><span><b>Order ID:</b></span><span id="dtlOrderId"></span></div>
       <div class="bill-row"><span><b>Order Timestamp:</b></span><span id="dtlTimestamp" style="color:#2563eb; font-weight:bold;"></span></div>
-      <div class="bill-row"><span><b>⏱️ Delivery Status:</b></span><span id="dtlLiveTimer">Checking...</span></div>
+      <div class="bill-row"><span><b>⏱️ Delivery Status:</b></span><span id="dtlLiveTimer"></span></div>
       <div class="bill-row"><span><b>Items Ordered:</b></span><span id="dtlItem"></span></div>
       <div class="bill-row"><span><b>Quantity:</b></span><span id="dtlQty"></span></div>
-      <div class="bill-row"><span><b>Total Paid:</b></span><span id="dtlAmount" style="color:#16a34a; font-weight:bold;"></span></div>
+      
+      <!-- Price Breakdown Section -->
+      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px; margin:10px 0;">
+        <div class="bill-row" style="font-size:13px;"><span>Items Subtotal:</span><span id="dtlSubtotal">₹0</span></div>
+        <div class="bill-row" style="font-size:13px;"><span>Promo Discount:</span><span id="dtlDiscount" style="color:#dc2626;">-₹0</span></div>
+        <div class="bill-row" style="font-size:13px;"><span>Delivery Fee:</span><span id="dtlDeliveryFee">FREE</span></div>
+        <div class="bill-row" style="font-size:15px; font-weight:900; border-top:1px dashed #cbd5e1; padding-top:6px; margin-top:6px;">
+          <span>Total Paid:</span>
+          <span id="dtlAmount" style="color:#16a34a;">₹0</span>
+        </div>
+      </div>
+
       <div class="bill-row"><span><b>Delivery Address:</b></span><span id="dtlAddress" style="max-width:60%; text-align:right;"></span></div>
-      <div class="bill-row"><span><b>ETA Duration:</b></span><span id="dtlEta"></span></div>
+      <div class="bill-row"><span><b>Guaranteed ETA:</b></span><span id="dtlEta"></span></div>
       <div class="bill-row"><span><b>Payment Status:</b></span><span id="dtlStatus" style="color:#15803d; font-weight:bold;"></span></div>
     </div>
 
@@ -710,16 +660,7 @@
   </div>
 </div>
 
-<!-- CLIENT-SIDE INVOICE TEMPLATE FOR FALLBACK RENDERING -->
-<div id="invoiceBill" style="display:none; padding:20px; background:white; font-family:Arial, sans-serif;">
-  <h2 style="color:#2563eb; margin:0 0 10px 0;">⚡ MOHNA EXPRESS OFFICIAL RECEIPT</h2>
-  <div class="bill-row"><span><b>Order ID:</b></span><span id="billOrderId"></span></div>
-  <div class="bill-row"><span><b>Order Timestamp:</b></span><span id="billTimestamp"></span></div>
-  <div class="bill-row"><span><b>Item:</b></span><span id="billItem"></span></div>
-  <div class="bill-row"><span><b>Grand Total Paid:</b></span><span id="billAmount" style="font-weight:bold; color:#15803d;"></span></div>
-</div>
-
-<!-- AUTH MODAL (PASSWORD LOGIN / OTP SIGNUP) -->
+<!-- AUTH MODAL -->
 <div id="authModal" class="modal-overlay" style="display: none;">
   <div class="modal-card">
     <div style="display:flex; gap:6px; margin-bottom:14px;">
@@ -727,7 +668,6 @@
       <button class="auth-tab-btn" id="btnTabSignup" onclick="toggleAuthTab('signup')">Sign Up (OTP)</button>
     </div>
 
-    <!-- Login View -->
     <div id="loginView">
       <div class="form-group"><label>Email Address</label><input type="email" id="loginEmail" placeholder="name@gmail.com" /></div>
       <div class="form-group"><label>Password</label><input type="password" id="loginPassword" placeholder="••••••••" /></div>
@@ -735,7 +675,6 @@
       <button type="button" class="btn-submit" onclick="processUserPasswordLogin()">🔑 Log In</button>
     </div>
 
-    <!-- Signup View: Step 1 (Details & OTP Request) -->
     <div id="signupStep1" style="display:none;">
       <div class="form-group"><label>Full Name</label><input type="text" id="signupName" placeholder="e.g. Rahul Kumar" /></div>
       <div class="form-group"><label>Mobile Number</label><input type="tel" id="signupPhone" placeholder="10-digit mobile" /></div>
@@ -745,7 +684,6 @@
       <button type="button" class="btn-submit" id="btnRequestSignupOtp" onclick="requestSignupOtp()">Send Verification Code</button>
     </div>
 
-    <!-- Signup View: Step 2 (Verify Code & Register) -->
     <div id="signupStep2" style="display:none;">
       <p style="font-size:13px; color:#475569; margin: 0 0 10px 0;">Enter 6-digit verification code sent to <b id="signupTargetEmail"></b></p>
       <div class="form-group"><input type="text" id="signupOtpCode" maxlength="6" style="text-align:center; font-size:22px; letter-spacing:4px;" placeholder="••••••" /></div>
@@ -783,18 +721,16 @@
   let currentSelectedProduct = null;
   let currentMatchedZoneTiming = 20;
   let appliedDiscountPercent = 0;
-  let pendingAvatarBase64 = "";
   let activeSelectedModalOrder = null;
 
   let modalMap = null, modalUserMarker = null, persistentTimerInterval = null, cardTickersInterval = null;
-  let mapScriptsLoaded = false, pdfScriptLoaded = false, sessionCheckInterval = null;
+  let sessionCheckInterval = null;
 
-  // MULTI-LOCALE DATE PARSER
+  // ROBUST MULTI-LOCALE DATE PARSER
   function parseAnyDateToMs(dateStr) {
     if (!dateStr) return 0;
     if (typeof dateStr === "number") return dateStr;
     const s = dateStr.toString().trim();
-    
     const directMs = new Date(s).getTime();
     if (!isNaN(directMs)) return directMs;
 
@@ -811,78 +747,31 @@
     return 0;
   }
 
-  function compressImageFile(file, maxWidth, maxHeight, callback) {
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      const img = new Image();
-      img.onload = function() {
-        const canvas = document.createElement("canvas");
-        let width = img.width;
-        let height = img.height;
+  function calculateDeliveryStatusBadge(orderDateStr, etaMinutes, expiryTimestamp, deliveredTimestamp) {
+    const orderStartMs = parseAnyDateToMs(orderDateStr) || (expiryTimestamp - (etaMinutes * 60000));
+    const endMs = parseInt(deliveredTimestamp) || Date.now();
+    const totalElapsedSec = Math.max(0, Math.floor((endMs - orderStartMs) / 1000));
+    const elapsedMins = Math.floor(totalElapsedSec / 60);
+    const elapsedSecs = totalElapsedSec % 60;
+    const timeFormatted = `${elapsedMins}m ${elapsedSecs}s`;
 
-        if (width > height) {
-          if (width > maxWidth) { height = Math.round((height * maxWidth) / width); width = maxWidth; }
-        } else {
-          if (height > maxHeight) { width = Math.round((width * maxHeight) / height); height = maxHeight; }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0, width, height);
-        callback(canvas.toDataURL("image/jpeg", 0.78));
-      };
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
-  }
-
-  function lazyLoadMapLibraries(callback) {
-    if (mapScriptsLoaded) return callback();
-    
-    const leafletCss = document.createElement('link');
-    leafletCss.rel = 'stylesheet';
-    leafletCss.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-    document.head.appendChild(leafletCss);
-
-    const leafletScript = document.createElement('script');
-    leafletScript.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-    leafletScript.onload = () => {
-      const turfScript = document.createElement('script');
-      turfScript.src = 'https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js';
-      turfScript.onload = () => {
-        mapScriptsLoaded = true;
-        callback();
-      };
-      document.body.appendChild(turfScript);
-    };
-    document.body.appendChild(leafletScript);
+    if (endMs <= expiryTimestamp) {
+      return `<span class="badge-ontime">✔ Delivered in ${timeFormatted} (On Time)</span>`;
+    } else {
+      const lateSec = Math.floor((endMs - expiryTimestamp) / 1000);
+      const lateMins = Math.floor(lateSec / 60);
+      return `<span class="badge-late">⚠️ Delivered in ${timeFormatted} (${lateMins}m Late)</span>`;
+    }
   }
 
   window.onload = function() {
     updateHeaderAuthUI();
     updateCartUI();
-    loadFromLocalCache();
     fetchInitialStoreData();
     requestUserGPS();
     startSingleSessionGuard();
   };
 
-  function loadFromLocalCache() {
-    try {
-      const cached = JSON.parse(localStorage.getItem('mohna_store_cache') || '{}');
-      if (cached.products && cached.products.length > 0) {
-        rawProducts = cached.products;
-        rawCategories = cached.categories || [];
-        rawCoupons = cached.coupons || [];
-        adminZonesData = cached.zone || null;
-        renderCategoryChips();
-        renderProducts();
-      }
-    } catch(e) {}
-  }
-
-  // SINGLE ACTIVE DEVICE SESSION GUARD
   function startSingleSessionGuard() {
     if (sessionCheckInterval) clearInterval(sessionCheckInterval);
     sessionCheckInterval = setInterval(() => {
@@ -931,14 +820,6 @@
           renderCustomerOrdersList();
           checkAndResumeActiveOrderTimer();
         }
-
-        localStorage.setItem('mohna_store_cache', JSON.stringify({
-          products: rawProducts,
-          categories: rawCategories,
-          coupons: rawCoupons,
-          zone: adminZonesData
-        }));
-
         renderCategoryChips();
         renderProducts();
       });
@@ -947,10 +828,9 @@
   function updateHeaderAuthUI() {
     const container = document.getElementById('authHeaderContainer');
     if (currentUser && currentUser.name) {
-      const avatarSrc = currentUser.avatar || "https://via.placeholder.com/24?text=U";
       container.innerHTML = `
         <div class="auth-pill auth-logged-in" onclick="switchPage('profilePage')">
-          <img src="${avatarSrc}" class="header-avatar" /> Hi, ${currentUser.name.split(' ')[0]}
+          Hi, ${currentUser.name.split(' ')[0]}
         </div>
       `;
     } else {
@@ -974,9 +854,9 @@
     localStorage.setItem('mohna_cart', JSON.stringify(cart));
   }
 
-  // =========================================================================
-  // AUTH MODAL & FLOWS (LOGIN / SIGNUP)
-  // =========================================================================
+  // ==========================================
+  // AUTH MODAL & FLOWS
+  // ==========================================
   function openAuthModal(mode = 'login') {
     document.getElementById('authModal').style.display = 'flex';
     toggleAuthTab(mode);
@@ -1090,58 +970,6 @@
     });
   }
 
-  function handleAvatarFileSelected(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    compressImageFile(file, 400, 400, (compressedBase64) => {
-      pendingAvatarBase64 = compressedBase64;
-      document.getElementById('profAvatarDisplay').src = compressedBase64;
-      document.getElementById('btnSaveAvatar').style.display = 'inline-block';
-    });
-  }
-
-  function saveSelectedAvatar() {
-    if (!currentUser || !pendingAvatarBase64) return;
-    const btn = document.getElementById('btnSaveAvatar');
-    btn.innerText = "Saving...";
-    btn.disabled = true;
-
-    fetch(SPREADSHEET_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: "updateUserProfilePic", email: currentUser.email, imageBase64: pendingAvatarBase64 })
-    }).then(r => r.json()).then(res => {
-      btn.innerText = "💾 Save Photo";
-      btn.disabled = false;
-      btn.style.display = "none";
-      if (res.status === "success") {
-        currentUser.avatar = res.avatarUrl;
-        localStorage.setItem('mohna_user', JSON.stringify(currentUser));
-        updateHeaderAuthUI();
-        alert("Profile picture uploaded and saved to Google Drive!");
-      }
-    });
-  }
-
-  function deleteAvatarPhoto() {
-    if (!currentUser || !confirm("Delete profile picture?")) return;
-    fetch(SPREADSHEET_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: "updateUserProfilePic", email: currentUser.email, imageBase64: "" })
-    }).then(r => r.json()).then(res => {
-      if (res.status === "success") {
-        currentUser.avatar = "";
-        pendingAvatarBase64 = "";
-        localStorage.setItem('mohna_user', JSON.stringify(currentUser));
-        document.getElementById('profAvatarDisplay').src = "https://via.placeholder.com/96?text=User";
-        document.getElementById('btnSaveAvatar').style.display = "none";
-        updateHeaderAuthUI();
-      }
-    });
-  }
-
   function logoutCustomer(promptUser = true) {
     if (!promptUser || confirm("Log out from this device?")) {
       localStorage.removeItem('mohna_user');
@@ -1150,9 +978,9 @@
     }
   }
 
-  // =========================================================================
+  // ==========================================
   // PRODUCT CATALOG & DETAILS MODAL
-  // =========================================================================
+  // ==========================================
   function renderCategoryChips() {
     const chipContainer = document.getElementById('categoryChips');
     const scopedCategories = rawCategories.filter(c => c.scope === currentTheme || c.scope === 'both');
@@ -1247,9 +1075,9 @@
     document.getElementById('productDetailsModal').style.display = 'none';
   }
 
-  // =========================================================================
+  // ==========================================
   // CART & CHECKOUT MANAGEMENT
-  // =========================================================================
+  // ==========================================
   function addToCart(productId) {
     const p = rawProducts.find(x => x.id === productId);
     if (!p) return;
@@ -1333,59 +1161,6 @@
     renderCheckoutCart();
   }
 
-  function initCheckoutMap() {
-    setTimeout(() => {
-      if (!modalMap && typeof L !== 'undefined') {
-        modalMap = L.map('mapModal').setView([25.6000, 85.1300], 12);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(modalMap);
-        if (adminZonesData) L.geoJSON(adminZonesData, { style: { color: "#2563eb", fillColor: "#3b82f6", fillOpacity: 0.25 } }).addTo(modalMap);
-      }
-
-      navigator.geolocation.getCurrentPosition((pos) => {
-        const lat = pos.coords.latitude, lng = pos.coords.longitude;
-        userCoords = { lat, lng };
-        if (modalMap) {
-          modalMap.setView([lat, lng], 14);
-          if (modalUserMarker) modalUserMarker.setLatLng([lat, lng]);
-          else modalUserMarker = L.marker([lat, lng]).addTo(modalMap);
-        }
-        evaluateCheckoutZone(lat, lng);
-      });
-    }, 100);
-  }
-
-  function evaluateCheckoutZone(lat, lng) {
-    const statusBox = document.getElementById('modalCoverageStatus');
-    if (typeof turf === 'undefined') {
-      statusBox.innerHTML = `✅ <b>Location Verified.</b> Fast delivery active.`;
-      document.getElementById('confirmPayBtn').disabled = false;
-      return;
-    }
-
-    const point = turf.point([lng, lat]);
-    let isDeliverable = false;
-
-    if (adminZonesData && adminZonesData.type === "FeatureCollection" && adminZonesData.features) {
-      for (let feature of adminZonesData.features) {
-        if (turf.booleanPointInPolygon(point, feature)) {
-          isDeliverable = true;
-          const props = feature.properties || {};
-          currentMatchedZoneTiming = props.deliveryMinutes || 20;
-          statusBox.style.background = "#dcfce7"; statusBox.style.color = "#166534";
-          statusBox.innerHTML = `✅ <b>Deliverable Area!</b> In ${props.name || 'Zone'} (${currentMatchedZoneTiming}m Delivery)`;
-          document.getElementById('confirmPayBtn').disabled = false;
-          break;
-        }
-      }
-    }
-
-    if (!isDeliverable) {
-      statusBox.style.background = "#fee2e2"; statusBox.style.color = "#991b1b";
-      statusBox.innerHTML = `❌ <b>Outside Delivery Zone.</b> Fast delivery unavailable.`;
-      document.getElementById('confirmPayBtn').disabled = true;
-    }
-  }
-
   function applyCouponCode() {
     const inputCode = document.getElementById('couponCodeInput').value.trim().toUpperCase();
     const msg = document.getElementById('couponStatusMsg');
@@ -1423,11 +1198,21 @@
     const totalQty = cart.reduce((sum, i) => sum + i.qty, 0);
 
     const payload = {
-      action: "saveOrder", orderId: orderId, paymentId: "pay_upi_" + Math.random().toString(36).substring(2, 9),
-      name: currentUser.name, email: currentUser.email, phone: currentUser.phone,
+      action: "saveOrder",
+      orderId: orderId,
+      paymentId: "pay_upi_" + Math.random().toString(36).substring(2, 9),
+      name: currentUser.name,
+      email: currentUser.email,
+      phone: currentUser.phone,
       address: document.getElementById('orderAddress').value || "Customer GPS Coordinates",
-      item: itemSummary, qty: totalQty, amount: "₹" + finalAmount,
-      lat: userCoords ? userCoords.lat.toFixed(5) : "0.0", lng: userCoords ? userCoords.lng.toFixed(5) : "0.0",
+      item: itemSummary,
+      qty: totalQty,
+      amount: "₹" + finalAmount,
+      subtotal: "₹" + subtotal,
+      discount: "₹" + discountAmount,
+      deliveryFee: maxDeliveryFee > 0 ? "₹" + maxDeliveryFee : "FREE",
+      lat: userCoords ? userCoords.lat.toFixed(5) : "0.0",
+      lng: userCoords ? userCoords.lng.toFixed(5) : "0.0",
       etaMinutes: currentMatchedZoneTiming
     };
 
@@ -1442,9 +1227,9 @@
       });
   }
 
-  // =========================================================================
+  // ==========================================
   // NAVIGATION & VIEW SWITCHER
-  // =========================================================================
+  // ==========================================
   function switchPage(pageId) {
     document.querySelectorAll('.page-view').forEach(p => p.classList.remove('active-page'));
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -1455,7 +1240,6 @@
     if (pageId === 'checkoutPage') {
       document.getElementById('navCheckout').classList.add('active');
       renderCheckoutCart();
-      lazyLoadMapLibraries(() => { initCheckoutMap(); });
     }
     if (pageId === 'ordersPage') {
       document.getElementById('navOrders').classList.add('active');
@@ -1476,14 +1260,12 @@
     document.getElementById('profRegCoords').value = `${currentUser.regLat || ''}, ${currentUser.regLng || ''}`;
     document.getElementById('profLoginCoords').value = `${currentUser.loginLat || userCoords?.lat || ''}, ${currentUser.loginLng || userCoords?.lng || ''}`;
     document.getElementById('profStatus').value = currentUser.status || "Active";
-    document.getElementById('profAvatarDisplay').src = currentUser.avatar || "https://via.placeholder.com/96?text=User";
-    document.getElementById('btnSaveAvatar').style.display = "none";
   }
 
   function checkAndResumeActiveOrderTimer() {
     if (!cachedMyOrders || cachedMyOrders.length === 0) return;
     const latestOrder = cachedMyOrders[0];
-    const expiryMs = parseInt(latestOrder.expiryTimestamp) || (new Date(latestOrder.date).getTime() + (latestOrder.etaMinutes || 20) * 60000);
+    const expiryMs = parseInt(latestOrder.expiryTimestamp) || (parseAnyDateToMs(latestOrder.date) + (latestOrder.etaMinutes || 20) * 60000);
     
     startPersistentCountdown(
       expiryMs,
@@ -1567,7 +1349,7 @@
       const isDelivered = o.status && o.status.includes('Delivered');
 
       let timerHtml = isDelivered 
-        ? `<span class="badge-ontime">✔ Delivered</span>` 
+        ? calculateDeliveryStatusBadge(o.date, o.etaMinutes || 20, expiryMs, o.deliveredTimestamp || 0)
         : `<span id="card_timer_${o.orderId}" data-expiry="${expiryMs}" class="badge-ticking">⏱️ Loading...</span>`;
 
       return `
@@ -1613,6 +1395,7 @@
     }, 1000);
   }
 
+  // OPEN MODAL WITH COMPREHENSIVE PRICE BREAKDOWN & ON-TIME/LATE STATUS
   function openOrderModal(orderIndex) {
     const order = cachedMyOrders[orderIndex];
     if (!order) return;
@@ -1622,10 +1405,34 @@
     document.getElementById('dtlTimestamp').innerText = order.date;
     document.getElementById('dtlItem').innerText = order.item;
     document.getElementById('dtlQty').innerText = order.qty;
+    
+    // Price Breakdown Populated
+    document.getElementById('dtlSubtotal').innerText = order.subtotal || order.amount;
+    document.getElementById('dtlDiscount').innerText = order.discount ? `-${order.discount}` : "-₹0";
+    document.getElementById('dtlDeliveryFee').innerText = order.deliveryFee || "FREE";
     document.getElementById('dtlAmount').innerText = order.amount;
+
     document.getElementById('dtlAddress').innerText = order.address || "Customer GPS Coordinates";
     document.getElementById('dtlEta').innerText = `${order.etaMinutes || 20} Minutes`;
     document.getElementById('dtlStatus').innerText = order.status || "PAID";
+
+    const expiryMs = parseInt(order.expiryTimestamp) || (parseAnyDateToMs(order.date) + (order.etaMinutes || 20) * 60000);
+    const timerBadge = document.getElementById('dtlLiveTimer');
+
+    if (order.status && order.status.includes('Delivered')) {
+      timerBadge.innerHTML = calculateDeliveryStatusBadge(order.date, order.etaMinutes || 20, expiryMs, order.deliveredTimestamp || 0);
+    } else {
+      timerBadge.className = "badge-ticking";
+      const remainingMs = expiryMs - Date.now();
+      if (remainingMs <= 0) {
+        timerBadge.className = "badge-late";
+        timerBadge.innerText = "00:00 (EXPIRED)";
+      } else {
+        const totalSec = Math.floor(remainingMs / 1000);
+        timerBadge.innerText = `⏱️ ${Math.floor(totalSec / 60)}m ${totalSec % 60}s`;
+      }
+    }
+
     document.getElementById('orderDetailsModal').style.display = 'flex';
   }
 
@@ -1638,29 +1445,6 @@
     if (!activeSelectedModalOrder) return;
     if (activeSelectedModalOrder.receiptPdfUrl && activeSelectedModalOrder.receiptPdfUrl.includes('drive.google.com')) {
       window.open(activeSelectedModalOrder.receiptPdfUrl, '_blank');
-      return;
-    }
-
-    document.getElementById('billOrderId').innerText = activeSelectedModalOrder.orderId;
-    document.getElementById('billTimestamp').innerText = activeSelectedModalOrder.date;
-    document.getElementById('billItem').innerText = activeSelectedModalOrder.item;
-    document.getElementById('billAmount').innerText = activeSelectedModalOrder.amount;
-
-    const element = document.getElementById('invoiceBill');
-    element.style.display = 'block';
-
-    if (!pdfScriptLoaded) {
-      const script = document.createElement('script');
-      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-      script.onload = () => {
-        pdfScriptLoaded = true;
-        html2pdf().set({ margin: [8, 8, 8, 8], filename: `Invoice_${activeSelectedModalOrder.orderId}.pdf`, jsPDF: { unit: 'mm', format: 'a5' } })
-          .from(element).save().then(() => { element.style.display = 'none'; });
-      };
-      document.body.appendChild(script);
-    } else {
-      html2pdf().set({ margin: [8, 8, 8, 8], filename: `Invoice_${activeSelectedModalOrder.orderId}.pdf`, jsPDF: { unit: 'mm', format: 'a5' } })
-        .from(element).save().then(() => { element.style.display = 'none'; });
     }
   }
 </script>
