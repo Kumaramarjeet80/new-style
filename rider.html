@@ -92,10 +92,12 @@
     </div>
   </header>
 
+  <!-- PENDING VERIFICATION / BLOCKED BANNER -->
   <div id="verificationAlert" class="verification-alert-banner">
     <b>⏳ Account Verification Required:</b> Your profile has been registered and is awaiting Admin Verification. You will become an active rider once approved by warehouse admin.
   </div>
 
+  <!-- RIDER METRICS -->
   <div class="metrics-grid">
     <div class="metric-card">
       <div id="mActiveCount" class="metric-val">0</div>
@@ -111,6 +113,7 @@
     </div>
   </div>
 
+  <!-- STATUS FILTER TABS -->
   <div class="tab-bar">
     <button class="tab-btn active" id="tabActive" onclick="filterRiderTab('active')">⚡ Active Tasks (<span id="countActive">0</span>)</button>
     <button class="tab-btn" id="tabOut" onclick="filterRiderTab('out')">🛵 In Transit (<span id="countOut">0</span>)</button>
@@ -131,6 +134,7 @@
       <button class="tab-btn" id="btnRTabSignup" style="flex:1;" onclick="toggleRiderAuthTab('signup')">Partner Sign Up (OTP)</button>
     </div>
 
+    <!-- LOGIN VIEW -->
     <div id="rLoginView">
       <div class="form-group">
         <label>Rider Email Address</label>
@@ -143,6 +147,7 @@
       <button type="button" id="btnRiderSubmitLogin" class="btn" style="background:#0284c7; color:white; width:100%; padding:12px; margin-top:6px;" onclick="processRiderPasswordLogin()">🔑 Log In & Go Online</button>
     </div>
 
+    <!-- SIGNUP STEP 1 -->
     <div id="rSignupStep1" style="display:none;">
       <div class="form-group">
         <label>Full Name</label>
@@ -163,6 +168,7 @@
       <button type="button" class="btn" id="btnSendRiderSignupOtp" style="background:#0284c7; color:white; width:100%; padding:12px; margin-top:6px;" onclick="sendRiderSignupOtp()">Send Verification OTP</button>
     </div>
 
+    <!-- SIGNUP STEP 2 -->
     <div id="rSignupStep2" style="display:none;">
       <p style="font-size:13px; color:#94a3b8;">Enter the 6-digit OTP sent to <b id="rTargetEmailDisplay" style="color:#38bdf8;"></b></p>
       <div class="form-group">
@@ -252,7 +258,7 @@
   function updateRiderHeaderUI() {
     const container = document.getElementById('riderAuthContainer');
     if (currentRider && currentRider.email) {
-      const isVerified = currentRider.status === 'Active';
+      const isVerified = (currentRider.status || '').toLowerCase() === 'active';
       container.innerHTML = `
         <button class="rider-auth-pill" style="background:${isVerified ? '#166534' : '#854d0e'}; color:${isVerified ? '#bbf7d0' : '#fef08a'};" onclick="logoutRider()">
           ${isVerified ? '🟢' : '⏳'} ${currentRider.name || currentRider.email.split('@')[0]} (${currentRider.status || 'Pending'})
@@ -273,18 +279,20 @@
     fetch(`${SPREADSHEET_API_URL}?action=checkRiderStatus&email=${encodeURIComponent(currentRider.email)}`)
       .then(r => r.json())
       .then(res => {
-        if (res.status === 'success') {
+        if (res && res.status === 'success') {
           currentRider.status = res.riderStatus;
           localStorage.setItem('mohna_rider', JSON.stringify(currentRider));
           updateRiderHeaderUI();
 
           const alertBox = document.getElementById('verificationAlert');
-          if (currentRider.status === 'Pending Verification') {
+          const normalizedStatus = (currentRider.status || '').toLowerCase();
+
+          if (normalizedStatus.includes('pending')) {
             alertBox.style.display = 'block';
             alertBox.style.background = '#78350f';
             alertBox.style.borderColor = '#f59e0b';
             alertBox.innerHTML = `<b>⏳ Verification In Progress:</b> Your profile has been submitted and requires 1st-time Admin Verification. You will be able to accept tasks once approved by warehouse admin.`;
-          } else if (currentRider.status === 'Blocked') {
+          } else if (normalizedStatus.includes('block')) {
             alertBox.style.display = 'block';
             alertBox.style.background = '#450a0a';
             alertBox.style.borderColor = '#ef4444';
@@ -333,9 +341,19 @@
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({ action: 'riderPasswordLogin', email, password })
-    }).then(r => r.json()).then(res => {
+    })
+    .then(r => r.text())
+    .then(text => {
       btn.innerText = "🔑 Log In & Go Online";
       btn.disabled = false;
+
+      let res;
+      try {
+        res = JSON.parse(text);
+      } catch(e) {
+        alert("Server returned an invalid response: " + text.slice(0, 100));
+        return;
+      }
 
       const riderPayload = res.rider || res.user;
       if (res.status === 'success' && riderPayload) {
@@ -354,12 +372,13 @@
           validateRiderStatus();
         }
       } else {
-        alert(res.message || "Login failed. Check your credentials.");
+        alert(res.message || "Login failed. Check your email and password.");
       }
-    }).catch(err => {
+    })
+    .catch(err => {
       btn.innerText = "🔑 Log In & Go Online";
       btn.disabled = false;
-      alert("Network error. Please try again.");
+      alert("Network communication error. Please try again.");
     });
   }
 
@@ -380,7 +399,9 @@
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({ action: 'sendSignupOtp', email, role: 'rider' })
-    }).then(r => r.json()).then(res => {
+    })
+    .then(r => r.json())
+    .then(res => {
       btn.innerText = 'Send Verification OTP';
       btn.disabled = false;
       if (res.status === 'success') {
@@ -389,9 +410,11 @@
       } else {
         alert(res.message);
       }
-    }).catch(() => {
+    })
+    .catch(() => {
       btn.innerText = 'Send Verification OTP';
       btn.disabled = false;
+      alert("Failed to send OTP. Please check your network connection.");
     });
   }
 
@@ -415,7 +438,9 @@
         action: 'completeRiderSignup',
         name, phone, email, password, otp
       })
-    }).then(r => r.json()).then(res => {
+    })
+    .then(r => r.json())
+    .then(res => {
       btn.innerText = 'Verify OTP & Submit Profile';
       btn.disabled = false;
 
@@ -428,9 +453,11 @@
       } else {
         alert(res.message);
       }
-    }).catch(() => {
+    })
+    .catch(() => {
       btn.innerText = 'Verify OTP & Submit Profile';
       btn.disabled = false;
+      alert("Verification failed due to a network issue. Please retry.");
     });
   }
 
@@ -443,7 +470,7 @@
   }
 
   function fetchRiderFeed() {
-    if (!currentRider || currentRider.status !== 'Active') return;
+    if (!currentRider || (currentRider.status || '').toLowerCase() !== 'active') return;
     
     fetch(`${SPREADSHEET_API_URL}?action=getRiderOrders`)
       .then(r => r.json())
@@ -451,7 +478,8 @@
         cachedOrders = data.orders || [];
         updateMetrics();
         renderFeed();
-      });
+      })
+      .catch(()=>{});
   }
 
   function updateMetrics() {
@@ -490,7 +518,7 @@
       return;
     }
 
-    if (currentRider.status !== 'Active') {
+    if ((currentRider.status || '').toLowerCase() !== 'active') {
       feed.innerHTML = `<p style="text-align:center; color:#f59e0b; padding:40px;">⚠️ Access Restricted: Account verification required by warehouse admin.</p>`;
       return;
     }
@@ -540,7 +568,7 @@
           <div style="font-size:12.5px; color:#cbd5e1; margin-bottom:10px; background:#0f172a; padding:8px; border-radius:8px;">📍 ${o.address}</div>
 
           <div class="action-btn-row">
-            <a href="${o.mapsUrl}" target="_blank" class="btn btn-maps">🗺️ GPS Navigation</a>
+            <a href="${o.mapsUrl}" target="_blank" class="btn btn-maps">🗺️ Direct GPS Navigation</a>
             <a href="tel:${o.phone}" class="btn btn-call">📞 Call Customer</a>
           </div>
 
@@ -575,7 +603,7 @@
   }
 
   function updateStatus(orderId, newStatus) {
-    if (!currentRider || currentRider.status !== 'Active') return alert("Account verification required to accept tasks.");
+    if (!currentRider || (currentRider.status || '').toLowerCase() !== 'active') return alert("Account verification required to accept tasks.");
     
     fetch(SPREADSHEET_API_URL, {
       method: 'POST',
