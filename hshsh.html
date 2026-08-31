@@ -52,9 +52,10 @@
     .btn-refresh { background: #f8fafc; border: 1px solid #cbd5e1; color: #334155; font-size: 12px; }
     .btn-del { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; padding: 4px 8px; font-size: 11px; }
 
-    /* LIVE ORDER TIMER BADGES IN TABLE */
-    .timer-badge-active { background: #0f172a; color: #38bdf8; font-family: monospace; font-weight: 800; font-size: 12px; padding: 4px 8px; border-radius: 6px; border: 1px solid #38bdf8; }
-    .timer-badge-expired { background: #fee2e2; color: #b91c1c; font-family: monospace; font-weight: 800; font-size: 12px; padding: 4px 8px; border-radius: 6px; border: 1px solid #f87171; }
+    /* TIMER BADGES */
+    .badge-ticking { background: #0f172a; color: #38bdf8; font-family: monospace; font-weight: 800; font-size: 12px; padding: 4px 8px; border-radius: 6px; border: 1px solid #38bdf8; }
+    .badge-ontime { background: #dcfce7; color: #166534; font-family: monospace; font-weight: 800; font-size: 12px; padding: 4px 8px; border-radius: 6px; border: 1px solid #86efac; }
+    .badge-late { background: #fee2e2; color: #b91c1c; font-family: monospace; font-weight: 800; font-size: 12px; padding: 4px 8px; border-radius: 6px; border: 1px solid #f87171; }
 
     table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
     th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
@@ -93,13 +94,13 @@
 
   <input type="text" id="masterAdminSearch" class="master-search-input" placeholder="🔍 Omnisearch across all tabs (Names, Phone numbers, Order IDs, Coordinates)..." oninput="handleAdminOmniSearch(this.value)" />
 
-  <!-- TAB 1: 🧾 ORDERS WITH RECEIPT LINKS -->
+  <!-- TAB 1: 🧾 ORDERS WITH LIVE COUNTDOWNS & DELIVERY DURATION -->
   <div id="viewOrders" class="admin-page-view active-view">
     <div class="card">
       <div class="card-header">
         <div>
           <h3>🧾 Orders & Synchronized Zone ETA Tracking</h3>
-          <p style="margin:2px 0 0; font-size:12px; color:#64748b;">Live ticking countdown timers for every order synced with customer devices.</p>
+          <p style="margin:2px 0 0; font-size:12px; color:#64748b;">Live countdown timers freeze and turn Green/Red when delivered.</p>
         </div>
         <div style="display:flex; gap:8px;">
           <button class="btn btn-primary" onclick="printLast24HoursSlips()">🖨️ A4 Slip Print</button>
@@ -116,7 +117,7 @@
             <th>Phone</th>
             <th>Total Paid</th>
             <th>Zone ETA</th>
-            <th>⏱️ Live Countdown</th>
+            <th>⏱️ Delivery Status / Timer</th>
             <th>Status</th>
             <th>Receipt</th>
             <th>Route</th>
@@ -300,6 +301,23 @@
     reader.readAsDataURL(file);
   }
 
+  function calculateDeliveryStatusBadge(orderDateStr, etaMinutes, expiryTimestamp, deliveredTimestamp) {
+    const orderStartMs = new Date(orderDateStr).getTime() || (expiryTimestamp - (etaMinutes * 60000));
+    const endMs = parseInt(deliveredTimestamp) || Date.now();
+    const totalElapsedSec = Math.max(0, Math.floor((endMs - orderStartMs) / 1000));
+    const elapsedMins = Math.floor(totalElapsedSec / 60);
+    const elapsedSecs = totalElapsedSec % 60;
+    const timeFormatted = `${elapsedMins}m ${elapsedSecs}s`;
+
+    if (endMs <= expiryTimestamp) {
+      return `<span class="badge-ontime">✔ ${timeFormatted} (On Time)</span>`;
+    } else {
+      const lateSec = Math.floor((endMs - expiryTimestamp) / 1000);
+      const lateMins = Math.floor(lateSec / 60);
+      return `<span class="badge-late">⚠️ ${timeFormatted} (${lateMins}m Late)</span>`;
+    }
+  }
+
   function switchAdminTab(viewId) {
     document.querySelectorAll('.admin-page-view').forEach(v => v.classList.remove('active-view'));
     document.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.remove('active-tab'));
@@ -365,7 +383,15 @@
     
     document.getElementById('ordersBody').innerHTML = filtered.map(o => {
       const expiryMs = parseInt(o.expiryTimestamp) || (new Date(o.date).getTime() + (o.etaMinutes || 20) * 60000);
+      const isDelivered = o.status && o.status.includes('Delivered');
       const receiptLink = o.receiptPdfUrl ? `<a href="${o.receiptPdfUrl}" target="_blank" style="color:#0f172a; font-weight:bold; font-size:12px;">📄 Receipt</a>` : `<span style="color:#94a3b8; font-size:11px;">N/A</span>`;
+
+      let timerBadge = "";
+      if (isDelivered) {
+        timerBadge = calculateDeliveryStatusBadge(o.date, o.etaMinutes || 20, expiryMs, o.deliveredTimestamp || 0);
+      } else {
+        timerBadge = `<span id="admin_timer_${o.orderId}" data-expiry="${expiryMs}" class="badge-ticking">Loading...</span>`;
+      }
 
       return `
         <tr>
@@ -376,7 +402,7 @@
           <td>${o.phone}</td>
           <td><b>${o.amount}</b></td>
           <td><span style="background:#dbeafe; color:#1e40af; padding:2px 6px; border-radius:4px; font-weight:bold;">⚡ ${o.etaMinutes || 20}m</span></td>
-          <td><span id="admin_timer_${o.orderId}" data-expiry="${expiryMs}" class="timer-badge-active">Loading...</span></td>
+          <td>${timerBadge}</td>
           <td><span style="background:#dcfce7; color:#166534; padding:2px 6px; border-radius:4px; font-weight:bold;">${o.status}</span></td>
           <td>${receiptLink}</td>
           <td><a href="${o.mapsUrl}" target="_blank" style="color:#2563eb; font-size:12px;">🗺️ Route</a></td>
@@ -394,10 +420,10 @@
         const diff = expiry - now;
 
         if (diff <= 0) {
-          el.className = "timer-badge-expired";
+          el.className = "badge-late";
           el.innerText = "00:00 (EXPIRED)";
         } else {
-          el.className = "timer-badge-active";
+          el.className = "badge-ticking";
           const totalSec = Math.floor(diff / 1000);
           const mins = Math.floor(totalSec / 60);
           const secs = totalSec % 60;
