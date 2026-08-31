@@ -158,7 +158,9 @@
             <th>Route</th>
           </tr>
         </thead>
-        <tbody id="ordersBody"></tbody>
+        <tbody id="ordersBody">
+          <tr><td colspan="11" style="text-align:center; color:#64748b; padding:20px;">Loading orders database...</td></tr>
+        </tbody>
       </table>
     </div>
   </div>
@@ -172,7 +174,9 @@
       </div>
       <table>
         <thead><tr><th>Photo</th><th>User ID</th><th>Registered Date</th><th>Name</th><th>Email</th><th>Phone</th><th>GPS Coordinates</th><th>Status</th><th>Access Action</th></tr></thead>
-        <tbody id="userTableBody"></tbody>
+        <tbody id="userTableBody">
+          <tr><td colspan="9" style="text-align:center; color:#64748b; padding:20px;">Loading users database...</td></tr>
+        </tbody>
       </table>
     </div>
   </div>
@@ -313,10 +317,34 @@
 <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.js"></script>
 
 <script>
-  const SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbyZ11fczqVaeZx8yyL1IXUDkJ92U7cMhX7_AgaqNXygIuj3tMdwkwiYa_lY9a0GR9btsg/exec";
+  const SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbyZ11fczqVaeZx8yyL1IXUDkJ92U7cMhX7_AgaqNXygIuj3tMdwkwiYa_lY9a0GR9btsg/exec"; // Ensure you paste your latest deployment URL here if different
 
   let activeZones = [], cachedProducts = [], cachedCategories = [], cachedOrders = [], cachedUsers = [], cachedCoupons = [], adminOrdersInterval = null;
   let activeFilterFromMs = 0, activeFilterToMs = Infinity;
+
+  // ROBUST MULTI-LOCALE DATE PARSER (Fixes DD/MM/YYYY and NaN issues)
+  function parseAnyDateToMs(dateStr) {
+    if (!dateStr) return 0;
+    if (typeof dateStr === "number") return dateStr;
+    const s = dateStr.toString().trim();
+    
+    // Check standard JS parser first
+    const directMs = new Date(s).getTime();
+    if (!isNaN(directMs)) return directMs;
+
+    // Handle DD/MM/YYYY, HH:MM:SS format
+    const match = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:,\s*(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+    if (match) {
+      const day = parseInt(match[1], 10);
+      const month = parseInt(match[2], 10) - 1;
+      const year = parseInt(match[3], 10);
+      const hours = match[4] ? parseInt(match[4], 10) : 0;
+      const mins = match[5] ? parseInt(match[5], 10) : 0;
+      const secs = match[6] ? parseInt(match[6], 10) : 0;
+      return new Date(year, month, day, hours, mins, secs).getTime();
+    }
+    return 0;
+  }
 
   function compressImageFile(file, maxWidth, maxHeight, callback) {
     const reader = new FileReader();
@@ -345,7 +373,7 @@
   }
 
   function calculateDeliveryStatusBadge(orderDateStr, etaMinutes, expiryTimestamp, deliveredTimestamp) {
-    const orderStartMs = new Date(orderDateStr).getTime() || (expiryTimestamp - (etaMinutes * 60000));
+    const orderStartMs = parseAnyDateToMs(orderDateStr) || (expiryTimestamp - (etaMinutes * 60000));
     const endMs = parseInt(deliveredTimestamp) || Date.now();
     const totalElapsedSec = Math.max(0, Math.floor((endMs - orderStartMs) / 1000));
     const elapsedMins = Math.floor(totalElapsedSec / 60);
@@ -453,25 +481,36 @@
 
   // ORDERS WITH DATE & SEARCH FILTER
   function loadOrders() {
-    fetch(`${SPREADSHEET_API_URL}?action=getOrders`).then(r => r.json()).then(data => {
-      cachedOrders = data.orders || [];
-      renderOrdersTable();
-      startAdminLiveCountdownTicker();
-    });
+    fetch(`${SPREADSHEET_API_URL}?action=getOrders`)
+      .then(r => r.json())
+      .then(data => {
+        cachedOrders = data.orders || [];
+        renderOrdersTable();
+        startAdminLiveCountdownTicker();
+      })
+      .catch(err => {
+        document.getElementById('ordersBody').innerHTML = `<tr><td colspan="11" style="text-align:center; color:#ef4444; padding:20px;">Failed to load orders. Check your Apps Script deployment permissions.</td></tr>`;
+      });
   }
 
   function renderOrdersTable(q = "") {
     let filtered = cachedOrders.filter(o => {
-      const oTime = new Date(o.date).getTime();
-      return oTime >= activeFilterFromMs && oTime <= activeFilterToMs;
+      const oTime = parseAnyDateToMs(o.date);
+      if (activeFilterFromMs === 0 && activeFilterToMs === Infinity) return true;
+      return oTime === 0 || (oTime >= activeFilterFromMs && oTime <= activeFilterToMs);
     });
 
     if (q) {
       filtered = filtered.filter(o => o.orderId.toLowerCase().includes(q) || o.name.toLowerCase().includes(q) || (o.email && o.email.toLowerCase().includes(q)) || o.phone.toString().includes(q));
     }
     
+    if (filtered.length === 0) {
+      document.getElementById('ordersBody').innerHTML = `<tr><td colspan="11" style="text-align:center; color:#64748b; padding:20px;">No orders found matching the filter criteria.</td></tr>`;
+      return;
+    }
+
     document.getElementById('ordersBody').innerHTML = filtered.map(o => {
-      const expiryMs = parseInt(o.expiryTimestamp) || (new Date(o.date).getTime() + (o.etaMinutes || 20) * 60000);
+      const expiryMs = parseInt(o.expiryTimestamp) || (parseAnyDateToMs(o.date) + (o.etaMinutes || 20) * 60000);
       const isDelivered = o.status && o.status.includes('Delivered');
       const receiptLink = o.receiptPdfUrl ? `<a href="${o.receiptPdfUrl}" target="_blank" style="color:#0f172a; font-weight:bold; font-size:12px;">📄 Receipt</a>` : `<span style="color:#94a3b8; font-size:11px;">N/A</span>`;
 
@@ -532,12 +571,18 @@
 
   function renderUsersTable(q = "") {
     let filtered = cachedUsers.filter(u => {
-      const uTime = new Date(u.date).getTime();
-      return isNaN(uTime) || (uTime >= activeFilterFromMs && uTime <= activeFilterToMs);
+      const uTime = parseAnyDateToMs(u.date);
+      if (activeFilterFromMs === 0 && activeFilterToMs === Infinity) return true;
+      return uTime === 0 || (uTime >= activeFilterFromMs && uTime <= activeFilterToMs);
     });
 
     if (q) {
       filtered = filtered.filter(u => u.name.toLowerCase().includes(q) || (u.email && u.email.toLowerCase().includes(q)) || u.phone.includes(q));
+    }
+
+    if (filtered.length === 0) {
+      document.getElementById('userTableBody').innerHTML = `<tr><td colspan="9" style="text-align:center; color:#64748b; padding:20px;">No customers found.</td></tr>`;
+      return;
     }
 
     document.getElementById('userTableBody').innerHTML = filtered.map(u => `
@@ -753,15 +798,17 @@
       reportTitle = "REGISTERED CUSTOMERS AUDIT STATEMENT";
       headers = ["User ID", "Registration Date", "Customer Name", "Email Address", "Phone Number", "Account Status"];
       rows = cachedUsers.filter(u => {
-        const uTime = new Date(u.date).getTime();
-        return isNaN(uTime) || (uTime >= activeFilterFromMs && uTime <= activeFilterToMs);
+        const uTime = parseAnyDateToMs(u.date);
+        if (activeFilterFromMs === 0 && activeFilterToMs === Infinity) return true;
+        return uTime === 0 || (uTime >= activeFilterFromMs && uTime <= activeFilterToMs);
       }).map(u => [u.id, u.date, u.name, u.email, u.phone, u.status]);
     } else if (type === 'orders') {
       reportTitle = "EXECUTIVE SALES & DISPATCH AUDIT REPORT";
       headers = ["Order ID", "Timestamp", "Customer Name", "Total Paid", "Guaranteed ETA", "Current Status"];
       rows = cachedOrders.filter(o => {
-        const oTime = new Date(o.date).getTime();
-        return oTime >= activeFilterFromMs && oTime <= activeFilterToMs;
+        const oTime = parseAnyDateToMs(o.date);
+        if (activeFilterFromMs === 0 && activeFilterToMs === Infinity) return true;
+        return oTime === 0 || (oTime >= activeFilterFromMs && oTime <= activeFilterToMs);
       }).map(o => [o.orderId, o.date, o.name, o.amount, (o.etaMinutes || 20) + " Mins", o.status]);
     } else if (type === 'products') {
       reportTitle = "INVENTORY VALUATION & STOCK LEVEL REPORT";
@@ -872,8 +919,9 @@
 
   function printLast24HoursSlips() {
     let filtered = cachedOrders.filter(o => {
-      const oTime = new Date(o.date).getTime();
-      return oTime >= activeFilterFromMs && oTime <= activeFilterToMs;
+      const oTime = parseAnyDateToMs(o.date);
+      if (activeFilterFromMs === 0 && activeFilterToMs === Infinity) return true;
+      return oTime === 0 || (oTime >= activeFilterFromMs && oTime <= activeFilterToMs);
     });
 
     const activeOrders = filtered.filter(o => !o.status.includes('Delivered'));
