@@ -89,6 +89,27 @@
       object-fit: cover; 
     }
 
+    .zone-status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-radius: 12px;
+      margin-bottom: 14px;
+      font-size: 12.5px;
+      font-weight: 700;
+    }
+    .zone-deliverable {
+      background: #dcfce7;
+      color: #166534;
+      border: 1px solid #86efac;
+    }
+    .zone-undeliverable {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fca5a5;
+    }
+
     .mode-toggle-container { 
       display: flex; 
       gap: 10px; 
@@ -278,6 +299,10 @@
       font-weight: 700; 
       cursor: pointer; 
       font-size: 14px; 
+    }
+    .btn-submit:disabled {
+      background: #94a3b8;
+      cursor: not-allowed;
     }
 
     .bill-row { 
@@ -520,6 +545,12 @@
     </div>
   </header>
 
+  <!-- LIVE LOCATION SERVICEABILITY STATUS BAR -->
+  <div id="zoneStatusBar" class="zone-status-bar zone-undeliverable">
+    <span id="zoneStatusText">📍 Locating your address...</span>
+    <button type="button" onclick="requestUserGPS()" style="border:none; background:transparent; font-size:11px; font-weight:800; cursor:pointer; text-decoration:underline;">Update GPS</button>
+  </div>
+
   <!-- PAGE 1: 🏠 HOME -->
   <div id="homePage" class="page-view active-page">
     <div class="mode-toggle-container">
@@ -542,6 +573,8 @@
   <div id="checkoutPage" class="page-view">
     <div class="card">
       <h3 style="margin-top:0;">💳 Checkout & GPS Delivery Confirmation</h3>
+
+      <div id="chkZoneNotice" style="margin-bottom:12px; font-size:13px; font-weight:bold;"></div>
       
       <div id="cartItemsContainer" style="margin-bottom:14px;">
         <p style="color:#64748b; font-size:13px; text-align:center;">Your cart is empty.</p>
@@ -660,6 +693,8 @@
       <span>🚚 <b>Delivery Fee:</b> <span id="modalProdDeliveryFee" style="color:#1d4ed8; font-weight:800;">₹0</span></span>
     </div>
 
+    <div id="modalCoverageBanner" style="font-size:12px; font-weight:bold; padding:8px; border-radius:6px; margin-bottom:10px;"></div>
+
     <div style="margin-bottom:8px;">
       <h4 style="margin:0 0 4px 0; font-size:13px; color:#475569;">Description</h4>
       <div class="p-spec-box" id="modalProdDesc">No description available.</div>
@@ -672,7 +707,7 @@
 
     <div style="margin-bottom:14px;">
       <h4 style="margin:0 0 4px 0; font-size:13px; color:#475569;">Terms & Conditions</h4>
-      <div class="p-spec-box" id="modalProdTerms">Guaranteed 100% genuine product. Returnable upon delivery inspection.</div>
+      <div class="p-spec-box" id="modalProdTerms">Guaranteed genuine product. Returnable upon delivery inspection.</div>
     </div>
 
     <div style="display:flex; gap:8px;">
@@ -776,15 +811,99 @@
   let currentTheme = 'retail';
   let activeCategory = 'all';
 
+  let isLocationDeliverable = false;
+  let matchedZoneName = "Unserviceable Area";
+  let matchedZoneTiming = 20;
+  let matchedLateCashback = 25;
+
   let rawProducts = [], rawCategories = [], rawCoupons = [], cachedMyOrders = [];
   let currentSelectedProduct = null;
-  let currentMatchedZoneTiming = 20;
   let appliedDiscountPercent = 0;
   let pendingAvatarBase64 = "";
   let activeSelectedModalOrder = null;
 
   let persistentTimerInterval = null, cardTickersInterval = null;
   let sessionCheckInterval = null;
+
+  function isPointInPolygon(point, polygon) {
+    let x = point.lat, y = point.lng;
+    let inside = false;
+    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+      let xi = polygon[i][1], yi = polygon[i][0];
+      let xj = polygon[j][1], yj = polygon[j][0];
+      let intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+      if (intersect) inside = !inside;
+    }
+    return inside;
+  }
+
+  function evaluateUserDeliverability() {
+    isLocationDeliverable = false;
+    matchedZoneName = "Out of Delivery Range";
+    matchedZoneTiming = 20;
+    matchedLateCashback = 25;
+
+    if (!userCoords) {
+      updateLocationUI("⚠️ Waiting for live GPS location...", false);
+      return;
+    }
+
+    if (!adminZonesData || !adminZonesData.features || adminZonesData.features.length === 0) {
+      isLocationDeliverable = true;
+      matchedZoneName = "Standard Delivery Area";
+      matchedZoneTiming = 20;
+      updateLocationUI(`✅ Delivering to your area in ~${matchedZoneTiming} Mins (${matchedZoneName})`, true);
+      return;
+    }
+
+    for (let f of adminZonesData.features) {
+      if (f.geometry && f.geometry.coordinates) {
+        let coords = f.geometry.coordinates[0];
+        if (isPointInPolygon(userCoords, coords)) {
+          isLocationDeliverable = true;
+          matchedZoneName = f.properties?.name || "Express Hub";
+          matchedZoneTiming = parseInt(f.properties?.deliveryMinutes) || 20;
+          matchedLateCashback = parseInt(f.properties?.lateCashback) || 25;
+          break;
+        }
+      }
+    }
+
+    if (isLocationDeliverable) {
+      updateLocationUI(`⚡ Delivering to ${matchedZoneName} in ~${matchedZoneTiming} Mins (₹${matchedLateCashback} late cashback guarantee)`, true);
+    } else {
+      updateLocationUI(`🚫 Delivery not available in your current area (${userCoords.lat.toFixed(3)}, ${userCoords.lng.toFixed(3)})`, false);
+    }
+  }
+
+  function updateLocationUI(msg, deliverable) {
+    const bar = document.getElementById('zoneStatusBar');
+    const text = document.getElementById('zoneStatusText');
+    if (bar && text) {
+      bar.className = deliverable ? "zone-status-bar zone-deliverable" : "zone-status-bar zone-undeliverable";
+      text.innerText = msg;
+    }
+
+    const modalCov = document.getElementById('modalCoverageBanner');
+    if (modalCov) {
+      modalCov.style.display = "block";
+      modalCov.style.background = deliverable ? "#dcfce7" : "#fee2e2";
+      modalCov.style.color = deliverable ? "#166534" : "#991b1b";
+      modalCov.innerText = deliverable ? `📍 Area: ${matchedZoneName} | Guaranteed ${matchedZoneTiming} Mins ETA` : `🚫 Currently out of serviceable delivery boundaries.`;
+    }
+
+    const chkNotice = document.getElementById('chkZoneNotice');
+    if (chkNotice) {
+      chkNotice.style.display = "block";
+      chkNotice.style.color = deliverable ? "#166534" : "#dc2626";
+      chkNotice.innerText = deliverable ? `✅ Deliverable to: ${matchedZoneName} (~${matchedZoneTiming} Mins Guarantee)` : `🚫 Ordering is disabled: Your GPS is currently outside of our delivery zones.`;
+    }
+
+    const payBtn = document.getElementById('confirmPayBtn');
+    if (payBtn) {
+      payBtn.disabled = !deliverable || cart.length === 0;
+    }
+  }
 
   function parseAnyDateToMs(dateStr) {
     if (!dateStr) return 0;
@@ -868,6 +987,7 @@
         adminZonesData = cached.zone || null;
         renderCategoryChips();
         renderProducts();
+        evaluateUserDeliverability();
       }
     } catch(e) {}
   }
@@ -897,9 +1017,11 @@
           const s2 = document.getElementById('signupGpsStatus');
           if (s1) s1.innerText = `✅ GPS Locked (${userCoords.lat.toFixed(4)}, ${userCoords.lng.toFixed(4)})`;
           if (s2) s2.innerText = `✅ Registered Location Locked (${userCoords.lat.toFixed(4)}, ${userCoords.lng.toFixed(4)})`;
+          evaluateUserDeliverability();
           if (callback) callback();
         },
         () => {
+          evaluateUserDeliverability();
           if (callback) callback();
         }
       );
@@ -930,6 +1052,7 @@
 
         renderCategoryChips();
         renderProducts();
+        evaluateUserDeliverability();
       });
   }
 
@@ -1224,10 +1347,12 @@
     document.getElementById('modalProdMrp').innerText = `₹${mrp}`;
     document.getElementById('modalProdDiscount').innerText = `${discount > 0 ? discount : 10}% OFF`;
     document.getElementById('modalProdDeliveryFee').innerText = p.deliveryFee > 0 ? `₹${p.deliveryFee}` : "FREE";
-    document.getElementById('modalProdEta').innerText = `${currentMatchedZoneTiming} Mins Guarantee`;
+    document.getElementById('modalProdEta').innerText = `${matchedZoneTiming} Mins Guarantee (${matchedZoneName})`;
     document.getElementById('modalProdDesc').innerText = p.description || "Fresh and guaranteed fast dispatch item.";
     document.getElementById('modalProdSpecs').innerText = p.specifications || "Standard Quality Grade A";
-    document.getElementById('modalProdTerms').innerText = p.terms || "Returnable upon delivery if damaged.";
+    document.getElementById('modalProdTerms').innerText = p.terms || "Guaranteed genuine product. Returnable upon delivery inspection.";
+
+    evaluateUserDeliverability();
 
     const addBtn = document.getElementById('modalBtnAddCart');
     addBtn.innerText = inCart ? "✔ Added" : "🛒 Add to Cart";
@@ -1276,6 +1401,10 @@
 
   function directBuyNow(productId) {
     if (!currentUser) { openAuthModal('login'); return; }
+    if (!isLocationDeliverable) {
+      return alert(`🚫 Delivery is not available in your area (${userCoords ? userCoords.lat.toFixed(4) + ', ' + userCoords.lng.toFixed(4) : 'Unknown GPS'}). Orders can only be placed within supported delivery hubs.`);
+    }
+
     const p = rawProducts.find(x => x.id === productId);
     if (!p) return;
 
@@ -1301,6 +1430,8 @@
 
   function renderCheckoutCart() {
     const container = document.getElementById('cartItemsContainer');
+    evaluateUserDeliverability();
+
     if (cart.length === 0) {
       container.innerHTML = '<p style="color:#64748b; font-size:13px; text-align:center;">Your cart is empty. Browse Home to add items.</p>';
       document.getElementById('chkSubtotal').innerText = '₹0';
@@ -1311,7 +1442,7 @@
       return;
     }
 
-    document.getElementById('confirmPayBtn').disabled = false;
+    document.getElementById('confirmPayBtn').disabled = !isLocationDeliverable;
     let subtotal = 0;
     let maxDeliveryFee = 0;
 
@@ -1376,6 +1507,9 @@
 
   function processOrderSuccess() {
     if (!currentUser) { openAuthModal('login'); return; }
+    if (!isLocationDeliverable) {
+      return alert("🚫 Ordering Blocked: Your location is outside our operational delivery area.");
+    }
     if (cart.length === 0) return alert("Cart is empty.");
 
     let subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
@@ -1403,7 +1537,7 @@
       deliveryFee: maxDeliveryFee > 0 ? "₹" + maxDeliveryFee : "FREE",
       lat: userCoords ? userCoords.lat.toFixed(5) : "0.0",
       lng: userCoords ? userCoords.lng.toFixed(5) : "0.0",
-      etaMinutes: currentMatchedZoneTiming
+      etaMinutes: matchedZoneTiming
     };
 
     fetch(SPREADSHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) })
@@ -1411,7 +1545,7 @@
       .then((res) => {
         cart = [];
         updateCartUI();
-        startPersistentCountdown(res.expiryTimestamp, orderId, "PAID (Verified)", 0, new Date().toLocaleString(), currentMatchedZoneTiming);
+        startPersistentCountdown(res.expiryTimestamp, orderId, "PAID (Verified)", 0, new Date().toLocaleString(), matchedZoneTiming);
         fetchInitialStoreData();
         switchPage('ordersPage');
       });
