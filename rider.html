@@ -148,14 +148,14 @@
   </div>
 </div>
 
-<!-- SECURE CUSTOMER DELIVERY OTP MODAL -->
+<!-- SECURE CUSTOMER DELIVERY OTP MODAL (WITH MASKED EMAIL HINT) -->
 <div id="deliveryOtpModal" class="modal-overlay" style="display:none;">
   <div class="modal-card">
     <h3 style="margin-top:0; color:#22c55e;">📦 Customer Delivery Verification</h3>
-    <p style="font-size:13px; color:#cbd5e1; margin-bottom:12px;">Ask the customer for the <b>4-digit PIN</b> sent to their registered email.</p>
     
     <div style="background:#0f172a; padding:10px; border-radius:8px; border:1px solid #334155; margin-bottom:12px; font-size:13px;">
-      Order: <b id="dOtpModalOrderId" style="color:#38bdf8;">MHN-XXXXXX</b>
+      Order: <b id="dOtpModalOrderId" style="color:#38bdf8;">MHN-XXXXXX</b><br>
+      <span style="font-size:12px; color:#94a3b8;">PIN sent to: <b id="dOtpModalEmailHint" style="color:#22c55e;">Fetching email...</b></span>
     </div>
 
     <div class="form-group">
@@ -454,6 +454,7 @@
   function triggerCustomerDeliveryOtpModal(orderId) {
     activeOtpVerificationOrderId = orderId;
     document.getElementById('dOtpModalOrderId').innerText = orderId;
+    document.getElementById('dOtpModalEmailHint').innerText = "Sending code...";
     document.getElementById('custDeliveryOtpInput').value = "";
     document.getElementById('deliveryOtpModal').style.display = 'flex';
 
@@ -462,18 +463,28 @@
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({ action: 'sendDeliveryOtp', orderId })
     }).then(r => r.json()).then(res => {
-      if (res.status !== 'success') alert(res.message);
+      if (res.status === 'success') {
+        document.getElementById('dOtpModalEmailHint').innerText = res.emailHint || "Registered Customer Email";
+      } else {
+        alert(res.message);
+      }
     });
   }
 
   function resendCustomerDeliveryOtp() {
     if (!activeOtpVerificationOrderId) return;
+    document.getElementById('dOtpModalEmailHint').innerText = "Resending...";
     fetch(SPREADSHEET_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({ action: 'sendDeliveryOtp', orderId: activeOtpVerificationOrderId })
     }).then(r => r.json()).then(res => {
-      alert(res.message || "PIN resent to customer.");
+      if (res.status === 'success') {
+        document.getElementById('dOtpModalEmailHint').innerText = res.emailHint || "Registered Customer Email";
+        alert("PIN resent successfully!");
+      } else {
+        alert(res.message);
+      }
     });
   }
 
