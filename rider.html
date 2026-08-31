@@ -92,12 +92,10 @@
     </div>
   </header>
 
-  <!-- PENDING VERIFICATION / BLOCKED BANNER -->
   <div id="verificationAlert" class="verification-alert-banner">
     <b>⏳ Account Verification Required:</b> Your profile has been registered and is awaiting Admin Verification. You will become an active rider once approved by warehouse admin.
   </div>
 
-  <!-- RIDER METRICS -->
   <div class="metrics-grid">
     <div class="metric-card">
       <div id="mActiveCount" class="metric-val">0</div>
@@ -113,7 +111,6 @@
     </div>
   </div>
 
-  <!-- STATUS FILTER TABS -->
   <div class="tab-bar">
     <button class="tab-btn active" id="tabActive" onclick="filterRiderTab('active')">⚡ Active Tasks (<span id="countActive">0</span>)</button>
     <button class="tab-btn" id="tabOut" onclick="filterRiderTab('out')">🛵 In Transit (<span id="countOut">0</span>)</button>
@@ -126,7 +123,7 @@
 
 </div>
 
-<!-- RIDER AUTH MODAL (OTP SIGNUP & PASSWORD FLOW) -->
+<!-- RIDER AUTH MODAL -->
 <div id="riderAuthModal" class="modal-overlay" style="display:none;">
   <div class="modal-card">
     <div style="display:flex; gap:6px; margin-bottom:14px;">
@@ -134,7 +131,6 @@
       <button class="tab-btn" id="btnRTabSignup" style="flex:1;" onclick="toggleRiderAuthTab('signup')">Partner Sign Up (OTP)</button>
     </div>
 
-    <!-- LOGIN VIEW -->
     <div id="rLoginView">
       <div class="form-group">
         <label>Rider Email Address</label>
@@ -144,10 +140,9 @@
         <label>Password</label>
         <input type="password" id="rLoginPassword" placeholder="••••••••" />
       </div>
-      <button type="button" class="btn" style="background:#0284c7; color:white; width:100%; padding:12px; margin-top:6px;" onclick="processRiderPasswordLogin()">🔑 Log In & Go Online</button>
+      <button type="button" id="btnRiderSubmitLogin" class="btn" style="background:#0284c7; color:white; width:100%; padding:12px; margin-top:6px;" onclick="processRiderPasswordLogin()">🔑 Log In & Go Online</button>
     </div>
 
-    <!-- SIGNUP STEP 1 (DETAILS & SEND OTP) -->
     <div id="rSignupStep1" style="display:none;">
       <div class="form-group">
         <label>Full Name</label>
@@ -168,13 +163,12 @@
       <button type="button" class="btn" id="btnSendRiderSignupOtp" style="background:#0284c7; color:white; width:100%; padding:12px; margin-top:6px;" onclick="sendRiderSignupOtp()">Send Verification OTP</button>
     </div>
 
-    <!-- SIGNUP STEP 2 (OTP VERIFICATION) -->
     <div id="rSignupStep2" style="display:none;">
       <p style="font-size:13px; color:#94a3b8;">Enter the 6-digit OTP sent to <b id="rTargetEmailDisplay" style="color:#38bdf8;"></b></p>
       <div class="form-group">
         <input type="text" id="rSignupOtpCode" maxlength="6" style="text-align:center; font-size:24px; letter-spacing:6px;" placeholder="••••••" />
       </div>
-      <button type="button" class="btn" style="background:#16a34a; color:white; width:100%; padding:12px;" onclick="verifyRiderSignupAndCreateAccount()">Verify OTP & Submit Profile</button>
+      <button type="button" id="btnVerifyRiderSignupOtp" class="btn" style="background:#16a34a; color:white; width:100%; padding:12px;" onclick="verifyRiderSignupAndCreateAccount()">Verify OTP & Submit Profile</button>
       <button type="button" style="background:none; border:none; color:#38bdf8; font-size:12px; width:100%; text-align:center; margin-top:10px; cursor:pointer;" onclick="toggleRiderSignupStep(1)">← Back / Resend OTP</button>
     </div>
 
@@ -215,7 +209,7 @@
   window.onload = function() {
     updateRiderHeaderUI();
     validateRiderStatus();
-    setInterval(validateRiderStatus, 15000);
+    setInterval(validateRiderStatus, 12000);
   };
 
   function parseAnyDateToMs(dateStr) {
@@ -289,18 +283,18 @@
             alertBox.style.display = 'block';
             alertBox.style.background = '#78350f';
             alertBox.style.borderColor = '#f59e0b';
-            alertBox.innerHTML = `<b>⏳ Verification In Progress:</b> Your account is submitted and requires 1st-time admin verification. Please wait for the admin to approve your profile before accepting dispatches.`;
+            alertBox.innerHTML = `<b>⏳ Verification In Progress:</b> Your profile has been submitted and requires 1st-time Admin Verification. You will be able to accept tasks once approved by warehouse admin.`;
           } else if (currentRider.status === 'Blocked') {
             alertBox.style.display = 'block';
             alertBox.style.background = '#450a0a';
             alertBox.style.borderColor = '#ef4444';
-            alertBox.innerHTML = `<b>🚫 Account Blocked:</b> Your rider access has been temporarily suspended by the administrator. Contact your dispatch manager.`;
+            alertBox.innerHTML = `<b>🚫 Account Blocked:</b> Your rider access has been suspended by the administrator. Contact your warehouse manager.`;
           } else {
             alertBox.style.display = 'none';
             fetchRiderFeed();
           }
         }
-      });
+      }).catch(()=>{});
   }
 
   function openRiderAuth(mode = 'login') {
@@ -331,20 +325,41 @@
 
     if (!email || !password) return alert("Please enter both email and password.");
 
+    const btn = document.getElementById('btnRiderSubmitLogin');
+    btn.innerText = "Authenticating...";
+    btn.disabled = true;
+
     fetch(SPREADSHEET_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({ action: 'riderPasswordLogin', email, password })
     }).then(r => r.json()).then(res => {
-      if (res.status === 'success') {
-        currentRider = res.rider;
+      btn.innerText = "🔑 Log In & Go Online";
+      btn.disabled = false;
+
+      const riderPayload = res.rider || res.user;
+      if (res.status === 'success' && riderPayload) {
+        currentRider = riderPayload;
         localStorage.setItem('mohna_rider', JSON.stringify(currentRider));
         closeRiderAuth();
         updateRiderHeaderUI();
         validateRiderStatus();
-      } else {
+        fetchRiderFeed();
+      } else if (res.status === 'blocked') {
         alert(res.message);
+        if (riderPayload) {
+          currentRider = riderPayload;
+          localStorage.setItem('mohna_rider', JSON.stringify(currentRider));
+          updateRiderHeaderUI();
+          validateRiderStatus();
+        }
+      } else {
+        alert(res.message || "Login failed. Check your credentials.");
       }
+    }).catch(err => {
+      btn.innerText = "🔑 Log In & Go Online";
+      btn.disabled = false;
+      alert("Network error. Please try again.");
     });
   }
 
@@ -364,7 +379,7 @@
     fetch(SPREADSHEET_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: 'sendSignupOtp', email })
+      body: JSON.stringify({ action: 'sendSignupOtp', email, role: 'rider' })
     }).then(r => r.json()).then(res => {
       btn.innerText = 'Send Verification OTP';
       btn.disabled = false;
@@ -374,6 +389,9 @@
       } else {
         alert(res.message);
       }
+    }).catch(() => {
+      btn.innerText = 'Send Verification OTP';
+      btn.disabled = false;
     });
   }
 
@@ -386,6 +404,10 @@
 
     if (!otp || otp.length < 6) return alert("Please enter valid 6-digit OTP.");
 
+    const btn = document.getElementById('btnVerifyRiderSignupOtp');
+    btn.innerText = 'Verifying...';
+    btn.disabled = true;
+
     fetch(SPREADSHEET_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -394,16 +416,21 @@
         name, phone, email, password, otp
       })
     }).then(r => r.json()).then(res => {
-      if (res.status === 'success') {
-        currentRider = res.rider;
-        localStorage.setItem('mohna_rider', JSON.stringify(currentRider));
-        closeRiderAuth();
-        updateRiderHeaderUI();
-        validateRiderStatus();
-        alert("Account registered successfully! Please wait for Admin Verification before accepting deliveries.");
+      btn.innerText = 'Verify OTP & Submit Profile';
+      btn.disabled = false;
+
+      if (res.status === 'success' || res.status === 'pending_approval') {
+        alert(res.message || "Account registered successfully! First-time Admin Verification is mandatory. Redirecting you to login page...");
+        
+        document.getElementById('rLoginEmail').value = email;
+        document.getElementById('rLoginPassword').value = "";
+        toggleRiderAuthTab('login');
       } else {
         alert(res.message);
       }
+    }).catch(() => {
+      btn.innerText = 'Verify OTP & Submit Profile';
+      btn.disabled = false;
     });
   }
 
@@ -417,6 +444,7 @@
 
   function fetchRiderFeed() {
     if (!currentRider || currentRider.status !== 'Active') return;
+    
     fetch(`${SPREADSHEET_API_URL}?action=getRiderOrders`)
       .then(r => r.json())
       .then(data => {
@@ -553,7 +581,7 @@
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({ 
-        action: 'updateOrderStatus', 
+        action: 'assignRiderToOrder', 
         orderId, 
         newStatus,
         riderName: currentRider.name,
