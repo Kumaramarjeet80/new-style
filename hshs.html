@@ -97,17 +97,10 @@
     }
     .order-history-card:hover { transform: translateY(-2px); border-color: #2563eb; }
 
-    /* LIVE ORDER TIMER BADGES IN CARDS (CENTER MARKED AREA) */
-    .card-timer-active {
-      display: inline-block; background: #0f172a; color: #38bdf8; font-family: monospace;
-      font-weight: 800; font-size: 12px; padding: 4px 10px; border-radius: 6px;
-      border: 1px solid #38bdf8; box-shadow: 0 2px 6px rgba(56,189,248,0.2);
-    }
-    .card-timer-expired {
-      display: inline-block; background: #fee2e2; color: #b91c1c; font-family: monospace;
-      font-weight: 800; font-size: 12px; padding: 4px 10px; border-radius: 6px;
-      border: 1px solid #f87171;
-    }
+    /* TIMER BADGE COLOR STATES */
+    .badge-ticking { display: inline-block; background: #0f172a; color: #38bdf8; font-family: monospace; font-weight: 800; font-size: 12px; padding: 4px 10px; border-radius: 6px; border: 1px solid #38bdf8; }
+    .badge-ontime { display: inline-block; background: #dcfce7; color: #166534; font-family: monospace; font-weight: 800; font-size: 12px; padding: 4px 10px; border-radius: 6px; border: 1px solid #86efac; }
+    .badge-late { display: inline-block; background: #fee2e2; color: #b91c1c; font-family: monospace; font-weight: 800; font-size: 12px; padding: 4px 10px; border-radius: 6px; border: 1px solid #fca5a5; }
 
     /* PROFILE AVATAR COMPONENTS */
     .profile-avatar-container { display: flex; flex-direction: column; align-items: center; margin-bottom: 16px; }
@@ -203,10 +196,10 @@
     </div>
   </div>
 
-  <!-- PAGE 3: 📦 MY ORDERS (PERSISTENT COUNTDOWN & CLICKABLE HISTORY) -->
+  <!-- PAGE 3: 📦 MY ORDERS -->
   <div id="ordersPage" class="page-view">
     <div id="persistentTrackerBox" style="display: none;" class="live-timer-banner">
-      <span style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; font-size: 11px; font-weight: 800; padding: 4px 12px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px;">
+      <span id="pTrackerHeader" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; font-size: 11px; font-weight: 800; padding: 4px 12px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px;">
         ⚡ LIVE DISPATCH COUNTDOWN ACTIVE
       </span>
       <div id="activeOrderIdDisplay" style="font-size: 13px; color: #94a3b8; margin-top: 8px;">Order: MHN-XXXXXX</div>
@@ -219,7 +212,7 @@
         <h3 style="margin:0;">📦 My Order History</h3>
         <button class="btn-submit" style="width:auto; padding:6px 12px; font-size:12px; background:#0f172a;" onclick="fetchInitialStoreData(true)">🔄 Refresh</button>
       </div>
-      <p style="font-size:12px; color:#64748b; margin:0 0 10px 0;">💡 Click on any order to view live countdown status, timestamp details and download tax receipts.</p>
+      <p style="font-size:12px; color:#64748b; margin:0 0 10px 0;">💡 Click on any order to view timestamp details and download tax receipts.</p>
       <div id="customerOrdersList">
         <p style="text-align:center; color:#94a3b8; font-size:13px;">Loading orders...</p>
       </div>
@@ -252,7 +245,7 @@
 
 </div>
 
-<!-- ORDER DETAILS POPUP MODAL (WITH LIVE DISPATCH TIMER NEAR TIMESTAMP) -->
+<!-- ORDER DETAILS MODAL -->
 <div id="orderDetailsModal" class="modal-overlay" style="display:none;">
   <div class="modal-card">
     <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:10px; margin-bottom:12px;">
@@ -263,7 +256,7 @@
     <div id="modalOrderDetailsBody">
       <div class="bill-row"><span><b>Order ID:</b></span><span id="dtlOrderId"></span></div>
       <div class="bill-row"><span><b>Order Timestamp:</b></span><span id="dtlTimestamp" style="color:#2563eb; font-weight:bold;"></span></div>
-      <div class="bill-row"><span><b>⏱️ Live Dispatch Timer:</b></span><span id="dtlLiveTimer" style="background:#0f172a; color:#38bdf8; padding:3px 8px; border-radius:6px; font-family:monospace; font-weight:bold; font-size:13px;">Checking...</span></div>
+      <div class="bill-row"><span><b>⏱️ Delivery Time / Status:</b></span><span id="dtlLiveTimer">Checking...</span></div>
       <div class="bill-row"><span><b>Items Ordered:</b></span><span id="dtlItem"></span></div>
       <div class="bill-row"><span><b>Quantity:</b></span><span id="dtlQty"></span></div>
       <div class="bill-row"><span><b>Total Paid:</b></span><span id="dtlAmount" style="color:#16a34a; font-weight:bold;"></span></div>
@@ -279,7 +272,6 @@
   </div>
 </div>
 
-<!-- HIDDEN INVOICE BUILDER FOR LOCAL PDF RENDERING -->
 <div id="invoiceBill" style="display:none; padding:20px; background:white; font-family:Arial, sans-serif;">
   <h2 style="color:#2563eb; margin:0 0 10px 0;">⚡ MOHNA EXPRESS OFFICIAL RECEIPT</h2>
   <div class="bill-row"><span><b>Order ID:</b></span><span id="billOrderId"></span></div>
@@ -352,10 +344,28 @@
   let modalMap = null;
   let modalUserMarker = null;
   let persistentTimerInterval = null;
-  let modalTimerInterval = null;
   let cardTickersInterval = null;
   let mapScriptsLoaded = false;
   let pdfScriptLoaded = false;
+
+  // COMPUTE ON-TIME / LATE DELIVERY BADGE
+  function calculateDeliveryStatusBadge(orderDateStr, etaMinutes, expiryTimestamp, deliveredTimestamp) {
+    const orderStartMs = new Date(orderDateStr).getTime() || (expiryTimestamp - (etaMinutes * 60000));
+    const endMs = parseInt(deliveredTimestamp) || Date.now();
+    const totalElapsedSec = Math.max(0, Math.floor((endMs - orderStartMs) / 1000));
+    const elapsedMins = Math.floor(totalElapsedSec / 60);
+    const elapsedSecs = totalElapsedSec % 60;
+    const timeFormatted = `${elapsedMins}m ${elapsedSecs}s`;
+
+    if (endMs <= expiryTimestamp) {
+      return `<span class="badge-ontime">⚡ Delivered in ${timeFormatted} (On Time)</span>`;
+    } else {
+      const lateSec = Math.floor((endMs - expiryTimestamp) / 1000);
+      const lateMins = Math.floor(lateSec / 60);
+      const lateSecs = lateSec % 60;
+      return `<span class="badge-late">⚠️ Delivered in ${timeFormatted} (${lateMins}m ${lateSecs}s Late)</span>`;
+    }
+  }
 
   function loadFromLocalCache() {
     try {
@@ -844,7 +854,7 @@
     fetch(SPREADSHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) })
       .then(r => r.json())
       .then((res) => {
-        startPersistentCountdown(res.expiryTimestamp, orderId);
+        startPersistentCountdown(res.expiryTimestamp, orderId, "PAID (Verified)", 0, new Date().toLocaleString(), currentMatchedZoneTiming);
         fetchInitialStoreData();
         switchPage('ordersPage');
       });
@@ -854,20 +864,65 @@
     if (!cachedMyOrders || cachedMyOrders.length === 0) return;
     const latestOrder = cachedMyOrders[0];
     const expiryMs = parseInt(latestOrder.expiryTimestamp) || (new Date(latestOrder.date).getTime() + (latestOrder.etaMinutes || 20) * 60000);
-    if (expiryMs > Date.now() - (60 * 60 * 1000)) {
-      startPersistentCountdown(expiryMs, latestOrder.orderId);
-    }
+    
+    startPersistentCountdown(
+      expiryMs,
+      latestOrder.orderId,
+      latestOrder.status,
+      latestOrder.deliveredTimestamp || 0,
+      latestOrder.date,
+      latestOrder.etaMinutes || 20
+    );
   }
 
-  function startPersistentCountdown(targetExpiryTimestamp, orderId) {
+  function startPersistentCountdown(targetExpiryTimestamp, orderId, status, deliveredTimestamp, orderDateStr, etaMinutes) {
     const box = document.getElementById('persistentTrackerBox');
     const clock = document.getElementById('persistentTimerDisplay');
     const orderDisplay = document.getElementById('activeOrderIdDisplay');
+    const header = document.getElementById('pTrackerHeader');
+    const subtext = document.getElementById('timerSubtext');
 
     box.style.display = 'block';
     orderDisplay.innerText = `Order ID: ${orderId}`;
 
     clearInterval(persistentTimerInterval);
+
+    // If order is delivered, freeze timer and display final duration
+    if (status && status.includes('Delivered')) {
+      const endMs = parseInt(deliveredTimestamp) || Date.now();
+      const orderStartMs = new Date(orderDateStr).getTime() || (targetExpiryTimestamp - (etaMinutes * 60000));
+      const totalElapsedSec = Math.max(0, Math.floor((endMs - orderStartMs) / 1000));
+      const mins = Math.floor(totalElapsedSec / 60);
+      const secs = totalSec % 60;
+      const timeFormatted = `${mins}m ${secs}s`;
+
+      if (endMs <= targetExpiryTimestamp) {
+        clock.style.color = "#22c55e";
+        clock.innerText = `✔ ${timeFormatted}`;
+        header.style.background = "rgba(34, 197, 94, 0.2)";
+        header.style.color = "#22c55e";
+        header.innerText = "⚡ ORDER DELIVERED ON TIME";
+        subtext.innerHTML = `<b style="color:#22c55e;">Delivered within ${etaMinutes} mins guarantee. Thank you!</b>`;
+      } else {
+        const lateSec = Math.floor((endMs - targetExpiryTimestamp) / 1000);
+        const lateMins = Math.floor(lateSec / 60);
+        clock.style.color = "#ef4444";
+        clock.innerText = `⚠️ ${timeFormatted}`;
+        header.style.background = "rgba(239, 68, 68, 0.2)";
+        header.style.color = "#ef4444";
+        header.innerText = "⚠️ ORDER DELIVERED (LATE)";
+        subtext.innerHTML = `<b style="color:#ef4444;">Delivered ${lateMins} mins late. Late cashback guarantee eligible.</b>`;
+      }
+      return;
+    }
+
+    // Live Ticking State
+    header.style.background = "rgba(56, 189, 248, 0.2)";
+    header.style.color = "#38bdf8";
+    header.innerText = "⚡ LIVE DISPATCH COUNTDOWN ACTIVE";
+    clock.style.color = "#38bdf8";
+    subtext.innerText = "Synchronized with Mohna Express Dispatch Hub";
+
     persistentTimerInterval = setInterval(() => {
       const remainingMs = targetExpiryTimestamp - Date.now();
 
@@ -875,7 +930,7 @@
         clearInterval(persistentTimerInterval);
         clock.innerText = "00:00";
         clock.style.color = "#ef4444";
-        document.getElementById('timerSubtext').innerHTML = "⚡ <b style='color:#ef4444;'>Delivery Time Guarantee Reached</b> (Cashback Triggered)";
+        subtext.innerHTML = "⚡ <b style='color:#ef4444;'>Delivery Time Guarantee Reached</b> (Cashback Triggered)";
         return;
       }
 
@@ -886,7 +941,7 @@
     }, 1000);
   }
 
-  // RENDER CLICKABLE ORDER LIST (WITH LIVE TICKING TIMER IN THE CENTER MARKED AREA)
+  // RENDER CLICKABLE ORDER LIST WITH CENTER TIMER
   function renderCustomerOrdersList() {
     const container = document.getElementById('customerOrdersList');
     if (!currentUser) {
@@ -901,6 +956,15 @@
 
     container.innerHTML = cachedMyOrders.map((o, idx) => {
       const expiryMs = parseInt(o.expiryTimestamp) || (new Date(o.date).getTime() + (o.etaMinutes || 20) * 60000);
+      const isDelivered = o.status && o.status.includes('Delivered');
+
+      let timerHtml = "";
+      if (isDelivered) {
+        timerHtml = calculateDeliveryStatusBadge(o.date, o.etaMinutes || 20, expiryMs, o.deliveredTimestamp || 0);
+      } else {
+        timerHtml = `<span id="card_timer_${o.orderId}" data-expiry="${expiryMs}" class="badge-ticking">⏱️ Loading...</span>`;
+      }
+
       return `
         <div class="order-history-card" onclick="openOrderModal(${idx})">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
@@ -908,12 +972,12 @@
             <span style="background:#dcfce7; color:#166534; font-size:11px; font-weight:bold; padding:2px 8px; border-radius:12px;">${o.status || 'PAID'}</span>
           </div>
 
-          <!-- Middle Row: Item on Left, Live Timer in Center (Marked Area), Price on Right -->
+          <!-- Middle Row: Item on Left, Live Timer / Frozen Result in Center, Price on Right -->
           <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin:6px 0;">
             <p style="margin:0; font-size:13.5px; color:#1e293b; font-weight:600; flex:1;">${o.item} (Qty: ${o.qty})</p>
             
             <div style="flex:1; text-align:center;">
-              <span id="card_timer_${o.orderId}" data-expiry="${expiryMs}" class="card-timer-active">⏱️ Loading...</span>
+              ${timerHtml}
             </div>
             
             <b style="color:#16a34a; font-size:15px; flex:1; text-align:right;">${o.amount}</b>
@@ -929,7 +993,7 @@
     startCardTimersCountdown();
   }
 
-  // TICK ALL ORDER CARD TIMERS IN REAL-TIME
+  // TICK LIVE TIMERS IN ORDER CARDS
   function startCardTimersCountdown() {
     clearInterval(cardTickersInterval);
     cardTickersInterval = setInterval(() => {
@@ -939,10 +1003,10 @@
         const diff = expiry - now;
 
         if (diff <= 0) {
-          el.className = "card-timer-expired";
-          el.innerText = "00:00 (DELIVERED)";
+          el.className = "badge-late";
+          el.innerText = "00:00 (EXPIRED)";
         } else {
-          el.className = "card-timer-active";
+          el.className = "badge-ticking";
           const totalSec = Math.floor(diff / 1000);
           const mins = Math.floor(totalSec / 60);
           const secs = totalSec % 60;
@@ -952,7 +1016,7 @@
     }, 1000);
   }
 
-  // OPEN MODAL WITH LIVE TICKING TIMER
+  // OPEN MODAL
   function openOrderModal(orderIndex) {
     const order = cachedMyOrders[orderIndex];
     if (!order) return;
@@ -970,30 +1034,24 @@
     const expiryMs = parseInt(order.expiryTimestamp) || (new Date(order.date).getTime() + (order.etaMinutes || 20) * 60000);
     const timerBadge = document.getElementById('dtlLiveTimer');
 
-    clearInterval(modalTimerInterval);
-    function updateModalCountdown() {
+    if (order.status && order.status.includes('Delivered')) {
+      timerBadge.innerHTML = calculateDeliveryStatusBadge(order.date, order.etaMinutes || 20, expiryMs, order.deliveredTimestamp || 0);
+    } else {
+      timerBadge.className = "badge-ticking";
       const remainingMs = expiryMs - Date.now();
       if (remainingMs <= 0) {
-        timerBadge.style.background = "#fee2e2";
-        timerBadge.style.color = "#b91c1c";
-        timerBadge.innerText = "00:00 (DELIVERED / EXPIRED)";
+        timerBadge.className = "badge-late";
+        timerBadge.innerText = "00:00 (EXPIRED)";
       } else {
         const totalSec = Math.floor(remainingMs / 1000);
-        const mins = Math.floor(totalSec / 60);
-        const secs = totalSec % 60;
-        timerBadge.style.background = "#0f172a";
-        timerBadge.style.color = "#38bdf8";
-        timerBadge.innerText = `⏱️ ${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        timerBadge.innerText = `⏱️ ${Math.floor(totalSec / 60)}m ${totalSec % 60}s`;
       }
     }
-    updateModalCountdown();
-    modalTimerInterval = setInterval(updateModalCountdown, 1000);
 
     document.getElementById('orderDetailsModal').style.display = 'flex';
   }
 
   function closeOrderModal() {
-    clearInterval(modalTimerInterval);
     document.getElementById('orderDetailsModal').style.display = 'none';
     activeSelectedModalOrder = null;
   }
