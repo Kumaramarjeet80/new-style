@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Mohna Express - Retail & Wholesale Store</title>
 
-  <!-- Lightweight CSS Preconnect -->
   <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
@@ -91,6 +90,13 @@
     }
     .timer-clock { font-size: 44px; font-weight: 900; font-family: monospace; color: #38bdf8; margin: 8px 0; }
 
+    /* CLICKABLE ORDER CARD */
+    .order-history-card {
+      background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-bottom: 10px;
+      cursor: pointer; transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+    .order-history-card:hover { transform: translateY(-2px); border-color: #2563eb; }
+
     /* PROFILE AVATAR COMPONENTS */
     .profile-avatar-container { display: flex; flex-direction: column; align-items: center; margin-bottom: 16px; }
     .profile-img-preview { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; border: 3px solid #2563eb; background: #f1f5f9; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
@@ -108,9 +114,9 @@
     .nav-item.active { color: #2563eb; }
     .nav-item span { font-size: 18px; }
 
-    /* AUTH MODAL */
+    /* MODAL OVERLAYS */
     .modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 16px; }
-    .modal-card { background: white; border-radius: 16px; width: 100%; max-width: 440px; padding: 24px; max-height: 90vh; overflow-y: auto; }
+    .modal-card { background: white; border-radius: 16px; width: 100%; max-width: 460px; padding: 24px; max-height: 90vh; overflow-y: auto; }
     .auth-tab-btn { flex: 1; padding: 8px; border: none; background: #f1f5f9; font-weight: bold; cursor: pointer; border-radius: 6px; font-size: 13px; color: #64748b; }
     .auth-tab-btn.active { background: #2563eb; color: white; }
   </style>
@@ -185,7 +191,7 @@
     </div>
   </div>
 
-  <!-- PAGE 3: 📦 MY ORDERS (PERSISTENT COUNTDOWN) -->
+  <!-- PAGE 3: 📦 MY ORDERS (PERSISTENT COUNTDOWN & CLICKABLE HISTORY) -->
   <div id="ordersPage" class="page-view">
     <div id="persistentTrackerBox" style="display: none;" class="live-timer-banner">
       <span style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; font-size: 11px; font-weight: 800; padding: 4px 12px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px;">
@@ -196,20 +202,12 @@
       <p id="timerSubtext" style="color: #cbd5e1; font-size: 12.5px; margin: 0;">Synchronized with Mohna Express Dispatch Hub</p>
     </div>
 
-    <div class="card" id="invoiceBill" style="display:none;">
-      <h3 style="margin-top:0; color:#1e40af;">⚡ Official Paid Invoice</h3>
-      <div class="bill-row"><span><b>Order ID:</b></span><span id="billOrderId"></span></div>
-      <div class="bill-row"><span><b>Item:</b></span><span id="billItem"></span></div>
-      <div class="bill-row"><span><b>Discount:</b></span><span id="billDiscount" style="color:#16a34a; font-weight:bold;">₹0</span></div>
-      <div class="bill-row" style="border-top:1px solid #e2e8f0; padding-top:6px;"><span><b>Grand Total Paid:</b></span><span id="billAmount" style="font-weight:bold; color:#15803d;"></span></div>
-      <button class="btn-submit" style="background:#4f46e5; margin-top:12px;" onclick="downloadPDF()">📄 Download PDF Tax Invoice</button>
-    </div>
-
     <div class="card">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
         <h3 style="margin:0;">📦 My Order History</h3>
         <button class="btn-submit" style="width:auto; padding:6px 12px; font-size:12px; background:#0f172a;" onclick="fetchInitialStoreData(true)">🔄 Refresh</button>
       </div>
+      <p style="font-size:12px; color:#64748b; margin:0 0 10px 0;">💡 Click on any order to view full timestamp details and download your tax receipt.</p>
       <div id="customerOrdersList">
         <p style="text-align:center; color:#94a3b8; font-size:13px;">Loading orders...</p>
       </div>
@@ -240,6 +238,41 @@
     </div>
   </div>
 
+</div>
+
+<!-- ORDER DETAILS POPUP MODAL (ANYTIME RECEIPT DOWNLOAD & TIMESTAMPS) -->
+<div id="orderDetailsModal" class="modal-overlay" style="display:none;">
+  <div class="modal-card">
+    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:10px; margin-bottom:12px;">
+      <h3 style="margin:0; color:#1e40af;">⚡ Order Details & Receipt</h3>
+      <button type="button" onclick="closeOrderModal()" style="background:none; border:none; font-size:18px; cursor:pointer; color:#64748b;">✕</button>
+    </div>
+
+    <div id="modalOrderDetailsBody">
+      <div class="bill-row"><span><b>Order ID:</b></span><span id="dtlOrderId"></span></div>
+      <div class="bill-row"><span><b>Order Timestamp:</b></span><span id="dtlTimestamp" style="color:#2563eb; font-weight:bold;"></span></div>
+      <div class="bill-row"><span><b>Items Ordered:</b></span><span id="dtlItem"></span></div>
+      <div class="bill-row"><span><b>Quantity:</b></span><span id="dtlQty"></span></div>
+      <div class="bill-row"><span><b>Total Paid:</b></span><span id="dtlAmount" style="color:#16a34a; font-weight:bold;"></span></div>
+      <div class="bill-row"><span><b>Delivery Address:</b></span><span id="dtlAddress" style="max-width:60%; text-align:right;"></span></div>
+      <div class="bill-row"><span><b>ETA Duration:</b></span><span id="dtlEta"></span></div>
+      <div class="bill-row"><span><b>Payment Status:</b></span><span id="dtlStatus" style="color:#15803d; font-weight:bold;"></span></div>
+    </div>
+
+    <div style="margin-top:18px; display:flex; flex-direction:column; gap:8px;">
+      <button type="button" id="btnDownloadDriveReceipt" class="btn-submit" style="background:#0f172a;" onclick="downloadSelectedOrderReceipt()">📥 Download Official PDF Tax Invoice</button>
+      <button type="button" class="btn-submit" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1;" onclick="closeOrderModal()">Close Window</button>
+    </div>
+  </div>
+</div>
+
+<!-- HIDDEN INVOICE BUILDER FOR LOCAL PDF RENDERING -->
+<div id="invoiceBill" style="display:none; padding:20px; background:white; font-family:Arial, sans-serif;">
+  <h2 style="color:#2563eb; margin:0 0 10px 0;">⚡ MOHNA EXPRESS OFFICIAL RECEIPT</h2>
+  <div class="bill-row"><span><b>Order ID:</b></span><span id="billOrderId"></span></div>
+  <div class="bill-row"><span><b>Order Timestamp:</b></span><span id="billTimestamp"></span></div>
+  <div class="bill-row"><span><b>Item:</b></span><span id="billItem"></span></div>
+  <div class="bill-row"><span><b>Grand Total Paid:</b></span><span id="billAmount" style="font-weight:bold; color:#15803d;"></span></div>
 </div>
 
 <!-- AUTH MODAL -->
@@ -301,6 +334,7 @@
   let appliedDiscountPercent = 0;
   let baseAmount = 0;
   let pendingAvatarBase64 = "";
+  let activeSelectedModalOrder = null;
 
   let modalMap = null;
   let modalUserMarker = null;
@@ -308,7 +342,6 @@
   let mapScriptsLoaded = false;
   let pdfScriptLoaded = false;
 
-  // 1. INSTANT STALE-WHILE-REVALIDATE LOADER
   function loadFromLocalCache() {
     try {
       const cached = JSON.parse(localStorage.getItem('mohna_store_cache') || '{}');
@@ -323,7 +356,6 @@
     } catch(e) {}
   }
 
-  // 2. CONSOLIDATED SINGLE-SHOT API CALL
   function fetchInitialStoreData(isUserAction = false) {
     const userEmailParam = currentUser && currentUser.email ? `&userEmail=${encodeURIComponent(currentUser.email)}` : "";
     fetch(`${SPREADSHEET_API_URL}?action=getInitStoreData${userEmailParam}`)
@@ -339,7 +371,6 @@
           checkAndResumeActiveOrderTimer();
         }
 
-        // Cache for instant next load
         localStorage.setItem('mohna_store_cache', JSON.stringify({
           products: rawProducts,
           categories: rawCategories,
@@ -354,7 +385,6 @@
       });
   }
 
-  // 3. LAZY-LOAD LEAFLET & TURF.JS ONLY WHEN CHECKOUT IS ACCESSED
   function lazyLoadMapLibraries(callback) {
     if (mapScriptsLoaded) return callback();
     
@@ -427,8 +457,8 @@
 
   window.onload = function() {
     updateHeaderAuthUI();
-    loadFromLocalCache();       // Step 1: Render instantly from cache
-    fetchInitialStoreData();     // Step 2: Fetch 1 single roundtrip in background
+    loadFromLocalCache();
+    fetchInitialStoreData();
     requestUserGPS();
 
     if (!currentUser) {
@@ -799,13 +829,8 @@
     fetch(SPREADSHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) })
       .then(r => r.json())
       .then((res) => {
-        document.getElementById('billOrderId').innerText = orderId;
-        document.getElementById('billItem').innerText = payload.item;
-        document.getElementById('billDiscount').innerText = `₹${discountAmount} (${appliedDiscountPercent}%)`;
-        document.getElementById('billAmount').innerText = payload.amount;
-        document.getElementById('invoiceBill').style.display = 'block';
-
         startPersistentCountdown(res.expiryTimestamp, orderId);
+        fetchInitialStoreData();
         switchPage('ordersPage');
       });
   }
@@ -846,6 +871,7 @@
     }, 1000);
   }
 
+  // RENDER CLICKABLE ORDER LIST
   function renderCustomerOrdersList() {
     const container = document.getElementById('customerOrdersList');
     if (!currentUser) {
@@ -858,33 +884,74 @@
       return;
     }
 
-    container.innerHTML = cachedMyOrders.map(o => `
-      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px; margin-bottom:10px;">
+    container.innerHTML = cachedMyOrders.map((o, idx) => `
+      <div class="order-history-card" onclick="openOrderModal(${idx})">
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <b>${o.orderId}</b>
           <span style="background:#dcfce7; color:#166534; font-size:11px; font-weight:bold; padding:2px 8px; border-radius:12px;">${o.status || 'PAID'}</span>
         </div>
-        <p style="margin:4px 0; font-size:13px; color:#334155;">${o.item} (Qty: ${o.qty})</p>
+        <p style="margin:6px 0 4px; font-size:13.5px; color:#1e293b; font-weight:600;">${o.item} (Qty: ${o.qty})</p>
         <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#64748b;">
-          <span>📅 ${o.date} (ETA: ${o.etaMinutes || 20}m)</span>
-          <b style="color:#0f172a; font-size:14px;">${o.amount}</b>
+          <span>🕒 Timestamp: <b style="color:#0f172a;">${o.date}</b></span>
+          <b style="color:#16a34a; font-size:14px;">${o.amount}</b>
         </div>
       </div>
     `).join('');
   }
 
-  function downloadPDF() {
+  // OPEN DETAILED POPUP MODAL
+  function openOrderModal(orderIndex) {
+    const order = cachedMyOrders[orderIndex];
+    if (!order) return;
+    activeSelectedModalOrder = order;
+
+    document.getElementById('dtlOrderId').innerText = order.orderId;
+    document.getElementById('dtlTimestamp').innerText = order.date;
+    document.getElementById('dtlItem').innerText = order.item;
+    document.getElementById('dtlQty').innerText = order.qty;
+    document.getElementById('dtlAmount').innerText = order.amount;
+    document.getElementById('dtlAddress').innerText = order.address || "Customer GPS Coordinates";
+    document.getElementById('dtlEta').innerText = `${order.etaMinutes || 20} Minutes`;
+    document.getElementById('dtlStatus').innerText = order.status || "PAID";
+
+    document.getElementById('orderDetailsModal').style.display = 'flex';
+  }
+
+  function closeOrderModal() {
+    document.getElementById('orderDetailsModal').style.display = 'none';
+    activeSelectedModalOrder = null;
+  }
+
+  // DOWNLOAD RECEIPT FROM DRIVE OR GENERATE LOCALLY
+  function downloadSelectedOrderReceipt() {
+    if (!activeSelectedModalOrder) return;
+
+    if (activeSelectedModalOrder.receiptPdfUrl && activeSelectedModalOrder.receiptPdfUrl.includes('drive.google.com')) {
+      window.open(activeSelectedModalOrder.receiptPdfUrl, '_blank');
+      return;
+    }
+
+    // Local fallback generator
+    document.getElementById('billOrderId').innerText = activeSelectedModalOrder.orderId;
+    document.getElementById('billTimestamp').innerText = activeSelectedModalOrder.date;
+    document.getElementById('billItem').innerText = activeSelectedModalOrder.item;
+    document.getElementById('billAmount').innerText = activeSelectedModalOrder.amount;
+
     const element = document.getElementById('invoiceBill');
+    element.style.display = 'block';
+
     if (!pdfScriptLoaded) {
       const script = document.createElement('script');
       script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
       script.onload = () => {
         pdfScriptLoaded = true;
-        html2pdf().set({ margin: [8, 8, 8, 8], filename: 'Invoice.pdf', jsPDF: { unit: 'mm', format: 'a5' } }).from(element).save();
+        html2pdf().set({ margin: [8, 8, 8, 8], filename: `Invoice_${activeSelectedModalOrder.orderId}.pdf`, jsPDF: { unit: 'mm', format: 'a5' } })
+          .from(element).save().then(() => { element.style.display = 'none'; });
       };
       document.body.appendChild(script);
     } else {
-      html2pdf().set({ margin: [8, 8, 8, 8], filename: 'Invoice.pdf', jsPDF: { unit: 'mm', format: 'a5' } }).from(element).save();
+      html2pdf().set({ margin: [8, 8, 8, 8], filename: `Invoice_${activeSelectedModalOrder.orderId}.pdf`, jsPDF: { unit: 'mm', format: 'a5' } })
+        .from(element).save().then(() => { element.style.display = 'none'; });
     }
   }
 </script>
