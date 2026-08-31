@@ -92,12 +92,10 @@
     </div>
   </header>
 
-  <!-- PENDING VERIFICATION / BLOCKED BANNER -->
   <div id="verificationAlert" class="verification-alert-banner">
     <b>⏳ Account Verification Required:</b> Your profile has been registered and is awaiting Admin Verification. You will become an active rider once approved by warehouse admin.
   </div>
 
-  <!-- RIDER METRICS -->
   <div class="metrics-grid">
     <div class="metric-card">
       <div id="mActiveCount" class="metric-val">0</div>
@@ -113,7 +111,6 @@
     </div>
   </div>
 
-  <!-- STATUS FILTER TABS -->
   <div class="tab-bar">
     <button class="tab-btn active" id="tabActive" onclick="filterRiderTab('active')">⚡ Active Tasks (<span id="countActive">0</span>)</button>
     <button class="tab-btn" id="tabOut" onclick="filterRiderTab('out')">🛵 In Transit (<span id="countOut">0</span>)</button>
@@ -134,7 +131,6 @@
       <button class="tab-btn" id="btnRTabSignup" style="flex:1;" onclick="toggleRiderAuthTab('signup')">Partner Sign Up (OTP)</button>
     </div>
 
-    <!-- LOGIN VIEW -->
     <div id="rLoginView">
       <div class="form-group">
         <label>Rider Email Address</label>
@@ -147,7 +143,6 @@
       <button type="button" id="btnRiderSubmitLogin" class="btn" style="background:#0284c7; color:white; width:100%; padding:12px; margin-top:6px;" onclick="processRiderPasswordLogin()">🔑 Log In & Go Online</button>
     </div>
 
-    <!-- SIGNUP STEP 1 -->
     <div id="rSignupStep1" style="display:none;">
       <div class="form-group">
         <label>Full Name</label>
@@ -168,7 +163,6 @@
       <button type="button" class="btn" id="btnSendRiderSignupOtp" style="background:#0284c7; color:white; width:100%; padding:12px; margin-top:6px;" onclick="sendRiderSignupOtp()">Send Verification OTP</button>
     </div>
 
-    <!-- SIGNUP STEP 2 -->
     <div id="rSignupStep2" style="display:none;">
       <p style="font-size:13px; color:#94a3b8;">Enter the 6-digit OTP sent to <b id="rTargetEmailDisplay" style="color:#38bdf8;"></b></p>
       <div class="form-group">
@@ -211,6 +205,15 @@
   let currentTab = 'active';
   let tickerInterval = null;
   let activeOtpVerificationOrderId = null;
+
+  // ROBUST GAS POST WRAPPER (AVOIDS PREFLIGHT/CORS REDIRECT FAILURES)
+  async function postToAppsScript(payload) {
+    const response = await fetch(SPREADSHEET_API_URL, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    return await response.json();
+  }
 
   window.onload = function() {
     updateRiderHeaderUI();
@@ -327,7 +330,7 @@
     document.getElementById('rSignupStep2').style.display = (step === 2) ? 'block' : 'none';
   }
 
-  function processRiderPasswordLogin() {
+  async function processRiderPasswordLogin() {
     const email = document.getElementById('rLoginEmail').value.trim();
     const password = document.getElementById('rLoginPassword').value.trim();
 
@@ -337,23 +340,10 @@
     btn.innerText = "Authenticating...";
     btn.disabled = true;
 
-    fetch(SPREADSHEET_API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: 'riderPasswordLogin', email, password })
-    })
-    .then(r => r.text())
-    .then(text => {
+    try {
+      const res = await postToAppsScript({ action: 'riderPasswordLogin', email, password });
       btn.innerText = "🔑 Log In & Go Online";
       btn.disabled = false;
-
-      let res;
-      try {
-        res = JSON.parse(text);
-      } catch(e) {
-        alert("Server returned an invalid response: " + text.slice(0, 100));
-        return;
-      }
 
       const riderPayload = res.rider || res.user;
       if (res.status === 'success' && riderPayload) {
@@ -374,15 +364,14 @@
       } else {
         alert(res.message || "Login failed. Check your email and password.");
       }
-    })
-    .catch(err => {
+    } catch(err) {
       btn.innerText = "🔑 Log In & Go Online";
       btn.disabled = false;
-      alert("Network communication error. Please try again.");
-    });
+      alert("Error contacting server. Please check your internet connection.");
+    }
   }
 
-  function sendRiderSignupOtp() {
+  async function sendRiderSignupOtp() {
     const name = document.getElementById('rSignupName').value.trim();
     const phone = document.getElementById('rSignupPhone').value.trim();
     const email = document.getElementById('rSignupEmail').value.trim();
@@ -395,13 +384,8 @@
     btn.innerText = 'Sending OTP...';
     btn.disabled = true;
 
-    fetch(SPREADSHEET_API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: 'sendSignupOtp', email, role: 'rider' })
-    })
-    .then(r => r.json())
-    .then(res => {
+    try {
+      const res = await postToAppsScript({ action: 'sendSignupOtp', email, role: 'rider' });
       btn.innerText = 'Send Verification OTP';
       btn.disabled = false;
       if (res.status === 'success') {
@@ -410,15 +394,14 @@
       } else {
         alert(res.message);
       }
-    })
-    .catch(() => {
+    } catch(e) {
       btn.innerText = 'Send Verification OTP';
       btn.disabled = false;
-      alert("Failed to send OTP. Please check your network connection.");
-    });
+      alert("Failed to send OTP. Please try again.");
+    }
   }
 
-  function verifyRiderSignupAndCreateAccount() {
+  async function verifyRiderSignupAndCreateAccount() {
     const name = document.getElementById('rSignupName').value.trim();
     const phone = document.getElementById('rSignupPhone').value.trim();
     const email = document.getElementById('rSignupEmail').value.trim();
@@ -431,34 +414,27 @@
     btn.innerText = 'Verifying...';
     btn.disabled = true;
 
-    fetch(SPREADSHEET_API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({
+    try {
+      const res = await postToAppsScript({
         action: 'completeRiderSignup',
         name, phone, email, password, otp
-      })
-    })
-    .then(r => r.json())
-    .then(res => {
+      });
       btn.innerText = 'Verify OTP & Submit Profile';
       btn.disabled = false;
 
       if (res.status === 'success' || res.status === 'pending_approval') {
         alert(res.message || "Account registered successfully! First-time Admin Verification is mandatory. Redirecting you to login page...");
-        
         document.getElementById('rLoginEmail').value = email;
         document.getElementById('rLoginPassword').value = "";
         toggleRiderAuthTab('login');
       } else {
         alert(res.message);
       }
-    })
-    .catch(() => {
+    } catch(e) {
       btn.innerText = 'Verify OTP & Submit Profile';
       btn.disabled = false;
-      alert("Verification failed due to a network issue. Please retry.");
-    });
+      alert("Verification submission error. Please retry.");
+    }
   }
 
   function logoutRider() {
@@ -602,79 +578,59 @@
     }, 1000);
   }
 
-  function updateStatus(orderId, newStatus) {
+  async function updateStatus(orderId, newStatus) {
     if (!currentRider || (currentRider.status || '').toLowerCase() !== 'active') return alert("Account verification required to accept tasks.");
     
-    fetch(SPREADSHEET_API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ 
-        action: 'assignRiderToOrder', 
-        orderId, 
-        newStatus,
-        riderName: currentRider.name,
-        riderPhone: currentRider.phone,
-        riderEmail: currentRider.email
-      })
-    }).then(() => {
-      fetchRiderFeed();
+    await postToAppsScript({ 
+      action: 'assignRiderToOrder', 
+      orderId, 
+      newStatus,
+      riderName: currentRider.name,
+      riderPhone: currentRider.phone,
+      riderEmail: currentRider.email
     });
+    fetchRiderFeed();
   }
 
-  function triggerCustomerDeliveryOtpModal(orderId) {
+  async function triggerCustomerDeliveryOtpModal(orderId) {
     activeOtpVerificationOrderId = orderId;
     document.getElementById('dOtpModalOrderId').innerText = orderId;
     document.getElementById('dOtpModalEmailHint').innerText = "Sending PIN...";
     document.getElementById('custDeliveryOtpInput').value = "";
     document.getElementById('deliveryOtpModal').style.display = 'flex';
 
-    fetch(SPREADSHEET_API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: 'sendDeliveryOtp', orderId })
-    }).then(r => r.json()).then(res => {
-      if (res.status === 'success') {
-        document.getElementById('dOtpModalEmailHint').innerText = res.emailHint || "Registered Customer Email";
-      } else {
-        alert(res.message);
-      }
-    });
+    const res = await postToAppsScript({ action: 'sendDeliveryOtp', orderId });
+    if (res.status === 'success') {
+      document.getElementById('dOtpModalEmailHint').innerText = res.emailHint || "Registered Customer Email";
+    } else {
+      alert(res.message);
+    }
   }
 
-  function resendCustomerDeliveryOtp() {
+  async function resendCustomerDeliveryOtp() {
     if (!activeOtpVerificationOrderId) return;
     document.getElementById('dOtpModalEmailHint').innerText = "Resending...";
-    fetch(SPREADSHEET_API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: 'sendDeliveryOtp', orderId: activeOtpVerificationOrderId })
-    }).then(r => r.json()).then(res => {
-      if (res.status === 'success') {
-        document.getElementById('dOtpModalEmailHint').innerText = res.emailHint || "Registered Customer Email";
-        alert("PIN resent successfully!");
-      } else {
-        alert(res.message);
-      }
-    });
+    const res = await postToAppsScript({ action: 'sendDeliveryOtp', orderId: activeOtpVerificationOrderId });
+    if (res.status === 'success') {
+      document.getElementById('dOtpModalEmailHint').innerText = res.emailHint || "Registered Customer Email";
+      alert("PIN resent successfully!");
+    } else {
+      alert(res.message);
+    }
   }
 
-  function confirmCustomerDeliveryOtp() {
+  async function confirmCustomerDeliveryOtp() {
     const otp = document.getElementById('custDeliveryOtpInput').value.trim();
     if (!otp || otp.length < 4) return alert("Please enter the 4-digit PIN provided by customer.");
 
-    fetch(SPREADSHEET_API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: 'verifyDeliveryOtp', orderId: activeOtpVerificationOrderId, otp })
-    }).then(r => r.json()).then(res => {
-      if (res.status === 'success') {
-        alert("✅ Delivery Successfully Verified & Recorded!");
-        closeDeliveryOtpModal();
-        fetchRiderFeed();
-      } else {
-        alert(res.message);
-      }
-    });
+    const res = await postToAppsScript({ action: 'verifyDeliveryOtp', orderId: activeOtpVerificationOrderId, otp });
+    if (res.status === 'success') {
+      alert("✅ Delivery Successfully Verified & Recorded!");
+      closeDeliveryOtpModal();
+      fetchRiderFeed();
+    } else {
+      alert(res.message);
+    }
   }
 
   function closeDeliveryOtpModal() {
