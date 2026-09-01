@@ -61,32 +61,30 @@
       padding: 4px 8px; 
       font-size: 14px; 
     }
-
+    
     .header-right-actions {
       display: flex;
       align-items: center;
       gap: 10px;
-      position: relative;
     }
 
     .notif-bell-btn {
-      background: white;
+      position: relative;
+      background: rgba(255, 255, 255, 0.9);
       border: 1px solid #cbd5e1;
+      border-radius: 50%;
       width: 36px;
       height: 36px;
-      border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 16px;
       cursor: pointer;
-      position: relative;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
     }
     .notif-badge-count {
       position: absolute;
-      top: -3px;
-      right: -3px;
+      top: -2px;
+      right: -2px;
       background: #ef4444;
       color: white;
       font-size: 10px;
@@ -95,32 +93,8 @@
       padding: 1px 5px;
       min-width: 16px;
       text-align: center;
+      border: 1px solid white;
     }
-
-    .notif-dropdown-panel {
-      position: absolute;
-      top: 45px;
-      right: 0;
-      width: 310px;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-      border: 1px solid #e2e8f0;
-      padding: 12px;
-      z-index: 2000;
-      display: none;
-      max-height: 360px;
-      overflow-y: auto;
-    }
-    .notif-item {
-      padding: 8px 10px;
-      border-bottom: 1px solid #f1f5f9;
-      font-size: 12px;
-      color: #334155;
-    }
-    .notif-item:last-child { border-bottom: none; }
-    .notif-item b { color: #0f172a; display: block; margin-bottom: 2px; }
-    .notif-item small { color: #94a3b8; font-size: 10.5px; }
 
     .auth-pill {
       display: flex; 
@@ -413,18 +387,6 @@
       border-color: #2563eb; 
     }
 
-    .rider-card-strip {
-      background: #f0fdf4;
-      border: 1px solid #86efac;
-      border-radius: 8px;
-      padding: 8px 10px;
-      margin: 6px 0;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 12px;
-    }
-
     .badge-ticking { 
       display: inline-block; 
       background: #0f172a; 
@@ -606,24 +568,12 @@
     <div class="brand-logo" onclick="switchPage('homePage')">
       <span>⚡</span> Mohna Express
     </div>
-    
     <div class="header-right-actions">
       <!-- NOTIFICATION BELL -->
-      <button type="button" class="notif-bell-btn" id="btnNotifBell" onclick="toggleNotifDropdown()">
+      <div class="notif-bell-btn" onclick="openNotificationsModal()" title="Live Order Updates">
         🔔
         <span id="notifBadge" class="notif-badge-count" style="display:none;">0</span>
-      </button>
-
-      <div id="notifDropdown" class="notif-dropdown-panel">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-          <b style="font-size:13px; color:#0f172a;">🔔 Live Order Notifications</b>
-          <button type="button" onclick="clearAllNotifications()" style="background:none; border:none; color:#2563eb; font-size:11px; cursor:pointer;">Clear All</button>
-        </div>
-        <div id="notifListContainer">
-          <p style="text-align:center; color:#94a3b8; font-size:12px; margin:16px 0;">No new notifications</p>
-        </div>
       </div>
-
       <div id="authHeaderContainer">
         <div class="auth-pill auth-logged-out" onclick="openAuthModal('login')">
           🔑 Sign In
@@ -723,7 +673,7 @@
         <h3 style="margin:0;">📦 My Order History</h3>
         <button class="btn-submit" style="width:auto; padding:6px 12px; font-size:12px; background:#0f172a;" onclick="fetchInitialStoreData(true)">🔄 Refresh</button>
       </div>
-      <p style="font-size:12px; color:#64748b; margin:0 0 10px 0;">💡 Click any order to view details, price breakdown, assigned rider info, and download tax receipts.</p>
+      <p style="font-size:12px; color:#64748b; margin:0 0 10px 0;">💡 Click any order to view details, price breakdown, assigned rider, and download tax receipts.</p>
       <div id="customerOrdersList">
         <p style="text-align:center; color:#94a3b8; font-size:13px;">Loading orders...</p>
       </div>
@@ -755,6 +705,20 @@
     </div>
   </div>
 
+</div>
+
+<!-- NOTIFICATIONS MODAL -->
+<div id="notificationsModal" class="modal-overlay" style="display:none;">
+  <div class="modal-card">
+    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:8px; margin-bottom:12px;">
+      <h3 style="margin:0; color:#0f172a;">🔔 Live Order Notifications</h3>
+      <button type="button" onclick="closeNotificationsModal()" style="background:none; border:none; font-size:18px; cursor:pointer; color:#64748b;">✕</button>
+    </div>
+    <div id="notificationsList">
+      <p style="text-align:center; color:#94a3b8; font-size:13px;">No new dispatch notifications.</p>
+    </div>
+    <button type="button" class="btn-submit" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; margin-top:12px;" onclick="closeNotificationsModal()">Close</button>
+  </div>
 </div>
 
 <!-- PRODUCT DETAILS MODAL -->
@@ -815,11 +779,13 @@
       <div class="bill-row"><span><b>Order Timestamp:</b></span><span id="dtlTimestamp" style="color:#2563eb; font-weight:bold;"></span></div>
       <div class="bill-row"><span><b>⏱️ Delivery Status:</b></span><span id="dtlLiveTimer"></span></div>
       
-      <!-- ASSIGNED RIDER BLOCK IN ORDER MODAL -->
-      <div id="dtlRiderContainer" style="background:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:10px; margin:8px 0; display:none;">
-        <div style="font-size:11px; font-weight:bold; color:#166534; text-transform:uppercase;">🛵 Delivery Partner Details</div>
-        <div class="bill-row" style="margin:4px 0 2px;"><span><b>Rider Name:</b></span><span id="dtlRiderName" style="font-weight:700;">-</span></div>
-        <div class="bill-row" style="margin:0;"><span><b>Rider Phone:</b></span><a id="dtlRiderPhone" href="tel:" style="color:#16a34a; font-weight:bold; text-decoration:none;">-</a></div>
+      <!-- ASSIGNED RIDER DETAILS IN MODAL (VISIBLE ONLY WHEN OUT FOR DELIVERY) -->
+      <div id="dtlModalRiderBox" style="display:none; background:#0284c7; color:white; padding:10px; border-radius:8px; margin:8px 0;">
+        <div style="font-size:11px; text-transform:uppercase; font-weight:800; opacity:0.9;">🛵 Assigned Rider Partner</div>
+        <div class="bill-row" style="margin:4px 0 0 0;">
+          <span id="dtlModalRiderName" style="font-weight:bold; font-size:14px;">Rider Name</span>
+          <a id="dtlModalRiderCallBtn" href="tel:" style="background:#16a34a; color:white; padding:4px 10px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:12px;">📞 Call Rider</a>
+        </div>
       </div>
 
       <div class="bill-row"><span><b>Items Ordered:</b></span><span id="dtlItem"></span></div>
@@ -894,45 +860,47 @@
 </nav>
 
 <script>
-  const SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbyZ11fczqVaeZx8yyL1IXUDkJ92U7cMhX7_AgaqNXygIuj3tMdwkwiYa_lY9a0GR9btsg/exec";
-  const DEFAULT_UPI_ID = "mohnaexpress@upi";
+  var SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbyZ11fczqVaeZx8yyL1IXUDkJ92U7cMhX7_AgaqNXygIuj3tMdwkwiYa_lY9a0GR9btsg/exec";
+  var DEFAULT_UPI_ID = "mohnaexpress@upi";
 
-  let currentUser = JSON.parse(localStorage.getItem('mohna_user')) || null;
-  let cart = JSON.parse(localStorage.getItem('mohna_cart')) || [];
-  let userCoords = null;
-  let adminZonesData = null;
-  let currentTheme = 'retail';
-  let activeCategory = 'all';
+  var currentUser = null;
+  try { currentUser = JSON.parse(localStorage.getItem('mohna_user')) || null; } catch(e) {}
+  var cart = [];
+  try { cart = JSON.parse(localStorage.getItem('mohna_cart')) || []; } catch(e) {}
 
-  let rawProducts = [], rawCategories = [], rawCoupons = [], cachedMyOrders = [];
-  let customerNotifications = JSON.parse(localStorage.getItem('mohna_cust_notifs')) || [];
-  let currentSelectedProduct = null;
-  let currentMatchedZoneTiming = 20;
-  let currentMatchedZoneName = "City Express Hub";
-  let isDeliverableLocation = true;
-  let appliedDiscountPercent = 0;
-  let pendingAvatarBase64 = "";
-  let activeSelectedModalOrder = null;
+  var userCoords = null;
+  var adminZonesData = null;
+  var currentTheme = 'retail';
+  var activeCategory = 'all';
 
-  let persistentTimerInterval = null, cardTickersInterval = null;
-  let sessionCheckInterval = null;
+  var rawProducts = [], rawCategories = [], rawCoupons = [], cachedMyOrders = [];
+  var currentSelectedProduct = null;
+  var currentMatchedZoneTiming = 20;
+  var currentMatchedZoneName = "City Express Hub";
+  var isDeliverableLocation = true;
+  var appliedDiscountPercent = 0;
+  var pendingAvatarBase64 = "";
+  var activeSelectedModalOrder = null;
+
+  var persistentTimerInterval = null, cardTickersInterval = null;
+  var sessionCheckInterval = null;
 
   function isPointInsidePolygon(point, vs) {
-    const x = point[0], y = point[1];
-    let inside = false;
-    for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
-      const xi = vs[i][0], yi = vs[i][1];
-      const xj = vs[j][0], yj = vs[j][1];
-      const intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+    var x = point[0], y = point[1];
+    var inside = false;
+    for (var i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+      var xi = vs[i][0], yi = vs[i][1];
+      var xj = vs[j][0], yj = vs[j][1];
+      var intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
       if (intersect) inside = !inside;
     }
     return inside;
   }
 
-  function evaluateDeliveryZoneEligibility(showAlert = false) {
-    const noticeBox = document.getElementById('zoneCoverageNotice');
-    const noticeText = document.getElementById('zoneNoticeText');
-    const payBtn = document.getElementById('confirmPayBtn');
+  function evaluateDeliveryZoneEligibility(showAlert) {
+    var noticeBox = document.getElementById('zoneCoverageNotice');
+    var noticeText = document.getElementById('zoneNoticeText');
+    var payBtn = document.getElementById('confirmPayBtn');
 
     if (!userCoords) {
       isDeliverableLocation = false;
@@ -956,10 +924,11 @@
       return true;
     }
 
-    let matchedFeature = null;
-    for (const feature of adminZonesData.features) {
+    var matchedFeature = null;
+    for (var f = 0; f < adminZonesData.features.length; f++) {
+      var feature = adminZonesData.features[f];
       if (feature.geometry && feature.geometry.type === "Polygon") {
-        const ring = feature.geometry.coordinates[0];
+        var ring = feature.geometry.coordinates[0];
         if (isPointInsidePolygon([userCoords.lng, userCoords.lat], ring)) {
           matchedFeature = feature;
           break;
@@ -969,7 +938,7 @@
 
     if (matchedFeature) {
       isDeliverableLocation = true;
-      const props = matchedFeature.properties || {};
+      var props = matchedFeature.properties || {};
       currentMatchedZoneName = props.name || "Identified Hub";
       currentMatchedZoneTiming = parseInt(props.deliveryMinutes) || 20;
 
@@ -995,31 +964,31 @@
   function parseAnyDateToMs(dateStr) {
     if (!dateStr) return 0;
     if (typeof dateStr === "number") return dateStr;
-    const s = dateStr.toString().trim();
-    const directMs = new Date(s).getTime();
+    var s = dateStr.toString().trim();
+    var directMs = new Date(s).getTime();
     if (!isNaN(directMs)) return directMs;
 
-    const match = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:,\s*(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+    var match = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:,\s*(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
     if (match) {
-      const day = parseInt(match[1], 10);
-      const month = parseInt(match[2], 10) - 1;
-      const year = parseInt(match[3], 10);
-      const hours = match[4] ? parseInt(match[4], 10) : 0;
-      const mins = match[5] ? parseInt(match[5], 10) : 0;
-      const secs = match[6] ? parseInt(match[6], 10) : 0;
+      var day = parseInt(match[1], 10);
+      var month = parseInt(match[2], 10) - 1;
+      var year = parseInt(match[3], 10);
+      var hours = match[4] ? parseInt(match[4], 10) : 0;
+      var mins = match[5] ? parseInt(match[5], 10) : 0;
+      var secs = match[6] ? parseInt(match[6], 10) : 0;
       return new Date(year, month, day, hours, mins, secs).getTime();
     }
     return 0;
   }
 
   function compressImageFile(file, maxWidth, maxHeight, callback) {
-    const reader = new FileReader();
+    var reader = new FileReader();
     reader.onload = function(e) {
-      const img = new Image();
+      var img = new Image();
       img.onload = function() {
-        const canvas = document.createElement("canvas");
-        let width = img.width;
-        let height = img.height;
+        var canvas = document.createElement("canvas");
+        var width = img.width;
+        var height = img.height;
 
         if (width > height) {
           if (width > maxWidth) { height = Math.round((height * maxWidth) / width); width = maxWidth; }
@@ -1029,7 +998,7 @@
 
         canvas.width = width;
         canvas.height = height;
-        const ctx = canvas.getContext("2d");
+        var ctx = canvas.getContext("2d");
         ctx.drawImage(img, 0, 0, width, height);
         callback(canvas.toDataURL("image/jpeg", 0.78));
       };
@@ -1039,18 +1008,18 @@
   }
 
   function calculateDeliveryStatusBadge(orderDateStr, etaMinutes, expiryTimestamp, deliveredTimestamp) {
-    const orderStartMs = parseAnyDateToMs(orderDateStr) || (expiryTimestamp - (etaMinutes * 60000));
-    const endMs = parseInt(deliveredTimestamp) || Date.now();
-    const totalElapsedSec = Math.max(0, Math.floor((endMs - orderStartMs) / 1000));
-    const elapsedMins = Math.floor(totalElapsedSec / 60);
-    const elapsedSecs = totalElapsedSec % 60;
-    const timeFormatted = `${elapsedMins}m ${elapsedSecs}s`;
+    var orderStartMs = parseAnyDateToMs(orderDateStr) || (expiryTimestamp - (etaMinutes * 60000));
+    var endMs = parseInt(deliveredTimestamp) || Date.now();
+    var totalElapsedSec = Math.max(0, Math.floor((endMs - orderStartMs) / 1000));
+    var elapsedMins = Math.floor(totalElapsedSec / 60);
+    var elapsedSecs = totalElapsedSec % 60;
+    var timeFormatted = `${elapsedMins}m ${elapsedSecs}s`;
 
     if (endMs <= expiryTimestamp) {
       return `<span class="badge-ontime">✔ Delivered in ${timeFormatted} (On Time)</span>`;
     } else {
-      const lateSec = Math.floor((endMs - expiryTimestamp) / 1000);
-      const lateMins = Math.floor(lateSec / 60);
+      var lateSec = Math.floor((endMs - expiryTimestamp) / 1000);
+      var lateMins = Math.floor(lateSec / 60);
       return `<span class="badge-late">⚠️ Delivered in ${timeFormatted} (${lateMins}m Late)</span>`;
     }
   }
@@ -1058,68 +1027,15 @@
   window.onload = function() {
     updateHeaderAuthUI();
     updateCartUI();
-    updateNotificationsUI();
     loadFromLocalCache();
     fetchInitialStoreData();
     requestUserGPS(() => evaluateDeliveryZoneEligibility(false));
     startSingleSessionGuard();
   };
 
-  // NOTIFICATION SYSTEM ENGINE
-  function updateNotificationsUI() {
-    const badge = document.getElementById('notifBadge');
-    const container = document.getElementById('notifListContainer');
-    
-    if (customerNotifications.length > 0) {
-      badge.style.display = 'block';
-      badge.innerText = customerNotifications.length;
-      container.innerHTML = customerNotifications.map((n, idx) => `
-        <div class="notif-item">
-          <b>${n.title}</b>
-          <div>${n.msg}</div>
-          <small>${n.time}</small>
-        </div>
-      `).join('');
-    } else {
-      badge.style.display = 'none';
-      container.innerHTML = `<p style="text-align:center; color:#94a3b8; font-size:12px; margin:16px 0;">No new notifications</p>`;
-    }
-  }
-
-  function toggleNotifDropdown() {
-    const dropdown = document.getElementById('notifDropdown');
-    dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
-  }
-
-  function clearAllNotifications() {
-    customerNotifications = [];
-    localStorage.setItem('mohna_cust_notifs', JSON.stringify([]));
-    updateNotificationsUI();
-  }
-
-  function checkAndNotifyRiderAssignment(newOrders) {
-    newOrders.forEach(order => {
-      const isOut = order.status && (order.status.includes('OUT') || order.status.includes('Out'));
-      const notifKey = `notif_${order.orderId}_${order.status}`;
-      
-      if (isOut && order.riderName && !localStorage.getItem(notifKey)) {
-        const notif = {
-          id: notifKey,
-          title: `🛵 Order ${order.orderId} Out for Delivery!`,
-          msg: `Rider ${order.riderName} (${order.riderPhone || 'Partner'}) has accepted your delivery.`,
-          time: new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })
-        };
-        customerNotifications.unshift(notif);
-        localStorage.setItem(notifKey, "true");
-        localStorage.setItem('mohna_cust_notifs', JSON.stringify(customerNotifications));
-        updateNotificationsUI();
-      }
-    });
-  }
-
   function loadFromLocalCache() {
     try {
-      const cached = JSON.parse(localStorage.getItem('mohna_store_cache') || '{}');
+      var cached = JSON.parse(localStorage.getItem('mohna_store_cache') || '{}');
       if (cached.products && cached.products.length > 0) {
         rawProducts = cached.products;
         rawCategories = cached.categories || [];
@@ -1134,7 +1050,7 @@
 
   function startSingleSessionGuard() {
     if (sessionCheckInterval) clearInterval(sessionCheckInterval);
-    sessionCheckInterval = setInterval(() => {
+    sessionCheckInterval = setInterval(function() {
       if (currentUser && currentUser.email && currentUser.sessionToken) {
         fetch(`${SPREADSHEET_API_URL}?action=validateSession&email=${encodeURIComponent(currentUser.email)}&sessionToken=${encodeURIComponent(currentUser.sessionToken)}&type=customer`)
           .then(r => r.json())
@@ -1151,24 +1067,24 @@
   function requestUserGPS(callback) {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (pos) => {
+        function(pos) {
           userCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-          const s1 = document.getElementById('loginGpsStatus');
-          const s2 = document.getElementById('signupGpsStatus');
+          var s1 = document.getElementById('loginGpsStatus');
+          var s2 = document.getElementById('signupGpsStatus');
           if (s1) s1.innerText = `✅ GPS Locked (${userCoords.lat.toFixed(4)}, ${userCoords.lng.toFixed(4)})`;
           if (s2) s2.innerText = `✅ Registered Location Locked (${userCoords.lat.toFixed(4)}, ${userCoords.lng.toFixed(4)})`;
           evaluateDeliveryZoneEligibility(false);
           if (callback) callback();
         },
-        () => {
+        function() {
           if (callback) callback();
         }
       );
     }
   }
 
-  function fetchInitialStoreData(isUserAction = false) {
-    const userEmailParam = currentUser && currentUser.email ? `&userEmail=${encodeURIComponent(currentUser.email)}` : "";
+  function fetchInitialStoreData(isUserAction) {
+    var userEmailParam = currentUser && currentUser.email ? `&userEmail=${encodeURIComponent(currentUser.email)}` : "";
     fetch(`${SPREADSHEET_API_URL}?action=getInitStoreData${userEmailParam}`)
       .then(r => r.json())
       .then(data => {
@@ -1178,9 +1094,9 @@
         adminZonesData = data.zone || null;
         if (data.myOrders) {
           cachedMyOrders = data.myOrders;
-          checkAndNotifyRiderAssignment(cachedMyOrders);
           renderCustomerOrdersList();
           checkAndResumeActiveOrderTimer();
+          updateNotificationsFeed();
         }
 
         localStorage.setItem('mohna_store_cache', JSON.stringify({
@@ -1197,9 +1113,9 @@
   }
 
   function updateHeaderAuthUI() {
-    const container = document.getElementById('authHeaderContainer');
+    var container = document.getElementById('authHeaderContainer');
     if (currentUser && currentUser.name) {
-      const avatarSrc = currentUser.avatar || "https://via.placeholder.com/24?text=U";
+      var avatarSrc = currentUser.avatar || "https://via.placeholder.com/24?text=U";
       container.innerHTML = `
         <div class="auth-pill auth-logged-in" onclick="switchPage('profilePage')">
           <img src="${avatarSrc}" class="header-avatar" /> Hi, ${currentUser.name.split(' ')[0]}
@@ -1214,9 +1130,57 @@
     }
   }
 
+  function updateNotificationsFeed() {
+    var notifBadge = document.getElementById('notifBadge');
+    var notifList = document.getElementById('notificationsList');
+    if (!cachedMyOrders || cachedMyOrders.length === 0) {
+      if (notifBadge) notifBadge.style.display = 'none';
+      if (notifList) notifList.innerHTML = '<p style="text-align:center; color:#94a3b8; font-size:13px;">No new dispatch notifications.</p>';
+      return;
+    }
+
+    var activeDispatches = cachedMyOrders.filter(o => o.status && (o.status.includes('OUT') || o.status.includes('Out') || o.status.includes('Delivered')));
+    if (activeDispatches.length > 0) {
+      if (notifBadge) {
+        notifBadge.style.display = 'inline-block';
+        notifBadge.innerText = activeDispatches.length;
+      }
+      if (notifList) {
+        notifList.innerHTML = activeDispatches.map(o => {
+          var isOut = o.status.includes('OUT') || o.status.includes('Out');
+          var icon = isOut ? "🛵" : "✅";
+          var headline = isOut ? "Order Out for Delivery" : "Order Successfully Delivered";
+          var detail = isOut 
+            ? `Rider <b>${o.riderName || 'Partner'}</b> is on the way. (📞 ${o.riderPhone || 'In transit'})`
+            : `Order <b>${o.orderId}</b> was delivered. Thank you!`;
+
+          return `
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px; margin-bottom:8px; font-size:12.5px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+                <b style="color:#0f172a;">${icon} ${headline}</b>
+                <span style="font-size:11px; color:#64748b;">${o.orderId}</span>
+              </div>
+              <div style="color:#475569;">${detail}</div>
+            </div>
+          `;
+        }).join('');
+      }
+    } else {
+      if (notifBadge) notifBadge.style.display = 'none';
+      if (notifList) notifList.innerHTML = '<p style="text-align:center; color:#94a3b8; font-size:13px;">No new dispatch notifications.</p>';
+    }
+  }
+
+  function openNotificationsModal() {
+    document.getElementById('notificationsModal').style.display = 'flex';
+  }
+  function closeNotificationsModal() {
+    document.getElementById('notificationsModal').style.display = 'none';
+  }
+
   function updateCartUI() {
-    const totalCount = cart.reduce((sum, item) => sum + item.qty, 0);
-    const badge = document.getElementById('cartBadgeCount');
+    var totalCount = cart.reduce((sum, item) => sum + item.qty, 0);
+    var badge = document.getElementById('cartBadgeCount');
     if (totalCount > 0) {
       badge.style.display = 'block';
       badge.innerText = totalCount;
@@ -1227,9 +1191,9 @@
     renderProducts();
   }
 
-  function openAuthModal(mode = 'login') {
+  function openAuthModal(mode) {
     document.getElementById('authModal').style.display = 'flex';
-    toggleAuthTab(mode);
+    toggleAuthTab(mode || 'login');
     requestUserGPS();
   }
 
@@ -1251,15 +1215,15 @@
   }
 
   function requestSignupOtp() {
-    const name = document.getElementById('signupName').value.trim();
-    const phone = document.getElementById('signupPhone').value.trim();
-    const email = document.getElementById('signupEmail').value.trim();
-    const password = document.getElementById('signupPassword').value.trim();
+    var name = document.getElementById('signupName').value.trim();
+    var phone = document.getElementById('signupPhone').value.trim();
+    var email = document.getElementById('signupEmail').value.trim();
+    var password = document.getElementById('signupPassword').value.trim();
 
     if (!name || !email || !password) return alert("Please fill all required fields.");
     if (password.length < 6) return alert("Password must be at least 6 characters.");
 
-    const btn = document.getElementById('btnRequestSignupOtp');
+    var btn = document.getElementById('btnRequestSignupOtp');
     btn.innerText = "Sending OTP...";
     btn.disabled = true;
 
@@ -1280,11 +1244,11 @@
   }
 
   function verifyAndCompleteSignup() {
-    const name = document.getElementById('signupName').value.trim();
-    const phone = document.getElementById('signupPhone').value.trim();
-    const email = document.getElementById('signupEmail').value.trim();
-    const password = document.getElementById('signupPassword').value.trim();
-    const otp = document.getElementById('signupOtpCode').value.trim();
+    var name = document.getElementById('signupName').value.trim();
+    var phone = document.getElementById('signupPhone').value.trim();
+    var email = document.getElementById('signupEmail').value.trim();
+    var password = document.getElementById('signupPassword').value.trim();
+    var otp = document.getElementById('signupOtpCode').value.trim();
 
     if (!otp || otp.length < 6) return alert("Enter valid 6-digit OTP.");
 
@@ -1312,8 +1276,8 @@
   }
 
   function processUserPasswordLogin() {
-    const email = document.getElementById('loginEmail').value.trim();
-    const password = document.getElementById('loginPassword').value.trim();
+    var email = document.getElementById('loginEmail').value.trim();
+    var password = document.getElementById('loginPassword').value.trim();
 
     if (!email || !password) return alert("Please enter both email and password.");
 
@@ -1341,10 +1305,10 @@
   }
 
   function handleAvatarFileSelected(e) {
-    const file = e.target.files[0];
+    var file = e.target.files[0];
     if (!file) return;
 
-    compressImageFile(file, 400, 400, (compressedBase64) => {
+    compressImageFile(file, 400, 400, function(compressedBase64) {
       pendingAvatarBase64 = compressedBase64;
       document.getElementById('profAvatarDisplay').src = compressedBase64;
       document.getElementById('btnSaveAvatar').style.display = 'inline-block';
@@ -1353,7 +1317,7 @@
 
   function saveSelectedAvatar() {
     if (!currentUser || !pendingAvatarBase64) return;
-    const btn = document.getElementById('btnSaveAvatar');
+    var btn = document.getElementById('btnSaveAvatar');
     btn.innerText = "Saving...";
     btn.disabled = true;
 
@@ -1392,8 +1356,8 @@
     });
   }
 
-  function logoutCustomer(promptUser = true) {
-    if (!promptUser || confirm("Log out from this device?")) {
+  function logoutCustomer(promptUser) {
+    if (promptUser === false || confirm("Log out from this device?")) {
       localStorage.removeItem('mohna_user');
       currentUser = null;
       location.reload();
@@ -1401,8 +1365,8 @@
   }
 
   function renderCategoryChips() {
-    const chipContainer = document.getElementById('categoryChips');
-    const scopedCategories = rawCategories.filter(c => c.scope === currentTheme || c.scope === 'both');
+    var chipContainer = document.getElementById('categoryChips');
+    var scopedCategories = rawCategories.filter(c => c.scope === currentTheme || c.scope === 'both');
     chipContainer.innerHTML = '<div class="chip active" onclick="filterCategory(\'all\', this)">All Items</div>' + 
       scopedCategories.map(c => `<div class="chip" onclick="filterCategory('${c.slug}', this)">${c.name}</div>`).join('');
   }
@@ -1433,9 +1397,9 @@
   }
 
   function renderProducts(searchQuery = "") {
-    const grid = document.getElementById('productGrid');
-    const validSlugs = rawCategories.filter(c => c.scope === currentTheme || c.scope === 'both').map(c => c.slug);
-    let filtered = rawProducts.filter(p => validSlugs.includes(p.category) && (p.scope === currentTheme || p.scope === 'both'));
+    var grid = document.getElementById('productGrid');
+    var validSlugs = rawCategories.filter(c => c.scope === currentTheme || c.scope === 'both').map(c => c.slug);
+    var filtered = rawProducts.filter(p => validSlugs.includes(p.category) && (p.scope === currentTheme || p.scope === 'both'));
     if (activeCategory !== 'all') filtered = filtered.filter(p => p.category === activeCategory);
     if (searchQuery) filtered = filtered.filter(p => p.name.toLowerCase().includes(searchQuery));
 
@@ -1445,10 +1409,10 @@
     }
 
     grid.innerHTML = filtered.map(p => {
-      const price = (currentTheme === 'wholesale') ? p.wholesalePrice : p.retailPrice;
-      const mrp = p.mrp || (price * 1.25);
-      const discount = Math.round(((mrp - price) / mrp) * 100);
-      const inCart = isProductInCart(p.id);
+      var price = (currentTheme === 'wholesale') ? p.wholesalePrice : p.retailPrice;
+      var mrp = p.mrp || (price * 1.25);
+      var discount = Math.round(((mrp - price) / mrp) * 100);
+      var inCart = isProductInCart(p.id);
 
       return `
         <div class="product-card" onclick="openProductModal('${p.id}')">
@@ -1471,14 +1435,14 @@
   }
 
   function openProductModal(productId) {
-    const p = rawProducts.find(x => x.id === productId);
+    var p = rawProducts.find(x => x.id === productId);
     if (!p) return;
 
     currentSelectedProduct = p;
-    const price = (currentTheme === 'wholesale') ? p.wholesalePrice : p.retailPrice;
-    const mrp = p.mrp || (price * 1.25);
-    const discount = Math.round(((mrp - price) / mrp) * 100);
-    const inCart = isProductInCart(p.id);
+    var price = (currentTheme === 'wholesale') ? p.wholesalePrice : p.retailPrice;
+    var mrp = p.mrp || (price * 1.25);
+    var discount = Math.round(((mrp - price) / mrp) * 100);
+    var inCart = isProductInCart(p.id);
 
     document.getElementById('modalProdCategory').innerText = p.category;
     document.getElementById('modalProdImg').src = p.img || 'https://via.placeholder.com/300?text=Product';
@@ -1492,7 +1456,7 @@
     document.getElementById('modalProdSpecs').innerText = p.specifications || "Standard Quality Grade A";
     document.getElementById('modalProdTerms').innerText = p.terms || "Returnable upon delivery if damaged.";
 
-    const addBtn = document.getElementById('modalBtnAddCart');
+    var addBtn = document.getElementById('modalBtnAddCart');
     addBtn.innerText = inCart ? "✔ Added" : "🛒 Add to Cart";
     addBtn.style.background = inCart ? "#dcfce7" : "#f1f5f9";
     addBtn.style.color = inCart ? "#166534" : "#0f172a";
@@ -1505,11 +1469,11 @@
   }
 
   function toggleCartItem(productId) {
-    const p = rawProducts.find(x => x.id === productId);
+    var p = rawProducts.find(x => x.id === productId);
     if (!p) return;
 
-    const existingIdx = cart.findIndex(x => x.id === productId && x.theme === currentTheme);
-    const price = (currentTheme === 'wholesale') ? p.wholesalePrice : p.retailPrice;
+    var existingIdx = cart.findIndex(x => x.id === productId && x.theme === currentTheme);
+    var price = (currentTheme === 'wholesale') ? p.wholesalePrice : p.retailPrice;
 
     if (existingIdx !== -1) {
       cart.splice(existingIdx, 1);
@@ -1530,8 +1494,8 @@
   function toggleCartFromModal() {
     if (!currentSelectedProduct) return;
     toggleCartItem(currentSelectedProduct.id);
-    const inCart = isProductInCart(currentSelectedProduct.id);
-    const addBtn = document.getElementById('modalBtnAddCart');
+    var inCart = isProductInCart(currentSelectedProduct.id);
+    var addBtn = document.getElementById('modalBtnAddCart');
     addBtn.innerText = inCart ? "✔ Added" : "🛒 Add to Cart";
     addBtn.style.background = inCart ? "#dcfce7" : "#f1f5f9";
     addBtn.style.color = inCart ? "#166534" : "#0f172a";
@@ -1539,10 +1503,10 @@
 
   function directBuyNow(productId) {
     if (!currentUser) { openAuthModal('login'); return; }
-    const p = rawProducts.find(x => x.id === productId);
+    var p = rawProducts.find(x => x.id === productId);
     if (!p) return;
 
-    const price = (currentTheme === 'wholesale') ? p.wholesalePrice : p.retailPrice;
+    var price = (currentTheme === 'wholesale') ? p.wholesalePrice : p.retailPrice;
     cart = [{
       id: p.id,
       name: p.name,
@@ -1563,7 +1527,7 @@
   }
 
   function renderCheckoutCart() {
-    const container = document.getElementById('cartItemsContainer');
+    var container = document.getElementById('cartItemsContainer');
     evaluateDeliveryZoneEligibility(false);
 
     if (cart.length === 0) {
@@ -1576,11 +1540,11 @@
       return;
     }
 
-    let subtotal = 0;
-    let maxDeliveryFee = 0;
+    var subtotal = 0;
+    var maxDeliveryFee = 0;
 
     container.innerHTML = cart.map((item, idx) => {
-      const itemTotal = item.price * item.qty;
+      var itemTotal = item.price * item.qty;
       subtotal += itemTotal;
       if (item.deliveryFee > maxDeliveryFee) maxDeliveryFee = item.deliveryFee;
 
@@ -1598,8 +1562,8 @@
       `;
     }).join('');
 
-    const discountAmount = Math.round((subtotal * appliedDiscountPercent) / 100);
-    const grandTotal = Math.max(0, subtotal - discountAmount + maxDeliveryFee);
+    var discountAmount = Math.round((subtotal * appliedDiscountPercent) / 100);
+    var grandTotal = Math.max(0, subtotal - discountAmount + maxDeliveryFee);
 
     document.getElementById('chkSubtotal').innerText = `₹${subtotal}`;
     document.getElementById('chkDiscount').innerText = `-₹${discountAmount}`;
@@ -1617,11 +1581,11 @@
   }
 
   function applyCouponCode() {
-    const inputCode = document.getElementById('couponCodeInput').value.trim().toUpperCase();
-    const msg = document.getElementById('couponStatusMsg');
+    var inputCode = document.getElementById('couponCodeInput').value.trim().toUpperCase();
+    var msg = document.getElementById('couponStatusMsg');
 
     if (!inputCode) { msg.innerText = "Please enter a code"; msg.style.color = "#ef4444"; return; }
-    const coupon = rawCoupons.find(c => c.code.toUpperCase() === inputCode);
+    var coupon = rawCoupons.find(c => c.code.toUpperCase() === inputCode);
 
     if (!coupon) { msg.innerText = "❌ Invalid coupon code"; msg.style.color = "#ef4444"; return; }
 
@@ -1632,9 +1596,9 @@
   }
 
   function renderQrCode(amount) {
-    const orderId = "MHN-" + Math.floor(100000 + Math.random() * 900000);
-    const upiString = `upi://pay?pa=${DEFAULT_UPI_ID}&pn=MohnaExpress&am=${amount}&cu=INR&tn=${orderId}`;
-    const qrContainer = document.getElementById('qrcode');
+    var orderId = "MHN-" + Math.floor(100000 + Math.random() * 900000);
+    var upiString = `upi://pay?pa=${DEFAULT_UPI_ID}&pn=MohnaExpress&am=${amount}&cu=INR&tn=${orderId}`;
+    var qrContainer = document.getElementById('qrcode');
     qrContainer.innerHTML = "";
     new QRCode(qrContainer, { text: upiString, width: 140, height: 140 });
   }
@@ -1648,16 +1612,16 @@
       return;
     }
 
-    let subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
-    let maxDeliveryFee = Math.max(0, ...cart.map(i => i.deliveryFee));
-    let discountAmount = Math.round((subtotal * appliedDiscountPercent) / 100);
-    let finalAmount = Math.max(0, subtotal - discountAmount + maxDeliveryFee);
+    var subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+    var maxDeliveryFee = Math.max(0, ...cart.map(i => i.deliveryFee));
+    var discountAmount = Math.round((subtotal * appliedDiscountPercent) / 100);
+    var finalAmount = Math.max(0, subtotal - discountAmount + maxDeliveryFee);
 
-    const orderId = "MHN-" + Math.floor(100000 + Math.random() * 900000);
-    const itemSummary = cart.map(i => `${i.name} (x${i.qty})`).join(', ');
-    const totalQty = cart.reduce((sum, i) => sum + i.qty, 0);
+    var orderId = "MHN-" + Math.floor(100000 + Math.random() * 900000);
+    var itemSummary = cart.map(i => `${i.name} (x${i.qty})`).join(', ');
+    var totalQty = cart.reduce((sum, i) => sum + i.qty, 0);
 
-    const payload = {
+    var payload = {
       action: "saveOrder",
       orderId: orderId,
       paymentId: "pay_upi_" + Math.random().toString(36).substring(2, 9),
@@ -1723,8 +1687,8 @@
 
   function checkAndResumeActiveOrderTimer() {
     if (!cachedMyOrders || cachedMyOrders.length === 0) return;
-    const latestOrder = cachedMyOrders[0];
-    const expiryMs = parseInt(latestOrder.expiryTimestamp) || (parseAnyDateToMs(latestOrder.date) + (latestOrder.etaMinutes || 20) * 60000);
+    var latestOrder = cachedMyOrders[0];
+    var expiryMs = parseInt(latestOrder.expiryTimestamp) || (parseAnyDateToMs(latestOrder.date) + (latestOrder.etaMinutes || 20) * 60000);
     
     startPersistentCountdown(
       expiryMs,
@@ -1739,12 +1703,12 @@
   }
 
   function startPersistentCountdown(targetExpiryTimestamp, orderId, status, deliveredTimestamp, orderDateStr, etaMinutes, riderName, riderPhone) {
-    const box = document.getElementById('persistentTrackerBox');
-    const clock = document.getElementById('persistentTimerDisplay');
-    const orderDisplay = document.getElementById('activeOrderIdDisplay');
-    const header = document.getElementById('pTrackerHeader');
-    const subtext = document.getElementById('timerSubtext');
-    const riderCard = document.getElementById('liveRiderInfoCard');
+    var box = document.getElementById('persistentTrackerBox');
+    var clock = document.getElementById('persistentTimerDisplay');
+    var orderDisplay = document.getElementById('activeOrderIdDisplay');
+    var header = document.getElementById('pTrackerHeader');
+    var subtext = document.getElementById('timerSubtext');
+    var riderCard = document.getElementById('liveRiderInfoCard');
 
     box.style.display = 'block';
     orderDisplay.innerText = `Order ID: ${orderId}`;
@@ -1752,10 +1716,10 @@
 
     if (status && status.includes('Delivered')) {
       if (riderCard) riderCard.style.display = 'none';
-      const endMs = parseInt(deliveredTimestamp) || Date.now();
-      const orderStartMs = parseAnyDateToMs(orderDateStr) || (targetExpiryTimestamp - (etaMinutes * 60000));
-      const totalElapsedSec = Math.max(0, Math.floor((endMs - orderStartMs) / 1000));
-      const timeFormatted = `${Math.floor(totalElapsedSec / 60)}m ${totalElapsedSec % 60}s`;
+      var endMs = parseInt(deliveredTimestamp) || Date.now();
+      var orderStartMs = parseAnyDateToMs(orderDateStr) || (targetExpiryTimestamp - (etaMinutes * 60000));
+      var totalElapsedSec = Math.max(0, Math.floor((endMs - orderStartMs) / 1000));
+      var timeFormatted = `${Math.floor(totalElapsedSec / 60)}m ${totalElapsedSec % 60}s`;
 
       if (endMs <= targetExpiryTimestamp) {
         clock.style.color = "#22c55e";
@@ -1793,7 +1757,7 @@
     subtext.innerText = "Synchronized with Mohna Express Dispatch Hub";
 
     persistentTimerInterval = setInterval(() => {
-      const remainingMs = targetExpiryTimestamp - Date.now();
+      var remainingMs = targetExpiryTimestamp - Date.now();
       if (remainingMs <= 0) {
         clearInterval(persistentTimerInterval);
         clock.innerText = "00:00";
@@ -1801,13 +1765,13 @@
         subtext.innerHTML = "⚡ <b style='color:#ef4444;'>Delivery Time Guarantee Reached</b>";
         return;
       }
-      const totalSec = Math.floor(remainingMs / 1000);
+      var totalSec = Math.floor(remainingMs / 1000);
       clock.innerText = `${String(Math.floor(totalSec / 60)).padStart(2, '0')}:${String(totalSec % 60).padStart(2, '0')}`;
     }, 1000);
   }
 
   function renderCustomerOrdersList() {
-    const container = document.getElementById('customerOrdersList');
+    var container = document.getElementById('customerOrdersList');
     if (!currentUser) {
       container.innerHTML = '<p style="text-align:center; color:#94a3b8; font-size:13px;">Please log in to view order history.</p>';
       return;
@@ -1819,28 +1783,26 @@
     }
 
     container.innerHTML = cachedMyOrders.map((o, idx) => {
-      const expiryMs = parseInt(o.expiryTimestamp) || (parseAnyDateToMs(o.date) + (o.etaMinutes || 20) * 60000);
-      const isDelivered = o.status && o.status.includes('Delivered');
+      var expiryMs = parseInt(o.expiryTimestamp) || (parseAnyDateToMs(o.date) + (o.etaMinutes || 20) * 60000);
+      var isDelivered = o.status && o.status.includes('Delivered');
+      var isOut = o.status && (o.status.includes('OUT') || o.status.includes('Out'));
 
-      let timerHtml = isDelivered 
+      var timerHtml = isDelivered 
         ? calculateDeliveryStatusBadge(o.date, o.etaMinutes || 20, expiryMs, o.deliveredTimestamp || 0)
         : `<span id="card_timer_${o.orderId}" data-expiry="${expiryMs}" class="badge-ticking">⏱️ Loading...</span>`;
 
-      let riderBoxHtml = "";
-      if (o.riderName) {
-        riderBoxHtml = `
-          <div class="rider-card-strip">
-            <span>🛵 <b>Rider:</b> ${o.riderName}</span>
-            <a href="tel:${o.riderPhone || ''}" onclick="event.stopPropagation();" style="color:#15803d; font-weight:800; text-decoration:none;">📞 ${o.riderPhone || 'Call'}</a>
-          </div>
-        `;
-      }
+      var riderBoxInCard = (isOut && o.riderName) 
+        ? `<div style="background:#eff6ff; border:1px solid #bfdbfe; padding:6px 10px; border-radius:6px; margin:6px 0; font-size:12px; display:flex; justify-content:space-between; align-items:center;">
+             <span>🛵 <b>Rider:</b> ${o.riderName}</span>
+             <a href="tel:${o.riderPhone || ''}" style="color:#2563eb; font-weight:bold; text-decoration:none;" onclick="event.stopPropagation();">📞 ${o.riderPhone || 'Call'}</a>
+           </div>`
+        : '';
 
       return `
         <div class="order-history-card" onclick="openOrderModal(${idx})">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
             <b>${o.orderId}</b>
-            <span style="background:#dcfce7; color:#166534; font-size:11px; font-weight:bold; padding:2px 8px; border-radius:12px;">${o.status || 'PAID'}</span>
+            <span style="background:${isOut ? '#fed7aa' : '#dcfce7'}; color:${isOut ? '#9a3412' : '#166534'}; font-size:11px; font-weight:bold; padding:2px 8px; border-radius:12px;">${o.status || 'PAID'}</span>
           </div>
 
           <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin:6px 0;">
@@ -1849,7 +1811,7 @@
             <b style="color:#16a34a; font-size:15px; flex:1; text-align:right;">${o.amount}</b>
           </div>
 
-          ${riderBoxHtml}
+          ${riderBoxInCard}
 
           <div style="font-size:12px; color:#64748b; margin-top:2px;">
             🕒 Timestamp: <b style="color:#0f172a;">${o.date}</b>
@@ -1864,17 +1826,17 @@
   function startCardTimersCountdown() {
     clearInterval(cardTickersInterval);
     cardTickersInterval = setInterval(() => {
-      const now = Date.now();
+      var now = Date.now();
       document.querySelectorAll('[id^="card_timer_"]').forEach(el => {
-        const expiry = parseInt(el.getAttribute('data-expiry'));
-        const diff = expiry - now;
+        var expiry = parseInt(el.getAttribute('data-expiry'));
+        var diff = expiry - now;
 
         if (diff <= 0) {
           el.className = "badge-late";
           el.innerText = "00:00 (EXPIRED)";
         } else {
           el.className = "badge-ticking";
-          const totalSec = Math.floor(diff / 1000);
+          var totalSec = Math.floor(diff / 1000);
           el.innerText = `⏱️ ${String(Math.floor(totalSec / 60)).padStart(2, '0')}:${String(totalSec % 60).padStart(2, '0')}`;
         }
       });
@@ -1882,7 +1844,7 @@
   }
 
   function openOrderModal(orderIndex) {
-    const order = cachedMyOrders[orderIndex];
+    var order = cachedMyOrders[orderIndex];
     if (!order) return;
     activeSelectedModalOrder = order;
 
@@ -1900,30 +1862,29 @@
     document.getElementById('dtlEta').innerText = `${order.etaMinutes || 20} Minutes`;
     document.getElementById('dtlStatus').innerText = order.status || "PAID";
 
-    const riderContainer = document.getElementById('dtlRiderContainer');
-    if (order.riderName) {
-      riderContainer.style.display = "block";
-      document.getElementById('dtlRiderName').innerText = order.riderName;
-      const rPhone = document.getElementById('dtlRiderPhone');
-      rPhone.innerText = order.riderPhone || "N/A";
-      rPhone.href = `tel:${order.riderPhone || ''}`;
+    var isOut = order.status && (order.status.includes('OUT') || order.status.includes('Out'));
+    var modalRiderBox = document.getElementById('dtlModalRiderBox');
+    if (isOut && order.riderName) {
+      modalRiderBox.style.display = 'block';
+      document.getElementById('dtlModalRiderName').innerText = `${order.riderName} (${order.riderPhone || 'In Transit'})`;
+      document.getElementById('dtlModalRiderCallBtn').href = "tel:" + (order.riderPhone || "");
     } else {
-      riderContainer.style.display = "none";
+      modalRiderBox.style.display = 'none';
     }
 
-    const expiryMs = parseInt(order.expiryTimestamp) || (parseAnyDateToMs(order.date) + (order.etaMinutes || 20) * 60000);
-    const timerBadge = document.getElementById('dtlLiveTimer');
+    var expiryMs = parseInt(order.expiryTimestamp) || (parseAnyDateToMs(order.date) + (order.etaMinutes || 20) * 60000);
+    var timerBadge = document.getElementById('dtlLiveTimer');
 
     if (order.status && order.status.includes('Delivered')) {
       timerBadge.innerHTML = calculateDeliveryStatusBadge(order.date, order.etaMinutes || 20, expiryMs, order.deliveredTimestamp || 0);
     } else {
       timerBadge.className = "badge-ticking";
-      const remainingMs = expiryMs - Date.now();
+      var remainingMs = expiryMs - Date.now();
       if (remainingMs <= 0) {
         timerBadge.className = "badge-late";
         timerBadge.innerText = "00:00 (EXPIRED)";
       } else {
-        const totalSec = Math.floor(remainingMs / 1000);
+        var totalSec = Math.floor(remainingMs / 1000);
         timerBadge.innerText = `⏱️ ${Math.floor(totalSec / 60)}m ${totalSec % 60}s`;
       }
     }
