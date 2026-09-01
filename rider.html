@@ -218,15 +218,15 @@
   var tickerInterval = null;
   var activeOtpVerificationOrderId = null;
 
-  // WEB AUDIO DISPATCH ALERT CHIME (FEATURE #4)
+  // WEB AUDIO DISPATCH ALERT CHIME
   function playDispatchAlertSound() {
     try {
       var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       var osc = audioCtx.createOscillator();
       var gain = audioCtx.createGain();
       osc.type = "sine";
-      osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
-      osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.2); // A5
+      osc.frequency.setValueAtTime(587.33, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.2);
       gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
       osc.connect(gain);
@@ -268,7 +268,7 @@
     setInterval(validateRiderStatus, 12000);
   };
 
-  // LIVE RIDER TELEMETRY BROADCASTER (FEATURE #1)
+  // LIVE RIDER TELEMETRY BROADCASTER
   function startLiveGpsTelemetryTracking() {
     if (navigator.geolocation) {
       navigator.geolocation.watchPosition(function(pos) {
@@ -528,7 +528,10 @@
 
   function updateMetrics() {
     var riderName = (currentRider && currentRider.name) ? currentRider.name.trim().toLowerCase() : "";
-    var ready = cachedOrders.filter(function(o) { return !o.status.includes('Delivered') && !o.status.includes('OUT') && !o.status.includes('Out'); });
+    // Only packed orders are available for pickup
+    var ready = cachedOrders.filter(function(o) { 
+      return (o.status && o.status.includes('PACKED')) && !o.status.includes('Delivered') && !o.status.includes('OUT') && !o.status.includes('Out'); 
+    });
     var myOut = cachedOrders.filter(function(o) { 
       return (o.status.includes('OUT') || o.status.includes('Out')) && (o.riderName && o.riderName.trim().toLowerCase() === riderName); 
     });
@@ -580,15 +583,20 @@
     var riderName = (currentRider && currentRider.name) ? currentRider.name.trim().toLowerCase() : "";
     var filtered = [];
     
+    // TAB 1: Shows ONLY orders packed & ready by warehouse
     if (currentTab === 'active') {
       filtered = cachedOrders.filter(function(o) { 
-        return !o.status.includes('Delivered') && !o.status.includes('OUT') && !o.status.includes('Out'); 
+        return (o.status && o.status.includes('PACKED')) && !o.status.includes('Delivered') && !o.status.includes('OUT') && !o.status.includes('Out'); 
       });
-    } else if (currentTab === 'out') {
+    } 
+    // TAB 2: In-Transit tasks for this specific rider
+    else if (currentTab === 'out') {
       filtered = cachedOrders.filter(function(o) { 
         return (o.status.includes('OUT') || o.status.includes('Out')) && (o.riderName && o.riderName.trim().toLowerCase() === riderName); 
       });
-    } else {
+    } 
+    // TAB 3: Delivered tasks for this specific rider
+    else {
       filtered = cachedOrders.filter(function(o) { 
         return o.status.includes('Delivered') && (o.riderName && o.riderName.trim().toLowerCase() === riderName); 
       });
@@ -604,7 +612,7 @@
       var isDelivered = o.status.includes('Delivered');
       var isOut = o.status.includes('OUT') || o.status.includes('Out');
 
-      var statusBadge = '<span class="status-badge status-pending">● Dispatch Ready</span>';
+      var statusBadge = '<span class="status-badge status-pending">● Packed & Ready</span>';
       var actionBtn = `<button class="btn-status btn-out" onclick="updateStatus('${o.orderId}', 'OUT FOR DELIVERY')">🛵 Accept & Start Delivery</button>`;
       var timerBadge = `<span id="rider_timer_${o.orderId}" data-expiry="${expiryMs}" class="badge-ticking">⏱️ Loading...</span>`;
 
