@@ -89,13 +89,14 @@
   <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
     <div>
       <h1 style="margin:0; font-size:24px; color:#0f172a;">⚡ Mohna Express Control Hub</h1>
-      <p style="margin:4px 0 0; color:#64748b; font-size:14px;">Live Synchronized Orders, Delivery Timers, Customer GPS & Catalogs</p>
+      <p style="margin:4px 0 0; color:#64748b; font-size:14px;">Live Synchronized Orders, Packing Hub, Delivery Timers & Fleet Control</p>
     </div>
     <button class="btn btn-dark" onclick="fetchAllData()">🔄 Master Refresh (All)</button>
   </div>
 
   <nav class="admin-tab-nav">
     <button class="admin-tab-btn active-tab" id="tabBtnOrders" onclick="switchAdminTab('viewOrders')">🧾 Orders & Live Countdowns</button>
+    <button class="admin-tab-btn" id="tabBtnPicker" onclick="switchAdminTab('viewPicker')">📦 Dark Store Picker & Packing Hub</button>
     <button class="admin-tab-btn" id="tabBtnUsers" onclick="switchAdminTab('viewUsers')">👥 Users Database</button>
     <button class="admin-tab-btn" id="tabBtnRiders" onclick="switchAdminTab('viewRiders')">🛵 Rider Verification & Fleet</button>
     <button class="admin-tab-btn" id="tabBtnReports" onclick="switchAdminTab('viewReports')">📊 Reports (CSV & PDF)</button>
@@ -162,6 +163,35 @@
         </thead>
         <tbody id="ordersBody">
           <tr><td colspan="12" style="text-align:center; color:#64748b; padding:20px;">Loading orders database...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TAB 1.5: 📦 DARK STORE PICKER & PACKING HUB (FEATURE #14) -->
+  <div id="viewPicker" class="admin-page-view">
+    <div class="card" style="border-left:5px solid #2563eb;">
+      <div class="card-header">
+        <div>
+          <h3>📦 Dark Store Picker & Packing Hub</h3>
+          <p style="margin:2px 0 0; font-size:12px; color:#64748b;">Real-time queue for warehouse packers to verify SKU items and mark orders as Ready for Rider Assignment.</p>
+        </div>
+        <button class="btn btn-refresh" onclick="loadOrders()">🔄 Refresh Packing Queue</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Order ID</th>
+            <th>Time</th>
+            <th>Customer & Address</th>
+            <th>SKU Items to Pack</th>
+            <th>Total Qty</th>
+            <th>Current Stage</th>
+            <th>Packing Action</th>
+          </tr>
+        </thead>
+        <tbody id="pickerTableBody">
+          <tr><td colspan="7" style="text-align:center; color:#64748b; padding:20px;">Loading packing tasks...</td></tr>
         </tbody>
       </table>
     </div>
@@ -463,6 +493,7 @@
 
     var q = document.getElementById('masterAdminSearch').value.trim().toLowerCase();
     renderOrdersTable(q);
+    renderPickerTable(q);
     renderUsersTable(q);
     renderRidersTable(q);
   }
@@ -484,6 +515,7 @@
     document.getElementById(viewId).classList.add('active-view');
 
     if (viewId === 'viewOrders') document.getElementById('tabBtnOrders').classList.add('active-tab');
+    if (viewId === 'viewPicker') document.getElementById('tabBtnPicker').classList.add('active-tab');
     if (viewId === 'viewUsers') document.getElementById('tabBtnUsers').classList.add('active-tab');
     if (viewId === 'viewRiders') document.getElementById('tabBtnRiders').classList.add('active-tab');
     if (viewId === 'viewReports') document.getElementById('tabBtnReports').classList.add('active-tab');
@@ -515,6 +547,7 @@
   function handleAdminOmniSearch(q) {
     var query = q.trim().toLowerCase();
     renderOrdersTable(query);
+    renderPickerTable(query);
     renderUsersTable(query);
     renderRidersTable(query);
     renderCouponsTable(query);
@@ -529,6 +562,7 @@
       .then(data => {
         cachedOrders = data.orders || [];
         renderOrdersTable();
+        renderPickerTable();
         startAdminLiveCountdownTicker();
       })
       .catch(err => {
@@ -582,6 +616,42 @@
         </tr>
       `;
     }).join('');
+  }
+
+  // RENDER DARK STORE PICKER TABLE (FEATURE #14)
+  function renderPickerTable(q = "") {
+    var packingQueue = cachedOrders.filter(o => !o.status.includes('Delivered') && !o.status.includes('OUT') && !o.status.includes('Out'));
+    if (q) {
+      packingQueue = packingQueue.filter(o => o.orderId.toLowerCase().includes(q) || o.item.toLowerCase().includes(q));
+    }
+
+    var tbody = document.getElementById('pickerTableBody');
+    if (packingQueue.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#16a34a; padding:20px; font-weight:bold;">🎉 All orders packed and ready for dispatch!</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = packingQueue.map(o => `
+      <tr>
+        <td><b>${o.orderId}</b></td>
+        <td><small>${o.date}</small></td>
+        <td><b>${o.name}</b><br><small>${o.address}</small></td>
+        <td><div style="background:#f8fafc; padding:6px; border-radius:6px; border:1px solid #cbd5e1; font-size:12px;">📋 <b>${o.item}</b></div></td>
+        <td><b>${o.qty} Units</b></td>
+        <td><span style="background:#fef08a; color:#854d0e; padding:3px 8px; border-radius:4px; font-weight:800; font-size:11px;">${o.status}</span></td>
+        <td>
+          <button class="btn btn-primary" onclick="markOrderAsPacked('${o.orderId}')">📦 Mark Packed & Ready</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function markOrderAsPacked(orderId) {
+    fetch(SPREADSHEET_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "updateOrderStatus", orderId: orderId, newStatus: "PACKED & READY FOR PICKUP" })
+    }).then(() => loadOrders());
   }
 
   function startAdminLiveCountdownTicker() {
@@ -758,7 +828,7 @@
       <tr>
         <td><img src="${p.img || 'https://via.placeholder.com/34?text=Item'}" style="width:34px; height:34px; border-radius:6px; object-fit:cover;"></td>
         <td><b>${p.name}</b></td><td><span style="font-size:11px; background:#e0f2fe; color:#0369a1; padding:2px 6px; border-radius:4px; font-weight:bold;">${p.scope || 'both'}</span></td>
-        <td>₹${p.retailPrice}</td><td>₹${p.wholesalePrice}</td><td>${p.stockQty || 0}</td>
+        <td>₹${p.retailPrice}</td><td>₹${p.wholesalePrice}</td><td><b>${p.stockQty || 0}</b></td>
         <td><button class="btn btn-del" onclick="deleteProduct('${p.id}', '${p.name}')">🗑️</button></td>
       </tr>
     `).join('');
