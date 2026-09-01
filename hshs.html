@@ -6,7 +6,10 @@
   <title>Mohna Express - Retail & Wholesale Store</title>
 
   <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Razorpay Checkout Integration Script -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 
   <style>
     * { 
@@ -393,9 +396,17 @@
       padding: 14px;
       margin-top: 14px;
       display: flex;
-      justify-content: space-between;
-      align-items: center;
+      flex-direction: column;
+      gap: 10px;
       text-align: left;
+    }
+
+    #customerLiveMap {
+      width: 100%;
+      height: 200px;
+      border-radius: 8px;
+      border: 1.5px solid #38bdf8;
+      margin-top: 8px;
     }
 
     .order-history-card {
@@ -594,7 +605,6 @@
       <span>⚡</span> Mohna Express
     </div>
     <div class="header-right-actions">
-      <!-- LIVE NOTIFICATIONS BELL -->
       <div class="notif-bell-btn" onclick="openNotificationsModal()" title="Live Order Updates">
         🔔
         <span id="notifBadge" class="notif-badge-count" style="display:none;">0</span>
@@ -625,12 +635,11 @@
     </div>
   </div>
 
-  <!-- PAGE 2: 💳 CHECKOUT -->
+  <!-- PAGE 2: 💳 CHECKOUT (WITH RAZORPAY & WALLET) -->
   <div id="checkoutPage" class="page-view">
     <div class="card">
       <h3 style="margin-top:0;">💳 Checkout & Live GPS Coverage Check</h3>
       
-      <!-- ZONE COVERAGE NOTICE -->
       <div id="zoneCoverageNotice" class="coverage-banner coverage-deliverable">
         <div>
           <span style="font-size:11px; text-transform:uppercase; display:block; opacity:0.85;">📍 Delivery Zone Status</span>
@@ -639,7 +648,7 @@
         <button type="button" class="btn-submit" style="width:auto; padding:6px 10px; font-size:11px; background:#0f172a;" onclick="requestUserGPS(() => evaluateDeliveryZoneEligibility(true))">🔄 Refresh GPS</button>
       </div>
 
-      <!-- WALLET CASHBACK APPLIER (FEATURE #7) -->
+      <!-- WALLET CASHBACK APPLIER -->
       <div id="walletCashbackBox" class="wallet-pill-box" style="display:none;">
         <div>
           <b style="color:#166534; font-size:13px;">🪙 Cashback Wallet Balance: <span id="chkWalletBal">₹0</span></b>
@@ -679,9 +688,10 @@
         </div>
       </div>
 
-      <!-- INSTANT PAYMENT SIMULATOR & QR (FEATURE #6) -->
-      <div id="qrcode" style="display:flex; justify-content:center; margin-bottom:14px;"></div>
-      <button type="button" id="confirmPayBtn" class="btn-submit" style="background:#16a34a;" onclick="processOrderSuccess()">✅ Complete UPI / Gateway Payment</button>
+      <!-- RAZORPAY INSTANT PAYMENT GATEWAY BUTTON -->
+      <button type="button" id="confirmPayBtn" class="btn-submit" style="background:#0c2340; display:flex; align-items:center; justify-content:center; gap:8px;" onclick="initiateRazorpayPayment()">
+        💳 Pay Securely with Razorpay
+      </button>
     </div>
   </div>
 
@@ -695,17 +705,19 @@
       <div id="persistentTimerDisplay" class="timer-clock">15:00</div>
       <p id="timerSubtext" style="color: #cbd5e1; font-size: 12.5px; margin: 0;">Synchronized with Mohna Express Dispatch Hub</p>
 
-      <!-- LIVE RIDER TELEMETRY & GPS TRACKER (FEATURE #1) -->
+      <!-- LIVE RIDER MAP & TELEMETRY (VISIBLE ONLY WHEN OUT FOR DELIVERY) -->
       <div id="liveRiderInfoCard" style="display:none;" class="assigned-rider-box">
-        <div>
-          <div style="font-size:11px; color:#38bdf8; font-weight:800; text-transform:uppercase;">🛵 Delivery Partner In-Transit</div>
-          <div style="font-size:15px; font-weight:900; color:#ffffff; margin:3px 0;" id="liveRiderNameDisplay">Rider Name</div>
-          <div style="font-size:12px; color:#94a3b8;">Contact: <b id="liveRiderPhoneDisplay" style="color:#f8fafc;">+91 9876543210</b></div>
-          <div id="liveRiderGpsDistance" style="font-size:11.5px; color:#38bdf8; margin-top:2px; font-weight:bold;">📍 Live GPS Connected</div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-size:11px; color:#38bdf8; font-weight:800; text-transform:uppercase;">🛵 Delivery Partner In-Transit</div>
+            <div style="font-size:15px; font-weight:900; color:#ffffff; margin:3px 0;" id="liveRiderNameDisplay">Rider Name</div>
+            <div style="font-size:12px; color:#94a3b8;">Contact: <b id="liveRiderPhoneDisplay" style="color:#f8fafc;">+91 9876543210</b></div>
+          </div>
+          <a id="btnCallRiderDirect" href="tel:" style="background:#16a34a; color:white; padding:8px 14px; border-radius:8px; text-decoration:none; font-weight:800; font-size:12px; display:inline-flex; align-items:center; gap:4px;">
+            📞 Call Rider
+          </a>
         </div>
-        <a id="btnCallRiderDirect" href="tel:" style="background:#16a34a; color:white; padding:8px 14px; border-radius:8px; text-decoration:none; font-weight:800; font-size:12px; display:inline-flex; align-items:center; gap:4px;">
-          📞 Call Rider
-        </a>
+        <div id="customerLiveMap"></div>
       </div>
     </div>
 
@@ -736,7 +748,7 @@
         </div>
       </div>
 
-      <div class="form-group"><label>Wallet Cashback Balance (Late Guarantees)</label><input type="text" id="profWallet" readonly style="font-weight:900; color:#16a34a; font-size:16px;" /></div>
+      <div class="form-group"><label>Wallet Balance (Late Guarantee Credits)</label><input type="text" id="profWallet" readonly style="font-weight:900; color:#16a34a; font-size:16px;" /></div>
       <div class="form-group"><label>Full Name</label><input type="text" id="profName" readonly /></div>
       <div class="form-group"><label>Mobile Number</label><input type="tel" id="profPhone" readonly /></div>
       <div class="form-group"><label>Email Address</label><input type="email" id="profEmail" readonly /></div>
@@ -832,9 +844,9 @@
       <div class="bill-row"><span><b>Items Ordered:</b></span><span id="dtlItem"></span></div>
       <div class="bill-row"><span><b>Quantity:</b></span><span id="dtlQty"></span></div>
       
-      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px; margin-log:10px 0;">
+      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px; margin:10px 0;">
         <div class="bill-row" style="font-size:13px;"><span>Items Subtotal:</span><span id="dtlSubtotal">₹0</span></div>
-        <div class="bill-row" style="font-size:13px;"><span>Promo Discount:</span><span id="dtlDiscount" style="color:#dc2626;">-₹0</span></div>
+        <div class="bill-row" style="font-size:13px;"><span>Promo / Wallet Discount:</span><span id="dtlDiscount" style="color:#dc2626;">-₹0</span></div>
         <div class="bill-row" style="font-size:13px;"><span>Delivery Fee:</span><span id="dtlDeliveryFee">FREE</span></div>
         <div class="bill-row" style="font-size:15px; font-weight:900; border-top:1px dashed #cbd5e1; padding-top:6px; margin-top:6px;">
           <span>Total Paid:</span>
@@ -902,7 +914,7 @@
 
 <script>
   var SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbyZ11fczqVaeZx8yyL1IXUDkJ92U7cMhX7_AgaqNXygIuj3tMdwkwiYa_lY9a0GR9btsg/exec";
-  var DEFAULT_UPI_ID = "mohnaexpress@upi";
+  var RAZORPAY_KEY_ID = "rzp_test_51MockKey12345"; // Replace with your live/test Razorpay Key ID
 
   var currentUser = null;
   try { currentUser = JSON.parse(localStorage.getItem('mohna_user')) || null; } catch(e) {}
@@ -926,6 +938,7 @@
 
   var persistentTimerInterval = null, cardTickersInterval = null;
   var sessionCheckInterval = null;
+  var custLeafletMap = null, riderMarker = null, userMarker = null;
 
   function isPointInsidePolygon(point, vs) {
     var x = point[0], y = point[1];
@@ -1193,12 +1206,11 @@
         notifList.innerHTML = activeDispatches.map(o => {
           var isOut = o.status.includes('OUT') || o.status.includes('Out');
           var isPacked = o.status.includes('PACKED');
-          var isDelivered = o.status.includes('Delivered');
           var icon = isOut ? "🛵" : (isPacked ? "📦" : "✅");
           var headline = isOut ? "Order Out for Delivery" : (isPacked ? "Order Packed at Warehouse" : "Order Successfully Delivered");
           var detail = isOut 
             ? `Rider <b>${o.riderName || 'Partner'}</b> is on the way. (📞 ${o.riderPhone || 'In transit'})`
-            : (isPacked ? `Warehouse staff completed packing. Ready for rider assignment.` : `Order <b>${o.orderId}</b> was delivered. Thank you!`);
+            : (isPacked ? `Warehouse packing complete. Ready for rider pickup.` : `Order <b>${o.orderId}</b> was delivered. Thank you!`);
 
           return `
             <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px; margin-bottom:8px; font-size:12.5px;">
@@ -1442,7 +1454,6 @@
     return cart.some(x => x.id === productId && x.theme === currentTheme);
   }
 
-  // RENDER PRODUCTS WITH STOCKOUT SHIELD (FEATURE #3)
   function renderProducts(searchQuery = "") {
     var grid = document.getElementById('productGrid');
     var validSlugs = rawCategories.filter(c => c.scope === currentTheme || c.scope === 'both').map(c => c.slug);
@@ -1652,7 +1663,6 @@
     document.getElementById('chkDeliveryFee').innerText = maxDeliveryFee > 0 ? `₹${maxDeliveryFee}` : 'FREE';
     document.getElementById('checkoutTotalDisplay').innerText = `₹${grandTotal}`;
 
-    renderQrCode(grandTotal);
     document.getElementById('confirmPayBtn').disabled = !isDeliverableLocation;
   }
 
@@ -1677,15 +1687,8 @@
     renderCheckoutCart();
   }
 
-  function renderQrCode(amount) {
-    var orderId = "MHN-" + Math.floor(100000 + Math.random() * 900000);
-    var upiString = `upi://pay?pa=${DEFAULT_UPI_ID}&pn=MohnaExpress&am=${amount}&cu=INR&tn=${orderId}`;
-    var qrContainer = document.getElementById('qrcode');
-    qrContainer.innerHTML = "";
-    new QRCode(qrContainer, { text: upiString, width: 140, height: 140 });
-  }
-
-  function processOrderSuccess() {
+  // RAZORPAY PAYMENT GATEWAY POPUP
+  function initiateRazorpayPayment() {
     if (!currentUser) { openAuthModal('login'); return; }
     if (cart.length === 0) return alert("Cart is empty.");
 
@@ -1702,6 +1705,34 @@
     var walletDeduction = (useWallet && userWalletBalance > 0) ? Math.min(netBeforeWallet, userWalletBalance) : 0;
     var finalAmount = Math.max(0, netBeforeWallet - walletDeduction);
 
+    var options = {
+      "key": RAZORPAY_KEY_ID,
+      "amount": finalAmount * 100, // Amount in paise
+      "currency": "INR",
+      "name": "Mohna Express",
+      "description": `Fast ${currentMatchedZoneTiming} Min Dispatch Order`,
+      "image": "https://via.placeholder.com/128?text=Mohna",
+      "prefill": {
+        "name": currentUser.name,
+        "email": currentUser.email,
+        "contact": currentUser.phone
+      },
+      "theme": {
+        "color": "#2563eb"
+      },
+      "handler": function (response) {
+        saveOrderToBackend(response.razorpay_payment_id || ("pay_" + Date.now()), finalAmount, subtotal, (discountAmount + walletDeduction), maxDeliveryFee, walletDeduction);
+      }
+    };
+
+    var rzp = new Razorpay(options);
+    rzp.on('payment.failed', function (response) {
+      alert("Payment Failed: " + response.error.description);
+    });
+    rzp.open();
+  }
+
+  function saveOrderToBackend(paymentId, finalAmount, subtotal, totalDiscount, maxDeliveryFee, walletDeduction) {
     var orderId = "MHN-" + Math.floor(100000 + Math.random() * 900000);
     var itemSummary = cart.map(i => `${i.name} (x${i.qty})`).join(', ');
     var totalQty = cart.reduce((sum, i) => sum + i.qty, 0);
@@ -1709,7 +1740,7 @@
     var payload = {
       action: "saveOrder",
       orderId: orderId,
-      paymentId: "pay_upi_" + Math.random().toString(36).substring(2, 9),
+      paymentId: paymentId,
       name: currentUser.name,
       email: currentUser.email,
       phone: currentUser.phone,
@@ -1718,7 +1749,7 @@
       qty: totalQty,
       amount: "₹" + finalAmount,
       subtotal: "₹" + subtotal,
-      discount: "₹" + (discountAmount + walletDeduction),
+      discount: "₹" + totalDiscount,
       deliveryFee: maxDeliveryFee > 0 ? "₹" + maxDeliveryFee : "FREE",
       lat: userCoords ? userCoords.lat.toFixed(5) : "0.0",
       lng: userCoords ? userCoords.lng.toFixed(5) : "0.0",
@@ -1732,7 +1763,7 @@
       .then((res) => {
         cart = [];
         updateCartUI();
-        startPersistentCountdown(res.expiryTimestamp, orderId, "PAID (Verified)", 0, new Date().toLocaleString(), currentMatchedZoneTiming, null, null);
+        startPersistentCountdown(res.expiryTimestamp, orderId, "PAID (Verified)", 0, new Date().toLocaleString(), currentMatchedZoneTiming, null, null, null);
         fetchInitialStoreData();
         switchPage('ordersPage');
       });
@@ -1786,11 +1817,12 @@
       latestOrder.date,
       latestOrder.etaMinutes || 20,
       latestOrder.riderName,
-      latestOrder.riderPhone
+      latestOrder.riderPhone,
+      latestOrder.riderCoords
     );
   }
 
-  function startPersistentCountdown(targetExpiryTimestamp, orderId, status, deliveredTimestamp, orderDateStr, etaMinutes, riderName, riderPhone) {
+  function startPersistentCountdown(targetExpiryTimestamp, orderId, status, deliveredTimestamp, orderDateStr, etaMinutes, riderName, riderPhone, riderCoords) {
     var box = document.getElementById('persistentTrackerBox');
     var clock = document.getElementById('persistentTimerDisplay');
     var orderDisplay = document.getElementById('activeOrderIdDisplay');
@@ -1833,6 +1865,7 @@
         document.getElementById('liveRiderNameDisplay').innerText = riderName;
         document.getElementById('liveRiderPhoneDisplay').innerText = riderPhone || "Available via Support";
         document.getElementById('btnCallRiderDirect').href = "tel:" + (riderPhone || "");
+        initCustomerLiveMap(riderCoords);
       }
     } else {
       if (riderCard) riderCard.style.display = 'none';
@@ -1856,6 +1889,39 @@
       var totalSec = Math.floor(remainingMs / 1000);
       clock.innerText = `${String(Math.floor(totalSec / 60)).padStart(2, '0')}:${String(totalSec % 60).padStart(2, '0')}`;
     }, 1000);
+  }
+
+  // CUSTOMER LIVE RIDER LEAFLET MAP
+  function initCustomerLiveMap(riderCoordsStr) {
+    setTimeout(function() {
+      var mapContainer = document.getElementById('customerLiveMap');
+      if (!mapContainer) return;
+
+      var rLat = 25.6000, rLng = 85.1300;
+      if (riderCoordsStr && riderCoordsStr.includes(',')) {
+        var parts = riderCoordsStr.split(',');
+        rLat = parseFloat(parts[0]) || rLat;
+        rLng = parseFloat(parts[1]) || rLng;
+      }
+
+      if (!custLeafletMap) {
+        custLeafletMap = L.map('customerLiveMap').setView([rLat, rLng], 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(custLeafletMap);
+
+        var riderIcon = L.divIcon({ html: '🛵', className: 'rider-map-icon', iconSize: [28, 28] });
+        riderMarker = L.marker([rLat, rLng], { icon: riderIcon }).addTo(custLeafletMap).bindPopup("Rider Partner Location");
+
+        if (userCoords) {
+          var userIcon = L.divIcon({ html: '🏠', className: 'user-map-icon', iconSize: [28, 28] });
+          userMarker = L.marker([userCoords.lat, userCoords.lng], { icon: userIcon }).addTo(custLeafletMap).bindPopup("Your Delivery Address");
+          var group = new L.featureGroup([riderMarker, userMarker]);
+          custLeafletMap.fitBounds(group.getBounds().pad(0.2));
+        }
+      } else {
+        custLeafletMap.invalidateSize();
+        if (riderMarker) riderMarker.setLatLng([rLat, rLng]);
+      }
+    }, 200);
   }
 
   function renderCustomerOrdersList() {
