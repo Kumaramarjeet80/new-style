@@ -8,7 +8,6 @@
   <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <!-- Razorpay Checkout Integration Script -->
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 
   <style>
@@ -162,7 +161,7 @@
       padding: 10px 16px; 
       font-size: 14px; 
       outline: none; 
-      margin-bottom: 14px;
+      margin-bottom: 14px; 
     }
 
     .category-scroll { 
@@ -379,7 +378,7 @@
       margin-bottom: 16px;
       box-shadow: 0 8px 25px rgba(15,23,42,0.25); 
       border: 2px solid #38bdf8; 
-      text-align: center;
+      text-align: center; 
     }
     .timer-clock { 
       font-size: 44px; 
@@ -387,26 +386,6 @@
       font-family: monospace; 
       color: #38bdf8; 
       margin: 8px 0; 
-    }
-
-    .assigned-rider-box {
-      background: #1e293b;
-      border: 1.5px solid #38bdf8;
-      border-radius: 12px;
-      padding: 14px;
-      margin-top: 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      text-align: left;
-    }
-
-    #customerLiveMap {
-      width: 100%;
-      height: 200px;
-      border-radius: 8px;
-      border: 1.5px solid #38bdf8;
-      margin-top: 8px;
     }
 
     .order-history-card {
@@ -421,6 +400,21 @@
     .order-history-card:hover { 
       transform: translateY(-2px); 
       border-color: #2563eb; 
+    }
+
+    .btn-track-rider {
+      background: #0284c7;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 6px;
     }
 
     .badge-ticking { 
@@ -594,6 +588,14 @@
       line-height: 1.5; 
       color: #334155; 
     }
+
+    #liveTrackingMap {
+      width: 100%;
+      height: 260px;
+      border-radius: 10px;
+      border: 1.5px solid #cbd5e1;
+      margin: 10px 0;
+    }
   </style>
 </head>
 <body class="theme-retail">
@@ -635,7 +637,7 @@
     </div>
   </div>
 
-  <!-- PAGE 2: 💳 CHECKOUT (WITH RAZORPAY & WALLET) -->
+  <!-- PAGE 2: 💳 CHECKOUT -->
   <div id="checkoutPage" class="page-view">
     <div class="card">
       <h3 style="margin-top:0;">💳 Checkout & Live GPS Coverage Check</h3>
@@ -648,7 +650,6 @@
         <button type="button" class="btn-submit" style="width:auto; padding:6px 10px; font-size:11px; background:#0f172a;" onclick="requestUserGPS(() => evaluateDeliveryZoneEligibility(true))">🔄 Refresh GPS</button>
       </div>
 
-      <!-- WALLET CASHBACK APPLIER -->
       <div id="walletCashbackBox" class="wallet-pill-box" style="display:none;">
         <div>
           <b style="color:#166534; font-size:13px;">🪙 Cashback Wallet Balance: <span id="chkWalletBal">₹0</span></b>
@@ -677,10 +678,11 @@
         <div id="couponStatusMsg" style="font-size:11px; margin-top:4px; font-weight:bold;"></div>
       </div>
 
+      <!-- SEPARATE ITEMIZED PRICE BREAKDOWN -->
       <div style="background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:12px;">
         <div class="bill-row"><span>Items Subtotal:</span><span id="chkSubtotal">₹0</span></div>
-        <div class="bill-row"><span>Discount:</span><span id="chkDiscount" style="color:#dc2626;">-₹0</span></div>
-        <div class="bill-row"><span>Wallet Applied:</span><span id="chkWalletDeduction" style="color:#16a34a;">-₹0</span></div>
+        <div class="bill-row"><span>Promo Coupon Discount:</span><span id="chkDiscount" style="color:#dc2626;">-₹0</span></div>
+        <div class="bill-row"><span>Wallet Cashback Applied:</span><span id="chkWalletDeduction" style="color:#16a34a;">-₹0</span></div>
         <div class="bill-row"><span>Delivery Fee:</span><span id="chkDeliveryFee">₹0</span></div>
         <div class="bill-row" style="font-size:16px; font-weight:900; border-top:1px solid #cbd5e1; padding-top:8px; margin-top:8px;">
           <span>Grand Total Payable:</span>
@@ -688,7 +690,6 @@
         </div>
       </div>
 
-      <!-- RAZORPAY INSTANT PAYMENT GATEWAY BUTTON -->
       <button type="button" id="confirmPayBtn" class="btn-submit" style="background:#0c2340; display:flex; align-items:center; justify-content:center; gap:8px;" onclick="initiateRazorpayPayment()">
         💳 Pay Securely with Razorpay
       </button>
@@ -704,21 +705,6 @@
       <div id="activeOrderIdDisplay" style="font-size: 13px; color: #94a3b8; margin-top: 8px;">Order: MHN-XXXXXX</div>
       <div id="persistentTimerDisplay" class="timer-clock">15:00</div>
       <p id="timerSubtext" style="color: #cbd5e1; font-size: 12.5px; margin: 0;">Synchronized with Mohna Express Dispatch Hub</p>
-
-      <!-- LIVE RIDER MAP & TELEMETRY (VISIBLE ONLY WHEN OUT FOR DELIVERY) -->
-      <div id="liveRiderInfoCard" style="display:none;" class="assigned-rider-box">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <div>
-            <div style="font-size:11px; color:#38bdf8; font-weight:800; text-transform:uppercase;">🛵 Delivery Partner In-Transit</div>
-            <div style="font-size:15px; font-weight:900; color:#ffffff; margin:3px 0;" id="liveRiderNameDisplay">Rider Name</div>
-            <div style="font-size:12px; color:#94a3b8;">Contact: <b id="liveRiderPhoneDisplay" style="color:#f8fafc;">+91 9876543210</b></div>
-          </div>
-          <a id="btnCallRiderDirect" href="tel:" style="background:#16a34a; color:white; padding:8px 14px; border-radius:8px; text-decoration:none; font-weight:800; font-size:12px; display:inline-flex; align-items:center; gap:4px;">
-            📞 Call Rider
-          </a>
-        </div>
-        <div id="customerLiveMap"></div>
-      </div>
     </div>
 
     <div class="card">
@@ -761,6 +747,24 @@
 
 </div>
 
+<!-- LIVE RIDER TRACKING POPUP MODAL -->
+<div id="liveTrackingModal" class="modal-overlay" style="display:none;">
+  <div class="modal-card">
+    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:8px;">
+      <h3 style="margin:0; color:#0284c7;">🛵 Live Rider GPS Radar</h3>
+      <button type="button" onclick="closeTrackingModal()" style="background:none; border:none; font-size:18px; cursor:pointer; color:#64748b;">✕</button>
+    </div>
+
+    <div style="margin-top:10px; font-size:13px;">
+      <div>Rider: <b id="trackModalRiderName" style="color:#0f172a;">Rider Partner</b> (📞 <a id="trackModalRiderCall" href="tel:" style="color:#2563eb; font-weight:bold;">Call</a>)</div>
+      <div id="trackModalDistance" style="font-size:12.5px; font-weight:800; color:#16a34a; margin-top:4px;">📍 Calculating distance...</div>
+    </div>
+
+    <div id="liveTrackingMap"></div>
+    <button type="button" class="btn-submit" style="background:#0f172a;" onclick="closeTrackingModal()">Close Tracking Radar</button>
+  </div>
+</div>
+
 <!-- NOTIFICATIONS MODAL -->
 <div id="notificationsModal" class="modal-overlay" style="display:none;">
   <div class="modal-card">
@@ -784,7 +788,6 @@
     </div>
 
     <img id="modalProdImg" src="" class="p-modal-img" alt="Product" />
-
     <h2 style="margin:0 0 4px 0; font-size:18px; color:#0f172a;" id="modalProdTitle">Product Name</h2>
     
     <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:8px;">
@@ -830,7 +833,7 @@
 
     <div id="modalOrderDetailsBody">
       <div class="bill-row"><span><b>Order ID:</b></span><span id="dtlOrderId"></span></div>
-      <div class="bill-row"><span><b>Order Timestamp:</b></span><span id="dtlTimestamp" style="color:#2563eb; font-weight:bold;"></span></div>
+      <div class="bill-row"><span><b>Order Timestamp (IST):</b></span><span id="dtlTimestamp" style="color:#2563eb; font-weight:bold;"></span></div>
       <div class="bill-row"><span><b>⏱️ Delivery Status:</b></span><span id="dtlLiveTimer"></span></div>
       
       <div id="dtlModalRiderBox" style="display:none; background:#0284c7; color:white; padding:10px; border-radius:8px; margin:8px 0;">
@@ -846,7 +849,8 @@
       
       <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px; margin:10px 0;">
         <div class="bill-row" style="font-size:13px;"><span>Items Subtotal:</span><span id="dtlSubtotal">₹0</span></div>
-        <div class="bill-row" style="font-size:13px;"><span>Promo / Wallet Discount:</span><span id="dtlDiscount" style="color:#dc2626;">-₹0</span></div>
+        <div class="bill-row" style="font-size:13px;"><span>Promo Coupon Discount:</span><span id="dtlDiscount" style="color:#dc2626;">-₹0</span></div>
+        <div class="bill-row" style="font-size:13px;"><span>Cashback Wallet Applied:</span><span id="dtlWalletDiscount" style="color:#16a34a;">-₹0</span></div>
         <div class="bill-row" style="font-size:13px;"><span>Delivery Fee:</span><span id="dtlDeliveryFee">FREE</span></div>
         <div class="bill-row" style="font-size:15px; font-weight:900; border-top:1px dashed #cbd5e1; padding-top:6px; margin-top:6px;">
           <span>Total Paid:</span>
@@ -914,7 +918,7 @@
 
 <script>
   var SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbyZ11fczqVaeZx8yyL1IXUDkJ92U7cMhX7_AgaqNXygIuj3tMdwkwiYa_lY9a0GR9btsg/exec";
-  var RAZORPAY_KEY_ID = "rzp_test_TUjrxJIbpA4EWb"; // Replace with your live/test Razorpay Key ID
+  var RAZORPAY_KEY_ID = "rzp_test_TUjrxJIbpA4EWb"; // Replace with your live Razorpay Key ID
 
   var currentUser = null;
   try { currentUser = JSON.parse(localStorage.getItem('mohna_user')) || null; } catch(e) {}
@@ -938,7 +942,56 @@
 
   var persistentTimerInterval = null, cardTickersInterval = null;
   var sessionCheckInterval = null;
-  var custLeafletMap = null, riderMarker = null, userMarker = null;
+  var trackingLeafletMap = null, riderMapMarker = null, userMapMarker = null;
+
+  // INDIAN STANDARD TIME (IST) ROBUST PARSER & FORMATTER
+  function parseAnyDateToMs(dateStr) {
+    if (!dateStr) return 0;
+    if (typeof dateStr === "number") return dateStr;
+    var s = dateStr.toString().trim();
+    
+    // Direct ISO / GMT timestamp check
+    var directMs = new Date(s).getTime();
+    if (!isNaN(directMs) && directMs > 1000000000000) return directMs;
+
+    // Handle DD/MM/YYYY or DD-MM-YYYY format
+    var match = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:,\s*(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+    if (match) {
+      var day = parseInt(match[1], 10);
+      var month = parseInt(match[2], 10) - 1;
+      var year = parseInt(match[3], 10);
+      var hours = match[4] ? parseInt(match[4], 10) : 0;
+      var mins = match[5] ? parseInt(match[5], 10) : 0;
+      var secs = match[6] ? parseInt(match[6], 10) : 0;
+      return new Date(year, month, day, hours, mins, secs).getTime();
+    }
+    return 0;
+  }
+
+  function formatIndianDate(dateInput) {
+    var ms = parseAnyDateToMs(dateInput);
+    if (!ms || ms === 0) return dateInput || "N/A";
+    return new Date(ms).toLocaleString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  }
+
+  function calculateDistanceKm(lat1, lon1, lat2, lon2) {
+    var R = 6371; // Earth radius in km
+    var dLat = (lat2 - lat1) * Math.PI / 180;
+    var dLon = (lon2 - lon1) * Math.PI / 180;
+    var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return (R * c).toFixed(2);
+  }
 
   function isPointInsidePolygon(point, vs) {
     var x = point[0], y = point[1];
@@ -1014,26 +1067,6 @@
       if (showAlert) alert("🚫 Undeliverable: Your location is outside our operational service areas.");
       return false;
     }
-  }
-
-  function parseAnyDateToMs(dateStr) {
-    if (!dateStr) return 0;
-    if (typeof dateStr === "number") return dateStr;
-    var s = dateStr.toString().trim();
-    var directMs = new Date(s).getTime();
-    if (!isNaN(directMs)) return directMs;
-
-    var match = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:,\s*(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
-    if (match) {
-      var day = parseInt(match[1], 10);
-      var month = parseInt(match[2], 10) - 1;
-      var year = parseInt(match[3], 10);
-      var hours = match[4] ? parseInt(match[4], 10) : 0;
-      var mins = match[5] ? parseInt(match[5], 10) : 0;
-      var secs = match[6] ? parseInt(match[6], 10) : 0;
-      return new Date(year, month, day, hours, mins, secs).getTime();
-    }
-    return 0;
   }
 
   function compressImageFile(file, maxWidth, maxHeight, callback) {
@@ -1707,10 +1740,10 @@
 
     var options = {
       "key": RAZORPAY_KEY_ID,
-      "amount": finalAmount * 100, // Amount in paise
+      "amount": finalAmount * 100, // in paise
       "currency": "INR",
       "name": "Mohna Express",
-      "description": `Fast ${currentMatchedZoneTiming} Min Dispatch Order`,
+      "description": `Guaranteed ${currentMatchedZoneTiming} Min Dispatch`,
       "image": "https://via.placeholder.com/128?text=Mohna",
       "prefill": {
         "name": currentUser.name,
@@ -1721,7 +1754,7 @@
         "color": "#2563eb"
       },
       "handler": function (response) {
-        saveOrderToBackend(response.razorpay_payment_id || ("pay_" + Date.now()), finalAmount, subtotal, (discountAmount + walletDeduction), maxDeliveryFee, walletDeduction);
+        saveOrderToBackend(response.razorpay_payment_id || ("pay_" + Date.now()), finalAmount, subtotal, discountAmount, maxDeliveryFee, walletDeduction);
       }
     };
 
@@ -1732,7 +1765,7 @@
     rzp.open();
   }
 
-  function saveOrderToBackend(paymentId, finalAmount, subtotal, totalDiscount, maxDeliveryFee, walletDeduction) {
+  function saveOrderToBackend(paymentId, finalAmount, subtotal, promoDiscount, maxDeliveryFee, walletDeduction) {
     var orderId = "MHN-" + Math.floor(100000 + Math.random() * 900000);
     var itemSummary = cart.map(i => `${i.name} (x${i.qty})`).join(', ');
     var totalQty = cart.reduce((sum, i) => sum + i.qty, 0);
@@ -1749,7 +1782,8 @@
       qty: totalQty,
       amount: "₹" + finalAmount,
       subtotal: "₹" + subtotal,
-      discount: "₹" + totalDiscount,
+      discount: "₹" + promoDiscount,
+      walletDiscount: "₹" + walletDeduction,
       deliveryFee: maxDeliveryFee > 0 ? "₹" + maxDeliveryFee : "FREE",
       lat: userCoords ? userCoords.lat.toFixed(5) : "0.0",
       lng: userCoords ? userCoords.lng.toFixed(5) : "0.0",
@@ -1828,14 +1862,12 @@
     var orderDisplay = document.getElementById('activeOrderIdDisplay');
     var header = document.getElementById('pTrackerHeader');
     var subtext = document.getElementById('timerSubtext');
-    var riderCard = document.getElementById('liveRiderInfoCard');
 
     box.style.display = 'block';
     orderDisplay.innerText = `Order ID: ${orderId}`;
     clearInterval(persistentTimerInterval);
 
     if (status && status.includes('Delivered')) {
-      if (riderCard) riderCard.style.display = 'none';
       var endMs = parseInt(deliveredTimestamp) || Date.now();
       var orderStartMs = parseAnyDateToMs(orderDateStr) || (targetExpiryTimestamp - (etaMinutes * 60000));
       var totalElapsedSec = Math.max(0, Math.floor((endMs - orderStartMs) / 1000));
@@ -1859,18 +1891,6 @@
       return;
     }
 
-    if (status && (status.includes('OUT') || status.includes('Out')) && riderName) {
-      if (riderCard) {
-        riderCard.style.display = 'flex';
-        document.getElementById('liveRiderNameDisplay').innerText = riderName;
-        document.getElementById('liveRiderPhoneDisplay').innerText = riderPhone || "Available via Support";
-        document.getElementById('btnCallRiderDirect').href = "tel:" + (riderPhone || "");
-        initCustomerLiveMap(riderCoords);
-      }
-    } else {
-      if (riderCard) riderCard.style.display = 'none';
-    }
-
     header.style.background = "rgba(56, 189, 248, 0.2)";
     header.style.color = "#38bdf8";
     header.innerText = "⚡ LIVE DISPATCH COUNTDOWN ACTIVE";
@@ -1891,39 +1911,7 @@
     }, 1000);
   }
 
-  // CUSTOMER LIVE RIDER LEAFLET MAP
-  function initCustomerLiveMap(riderCoordsStr) {
-    setTimeout(function() {
-      var mapContainer = document.getElementById('customerLiveMap');
-      if (!mapContainer) return;
-
-      var rLat = 25.6000, rLng = 85.1300;
-      if (riderCoordsStr && riderCoordsStr.includes(',')) {
-        var parts = riderCoordsStr.split(',');
-        rLat = parseFloat(parts[0]) || rLat;
-        rLng = parseFloat(parts[1]) || rLng;
-      }
-
-      if (!custLeafletMap) {
-        custLeafletMap = L.map('customerLiveMap').setView([rLat, rLng], 14);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(custLeafletMap);
-
-        var riderIcon = L.divIcon({ html: '🛵', className: 'rider-map-icon', iconSize: [28, 28] });
-        riderMarker = L.marker([rLat, rLng], { icon: riderIcon }).addTo(custLeafletMap).bindPopup("Rider Partner Location");
-
-        if (userCoords) {
-          var userIcon = L.divIcon({ html: '🏠', className: 'user-map-icon', iconSize: [28, 28] });
-          userMarker = L.marker([userCoords.lat, userCoords.lng], { icon: userIcon }).addTo(custLeafletMap).bindPopup("Your Delivery Address");
-          var group = new L.featureGroup([riderMarker, userMarker]);
-          custLeafletMap.fitBounds(group.getBounds().pad(0.2));
-        }
-      } else {
-        custLeafletMap.invalidateSize();
-        if (riderMarker) riderMarker.setLatLng([rLat, rLng]);
-      }
-    }, 200);
-  }
-
+  // RENDER CUSTOMER ORDERS WITH PER-CARD TRACKING BUTTON & CLEAN IST DATES
   function renderCustomerOrdersList() {
     var container = document.getElementById('customerOrdersList');
     if (!currentUser) {
@@ -1946,10 +1934,12 @@
         ? calculateDeliveryStatusBadge(o.date, o.etaMinutes || 20, expiryMs, o.deliveredTimestamp || 0)
         : `<span id="card_timer_${o.orderId}" data-expiry="${expiryMs}" class="badge-ticking">⏱️ Loading...</span>`;
 
-      var riderBoxInCard = (isOut && o.riderName) 
-        ? `<div style="background:#eff6ff; border:1px solid #bfdbfe; padding:6px 10px; border-radius:6px; margin:6px 0; font-size:12px; display:flex; justify-content:space-between; align-items:center;">
-             <span>🛵 <b>Rider:</b> ${o.riderName}</span>
-             <a href="tel:${o.riderPhone || ''}" style="color:#2563eb; font-weight:bold; text-decoration:none;" onclick="event.stopPropagation();">📞 ${o.riderPhone || 'Call'}</a>
+      // VIEW LIVE RIDER BUTTON (ONLY VISIBLE WHEN OUT FOR DELIVERY)
+      var trackRiderBtn = (isOut && o.riderName)
+        ? `<div style="text-align:center; margin-top:8px;" onclick="event.stopPropagation();">
+             <button type="button" class="btn-track-rider" onclick="openLiveRiderTrackingModal(${idx})">
+               🛵 View Live Rider Location & Radar
+             </button>
            </div>`
         : '';
 
@@ -1966,10 +1956,10 @@
             <b style="color:#16a34a; font-size:15px; flex:1; text-align:right;">${o.amount}</b>
           </div>
 
-          ${riderBoxInCard}
+          ${trackRiderBtn}
 
-          <div style="font-size:12px; color:#64748b; margin-top:2px;">
-            🕒 Timestamp: <b style="color:#0f172a;">${o.date}</b>
+          <div style="font-size:12px; color:#64748b; margin-top:4px;">
+            🕒 Timestamp (IST): <b style="color:#0f172a;">${formatIndianDate(o.date)}</b>
           </div>
         </div>
       `;
@@ -1998,18 +1988,71 @@
     }, 1000);
   }
 
+  // OPEN LIVE RIDER RADAR MODAL (WITH COURIER ICON & DISTANCE)
+  function openLiveRiderTrackingModal(orderIdx) {
+    var order = cachedMyOrders[orderIdx];
+    if (!order) return;
+
+    document.getElementById('trackModalRiderName').innerText = order.riderName || "Delivery Partner";
+    document.getElementById('trackModalRiderCall').href = "tel:" + (order.riderPhone || "");
+    document.getElementById('liveTrackingModal').style.display = 'flex';
+
+    setTimeout(function() {
+      var mapDiv = document.getElementById('liveTrackingMap');
+      var rLat = 25.6000, rLng = 85.1300;
+
+      if (order.riderCoords && order.riderCoords.includes(',')) {
+        var parts = order.riderCoords.split(',');
+        rLat = parseFloat(parts[0]) || rLat;
+        rLng = parseFloat(parts[1]) || rLng;
+      }
+
+      var uLat = userCoords ? userCoords.lat : (order.coords ? parseFloat(order.coords.split(',')[0]) : rLat);
+      var uLng = userCoords ? userCoords.lng : (order.coords ? parseFloat(order.coords.split(',')[1]) : rLng);
+
+      var dist = calculateDistanceKm(rLat, rLng, uLat, uLng);
+      document.getElementById('trackModalDistance').innerText = `📍 Delivery partner is ~${dist} km away from your location`;
+
+      if (!trackingLeafletMap) {
+        trackingLeafletMap = L.map('liveTrackingMap').setView([rLat, rLng], 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(trackingLeafletMap);
+
+        var riderIcon = L.divIcon({ html: '<div style="font-size:26px; filter:drop-shadow(0 2px 4px rgba(0,0,0,0.4));">🛵</div>', className: '', iconSize: [30, 30] });
+        riderMapMarker = L.marker([rLat, rLng], { icon: riderIcon }).addTo(trackingLeafletMap).bindPopup(`<b>${order.riderName || 'Rider'}</b> (In Transit)`);
+
+        var userIcon = L.divIcon({ html: '<div style="font-size:26px; filter:drop-shadow(0 2px 4px rgba(0,0,0,0.4));">🏠</div>', className: '', iconSize: [30, 30] });
+        userMapMarker = L.marker([uLat, uLng], { icon: userIcon }).addTo(trackingLeafletMap).bindPopup("Your Delivery Address");
+
+        var bounds = new L.LatLngBounds([[rLat, rLng], [uLat, uLng]]);
+        trackingLeafletMap.fitBounds(bounds, { padding: [40, 40] });
+      } else {
+        trackingLeafletMap.invalidateSize();
+        if (riderMapMarker) riderMapMarker.setLatLng([rLat, rLng]);
+        if (userMapMarker) userMapMarker.setLatLng([uLat, uLng]);
+        var b = new L.LatLngBounds([[rLat, rLng], [uLat, uLng]]);
+        trackingLeafletMap.fitBounds(b, { padding: [40, 40] });
+      }
+    }, 250);
+  }
+
+  function closeTrackingModal() {
+    document.getElementById('liveTrackingModal').style.display = 'none';
+  }
+
+  // ITEMIZED ORDER DETAILS MODAL
   function openOrderModal(orderIndex) {
     var order = cachedMyOrders[orderIndex];
     if (!order) return;
     activeSelectedModalOrder = order;
 
     document.getElementById('dtlOrderId').innerText = order.orderId;
-    document.getElementById('dtlTimestamp').innerText = order.date;
+    document.getElementById('dtlTimestamp').innerText = formatIndianDate(order.date);
     document.getElementById('dtlItem').innerText = order.item;
     document.getElementById('dtlQty').innerText = order.qty;
     
     document.getElementById('dtlSubtotal').innerText = order.subtotal || order.amount;
     document.getElementById('dtlDiscount').innerText = order.discount ? `-${order.discount}` : "-₹0";
+    document.getElementById('dtlWalletDiscount').innerText = order.walletDiscount ? `-${order.walletDiscount}` : "-₹0";
     document.getElementById('dtlDeliveryFee').innerText = order.deliveryFee || "FREE";
     document.getElementById('dtlAmount').innerText = order.amount;
 
