@@ -200,6 +200,7 @@
       box-shadow: 0 4px 14px rgba(0,0,0,0.04); 
       cursor: pointer; 
       transition: transform 0.15s ease, box-shadow 0.15s ease;
+      position: relative;
     }
     .product-card:hover { 
       transform: translateY(-3px); 
@@ -242,6 +243,19 @@
     }
     .theme-retail .product-price { color: #4338ca; }
     .theme-wholesale .product-price { color: #be123c; }
+
+    .stockout-badge {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background: rgba(220, 38, 38, 0.92);
+      color: white;
+      font-size: 11px;
+      font-weight: 900;
+      padding: 4px 8px;
+      border-radius: 6px;
+      letter-spacing: 0.5px;
+    }
 
     .card-actions-row { 
       display: flex; 
@@ -341,6 +355,17 @@
       background: #fee2e2;
       border: 1.5px solid #f87171;
       color: #991b1b;
+    }
+
+    .wallet-pill-box {
+      background: #f0fdf4;
+      border: 1.5px dashed #16a34a;
+      padding: 10px 14px;
+      border-radius: 10px;
+      margin-bottom: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
     .live-timer-banner {
@@ -569,7 +594,7 @@
       <span>⚡</span> Mohna Express
     </div>
     <div class="header-right-actions">
-      <!-- NOTIFICATION BELL -->
+      <!-- LIVE NOTIFICATIONS BELL -->
       <div class="notif-bell-btn" onclick="openNotificationsModal()" title="Live Order Updates">
         🔔
         <span id="notifBadge" class="notif-badge-count" style="display:none;">0</span>
@@ -605,12 +630,24 @@
     <div class="card">
       <h3 style="margin-top:0;">💳 Checkout & Live GPS Coverage Check</h3>
       
+      <!-- ZONE COVERAGE NOTICE -->
       <div id="zoneCoverageNotice" class="coverage-banner coverage-deliverable">
         <div>
           <span style="font-size:11px; text-transform:uppercase; display:block; opacity:0.85;">📍 Delivery Zone Status</span>
           <span id="zoneNoticeText">Checking GPS delivery boundary...</span>
         </div>
         <button type="button" class="btn-submit" style="width:auto; padding:6px 10px; font-size:11px; background:#0f172a;" onclick="requestUserGPS(() => evaluateDeliveryZoneEligibility(true))">🔄 Refresh GPS</button>
+      </div>
+
+      <!-- WALLET CASHBACK APPLIER (FEATURE #7) -->
+      <div id="walletCashbackBox" class="wallet-pill-box" style="display:none;">
+        <div>
+          <b style="color:#166534; font-size:13px;">🪙 Cashback Wallet Balance: <span id="chkWalletBal">₹0</span></b>
+          <div style="font-size:11px; color:#475569;">Earned from on-time delivery guarantees</div>
+        </div>
+        <label style="font-size:12px; font-weight:bold; cursor:pointer; color:#15803d; display:flex; align-items:center; gap:4px;">
+          <input type="checkbox" id="chkUseWallet" onchange="renderCheckoutCart()" /> Apply Wallet
+        </label>
       </div>
 
       <div id="cartItemsContainer" style="margin-bottom:14px;">
@@ -634,6 +671,7 @@
       <div style="background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:12px;">
         <div class="bill-row"><span>Items Subtotal:</span><span id="chkSubtotal">₹0</span></div>
         <div class="bill-row"><span>Discount:</span><span id="chkDiscount" style="color:#dc2626;">-₹0</span></div>
+        <div class="bill-row"><span>Wallet Applied:</span><span id="chkWalletDeduction" style="color:#16a34a;">-₹0</span></div>
         <div class="bill-row"><span>Delivery Fee:</span><span id="chkDeliveryFee">₹0</span></div>
         <div class="bill-row" style="font-size:16px; font-weight:900; border-top:1px solid #cbd5e1; padding-top:8px; margin-top:8px;">
           <span>Grand Total Payable:</span>
@@ -641,8 +679,9 @@
         </div>
       </div>
 
+      <!-- INSTANT PAYMENT SIMULATOR & QR (FEATURE #6) -->
       <div id="qrcode" style="display:flex; justify-content:center; margin-bottom:14px;"></div>
-      <button type="button" id="confirmPayBtn" class="btn-submit" style="background:#16a34a;" onclick="processOrderSuccess()">✅ Complete UPI Payment</button>
+      <button type="button" id="confirmPayBtn" class="btn-submit" style="background:#16a34a;" onclick="processOrderSuccess()">✅ Complete UPI / Gateway Payment</button>
     </div>
   </div>
 
@@ -656,11 +695,13 @@
       <div id="persistentTimerDisplay" class="timer-clock">15:00</div>
       <p id="timerSubtext" style="color: #cbd5e1; font-size: 12.5px; margin: 0;">Synchronized with Mohna Express Dispatch Hub</p>
 
+      <!-- LIVE RIDER TELEMETRY & GPS TRACKER (FEATURE #1) -->
       <div id="liveRiderInfoCard" style="display:none;" class="assigned-rider-box">
         <div>
-          <div style="font-size:11px; color:#38bdf8; font-weight:800; text-transform:uppercase;">🛵 Delivery Partner On the Way</div>
+          <div style="font-size:11px; color:#38bdf8; font-weight:800; text-transform:uppercase;">🛵 Delivery Partner In-Transit</div>
           <div style="font-size:15px; font-weight:900; color:#ffffff; margin:3px 0;" id="liveRiderNameDisplay">Rider Name</div>
           <div style="font-size:12px; color:#94a3b8;">Contact: <b id="liveRiderPhoneDisplay" style="color:#f8fafc;">+91 9876543210</b></div>
+          <div id="liveRiderGpsDistance" style="font-size:11.5px; color:#38bdf8; margin-top:2px; font-weight:bold;">📍 Live GPS Connected</div>
         </div>
         <a id="btnCallRiderDirect" href="tel:" style="background:#16a34a; color:white; padding:8px 14px; border-radius:8px; text-decoration:none; font-weight:800; font-size:12px; display:inline-flex; align-items:center; gap:4px;">
           📞 Call Rider
@@ -695,6 +736,7 @@
         </div>
       </div>
 
+      <div class="form-group"><label>Wallet Cashback Balance (Late Guarantees)</label><input type="text" id="profWallet" readonly style="font-weight:900; color:#16a34a; font-size:16px;" /></div>
       <div class="form-group"><label>Full Name</label><input type="text" id="profName" readonly /></div>
       <div class="form-group"><label>Mobile Number</label><input type="tel" id="profPhone" readonly /></div>
       <div class="form-group"><label>Email Address</label><input type="email" id="profEmail" readonly /></div>
@@ -779,7 +821,6 @@
       <div class="bill-row"><span><b>Order Timestamp:</b></span><span id="dtlTimestamp" style="color:#2563eb; font-weight:bold;"></span></div>
       <div class="bill-row"><span><b>⏱️ Delivery Status:</b></span><span id="dtlLiveTimer"></span></div>
       
-      <!-- ASSIGNED RIDER DETAILS IN MODAL (VISIBLE ONLY WHEN OUT FOR DELIVERY) -->
       <div id="dtlModalRiderBox" style="display:none; background:#0284c7; color:white; padding:10px; border-radius:8px; margin:8px 0;">
         <div style="font-size:11px; text-transform:uppercase; font-weight:800; opacity:0.9;">🛵 Assigned Rider Partner</div>
         <div class="bill-row" style="margin:4px 0 0 0;">
@@ -791,7 +832,7 @@
       <div class="bill-row"><span><b>Items Ordered:</b></span><span id="dtlItem"></span></div>
       <div class="bill-row"><span><b>Quantity:</b></span><span id="dtlQty"></span></div>
       
-      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px; margin:10px 0;">
+      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px; margin-log:10px 0;">
         <div class="bill-row" style="font-size:13px;"><span>Items Subtotal:</span><span id="dtlSubtotal">₹0</span></div>
         <div class="bill-row" style="font-size:13px;"><span>Promo Discount:</span><span id="dtlDiscount" style="color:#dc2626;">-₹0</span></div>
         <div class="bill-row" style="font-size:13px;"><span>Delivery Fee:</span><span id="dtlDeliveryFee">FREE</span></div>
@@ -879,6 +920,7 @@
   var currentMatchedZoneName = "City Express Hub";
   var isDeliverableLocation = true;
   var appliedDiscountPercent = 0;
+  var userWalletBalance = 0;
   var pendingAvatarBase64 = "";
   var activeSelectedModalOrder = null;
 
@@ -1092,6 +1134,8 @@
         rawCategories = data.categories || [];
         rawCoupons = data.coupons || [];
         adminZonesData = data.zone || null;
+        userWalletBalance = data.walletBalance || 0;
+        
         if (data.myOrders) {
           cachedMyOrders = data.myOrders;
           renderCustomerOrdersList();
@@ -1139,7 +1183,7 @@
       return;
     }
 
-    var activeDispatches = cachedMyOrders.filter(o => o.status && (o.status.includes('OUT') || o.status.includes('Out') || o.status.includes('Delivered')));
+    var activeDispatches = cachedMyOrders.filter(o => o.status && (o.status.includes('OUT') || o.status.includes('Out') || o.status.includes('Delivered') || o.status.includes('PACKED')));
     if (activeDispatches.length > 0) {
       if (notifBadge) {
         notifBadge.style.display = 'inline-block';
@@ -1148,11 +1192,13 @@
       if (notifList) {
         notifList.innerHTML = activeDispatches.map(o => {
           var isOut = o.status.includes('OUT') || o.status.includes('Out');
-          var icon = isOut ? "🛵" : "✅";
-          var headline = isOut ? "Order Out for Delivery" : "Order Successfully Delivered";
+          var isPacked = o.status.includes('PACKED');
+          var isDelivered = o.status.includes('Delivered');
+          var icon = isOut ? "🛵" : (isPacked ? "📦" : "✅");
+          var headline = isOut ? "Order Out for Delivery" : (isPacked ? "Order Packed at Warehouse" : "Order Successfully Delivered");
           var detail = isOut 
             ? `Rider <b>${o.riderName || 'Partner'}</b> is on the way. (📞 ${o.riderPhone || 'In transit'})`
-            : `Order <b>${o.orderId}</b> was delivered. Thank you!`;
+            : (isPacked ? `Warehouse staff completed packing. Ready for rider assignment.` : `Order <b>${o.orderId}</b> was delivered. Thank you!`);
 
           return `
             <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px; margin-bottom:8px; font-size:12.5px;">
@@ -1396,6 +1442,7 @@
     return cart.some(x => x.id === productId && x.theme === currentTheme);
   }
 
+  // RENDER PRODUCTS WITH STOCKOUT SHIELD (FEATURE #3)
   function renderProducts(searchQuery = "") {
     var grid = document.getElementById('productGrid');
     var validSlugs = rawCategories.filter(c => c.scope === currentTheme || c.scope === 'both').map(c => c.slug);
@@ -1413,9 +1460,12 @@
       var mrp = p.mrp || (price * 1.25);
       var discount = Math.round(((mrp - price) / mrp) * 100);
       var inCart = isProductInCart(p.id);
+      var stock = parseInt(p.stockQty) || 0;
+      var isOutOfStock = stock <= 0;
 
       return `
-        <div class="product-card" onclick="openProductModal('${p.id}')">
+        <div class="product-card" onclick="${isOutOfStock ? '' : `openProductModal('${p.id}')`}">
+          ${isOutOfStock ? '<div class="stockout-badge">OUT OF STOCK</div>' : ''}
           <img src="${p.img || 'https://via.placeholder.com/200?text=Product'}" loading="lazy" class="product-img" alt="${p.name}">
           <div class="product-title">${p.name}</div>
           <div class="product-mrp-strip">
@@ -1424,10 +1474,12 @@
           </div>
           <div class="product-price">₹${price}</div>
           <div class="card-actions-row" onclick="event.stopPropagation();">
-            <button class="btn-card-add ${inCart ? 'is-added' : ''}" onclick="toggleCartItem('${p.id}')">
-              ${inCart ? '✔ Added' : '🛒 Add'}
+            <button class="btn-card-add ${inCart ? 'is-added' : ''}" ${isOutOfStock ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : `onclick="toggleCartItem('${p.id}')"`}>
+              ${isOutOfStock ? 'Sold Out' : (inCart ? '✔ Added' : '🛒 Add')}
             </button>
-            <button class="btn-card-buy" onclick="directBuyNow('${p.id}')">⚡ Buy Now</button>
+            <button class="btn-card-buy" ${isOutOfStock ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : `onclick="directBuyNow('${p.id}')"`}>
+              ${isOutOfStock ? 'Unavailable' : '⚡ Buy Now'}
+            </button>
           </div>
         </div>
       `;
@@ -1443,6 +1495,8 @@
     var mrp = p.mrp || (price * 1.25);
     var discount = Math.round(((mrp - price) / mrp) * 100);
     var inCart = isProductInCart(p.id);
+    var stock = parseInt(p.stockQty) || 0;
+    var isOutOfStock = stock <= 0;
 
     document.getElementById('modalProdCategory').innerText = p.category;
     document.getElementById('modalProdImg').src = p.img || 'https://via.placeholder.com/300?text=Product';
@@ -1457,9 +1511,20 @@
     document.getElementById('modalProdTerms').innerText = p.terms || "Returnable upon delivery if damaged.";
 
     var addBtn = document.getElementById('modalBtnAddCart');
-    addBtn.innerText = inCart ? "✔ Added" : "🛒 Add to Cart";
-    addBtn.style.background = inCart ? "#dcfce7" : "#f1f5f9";
-    addBtn.style.color = inCart ? "#166534" : "#0f172a";
+    var buyBtn = document.getElementById('modalBtnBuyNow');
+
+    if (isOutOfStock) {
+      addBtn.innerText = "Out of Stock";
+      addBtn.disabled = true;
+      buyBtn.innerText = "Sold Out";
+      buyBtn.disabled = true;
+    } else {
+      addBtn.disabled = false;
+      buyBtn.disabled = false;
+      addBtn.innerText = inCart ? "✔ Added" : "🛒 Add to Cart";
+      addBtn.style.background = inCart ? "#dcfce7" : "#f1f5f9";
+      addBtn.style.color = inCart ? "#166534" : "#0f172a";
+    }
 
     document.getElementById('productDetailsModal').style.display = 'flex';
   }
@@ -1471,6 +1536,7 @@
   function toggleCartItem(productId) {
     var p = rawProducts.find(x => x.id === productId);
     if (!p) return;
+    if ((parseInt(p.stockQty) || 0) <= 0) return alert("Product is currently out of stock.");
 
     var existingIdx = cart.findIndex(x => x.id === productId && x.theme === currentTheme);
     var price = (currentTheme === 'wholesale') ? p.wholesalePrice : p.retailPrice;
@@ -1505,6 +1571,7 @@
     if (!currentUser) { openAuthModal('login'); return; }
     var p = rawProducts.find(x => x.id === productId);
     if (!p) return;
+    if ((parseInt(p.stockQty) || 0) <= 0) return alert("Product is currently out of stock.");
 
     var price = (currentTheme === 'wholesale') ? p.wholesalePrice : p.retailPrice;
     cart = [{
@@ -1530,10 +1597,21 @@
     var container = document.getElementById('cartItemsContainer');
     evaluateDeliveryZoneEligibility(false);
 
+    var walletBox = document.getElementById('walletCashbackBox');
+    if (walletBox) {
+      if (userWalletBalance > 0) {
+        walletBox.style.display = 'flex';
+        document.getElementById('chkWalletBal').innerText = `₹${userWalletBalance}`;
+      } else {
+        walletBox.style.display = 'none';
+      }
+    }
+
     if (cart.length === 0) {
       container.innerHTML = '<p style="color:#64748b; font-size:13px; text-align:center;">Your cart is empty. Browse Home to add items.</p>';
       document.getElementById('chkSubtotal').innerText = '₹0';
       document.getElementById('chkDiscount').innerText = '-₹0';
+      document.getElementById('chkWalletDeduction').innerText = '-₹0';
       document.getElementById('chkDeliveryFee').innerText = '₹0';
       document.getElementById('checkoutTotalDisplay').innerText = '₹0';
       document.getElementById('confirmPayBtn').disabled = true;
@@ -1563,10 +1641,14 @@
     }).join('');
 
     var discountAmount = Math.round((subtotal * appliedDiscountPercent) / 100);
-    var grandTotal = Math.max(0, subtotal - discountAmount + maxDeliveryFee);
+    var netBeforeWallet = Math.max(0, subtotal - discountAmount + maxDeliveryFee);
+    var useWallet = document.getElementById('chkUseWallet')?.checked;
+    var walletDeduction = (useWallet && userWalletBalance > 0) ? Math.min(netBeforeWallet, userWalletBalance) : 0;
+    var grandTotal = Math.max(0, netBeforeWallet - walletDeduction);
 
     document.getElementById('chkSubtotal').innerText = `₹${subtotal}`;
     document.getElementById('chkDiscount').innerText = `-₹${discountAmount}`;
+    document.getElementById('chkWalletDeduction').innerText = `-₹${walletDeduction}`;
     document.getElementById('chkDeliveryFee').innerText = maxDeliveryFee > 0 ? `₹${maxDeliveryFee}` : 'FREE';
     document.getElementById('checkoutTotalDisplay').innerText = `₹${grandTotal}`;
 
@@ -1615,7 +1697,10 @@
     var subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
     var maxDeliveryFee = Math.max(0, ...cart.map(i => i.deliveryFee));
     var discountAmount = Math.round((subtotal * appliedDiscountPercent) / 100);
-    var finalAmount = Math.max(0, subtotal - discountAmount + maxDeliveryFee);
+    var netBeforeWallet = Math.max(0, subtotal - discountAmount + maxDeliveryFee);
+    var useWallet = document.getElementById('chkUseWallet')?.checked;
+    var walletDeduction = (useWallet && userWalletBalance > 0) ? Math.min(netBeforeWallet, userWalletBalance) : 0;
+    var finalAmount = Math.max(0, netBeforeWallet - walletDeduction);
 
     var orderId = "MHN-" + Math.floor(100000 + Math.random() * 900000);
     var itemSummary = cart.map(i => `${i.name} (x${i.qty})`).join(', ');
@@ -1633,11 +1718,13 @@
       qty: totalQty,
       amount: "₹" + finalAmount,
       subtotal: "₹" + subtotal,
-      discount: "₹" + discountAmount,
+      discount: "₹" + (discountAmount + walletDeduction),
       deliveryFee: maxDeliveryFee > 0 ? "₹" + maxDeliveryFee : "FREE",
       lat: userCoords ? userCoords.lat.toFixed(5) : "0.0",
       lng: userCoords ? userCoords.lng.toFixed(5) : "0.0",
-      etaMinutes: currentMatchedZoneTiming
+      etaMinutes: currentMatchedZoneTiming,
+      cartItems: cart,
+      walletDeduction: walletDeduction
     };
 
     fetch(SPREADSHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) })
@@ -1675,6 +1762,7 @@
 
   function renderProfilePage() {
     if (!currentUser) { openAuthModal('login'); return; }
+    document.getElementById('profWallet').value = `₹${userWalletBalance}`;
     document.getElementById('profName').value = currentUser.name || "";
     document.getElementById('profPhone').value = currentUser.phone || "";
     document.getElementById('profEmail').value = currentUser.email || "";
@@ -1733,8 +1821,8 @@
         clock.innerText = `⚠️ ${timeFormatted}`;
         header.style.background = "rgba(239, 68, 68, 0.2)";
         header.style.color = "#ef4444";
-        header.innerText = "⚠️ ORDER DELIVERED (LATE)";
-        subtext.innerHTML = `<b style="color:#ef4444;">Delivered late. Late cashback guarantee eligible.</b>`;
+        header.innerText = "⚠️ ORDER DELIVERED (LATE - CASHBACK CREDITED)";
+        subtext.innerHTML = `<b style="color:#ef4444;">₹25 late delivery guarantee credited to your Wallet!</b>`;
       }
       return;
     }
@@ -1762,7 +1850,7 @@
         clearInterval(persistentTimerInterval);
         clock.innerText = "00:00";
         clock.style.color = "#ef4444";
-        subtext.innerHTML = "⚡ <b style='color:#ef4444;'>Delivery Time Guarantee Reached</b>";
+        subtext.innerHTML = "⚡ <b style='color:#ef4444;'>Delivery Time Guarantee Reached (Cashback Eligible)</b>";
         return;
       }
       var totalSec = Math.floor(remainingMs / 1000);
@@ -1786,6 +1874,7 @@
       var expiryMs = parseInt(o.expiryTimestamp) || (parseAnyDateToMs(o.date) + (o.etaMinutes || 20) * 60000);
       var isDelivered = o.status && o.status.includes('Delivered');
       var isOut = o.status && (o.status.includes('OUT') || o.status.includes('Out'));
+      var isPacked = o.status && o.status.includes('PACKED');
 
       var timerHtml = isDelivered 
         ? calculateDeliveryStatusBadge(o.date, o.etaMinutes || 20, expiryMs, o.deliveredTimestamp || 0)
@@ -1802,7 +1891,7 @@
         <div class="order-history-card" onclick="openOrderModal(${idx})">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
             <b>${o.orderId}</b>
-            <span style="background:${isOut ? '#fed7aa' : '#dcfce7'}; color:${isOut ? '#9a3412' : '#166534'}; font-size:11px; font-weight:bold; padding:2px 8px; border-radius:12px;">${o.status || 'PAID'}</span>
+            <span style="background:${isOut ? '#fed7aa' : (isPacked ? '#dbeafe' : '#dcfce7')}; color:${isOut ? '#9a3412' : (isPacked ? '#1e40af' : '#166534')}; font-size:11px; font-weight:bold; padding:2px 8px; border-radius:12px;">${o.status || 'PAID'}</span>
           </div>
 
           <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin:6px 0;">
