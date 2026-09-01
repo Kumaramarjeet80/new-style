@@ -212,28 +212,27 @@
   let tickerInterval = null;
   let activeOtpVerificationOrderId = null;
 
-  // ROBUST GAS NETWORK PIPELINE
-  async function postToAppsScript(payload) {
+  // CROSS-ORIGIN GAS API ENGINE (ZERO-FAIL REDIRECT TRANSPORT)
+  async function callAppsScriptApi(payload) {
+    const params = new URLSearchParams();
+    for (const key in payload) {
+      params.append(key, typeof payload[key] === 'object' ? JSON.stringify(payload[key]) : payload[key]);
+    }
+    
+    // First attempt: URL Query String GET (100% immune to CORS preflight block)
     try {
-      const response = await fetch(SPREADSHEET_API_URL, {
+      const getUrl = `${SPREADSHEET_API_URL}?${params.toString()}`;
+      const response = await fetch(getUrl, { method: 'GET' });
+      return await response.json();
+    } catch (e1) {
+      // Fallback attempt: Standard POST
+      const postResponse = await fetch(SPREADSHEET_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(payload)
       });
-      const text = await response.text();
+      const text = await postResponse.text();
       return JSON.parse(text);
-    } catch (primaryErr) {
-      // Fallback: Use URL-encoded parameters to bypass strict preflight filters
-      const formParams = new URLSearchParams();
-      for (const key in payload) {
-        formParams.append(key, typeof payload[key] === 'object' ? JSON.stringify(payload[key]) : payload[key]);
-      }
-      const fallbackResponse = await fetch(SPREADSHEET_API_URL, {
-        method: 'POST',
-        body: formParams
-      });
-      const fallbackText = await fallbackResponse.text();
-      return JSON.parse(fallbackText);
     }
   }
 
@@ -301,8 +300,7 @@
       return;
     }
 
-    fetch(`${SPREADSHEET_API_URL}?action=checkRiderStatus&email=${encodeURIComponent(currentRider.email)}`)
-      .then(r => r.json())
+    callAppsScriptApi({ action: 'checkRiderStatus', email: currentRider.email })
       .then(res => {
         if (res && res.status === 'success') {
           currentRider.status = res.riderStatus;
@@ -363,7 +361,7 @@
     btn.disabled = true;
 
     try {
-      const res = await postToAppsScript({ action: 'riderPasswordLogin', email, password });
+      const res = await callAppsScriptApi({ action: 'riderPasswordLogin', email, password });
       btn.innerText = "🔑 Log In & Go Online";
       btn.disabled = false;
 
@@ -389,7 +387,7 @@
     } catch(err) {
       btn.innerText = "🔑 Log In & Go Online";
       btn.disabled = false;
-      alert("Error contacting server. Please check your deployment URL and permissions.");
+      alert("Error contacting server. Please verify deployment settings.");
     }
   }
 
@@ -407,7 +405,7 @@
     btn.disabled = true;
 
     try {
-      const res = await postToAppsScript({ action: 'sendSignupOtp', email, role: 'rider' });
+      const res = await callAppsScriptApi({ action: 'sendSignupOtp', email, role: 'rider' });
       btn.innerText = 'Send Verification OTP';
       btn.disabled = false;
       if (res.status === 'success') {
@@ -437,7 +435,7 @@
     btn.disabled = true;
 
     try {
-      const res = await postToAppsScript({
+      const res = await callAppsScriptApi({
         action: 'completeRiderSignup',
         name, phone, email, password, otp
       });
@@ -470,8 +468,7 @@
   function fetchRiderFeed() {
     if (!currentRider || (currentRider.status || '').toLowerCase() !== 'active') return;
     
-    fetch(`${SPREADSHEET_API_URL}?action=getRiderOrders`)
-      .then(r => r.json())
+    callAppsScriptApi({ action: 'getRiderOrders' })
       .then(data => {
         cachedOrders = data.orders || [];
         updateMetrics();
@@ -603,7 +600,7 @@
   async function updateStatus(orderId, newStatus) {
     if (!currentRider || (currentRider.status || '').toLowerCase() !== 'active') return alert("Account verification required to accept tasks.");
     
-    await postToAppsScript({ 
+    await callAppsScriptApi({ 
       action: 'assignRiderToOrder', 
       orderId, 
       newStatus,
@@ -621,7 +618,7 @@
     document.getElementById('custDeliveryOtpInput').value = "";
     document.getElementById('deliveryOtpModal').style.display = 'flex';
 
-    const res = await postToAppsScript({ action: 'sendDeliveryOtp', orderId });
+    const res = await callAppsScriptApi({ action: 'sendDeliveryOtp', orderId });
     if (res.status === 'success') {
       document.getElementById('dOtpModalEmailHint').innerText = res.emailHint || "Registered Customer Email";
     } else {
@@ -632,7 +629,7 @@
   async function resendCustomerDeliveryOtp() {
     if (!activeOtpVerificationOrderId) return;
     document.getElementById('dOtpModalEmailHint').innerText = "Resending...";
-    const res = await postToAppsScript({ action: 'sendDeliveryOtp', orderId: activeOtpVerificationOrderId });
+    const res = await callAppsScriptApi({ action: 'sendDeliveryOtp', orderId: activeOtpVerificationOrderId });
     if (res.status === 'success') {
       document.getElementById('dOtpModalEmailHint').innerText = res.emailHint || "Registered Customer Email";
       alert("PIN resent successfully!");
@@ -645,7 +642,7 @@
     const otp = document.getElementById('custDeliveryOtpInput').value.trim();
     if (!otp || otp.length < 4) return alert("Please enter the 4-digit PIN provided by customer.");
 
-    const res = await postToAppsScript({ action: 'verifyDeliveryOtp', orderId: activeOtpVerificationOrderId, otp });
+    const res = await callAppsScriptApi({ action: 'verifyDeliveryOtp', orderId: activeOtpVerificationOrderId, otp });
     if (res.status === 'success') {
       alert("✅ Delivery Successfully Verified & Recorded!");
       closeDeliveryOtpModal();
