@@ -97,27 +97,27 @@
     <b>⏳ Account Verification Required:</b> Your profile has been registered and is awaiting Admin Verification. You will become an active rider once approved by warehouse admin.
   </div>
 
-  <!-- RIDER METRICS -->
+  <!-- RIDER METRICS (SCOPED TO THIS ACTIVE RIDER) -->
   <div class="metrics-grid">
     <div class="metric-card">
       <div id="mActiveCount" class="metric-val">0</div>
-      <div class="metric-lbl">Active Dispatches</div>
+      <div class="metric-lbl">Available Dispatches</div>
     </div>
     <div class="metric-card">
       <div id="mTodayDelivered" class="metric-val">0</div>
-      <div class="metric-lbl">Completed</div>
+      <div class="metric-lbl">My Completed</div>
     </div>
     <div class="metric-card">
       <div id="mGuaranteeRate" class="metric-val">100%</div>
-      <div class="metric-lbl">On-Time Rate</div>
+      <div class="metric-lbl">My On-Time Rate</div>
     </div>
   </div>
 
   <!-- STATUS FILTER TABS -->
   <div class="tab-bar">
-    <button class="tab-btn active" id="tabActive" onclick="filterRiderTab('active')">⚡ Active Tasks (<span id="countActive">0</span>)</button>
-    <button class="tab-btn" id="tabOut" onclick="filterRiderTab('out')">🛵 In Transit (<span id="countOut">0</span>)</button>
-    <button class="tab-btn" id="tabDone" onclick="filterRiderTab('done')">✅ Delivered (<span id="countDone">0</span>)</button>
+    <button class="tab-btn active" id="tabActive" onclick="filterRiderTab('active')">⚡ Ready for Pickup (<span id="countActive">0</span>)</button>
+    <button class="tab-btn" id="tabOut" onclick="filterRiderTab('out')">🛵 My In-Transit (<span id="countOut">0</span>)</button>
+    <button class="tab-btn" id="tabDone" onclick="filterRiderTab('done')">✅ My Delivered (<span id="countDone">0</span>)</button>
   </div>
 
   <div id="riderOrdersFeed">
@@ -204,7 +204,7 @@
 </div>
 
 <script>
-  // TOP-LEVEL SAFE GLOBAL DECLARATIONS (PREVENTS TDZ REFERENCE ERRORS)
+  // TOP-LEVEL SAFE GLOBAL DECLARATIONS
   var SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbyZ11fczqVaeZx8yyL1IXUDkJ92U7cMhX7_AgaqNXygIuj3tMdwkwiYa_lY9a0GR9btsg/exec";
   var currentRider = null;
   try {
@@ -491,23 +491,28 @@
   }
 
   function updateMetrics() {
-    var active = cachedOrders.filter(function(o) { return !o.status.includes('Delivered') && !o.status.includes('OUT'); });
-    var out = cachedOrders.filter(function(o) { return o.status.includes('OUT'); });
-    var done = cachedOrders.filter(function(o) { return o.status.includes('Delivered'); });
+    var riderName = (currentRider && currentRider.name) ? currentRider.name.trim().toLowerCase() : "";
+    var ready = cachedOrders.filter(function(o) { return !o.status.includes('Delivered') && !o.status.includes('OUT') && !o.status.includes('Out'); });
+    var myOut = cachedOrders.filter(function(o) { 
+      return (o.status.includes('OUT') || o.status.includes('Out')) && (o.riderName && o.riderName.trim().toLowerCase() === riderName); 
+    });
+    var myDone = cachedOrders.filter(function(o) { 
+      return o.status.includes('Delivered') && (o.riderName && o.riderName.trim().toLowerCase() === riderName); 
+    });
 
-    document.getElementById('mActiveCount').innerText = active.length + out.length;
-    document.getElementById('mTodayDelivered').innerText = done.length;
-    document.getElementById('countActive').innerText = active.length;
-    document.getElementById('countOut').innerText = out.length;
-    document.getElementById('countDone').innerText = done.length;
+    document.getElementById('mActiveCount').innerText = ready.length;
+    document.getElementById('mTodayDelivered').innerText = myDone.length;
+    document.getElementById('countActive').innerText = ready.length;
+    document.getElementById('countOut').innerText = myOut.length;
+    document.getElementById('countDone').innerText = myDone.length;
 
-    if (done.length > 0) {
-      var onTimeCount = done.filter(function(o) {
+    if (myDone.length > 0) {
+      var onTimeCount = myDone.filter(function(o) {
         var exp = parseInt(o.expiryTimestamp);
         var del = parseInt(o.deliveredTimestamp) || exp;
         return del <= exp;
       }).length;
-      document.getElementById('mGuaranteeRate').innerText = Math.round((onTimeCount / done.length) * 100) + "%";
+      document.getElementById('mGuaranteeRate').innerText = Math.round((onTimeCount / myDone.length) * 100) + "%";
     }
   }
 
@@ -531,13 +536,26 @@
       return;
     }
 
+    var riderName = (currentRider && currentRider.name) ? currentRider.name.trim().toLowerCase() : "";
     var filtered = [];
+    
+    // TAB 1: Available tasks ready for pickup
     if (currentTab === 'active') {
-      filtered = cachedOrders.filter(function(o) { return !o.status.includes('Delivered') && !o.status.includes('OUT'); });
-    } else if (currentTab === 'out') {
-      filtered = cachedOrders.filter(function(o) { return o.status.includes('OUT'); });
-    } else {
-      filtered = cachedOrders.filter(function(o) { return o.status.includes('Delivered'); });
+      filtered = cachedOrders.filter(function(o) { 
+        return !o.status.includes('Delivered') && !o.status.includes('OUT') && !o.status.includes('Out'); 
+      });
+    } 
+    // TAB 2: ONLY tasks accepted by THIS particular logged-in rider
+    else if (currentTab === 'out') {
+      filtered = cachedOrders.filter(function(o) { 
+        return (o.status.includes('OUT') || o.status.includes('Out')) && (o.riderName && o.riderName.trim().toLowerCase() === riderName); 
+      });
+    } 
+    // TAB 3: ONLY tasks successfully delivered by THIS particular logged-in rider
+    else {
+      filtered = cachedOrders.filter(function(o) { 
+        return o.status.includes('Delivered') && (o.riderName && o.riderName.trim().toLowerCase() === riderName); 
+      });
     }
 
     if (filtered.length === 0) {
@@ -548,17 +566,17 @@
     feed.innerHTML = filtered.map(function(o) {
       var expiryMs = parseInt(o.expiryTimestamp) || (parseAnyDateToMs(o.date) + (o.etaMinutes || 20) * 60000);
       var isDelivered = o.status.includes('Delivered');
-      var isOut = o.status.includes('OUT');
+      var isOut = o.status.includes('OUT') || o.status.includes('Out');
 
       var statusBadge = '<span class="status-badge status-pending">● Dispatch Ready</span>';
       var actionBtn = `<button class="btn-status btn-out" onclick="updateStatus('${o.orderId}', 'OUT FOR DELIVERY')">🛵 Accept & Start Delivery</button>`;
       var timerBadge = `<span id="rider_timer_${o.orderId}" data-expiry="${expiryMs}" class="badge-ticking">⏱️ Loading...</span>`;
 
       if (isOut) {
-        statusBadge = `<span class="status-badge status-out">● In Transit (${o.riderName || 'Rider'})</span>`;
+        statusBadge = `<span class="status-badge status-out">● In Transit (Assigned to You)</span>`;
         actionBtn = `<button class="btn-status btn-verify" onclick="triggerCustomerDeliveryOtpModal('${o.orderId}')">🔐 Arrived / Verify Customer PIN</button>`;
       } else if (isDelivered) {
-        statusBadge = '<span class="status-badge status-done">✔ Delivered</span>';
+        statusBadge = '<span class="status-badge status-done">✔ Delivered by You</span>';
         actionBtn = '';
         timerBadge = calculateDeliveryStatusBadge(o.date, o.etaMinutes || 20, expiryMs, o.deliveredTimestamp || 0);
       }
