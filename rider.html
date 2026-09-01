@@ -212,20 +212,23 @@
   let tickerInterval = null;
   let activeOtpVerificationOrderId = null;
 
-  // CROSS-ORIGIN GAS API ENGINE (ZERO-FAIL REDIRECT TRANSPORT)
+  // ROBUST GAS API TRANSPORT LAYER (SOLVES GITHUB.IO CORS REDIRECT DROPS)
   async function callAppsScriptApi(payload) {
     const params = new URLSearchParams();
     for (const key in payload) {
       params.append(key, typeof payload[key] === 'object' ? JSON.stringify(payload[key]) : payload[key]);
     }
     
-    // First attempt: URL Query String GET (100% immune to CORS preflight block)
+    // Method 1: GET Query Transport
     try {
       const getUrl = `${SPREADSHEET_API_URL}?${params.toString()}`;
-      const response = await fetch(getUrl, { method: 'GET' });
+      const response = await fetch(getUrl, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' }
+      });
       return await response.json();
     } catch (e1) {
-      // Fallback attempt: Standard POST
+      // Method 2: Direct Form POST Transport
       const postResponse = await fetch(SPREADSHEET_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -387,7 +390,7 @@
     } catch(err) {
       btn.innerText = "🔑 Log In & Go Online";
       btn.disabled = false;
-      alert("Error contacting server. Please verify deployment settings.");
+      alert("Error: " + err.toString());
     }
   }
 
