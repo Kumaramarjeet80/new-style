@@ -407,14 +407,15 @@
       color: white;
       border: none;
       border-radius: 6px;
-      padding: 6px 12px;
+      padding: 7px 14px;
       font-size: 12px;
       font-weight: 800;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
-      gap: 4px;
+      gap: 6px;
       margin-top: 6px;
+      box-shadow: 0 2px 6px rgba(2, 132, 199, 0.3);
     }
 
     .badge-ticking { 
@@ -712,7 +713,7 @@
         <h3 style="margin:0;">📦 My Order History</h3>
         <button class="btn-submit" style="width:auto; padding:6px 12px; font-size:12px; background:#0f172a;" onclick="fetchInitialStoreData(true)">🔄 Refresh</button>
       </div>
-      <p style="font-size:12px; color:#64748b; margin:0 0 10px 0;">💡 Click any order to view details, price breakdown, assigned rider, and download tax receipts.</p>
+      <p style="font-size:12px; color:#64748b; margin:0 0 10px 0;">💡 Click any order to view details, price breakdown, and tax receipts.</p>
       <div id="customerOrdersList">
         <p style="text-align:center; color:#94a3b8; font-size:13px;">Loading orders...</p>
       </div>
@@ -918,7 +919,7 @@
 
 <script>
   var SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbyZ11fczqVaeZx8yyL1IXUDkJ92U7cMhX7_AgaqNXygIuj3tMdwkwiYa_lY9a0GR9btsg/exec";
-  var RAZORPAY_KEY_ID = "rzp_test_TUjrxJIbpA4EWb"; // Replace with your live Razorpay Key ID
+  var RAZORPAY_KEY_ID = "rzp_test_51MockKey12345"; // Replace with your live Razorpay Key ID
 
   var currentUser = null;
   try { currentUser = JSON.parse(localStorage.getItem('mohna_user')) || null; } catch(e) {}
@@ -944,18 +945,22 @@
   var sessionCheckInterval = null;
   var trackingLeafletMap = null, riderMapMarker = null, userMapMarker = null;
 
-  // INDIAN STANDARD TIME (IST) ROBUST PARSER & FORMATTER
-  function parseAnyDateToMs(dateStr) {
-    if (!dateStr) return 0;
-    if (typeof dateStr === "number") return dateStr;
-    var s = dateStr.toString().trim();
+  // ACCURATE MILLISECOND & IST DATE PARSER
+  function parseAnyDateToMs(dateInput) {
+    if (!dateInput) return 0;
+    if (typeof dateInput === "number") return dateInput;
+    var s = dateInput.toString().trim();
     
-    // Direct ISO / GMT timestamp check
+    // Check if integer millisecond string
+    var num = Number(s);
+    if (!isNaN(num) && num > 1000000000000) return num;
+
+    // ISO string with timezone parsing
     var directMs = new Date(s).getTime();
     if (!isNaN(directMs) && directMs > 1000000000000) return directMs;
 
-    // Handle DD/MM/YYYY or DD-MM-YYYY format
-    var match = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:,\s*(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+    // Regex fallback for DD/MM/YYYY or DD-MM-YYYY
+    var match = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:[,\s]+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
     if (match) {
       var day = parseInt(match[1], 10);
       var month = parseInt(match[2], 10) - 1;
@@ -983,7 +988,7 @@
   }
 
   function calculateDistanceKm(lat1, lon1, lat2, lon2) {
-    var R = 6371; // Earth radius in km
+    var R = 6371;
     var dLat = (lat2 - lat1) * Math.PI / 180;
     var dLon = (lon2 - lon1) * Math.PI / 180;
     var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
@@ -1095,18 +1100,21 @@
     reader.readAsDataURL(file);
   }
 
-  function calculateDeliveryStatusBadge(orderDateStr, etaMinutes, expiryTimestamp, deliveredTimestamp) {
-    var orderStartMs = parseAnyDateToMs(orderDateStr) || (expiryTimestamp - (etaMinutes * 60000));
-    var endMs = parseInt(deliveredTimestamp) || Date.now();
-    var totalElapsedSec = Math.max(0, Math.floor((endMs - orderStartMs) / 1000));
+  // ACCURATE ELAPSED TIME & STATUS CALCULATOR
+  function calculateDeliveryStatusBadge(orderTimestampInput, etaMinutes, expiryTimestamp, deliveredTimestampInput) {
+    var startMs = parseAnyDateToMs(orderTimestampInput);
+    var endMs = parseAnyDateToMs(deliveredTimestampInput) || Date.now();
+    var expMs = Number(expiryTimestamp) || (startMs + (etaMinutes * 60000));
+
+    var totalElapsedSec = Math.max(0, Math.floor((endMs - startMs) / 1000));
     var elapsedMins = Math.floor(totalElapsedSec / 60);
     var elapsedSecs = totalElapsedSec % 60;
     var timeFormatted = `${elapsedMins}m ${elapsedSecs}s`;
 
-    if (endMs <= expiryTimestamp) {
+    if (endMs <= expMs) {
       return `<span class="badge-ontime">✔ Delivered in ${timeFormatted} (On Time)</span>`;
     } else {
-      var lateSec = Math.floor((endMs - expiryTimestamp) / 1000);
+      var lateSec = Math.floor((endMs - expMs) / 1000);
       var lateMins = Math.floor(lateSec / 60);
       return `<span class="badge-late">⚠️ Delivered in ${timeFormatted} (${lateMins}m Late)</span>`;
     }
@@ -1720,7 +1728,6 @@
     renderCheckoutCart();
   }
 
-  // RAZORPAY PAYMENT GATEWAY POPUP
   function initiateRazorpayPayment() {
     if (!currentUser) { openAuthModal('login'); return; }
     if (cart.length === 0) return alert("Cart is empty.");
@@ -1740,7 +1747,7 @@
 
     var options = {
       "key": RAZORPAY_KEY_ID,
-      "amount": finalAmount * 100, // in paise
+      "amount": finalAmount * 100,
       "currency": "INR",
       "name": "Mohna Express",
       "description": `Guaranteed ${currentMatchedZoneTiming} Min Dispatch`,
@@ -1769,10 +1776,12 @@
     var orderId = "MHN-" + Math.floor(100000 + Math.random() * 900000);
     var itemSummary = cart.map(i => `${i.name} (x${i.qty})`).join(', ');
     var totalQty = cart.reduce((sum, i) => sum + i.qty, 0);
+    var nowMs = Date.now();
 
     var payload = {
       action: "saveOrder",
       orderId: orderId,
+      orderTimestampMs: nowMs,
       paymentId: paymentId,
       name: currentUser.name,
       email: currentUser.email,
@@ -1797,7 +1806,7 @@
       .then((res) => {
         cart = [];
         updateCartUI();
-        startPersistentCountdown(res.expiryTimestamp, orderId, "PAID (Verified)", 0, new Date().toLocaleString(), currentMatchedZoneTiming, null, null, null);
+        startPersistentCountdown(res.expiryTimestamp, orderId, "PAID (Verified)", 0, nowMs, currentMatchedZoneTiming, null, null, null);
         fetchInitialStoreData();
         switchPage('ordersPage');
       });
@@ -1841,14 +1850,15 @@
   function checkAndResumeActiveOrderTimer() {
     if (!cachedMyOrders || cachedMyOrders.length === 0) return;
     var latestOrder = cachedMyOrders[0];
-    var expiryMs = parseInt(latestOrder.expiryTimestamp) || (parseAnyDateToMs(latestOrder.date) + (latestOrder.etaMinutes || 20) * 60000);
+    var startMs = parseAnyDateToMs(latestOrder.orderTimestampMs || latestOrder.date);
+    var expiryMs = Number(latestOrder.expiryTimestamp) || (startMs + (Number(latestOrder.etaMinutes) || 20) * 60000);
     
     startPersistentCountdown(
       expiryMs,
       latestOrder.orderId,
       latestOrder.status,
       latestOrder.deliveredTimestamp || 0,
-      latestOrder.date,
+      startMs,
       latestOrder.etaMinutes || 20,
       latestOrder.riderName,
       latestOrder.riderPhone,
@@ -1856,7 +1866,7 @@
     );
   }
 
-  function startPersistentCountdown(targetExpiryTimestamp, orderId, status, deliveredTimestamp, orderDateStr, etaMinutes, riderName, riderPhone, riderCoords) {
+  function startPersistentCountdown(targetExpiryTimestamp, orderId, status, deliveredTimestamp, orderStartMsInput, etaMinutes, riderName, riderPhone, riderCoords) {
     var box = document.getElementById('persistentTrackerBox');
     var clock = document.getElementById('persistentTimerDisplay');
     var orderDisplay = document.getElementById('activeOrderIdDisplay');
@@ -1867,13 +1877,15 @@
     orderDisplay.innerText = `Order ID: ${orderId}`;
     clearInterval(persistentTimerInterval);
 
+    var startMs = parseAnyDateToMs(orderStartMsInput);
+    var expMs = Number(targetExpiryTimestamp) || (startMs + (etaMinutes * 60000));
+
     if (status && status.includes('Delivered')) {
-      var endMs = parseInt(deliveredTimestamp) || Date.now();
-      var orderStartMs = parseAnyDateToMs(orderDateStr) || (targetExpiryTimestamp - (etaMinutes * 60000));
-      var totalElapsedSec = Math.max(0, Math.floor((endMs - orderStartMs) / 1000));
+      var endMs = parseAnyDateToMs(deliveredTimestamp) || Date.now();
+      var totalElapsedSec = Math.max(0, Math.floor((endMs - startMs) / 1000));
       var timeFormatted = `${Math.floor(totalElapsedSec / 60)}m ${totalElapsedSec % 60}s`;
 
-      if (endMs <= targetExpiryTimestamp) {
+      if (endMs <= expMs) {
         clock.style.color = "#22c55e";
         clock.innerText = `✔ ${timeFormatted}`;
         header.style.background = "rgba(34, 197, 94, 0.2)";
@@ -1898,7 +1910,7 @@
     subtext.innerText = "Synchronized with Mohna Express Dispatch Hub";
 
     persistentTimerInterval = setInterval(() => {
-      var remainingMs = targetExpiryTimestamp - Date.now();
+      var remainingMs = expMs - Date.now();
       if (remainingMs <= 0) {
         clearInterval(persistentTimerInterval);
         clock.innerText = "00:00";
@@ -1911,7 +1923,7 @@
     }, 1000);
   }
 
-  // RENDER CUSTOMER ORDERS WITH PER-CARD TRACKING BUTTON & CLEAN IST DATES
+  // RENDER CUSTOMER ORDERS
   function renderCustomerOrdersList() {
     var container = document.getElementById('customerOrdersList');
     if (!currentUser) {
@@ -1925,13 +1937,14 @@
     }
 
     container.innerHTML = cachedMyOrders.map((o, idx) => {
-      var expiryMs = parseInt(o.expiryTimestamp) || (parseAnyDateToMs(o.date) + (o.etaMinutes || 20) * 60000);
+      var startMs = parseAnyDateToMs(o.orderTimestampMs || o.date);
+      var expiryMs = Number(o.expiryTimestamp) || (startMs + (Number(o.etaMinutes) || 20) * 60000);
       var isDelivered = o.status && o.status.includes('Delivered');
       var isOut = o.status && (o.status.includes('OUT') || o.status.includes('Out'));
       var isPacked = o.status && o.status.includes('PACKED');
 
       var timerHtml = isDelivered 
-        ? calculateDeliveryStatusBadge(o.date, o.etaMinutes || 20, expiryMs, o.deliveredTimestamp || 0)
+        ? calculateDeliveryStatusBadge(startMs, o.etaMinutes || 20, expiryMs, o.deliveredTimestamp || 0)
         : `<span id="card_timer_${o.orderId}" data-expiry="${expiryMs}" class="badge-ticking">⏱️ Loading...</span>`;
 
       // VIEW LIVE RIDER BUTTON (ONLY VISIBLE WHEN OUT FOR DELIVERY)
@@ -1959,7 +1972,7 @@
           ${trackRiderBtn}
 
           <div style="font-size:12px; color:#64748b; margin-top:4px;">
-            🕒 Timestamp (IST): <b style="color:#0f172a;">${formatIndianDate(o.date)}</b>
+            🕒 Timestamp (IST): <b style="color:#0f172a;">${formatIndianDate(startMs)}</b>
           </div>
         </div>
       `;
@@ -1988,7 +2001,7 @@
     }, 1000);
   }
 
-  // OPEN LIVE RIDER RADAR MODAL (WITH COURIER ICON & DISTANCE)
+  // OPEN LIVE RIDER RADAR MODAL
   function openLiveRiderTrackingModal(orderIdx) {
     var order = cachedMyOrders[orderIdx];
     if (!order) return;
@@ -1998,9 +2011,7 @@
     document.getElementById('liveTrackingModal').style.display = 'flex';
 
     setTimeout(function() {
-      var mapDiv = document.getElementById('liveTrackingMap');
       var rLat = 25.6000, rLng = 85.1300;
-
       if (order.riderCoords && order.riderCoords.includes(',')) {
         var parts = order.riderCoords.split(',');
         rLat = parseFloat(parts[0]) || rLat;
@@ -2045,8 +2056,10 @@
     if (!order) return;
     activeSelectedModalOrder = order;
 
+    var startMs = parseAnyDateToMs(order.orderTimestampMs || order.date);
+
     document.getElementById('dtlOrderId').innerText = order.orderId;
-    document.getElementById('dtlTimestamp').innerText = formatIndianDate(order.date);
+    document.getElementById('dtlTimestamp').innerText = formatIndianDate(startMs);
     document.getElementById('dtlItem').innerText = order.item;
     document.getElementById('dtlQty').innerText = order.qty;
     
@@ -2070,11 +2083,11 @@
       modalRiderBox.style.display = 'none';
     }
 
-    var expiryMs = parseInt(order.expiryTimestamp) || (parseAnyDateToMs(order.date) + (order.etaMinutes || 20) * 60000);
+    var expiryMs = Number(order.expiryTimestamp) || (startMs + (Number(order.etaMinutes) || 20) * 60000);
     var timerBadge = document.getElementById('dtlLiveTimer');
 
     if (order.status && order.status.includes('Delivered')) {
-      timerBadge.innerHTML = calculateDeliveryStatusBadge(order.date, order.etaMinutes || 20, expiryMs, order.deliveredTimestamp || 0);
+      timerBadge.innerHTML = calculateDeliveryStatusBadge(startMs, order.etaMinutes || 20, expiryMs, order.deliveredTimestamp || 0);
     } else {
       timerBadge.className = "badge-ticking";
       var remainingMs = expiryMs - Date.now();
