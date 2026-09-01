@@ -212,31 +212,47 @@
   let tickerInterval = null;
   let activeOtpVerificationOrderId = null;
 
-  // ROBUST GAS API TRANSPORT LAYER (SOLVES GITHUB.IO CORS REDIRECT DROPS)
-  async function callAppsScriptApi(payload) {
-    const params = new URLSearchParams();
-    for (const key in payload) {
-      params.append(key, typeof payload[key] === 'object' ? JSON.stringify(payload[key]) : payload[key]);
-    }
-    
-    // Method 1: GET Query Transport
-    try {
-      const getUrl = `${SPREADSHEET_API_URL}?${params.toString()}`;
-      const response = await fetch(getUrl, {
-        method: 'GET',
-        headers: { 'Accept': 'application/json' }
-      });
-      return await response.json();
-    } catch (e1) {
-      // Method 2: Direct Form POST Transport
-      const postResponse = await fetch(SPREADSHEET_API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(payload)
-      });
-      const text = await postResponse.text();
-      return JSON.parse(text);
-    }
+  // JSONP TRANSPORT LAYER (IMMUNE TO GITHUB PAGES CORS REDIRECT DROPS)
+  function callAppsScriptApi(payload) {
+    return new Promise((resolve, reject) => {
+      const callbackName = 'gas_cb_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+      const script = document.createElement('script');
+
+      const timeout = setTimeout(() => {
+        cleanup();
+        reject(new Error("Request timed out. Please verify internet connection."));
+      }, 15000);
+
+      function cleanup() {
+        clearTimeout(timeout);
+        if (window[callbackName]) delete window[callbackName];
+        if (script.parentNode) script.parentNode.removeChild(script);
+      }
+
+      window[callbackName] = function(data) {
+        cleanup();
+        resolve(data);
+      };
+
+      script.onerror = function() {
+        cleanup();
+        // Fallback to fetch if script tag fails
+        fetch(SPREADSHEET_API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload)
+        }).then(r => r.json()).then(resolve).catch(reject);
+      };
+
+      const params = new URLSearchParams();
+      for (const key in payload) {
+        params.append(key, typeof payload[key] === 'object' ? JSON.stringify(payload[key]) : payload[key]);
+      }
+      params.append('callback', callbackName);
+
+      script.src = `${SPREADSHEET_API_URL}?${params.toString()}`;
+      document.body.appendChild(script);
+    });
   }
 
   window.onload = function() {
@@ -390,7 +406,7 @@
     } catch(err) {
       btn.innerText = "🔑 Log In & Go Online";
       btn.disabled = false;
-      alert("Error: " + err.toString());
+      alert("Error: " + err.message);
     }
   }
 
