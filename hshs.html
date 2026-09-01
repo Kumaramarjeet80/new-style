@@ -61,7 +61,67 @@
       padding: 4px 8px; 
       font-size: 14px; 
     }
-    
+
+    .header-right-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      position: relative;
+    }
+
+    .notif-bell-btn {
+      background: white;
+      border: 1px solid #cbd5e1;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      cursor: pointer;
+      position: relative;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+    .notif-badge-count {
+      position: absolute;
+      top: -3px;
+      right: -3px;
+      background: #ef4444;
+      color: white;
+      font-size: 10px;
+      font-weight: 900;
+      border-radius: 10px;
+      padding: 1px 5px;
+      min-width: 16px;
+      text-align: center;
+    }
+
+    .notif-dropdown-panel {
+      position: absolute;
+      top: 45px;
+      right: 0;
+      width: 310px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+      border: 1px solid #e2e8f0;
+      padding: 12px;
+      z-index: 2000;
+      display: none;
+      max-height: 360px;
+      overflow-y: auto;
+    }
+    .notif-item {
+      padding: 8px 10px;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 12px;
+      color: #334155;
+    }
+    .notif-item:last-child { border-bottom: none; }
+    .notif-item b { color: #0f172a; display: block; margin-bottom: 2px; }
+    .notif-item small { color: #94a3b8; font-size: 10.5px; }
+
     .auth-pill {
       display: flex; 
       align-items: center; 
@@ -353,6 +413,18 @@
       border-color: #2563eb; 
     }
 
+    .rider-card-strip {
+      background: #f0fdf4;
+      border: 1px solid #86efac;
+      border-radius: 8px;
+      padding: 8px 10px;
+      margin: 6px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+    }
+
     .badge-ticking { 
       display: inline-block; 
       background: #0f172a; 
@@ -534,9 +606,28 @@
     <div class="brand-logo" onclick="switchPage('homePage')">
       <span>⚡</span> Mohna Express
     </div>
-    <div id="authHeaderContainer">
-      <div class="auth-pill auth-logged-out" onclick="openAuthModal('login')">
-        🔑 Sign In
+    
+    <div class="header-right-actions">
+      <!-- NOTIFICATION BELL -->
+      <button type="button" class="notif-bell-btn" id="btnNotifBell" onclick="toggleNotifDropdown()">
+        🔔
+        <span id="notifBadge" class="notif-badge-count" style="display:none;">0</span>
+      </button>
+
+      <div id="notifDropdown" class="notif-dropdown-panel">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <b style="font-size:13px; color:#0f172a;">🔔 Live Order Notifications</b>
+          <button type="button" onclick="clearAllNotifications()" style="background:none; border:none; color:#2563eb; font-size:11px; cursor:pointer;">Clear All</button>
+        </div>
+        <div id="notifListContainer">
+          <p style="text-align:center; color:#94a3b8; font-size:12px; margin:16px 0;">No new notifications</p>
+        </div>
+      </div>
+
+      <div id="authHeaderContainer">
+        <div class="auth-pill auth-logged-out" onclick="openAuthModal('login')">
+          🔑 Sign In
+        </div>
       </div>
     </div>
   </header>
@@ -564,7 +655,6 @@
     <div class="card">
       <h3 style="margin-top:0;">💳 Checkout & Live GPS Coverage Check</h3>
       
-      <!-- REAL-TIME COVERAGE VALIDATION STATUS -->
       <div id="zoneCoverageNotice" class="coverage-banner coverage-deliverable">
         <div>
           <span style="font-size:11px; text-transform:uppercase; display:block; opacity:0.85;">📍 Delivery Zone Status</span>
@@ -633,7 +723,7 @@
         <h3 style="margin:0;">📦 My Order History</h3>
         <button class="btn-submit" style="width:auto; padding:6px 12px; font-size:12px; background:#0f172a;" onclick="fetchInitialStoreData(true)">🔄 Refresh</button>
       </div>
-      <p style="font-size:12px; color:#64748b; margin:0 0 10px 0;">💡 Click any order to view details, price breakdown, and download tax receipts.</p>
+      <p style="font-size:12px; color:#64748b; margin:0 0 10px 0;">💡 Click any order to view details, price breakdown, assigned rider info, and download tax receipts.</p>
       <div id="customerOrdersList">
         <p style="text-align:center; color:#94a3b8; font-size:13px;">Loading orders...</p>
       </div>
@@ -724,6 +814,14 @@
       <div class="bill-row"><span><b>Order ID:</b></span><span id="dtlOrderId"></span></div>
       <div class="bill-row"><span><b>Order Timestamp:</b></span><span id="dtlTimestamp" style="color:#2563eb; font-weight:bold;"></span></div>
       <div class="bill-row"><span><b>⏱️ Delivery Status:</b></span><span id="dtlLiveTimer"></span></div>
+      
+      <!-- ASSIGNED RIDER BLOCK IN ORDER MODAL -->
+      <div id="dtlRiderContainer" style="background:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:10px; margin:8px 0; display:none;">
+        <div style="font-size:11px; font-weight:bold; color:#166534; text-transform:uppercase;">🛵 Delivery Partner Details</div>
+        <div class="bill-row" style="margin:4px 0 2px;"><span><b>Rider Name:</b></span><span id="dtlRiderName" style="font-weight:700;">-</span></div>
+        <div class="bill-row" style="margin:0;"><span><b>Rider Phone:</b></span><a id="dtlRiderPhone" href="tel:" style="color:#16a34a; font-weight:bold; text-decoration:none;">-</a></div>
+      </div>
+
       <div class="bill-row"><span><b>Items Ordered:</b></span><span id="dtlItem"></span></div>
       <div class="bill-row"><span><b>Quantity:</b></span><span id="dtlQty"></span></div>
       
@@ -807,6 +905,7 @@
   let activeCategory = 'all';
 
   let rawProducts = [], rawCategories = [], rawCoupons = [], cachedMyOrders = [];
+  let customerNotifications = JSON.parse(localStorage.getItem('mohna_cust_notifs')) || [];
   let currentSelectedProduct = null;
   let currentMatchedZoneTiming = 20;
   let currentMatchedZoneName = "City Express Hub";
@@ -959,11 +1058,64 @@
   window.onload = function() {
     updateHeaderAuthUI();
     updateCartUI();
+    updateNotificationsUI();
     loadFromLocalCache();
     fetchInitialStoreData();
     requestUserGPS(() => evaluateDeliveryZoneEligibility(false));
     startSingleSessionGuard();
   };
+
+  // NOTIFICATION SYSTEM ENGINE
+  function updateNotificationsUI() {
+    const badge = document.getElementById('notifBadge');
+    const container = document.getElementById('notifListContainer');
+    
+    if (customerNotifications.length > 0) {
+      badge.style.display = 'block';
+      badge.innerText = customerNotifications.length;
+      container.innerHTML = customerNotifications.map((n, idx) => `
+        <div class="notif-item">
+          <b>${n.title}</b>
+          <div>${n.msg}</div>
+          <small>${n.time}</small>
+        </div>
+      `).join('');
+    } else {
+      badge.style.display = 'none';
+      container.innerHTML = `<p style="text-align:center; color:#94a3b8; font-size:12px; margin:16px 0;">No new notifications</p>`;
+    }
+  }
+
+  function toggleNotifDropdown() {
+    const dropdown = document.getElementById('notifDropdown');
+    dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+  }
+
+  function clearAllNotifications() {
+    customerNotifications = [];
+    localStorage.setItem('mohna_cust_notifs', JSON.stringify([]));
+    updateNotificationsUI();
+  }
+
+  function checkAndNotifyRiderAssignment(newOrders) {
+    newOrders.forEach(order => {
+      const isOut = order.status && (order.status.includes('OUT') || order.status.includes('Out'));
+      const notifKey = `notif_${order.orderId}_${order.status}`;
+      
+      if (isOut && order.riderName && !localStorage.getItem(notifKey)) {
+        const notif = {
+          id: notifKey,
+          title: `🛵 Order ${order.orderId} Out for Delivery!`,
+          msg: `Rider ${order.riderName} (${order.riderPhone || 'Partner'}) has accepted your delivery.`,
+          time: new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })
+        };
+        customerNotifications.unshift(notif);
+        localStorage.setItem(notifKey, "true");
+        localStorage.setItem('mohna_cust_notifs', JSON.stringify(customerNotifications));
+        updateNotificationsUI();
+      }
+    });
+  }
 
   function loadFromLocalCache() {
     try {
@@ -1026,6 +1178,7 @@
         adminZonesData = data.zone || null;
         if (data.myOrders) {
           cachedMyOrders = data.myOrders;
+          checkAndNotifyRiderAssignment(cachedMyOrders);
           renderCustomerOrdersList();
           checkAndResumeActiveOrderTimer();
         }
@@ -1622,7 +1775,7 @@
       return;
     }
 
-    if (status && status.includes('OUT') && riderName) {
+    if (status && (status.includes('OUT') || status.includes('Out')) && riderName) {
       if (riderCard) {
         riderCard.style.display = 'flex';
         document.getElementById('liveRiderNameDisplay').innerText = riderName;
@@ -1673,6 +1826,16 @@
         ? calculateDeliveryStatusBadge(o.date, o.etaMinutes || 20, expiryMs, o.deliveredTimestamp || 0)
         : `<span id="card_timer_${o.orderId}" data-expiry="${expiryMs}" class="badge-ticking">⏱️ Loading...</span>`;
 
+      let riderBoxHtml = "";
+      if (o.riderName) {
+        riderBoxHtml = `
+          <div class="rider-card-strip">
+            <span>🛵 <b>Rider:</b> ${o.riderName}</span>
+            <a href="tel:${o.riderPhone || ''}" onclick="event.stopPropagation();" style="color:#15803d; font-weight:800; text-decoration:none;">📞 ${o.riderPhone || 'Call'}</a>
+          </div>
+        `;
+      }
+
       return `
         <div class="order-history-card" onclick="openOrderModal(${idx})">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
@@ -1685,6 +1848,8 @@
             <div style="flex:1; text-align:center;">${timerHtml}</div>
             <b style="color:#16a34a; font-size:15px; flex:1; text-align:right;">${o.amount}</b>
           </div>
+
+          ${riderBoxHtml}
 
           <div style="font-size:12px; color:#64748b; margin-top:2px;">
             🕒 Timestamp: <b style="color:#0f172a;">${o.date}</b>
@@ -1734,6 +1899,17 @@
     document.getElementById('dtlAddress').innerText = order.address || "Customer GPS Coordinates";
     document.getElementById('dtlEta').innerText = `${order.etaMinutes || 20} Minutes`;
     document.getElementById('dtlStatus').innerText = order.status || "PAID";
+
+    const riderContainer = document.getElementById('dtlRiderContainer');
+    if (order.riderName) {
+      riderContainer.style.display = "block";
+      document.getElementById('dtlRiderName').innerText = order.riderName;
+      const rPhone = document.getElementById('dtlRiderPhone');
+      rPhone.innerText = order.riderPhone || "N/A";
+      rPhone.href = `tel:${order.riderPhone || ''}`;
+    } else {
+      riderContainer.style.display = "none";
+    }
 
     const expiryMs = parseInt(order.expiryTimestamp) || (parseAnyDateToMs(order.date) + (order.etaMinutes || 20) * 60000);
     const timerBadge = document.getElementById('dtlLiveTimer');
