@@ -92,12 +92,10 @@
     </div>
   </header>
 
-  <!-- PENDING VERIFICATION / BLOCKED BANNER -->
   <div id="verificationAlert" class="verification-alert-banner">
     <b>⏳ Account Verification Required:</b> Your profile has been registered and is awaiting Admin Verification. You will become an active rider once approved by warehouse admin.
   </div>
 
-  <!-- RIDER METRICS -->
   <div class="metrics-grid">
     <div class="metric-card">
       <div id="mActiveCount" class="metric-val">0</div>
@@ -113,7 +111,6 @@
     </div>
   </div>
 
-  <!-- STATUS FILTER TABS -->
   <div class="tab-bar">
     <button class="tab-btn active" id="tabActive" onclick="filterRiderTab('active')">⚡ Ready for Pickup (<span id="countActive">0</span>)</button>
     <button class="tab-btn" id="tabOut" onclick="filterRiderTab('out')">🛵 My In-Transit (<span id="countOut">0</span>)</button>
@@ -134,7 +131,6 @@
       <button class="tab-btn" id="btnRTabSignup" style="flex:1;" onclick="toggleRiderAuthTab('signup')">Partner Sign Up (OTP)</button>
     </div>
 
-    <!-- LOGIN VIEW -->
     <div id="rLoginView">
       <div class="form-group">
         <label>Rider Email Address</label>
@@ -147,7 +143,6 @@
       <button type="button" id="btnRiderSubmitLogin" class="btn" style="background:#0284c7; color:white; width:100%; padding:12px; margin-top:6px;" onclick="processRiderPasswordLogin()">🔑 Log In & Go Online</button>
     </div>
 
-    <!-- SIGNUP STEP 1 -->
     <div id="rSignupStep1" style="display:none;">
       <div class="form-group">
         <label>Full Name</label>
@@ -168,7 +163,6 @@
       <button type="button" class="btn" id="btnSendRiderSignupOtp" style="background:#0284c7; color:white; width:100%; padding:12px; margin-top:6px;" onclick="sendRiderSignupOtp()">Send Verification OTP</button>
     </div>
 
-    <!-- SIGNUP STEP 2 -->
     <div id="rSignupStep2" style="display:none;">
       <p style="font-size:13px; color:#94a3b8;">Enter the 6-digit OTP sent to <b id="rTargetEmailDisplay" style="color:#38bdf8;"></b></p>
       <div class="form-group">
@@ -204,7 +198,6 @@
 </div>
 
 <script>
-  // TOP-LEVEL SAFE GLOBAL DECLARATIONS
   var SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbyZ11fczqVaeZx8yyL1IXUDkJ92U7cMhX7_AgaqNXygIuj3tMdwkwiYa_lY9a0GR9btsg/exec";
   var currentRider = null;
   try {
@@ -216,9 +209,9 @@
   var previousActiveCount = 0;
   var currentTab = 'active';
   var tickerInterval = null;
+  var autoSyncInterval = null;
   var activeOtpVerificationOrderId = null;
 
-  // WEB AUDIO DISPATCH ALERT CHIME
   function playDispatchAlertSound() {
     try {
       var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -236,7 +229,6 @@
     } catch(e) {}
   }
 
-  // ROBUST GAS API TRANSPORT LAYER
   async function callAppsScriptApi(payload) {
     var params = new URLSearchParams();
     for (var key in payload) {
@@ -265,10 +257,13 @@
     updateRiderHeaderUI();
     validateRiderStatus();
     startLiveGpsTelemetryTracking();
-    setInterval(validateRiderStatus, 12000);
+
+    if (autoSyncInterval) clearInterval(autoSyncInterval);
+    autoSyncInterval = setInterval(function() {
+      validateRiderStatus();
+    }, 5000);
   };
 
-  // LIVE RIDER TELEMETRY BROADCASTER
   function startLiveGpsTelemetryTracking() {
     if (navigator.geolocation) {
       navigator.geolocation.watchPosition(function(pos) {
@@ -284,14 +279,18 @@
     }
   }
 
-  function parseAnyDateToMs(dateStr) {
-    if (!dateStr) return 0;
-    if (typeof dateStr === "number") return dateStr;
-    var s = dateStr.toString().trim();
-    var directMs = new Date(s).getTime();
-    if (!isNaN(directMs)) return directMs;
+  function parseAnyDateToMs(dateInput) {
+    if (!dateInput) return 0;
+    if (typeof dateInput === "number") return dateInput;
+    var s = dateInput.toString().trim();
+    
+    var num = Number(s);
+    if (!isNaN(num) && num > 1000000000000) return num;
 
-    var match = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:,\s*(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+    var directMs = new Date(s).getTime();
+    if (!isNaN(directMs) && directMs > 1000000000000) return directMs;
+
+    var match = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:[,\s]+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
     if (match) {
       var day = parseInt(match[1], 10);
       var month = parseInt(match[2], 10) - 1;
@@ -304,20 +303,22 @@
     return 0;
   }
 
-  function calculateDeliveryStatusBadge(orderDateStr, etaMinutes, expiryTimestamp, deliveredTimestamp) {
-    var orderStartMs = parseAnyDateToMs(orderDateStr) || (expiryTimestamp - (etaMinutes * 60000));
-    var endMs = parseInt(deliveredTimestamp) || Date.now();
-    var totalElapsedSec = Math.max(0, Math.floor((endMs - orderStartMs) / 1000));
+  function calculateDeliveryStatusBadge(orderTimestampInput, etaMinutes, expiryTimestamp, deliveredTimestampInput) {
+    var startMs = parseAnyDateToMs(orderTimestampInput);
+    var endMs = parseAnyDateToMs(deliveredTimestampInput) || Date.now();
+    var expMs = Number(expiryTimestamp) || (startMs + (etaMinutes * 60000));
+
+    var totalElapsedSec = Math.max(0, Math.floor((endMs - startMs) / 1000));
     var elapsedMins = Math.floor(totalElapsedSec / 60);
     var elapsedSecs = totalElapsedSec % 60;
-    var timeFormatted = elapsedMins + "m " + elapsedSecs + "s";
+    var timeFormatted = `${elapsedMins}m ${elapsedSecs}s`;
 
-    if (endMs <= expiryTimestamp) {
-      return '<span class="badge-ontime">✔ Delivered in ' + timeFormatted + ' (On Time)</span>';
+    if (endMs <= expMs) {
+      return `<span class="badge-ontime">✔ Delivered in ${timeFormatted} (On Time)</span>`;
     } else {
-      var lateSec = Math.floor((endMs - expiryTimestamp) / 1000);
+      var lateSec = Math.floor((endMs - expMs) / 1000);
       var lateMins = Math.floor(lateSec / 60);
-      return '<span class="badge-late">⚠️ Delivered in ' + timeFormatted + ' (' + lateMins + 'm Late)</span>';
+      return `<span class="badge-late">⚠️ Delivered in ${timeFormatted} (${lateMins}m Late)</span>`;
     }
   }
 
@@ -528,7 +529,6 @@
 
   function updateMetrics() {
     var riderName = (currentRider && currentRider.name) ? currentRider.name.trim().toLowerCase() : "";
-    // Only packed orders are available for pickup
     var ready = cachedOrders.filter(function(o) { 
       return (o.status && o.status.includes('PACKED')) && !o.status.includes('Delivered') && !o.status.includes('OUT') && !o.status.includes('Out'); 
     });
@@ -552,8 +552,9 @@
 
     if (myDone.length > 0) {
       var onTimeCount = myDone.filter(function(o) {
-        var exp = parseInt(o.expiryTimestamp);
-        var del = parseInt(o.deliveredTimestamp) || exp;
+        var startMs = parseAnyDateToMs(o.orderTimestampMs || o.date);
+        var exp = Number(o.expiryTimestamp) || (startMs + (Number(o.etaMinutes) || 20) * 60000);
+        var del = Number(o.deliveredTimestamp) || exp;
         return del <= exp;
       }).length;
       document.getElementById('mGuaranteeRate').innerText = Math.round((onTimeCount / myDone.length) * 100) + "%";
@@ -583,20 +584,15 @@
     var riderName = (currentRider && currentRider.name) ? currentRider.name.trim().toLowerCase() : "";
     var filtered = [];
     
-    // TAB 1: Shows ONLY orders packed & ready by warehouse
     if (currentTab === 'active') {
       filtered = cachedOrders.filter(function(o) { 
         return (o.status && o.status.includes('PACKED')) && !o.status.includes('Delivered') && !o.status.includes('OUT') && !o.status.includes('Out'); 
       });
-    } 
-    // TAB 2: In-Transit tasks for this specific rider
-    else if (currentTab === 'out') {
+    } else if (currentTab === 'out') {
       filtered = cachedOrders.filter(function(o) { 
         return (o.status.includes('OUT') || o.status.includes('Out')) && (o.riderName && o.riderName.trim().toLowerCase() === riderName); 
       });
-    } 
-    // TAB 3: Delivered tasks for this specific rider
-    else {
+    } else {
       filtered = cachedOrders.filter(function(o) { 
         return o.status.includes('Delivered') && (o.riderName && o.riderName.trim().toLowerCase() === riderName); 
       });
@@ -608,7 +604,8 @@
     }
 
     feed.innerHTML = filtered.map(function(o) {
-      var expiryMs = parseInt(o.expiryTimestamp) || (parseAnyDateToMs(o.date) + (o.etaMinutes || 20) * 60000);
+      var startMs = parseAnyDateToMs(o.orderTimestampMs || o.date);
+      var expiryMs = Number(o.expiryTimestamp) || (startMs + (Number(o.etaMinutes) || 20) * 60000);
       var isDelivered = o.status.includes('Delivered');
       var isOut = o.status.includes('OUT') || o.status.includes('Out');
 
@@ -622,7 +619,7 @@
       } else if (isDelivered) {
         statusBadge = '<span class="status-badge status-done">✔ Delivered by You</span>';
         actionBtn = '';
-        timerBadge = calculateDeliveryStatusBadge(o.date, o.etaMinutes || 20, expiryMs, o.deliveredTimestamp || 0);
+        timerBadge = calculateDeliveryStatusBadge(startMs, o.etaMinutes || 20, expiryMs, o.deliveredTimestamp || 0);
       }
 
       return `
