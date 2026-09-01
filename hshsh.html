@@ -168,13 +168,13 @@
     </div>
   </div>
 
-  <!-- TAB 1.5: 📦 DARK STORE PICKER & PACKING HUB (FEATURE #14) -->
+  <!-- TAB 1.5: 📦 DARK STORE PICKER & PACKING HUB -->
   <div id="viewPicker" class="admin-page-view">
     <div class="card" style="border-left:5px solid #2563eb;">
       <div class="card-header">
         <div>
           <h3>📦 Dark Store Picker & Packing Hub</h3>
-          <p style="margin:2px 0 0; font-size:12px; color:#64748b;">Real-time queue for warehouse packers to verify SKU items and mark orders as Ready for Rider Assignment.</p>
+          <p style="margin:2px 0 0; font-size:12px; color:#64748b;">Packers verify items and mark orders as Ready for Dispatch. Riders can ONLY accept orders after they are packed.</p>
         </div>
         <button class="btn btn-refresh" onclick="loadOrders()">🔄 Refresh Packing Queue</button>
       </div>
@@ -197,17 +197,17 @@
     </div>
   </div>
 
-  <!-- TAB 2: 👥 USERS DATABASE -->
+  <!-- TAB 2: 👥 USERS DATABASE (EXPOSES WALLET BALANCE) -->
   <div id="viewUsers" class="admin-page-view">
     <div class="card">
       <div class="card-header">
-        <div><h3>👥 Registered Customers (Signup vs Latest Login GPS)</h3></div>
+        <div><h3>👥 Registered Customers & Wallet Ledger</h3></div>
         <button class="btn btn-refresh" onclick="loadUsers()">🔄 Refresh</button>
       </div>
       <table>
-        <thead><tr><th>Photo</th><th>User ID</th><th>Registered Date</th><th>Name</th><th>Email</th><th>Phone</th><th>Registered GPS</th><th>Latest Login GPS</th><th>Status</th><th>Access Action</th></tr></thead>
+        <thead><tr><th>Photo</th><th>User ID</th><th>Registered Date</th><th>Name</th><th>Email</th><th>Phone</th><th>Wallet Balance</th><th>Registered GPS</th><th>Latest Login GPS</th><th>Status</th><th>Access Action</th></tr></thead>
         <tbody id="userTableBody">
-          <tr><td colspan="10" style="text-align:center; color:#64748b; padding:20px;">Loading users database...</td></tr>
+          <tr><td colspan="11" style="text-align:center; color:#64748b; padding:20px;">Loading users database...</td></tr>
         </tbody>
       </table>
     </div>
@@ -231,12 +231,13 @@
             <th>Full Name</th>
             <th>Email</th>
             <th>Phone</th>
+            <th>Live Telemetry</th>
             <th>Current Status</th>
             <th>Verification & Block Actions</th>
           </tr>
         </thead>
         <tbody id="riderTableBody">
-          <tr><td colspan="7" style="text-align:center; color:#64748b; padding:20px;">Loading riders database...</td></tr>
+          <tr><td colspan="8" style="text-align:center; color:#64748b; padding:20px;">Loading riders database...</td></tr>
         </tbody>
       </table>
     </div>
@@ -618,7 +619,6 @@
     }).join('');
   }
 
-  // RENDER DARK STORE PICKER TABLE (FEATURE #14)
   function renderPickerTable(q = "") {
     var packingQueue = cachedOrders.filter(o => !o.status.includes('Delivered') && !o.status.includes('OUT') && !o.status.includes('Out'));
     if (q) {
@@ -695,7 +695,7 @@
     }
 
     if (filtered.length === 0) {
-      document.getElementById('userTableBody').innerHTML = `<tr><td colspan="10" style="text-align:center; color:#64748b; padding:20px;">No customers found.</td></tr>`;
+      document.getElementById('userTableBody').innerHTML = `<tr><td colspan="11" style="text-align:center; color:#64748b; padding:20px;">No customers found.</td></tr>`;
       return;
     }
 
@@ -703,6 +703,7 @@
       <tr>
         <td><img src="${u.avatar || 'https://via.placeholder.com/32?text=U'}" style="width:32px; height:32px; border-radius:50%; object-fit:cover;" /></td>
         <td><b>${u.id}</b></td><td><small>${u.date || 'N/A'}</small></td><td><b>${u.name}</b></td><td>${u.email}</td><td>📞 ${u.phone}</td>
+        <td><b style="color:#16a34a; font-size:14px;">₹${u.walletBalance || 0}</b></td>
         <td>📍 ${u.regLat ? u.regLat + ', ' + u.regLng : 'N/A'}</td><td>📍 ${u.loginLat ? u.loginLat + ', ' + u.loginLng : 'Same as Reg'}</td>
         <td><span style="background:#dcfce7; color:#166534; padding:2px 6px; border-radius:4px; font-weight:bold;">${u.status}</span></td>
         <td><button class="btn btn-del" onclick="toggleUserStatus('${u.id}', '${u.email}', '${u.status === 'Blocked' ? 'Active' : 'Blocked'}')">${u.status === 'Blocked' ? '🔓 Unblock' : '🚫 Block'}</button></td>
@@ -734,7 +735,7 @@
     }
 
     if (filtered.length === 0) {
-      document.getElementById('riderTableBody').innerHTML = `<tr><td colspan="7" style="text-align:center; color:#64748b; padding:20px;">No rider partners registered.</td></tr>`;
+      document.getElementById('riderTableBody').innerHTML = `<tr><td colspan="8" style="text-align:center; color:#64748b; padding:20px;">No rider partners registered.</td></tr>`;
       return;
     }
 
@@ -763,6 +764,7 @@
           <td><b>${r.name}</b></td>
           <td>${r.email}</td>
           <td>📞 ${r.phone}</td>
+          <td>📍 <small>${r.liveLat ? `${r.liveLat}, ${r.liveLng}` : 'Offline'}</small></td>
           <td><span style="background:${statusBg}; color:${statusColor}; padding:2px 8px; border-radius:4px; font-weight:800; font-size:11px;">${r.status}</span></td>
           <td><div style="display:flex; gap:6px;">${actionButtons}</div></td>
         </tr>
@@ -975,12 +977,12 @@
 
     if (type === 'users') {
       reportTitle = "REGISTERED CUSTOMERS AUDIT STATEMENT";
-      headers = ["User ID", "Registration Date", "Customer Name", "Email Address", "Phone Number", "Account Status"];
+      headers = ["User ID", "Registration Date", "Customer Name", "Email Address", "Phone Number", "Wallet Balance", "Account Status"];
       rows = cachedUsers.filter(u => {
         var uTime = parseAnyDateToMs(u.date);
         if (activeFilterFromMs === 0 && activeFilterToMs === Infinity) return true;
         return uTime === 0 || (uTime >= activeFilterFromMs && uTime <= activeFilterToMs);
-      }).map(u => [u.id, u.date || 'N/A', u.name, u.email, u.phone, u.status]);
+      }).map(u => [u.id, u.date || 'N/A', u.name, u.email, u.phone, "₹" + (u.walletBalance || 0), u.status]);
     } else if (type === 'orders') {
       reportTitle = "EXECUTIVE SALES & DISPATCH AUDIT REPORT";
       headers = ["Order ID", "Timestamp", "Customer Name", "Rider", "Total Paid", "Guaranteed ETA", "Current Status"];
