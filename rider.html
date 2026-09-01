@@ -204,55 +204,42 @@
 </div>
 
 <script>
-  const SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbyZ11fczqVaeZx8yyL1IXUDkJ92U7cMhX7_AgaqNXygIuj3tMdwkwiYa_lY9a0GR9btsg/exec";
+  // TOP-LEVEL SAFE GLOBAL DECLARATIONS (PREVENTS TDZ REFERENCE ERRORS)
+  var SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbyZ11fczqVaeZx8yyL1IXUDkJ92U7cMhX7_AgaqNXygIuj3tMdwkwiYa_lY9a0GR9btsg/exec";
+  var currentRider = null;
+  try {
+    currentRider = JSON.parse(localStorage.getItem('mohna_rider')) || null;
+  } catch(e) {
+    currentRider = null;
+  }
+  var cachedOrders = [];
+  var currentTab = 'active';
+  var tickerInterval = null;
+  var activeOtpVerificationOrderId = null;
 
-  let currentRider = JSON.parse(localStorage.getItem('mohna_rider')) || null;
-  let cachedOrders = [];
-  let currentTab = 'active';
-  let tickerInterval = null;
-  let activeOtpVerificationOrderId = null;
-
-  // JSONP TRANSPORT LAYER (IMMUNE TO GITHUB PAGES CORS REDIRECT DROPS)
-  function callAppsScriptApi(payload) {
-    return new Promise((resolve, reject) => {
-      const callbackName = 'gas_cb_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
-      const script = document.createElement('script');
-
-      const timeout = setTimeout(() => {
-        cleanup();
-        reject(new Error("Request timed out. Please verify internet connection."));
-      }, 15000);
-
-      function cleanup() {
-        clearTimeout(timeout);
-        if (window[callbackName]) delete window[callbackName];
-        if (script.parentNode) script.parentNode.removeChild(script);
-      }
-
-      window[callbackName] = function(data) {
-        cleanup();
-        resolve(data);
-      };
-
-      script.onerror = function() {
-        cleanup();
-        // Fallback to fetch if script tag fails
-        fetch(SPREADSHEET_API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify(payload)
-        }).then(r => r.json()).then(resolve).catch(reject);
-      };
-
-      const params = new URLSearchParams();
-      for (const key in payload) {
-        params.append(key, typeof payload[key] === 'object' ? JSON.stringify(payload[key]) : payload[key]);
-      }
-      params.append('callback', callbackName);
-
-      script.src = `${SPREADSHEET_API_URL}?${params.toString()}`;
-      document.body.appendChild(script);
-    });
+  // ROBUST GAS API TRANSPORT LAYER
+  async function callAppsScriptApi(payload) {
+    var params = new URLSearchParams();
+    for (var key in payload) {
+      params.append(key, typeof payload[key] === 'object' ? JSON.stringify(payload[key]) : payload[key]);
+    }
+    
+    try {
+      var getUrl = SPREADSHEET_API_URL + '?' + params.toString();
+      var response = await fetch(getUrl, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' }
+      });
+      return await response.json();
+    } catch (e1) {
+      var postResponse = await fetch(SPREADSHEET_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+      var text = await postResponse.text();
+      return JSON.parse(text);
+    }
   }
 
   window.onload = function() {
@@ -264,44 +251,44 @@
   function parseAnyDateToMs(dateStr) {
     if (!dateStr) return 0;
     if (typeof dateStr === "number") return dateStr;
-    const s = dateStr.toString().trim();
-    const directMs = new Date(s).getTime();
+    var s = dateStr.toString().trim();
+    var directMs = new Date(s).getTime();
     if (!isNaN(directMs)) return directMs;
 
-    const match = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:,\s*(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+    var match = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:,\s*(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
     if (match) {
-      const day = parseInt(match[1], 10);
-      const month = parseInt(match[2], 10) - 1;
-      const year = parseInt(match[3], 10);
-      const hours = match[4] ? parseInt(match[4], 10) : 0;
-      const mins = match[5] ? parseInt(match[5], 10) : 0;
-      const secs = match[6] ? parseInt(match[6], 10) : 0;
+      var day = parseInt(match[1], 10);
+      var month = parseInt(match[2], 10) - 1;
+      var year = parseInt(match[3], 10);
+      var hours = match[4] ? parseInt(match[4], 10) : 0;
+      var mins = match[5] ? parseInt(match[5], 10) : 0;
+      var secs = match[6] ? parseInt(match[6], 10) : 0;
       return new Date(year, month, day, hours, mins, secs).getTime();
     }
     return 0;
   }
 
   function calculateDeliveryStatusBadge(orderDateStr, etaMinutes, expiryTimestamp, deliveredTimestamp) {
-    const orderStartMs = parseAnyDateToMs(orderDateStr) || (expiryTimestamp - (etaMinutes * 60000));
-    const endMs = parseInt(deliveredTimestamp) || Date.now();
-    const totalElapsedSec = Math.max(0, Math.floor((endMs - orderStartMs) / 1000));
-    const elapsedMins = Math.floor(totalElapsedSec / 60);
-    const elapsedSecs = totalElapsedSec % 60;
-    const timeFormatted = `${elapsedMins}m ${elapsedSecs}s`;
+    var orderStartMs = parseAnyDateToMs(orderDateStr) || (expiryTimestamp - (etaMinutes * 60000));
+    var endMs = parseInt(deliveredTimestamp) || Date.now();
+    var totalElapsedSec = Math.max(0, Math.floor((endMs - orderStartMs) / 1000));
+    var elapsedMins = Math.floor(totalElapsedSec / 60);
+    var elapsedSecs = totalElapsedSec % 60;
+    var timeFormatted = elapsedMins + "m " + elapsedSecs + "s";
 
     if (endMs <= expiryTimestamp) {
-      return `<span class="badge-ontime">✔ Delivered in ${timeFormatted} (On Time)</span>`;
+      return '<span class="badge-ontime">✔ Delivered in ' + timeFormatted + ' (On Time)</span>';
     } else {
-      const lateSec = Math.floor((endMs - expiryTimestamp) / 1000);
-      const lateMins = Math.floor(lateSec / 60);
-      return `<span class="badge-late">⚠️ Delivered in ${timeFormatted} (${lateMins}m Late)</span>`;
+      var lateSec = Math.floor((endMs - expiryTimestamp) / 1000);
+      var lateMins = Math.floor(lateSec / 60);
+      return '<span class="badge-late">⚠️ Delivered in ' + timeFormatted + ' (' + lateMins + 'm Late)</span>';
     }
   }
 
   function updateRiderHeaderUI() {
-    const container = document.getElementById('riderAuthContainer');
+    var container = document.getElementById('riderAuthContainer');
     if (currentRider && currentRider.email) {
-      const isVerified = (currentRider.status || '').toLowerCase() === 'active';
+      var isVerified = (currentRider.status || '').toLowerCase() === 'active';
       container.innerHTML = `
         <button class="rider-auth-pill" style="background:${isVerified ? '#166534' : '#854d0e'}; color:${isVerified ? '#bbf7d0' : '#fef08a'};" onclick="logoutRider()">
           ${isVerified ? '🟢' : '⏳'} ${currentRider.name || currentRider.email.split('@')[0]} (${currentRider.status || 'Pending'})
@@ -314,42 +301,47 @@
 
   function validateRiderStatus() {
     if (!currentRider || !currentRider.email) {
-      document.getElementById('verificationAlert').style.display = 'none';
+      var alertBox = document.getElementById('verificationAlert');
+      if (alertBox) alertBox.style.display = 'none';
       renderFeed();
       return;
     }
 
     callAppsScriptApi({ action: 'checkRiderStatus', email: currentRider.email })
-      .then(res => {
+      .then(function(res) {
         if (res && res.status === 'success') {
           currentRider.status = res.riderStatus;
           localStorage.setItem('mohna_rider', JSON.stringify(currentRider));
           updateRiderHeaderUI();
 
-          const alertBox = document.getElementById('verificationAlert');
-          const normalizedStatus = (currentRider.status || '').toLowerCase();
+          var alertBox = document.getElementById('verificationAlert');
+          var normalizedStatus = (currentRider.status || '').toLowerCase();
 
           if (normalizedStatus.includes('pending')) {
-            alertBox.style.display = 'block';
-            alertBox.style.background = '#78350f';
-            alertBox.style.borderColor = '#f59e0b';
-            alertBox.innerHTML = `<b>⏳ Verification In Progress:</b> Your profile has been submitted and requires 1st-time Admin Verification. You will be able to accept tasks once approved by warehouse admin.`;
+            if (alertBox) {
+              alertBox.style.display = 'block';
+              alertBox.style.background = '#78350f';
+              alertBox.style.borderColor = '#f59e0b';
+              alertBox.innerHTML = '<b>⏳ Verification In Progress:</b> Your profile has been submitted and requires 1st-time Admin Verification. You will be able to accept tasks once approved by warehouse admin.';
+            }
           } else if (normalizedStatus.includes('block')) {
-            alertBox.style.display = 'block';
-            alertBox.style.background = '#450a0a';
-            alertBox.style.borderColor = '#ef4444';
-            alertBox.innerHTML = `<b>🚫 Account Blocked:</b> Your rider access has been suspended by the administrator. Contact your warehouse manager.`;
+            if (alertBox) {
+              alertBox.style.display = 'block';
+              alertBox.style.background = '#450a0a';
+              alertBox.style.borderColor = '#ef4444';
+              alertBox.innerHTML = '<b>🚫 Account Blocked:</b> Your rider access has been suspended by the administrator. Contact your warehouse manager.';
+            }
           } else {
-            alertBox.style.display = 'none';
+            if (alertBox) alertBox.style.display = 'none';
             fetchRiderFeed();
           }
         }
-      }).catch(()=>{});
+      }).catch(function(){});
   }
 
-  function openRiderAuth(mode = 'login') {
+  function openRiderAuth(mode) {
     document.getElementById('riderAuthModal').style.display = 'flex';
-    toggleRiderAuthTab(mode);
+    toggleRiderAuthTab(mode || 'login');
   }
 
   function closeRiderAuth() {
@@ -370,29 +362,31 @@
   }
 
   async function processRiderPasswordLogin() {
-    const email = document.getElementById('rLoginEmail').value.trim();
-    const password = document.getElementById('rLoginPassword').value.trim();
+    var emailInput = document.getElementById('rLoginEmail');
+    var passInput = document.getElementById('rLoginPassword');
+    var email = emailInput ? emailInput.value.trim() : "";
+    var password = passInput ? passInput.value.trim() : "";
 
     if (!email || !password) return alert("Please enter both email and password.");
 
-    const btn = document.getElementById('btnRiderSubmitLogin');
+    var btn = document.getElementById('btnRiderSubmitLogin');
     btn.innerText = "Authenticating...";
     btn.disabled = true;
 
     try {
-      const res = await callAppsScriptApi({ action: 'riderPasswordLogin', email, password });
+      var res = await callAppsScriptApi({ action: 'riderPasswordLogin', email: email, password: password });
       btn.innerText = "🔑 Log In & Go Online";
       btn.disabled = false;
 
-      const riderPayload = res.rider || res.user;
-      if (res.status === 'success' && riderPayload) {
+      var riderPayload = res ? (res.rider || res.user) : null;
+      if (res && res.status === 'success' && riderPayload) {
         currentRider = riderPayload;
         localStorage.setItem('mohna_rider', JSON.stringify(currentRider));
         closeRiderAuth();
         updateRiderHeaderUI();
         validateRiderStatus();
         fetchRiderFeed();
-      } else if (res.status === 'blocked') {
+      } else if (res && res.status === 'blocked') {
         alert(res.message);
         if (riderPayload) {
           currentRider = riderPayload;
@@ -401,37 +395,37 @@
           validateRiderStatus();
         }
       } else {
-        alert(res.message || "Login failed. Check your email and password.");
+        alert((res && res.message) ? res.message : "Login failed. Check your email and password.");
       }
     } catch(err) {
       btn.innerText = "🔑 Log In & Go Online";
       btn.disabled = false;
-      alert("Error: " + err.message);
+      alert("Error: " + (err && err.message ? err.message : err.toString()));
     }
   }
 
   async function sendRiderSignupOtp() {
-    const name = document.getElementById('rSignupName').value.trim();
-    const phone = document.getElementById('rSignupPhone').value.trim();
-    const email = document.getElementById('rSignupEmail').value.trim();
-    const password = document.getElementById('rSignupPassword').value.trim();
+    var name = document.getElementById('rSignupName').value.trim();
+    var phone = document.getElementById('rSignupPhone').value.trim();
+    var email = document.getElementById('rSignupEmail').value.trim();
+    var password = document.getElementById('rSignupPassword').value.trim();
 
     if (!name || !phone || !email || !password) return alert("Please fill all fields.");
     if (password.length < 6) return alert("Password must be at least 6 characters.");
 
-    const btn = document.getElementById('btnSendRiderSignupOtp');
+    var btn = document.getElementById('btnSendRiderSignupOtp');
     btn.innerText = 'Sending OTP...';
     btn.disabled = true;
 
     try {
-      const res = await callAppsScriptApi({ action: 'sendSignupOtp', email, role: 'rider' });
+      var res = await callAppsScriptApi({ action: 'sendSignupOtp', email: email, role: 'rider' });
       btn.innerText = 'Send Verification OTP';
       btn.disabled = false;
-      if (res.status === 'success') {
+      if (res && res.status === 'success') {
         document.getElementById('rTargetEmailDisplay').innerText = email;
         toggleRiderSignupStep(2);
       } else {
-        alert(res.message);
+        alert(res ? res.message : "Failed to send OTP.");
       }
     } catch(e) {
       btn.innerText = 'Send Verification OTP';
@@ -441,33 +435,33 @@
   }
 
   async function verifyRiderSignupAndCreateAccount() {
-    const name = document.getElementById('rSignupName').value.trim();
-    const phone = document.getElementById('rSignupPhone').value.trim();
-    const email = document.getElementById('rSignupEmail').value.trim();
-    const password = document.getElementById('rSignupPassword').value.trim();
-    const otp = document.getElementById('rSignupOtpCode').value.trim();
+    var name = document.getElementById('rSignupName').value.trim();
+    var phone = document.getElementById('rSignupPhone').value.trim();
+    var email = document.getElementById('rSignupEmail').value.trim();
+    var password = document.getElementById('rSignupPassword').value.trim();
+    var otp = document.getElementById('rSignupOtpCode').value.trim();
 
     if (!otp || otp.length < 6) return alert("Please enter valid 6-digit OTP.");
 
-    const btn = document.getElementById('btnVerifyRiderSignupOtp');
+    var btn = document.getElementById('btnVerifyRiderSignupOtp');
     btn.innerText = 'Verifying...';
     btn.disabled = true;
 
     try {
-      const res = await callAppsScriptApi({
+      var res = await callAppsScriptApi({
         action: 'completeRiderSignup',
-        name, phone, email, password, otp
+        name: name, phone: phone, email: email, password: password, otp: otp
       });
       btn.innerText = 'Verify OTP & Submit Profile';
       btn.disabled = false;
 
-      if (res.status === 'success' || res.status === 'pending_approval') {
+      if (res && (res.status === 'success' || res.status === 'pending_approval')) {
         alert(res.message || "Account registered successfully! First-time Admin Verification is mandatory. Redirecting you to login page...");
         document.getElementById('rLoginEmail').value = email;
         document.getElementById('rLoginPassword').value = "";
         toggleRiderAuthTab('login');
       } else {
-        alert(res.message);
+        alert(res ? res.message : "Verification failed.");
       }
     } catch(e) {
       btn.innerText = 'Verify OTP & Submit Profile';
@@ -488,18 +482,18 @@
     if (!currentRider || (currentRider.status || '').toLowerCase() !== 'active') return;
     
     callAppsScriptApi({ action: 'getRiderOrders' })
-      .then(data => {
-        cachedOrders = data.orders || [];
+      .then(function(data) {
+        cachedOrders = (data && data.orders) ? data.orders : [];
         updateMetrics();
         renderFeed();
       })
-      .catch(()=>{});
+      .catch(function(){});
   }
 
   function updateMetrics() {
-    const active = cachedOrders.filter(o => !o.status.includes('Delivered') && !o.status.includes('OUT'));
-    const out = cachedOrders.filter(o => o.status.includes('OUT'));
-    const done = cachedOrders.filter(o => o.status.includes('Delivered'));
+    var active = cachedOrders.filter(function(o) { return !o.status.includes('Delivered') && !o.status.includes('OUT'); });
+    var out = cachedOrders.filter(function(o) { return o.status.includes('OUT'); });
+    var done = cachedOrders.filter(function(o) { return o.status.includes('Delivered'); });
 
     document.getElementById('mActiveCount').innerText = active.length + out.length;
     document.getElementById('mTodayDelivered').innerText = done.length;
@@ -508,12 +502,12 @@
     document.getElementById('countDone').innerText = done.length;
 
     if (done.length > 0) {
-      const onTimeCount = done.filter(o => {
-        const exp = parseInt(o.expiryTimestamp);
-        const del = parseInt(o.deliveredTimestamp) || exp;
+      var onTimeCount = done.filter(function(o) {
+        var exp = parseInt(o.expiryTimestamp);
+        var del = parseInt(o.deliveredTimestamp) || exp;
         return del <= exp;
       }).length;
-      document.getElementById('mGuaranteeRate').innerText = `${Math.round((onTimeCount / done.length) * 100)}%`;
+      document.getElementById('mGuaranteeRate').innerText = Math.round((onTimeCount / done.length) * 100) + "%";
     }
   }
 
@@ -526,46 +520,46 @@
   }
 
   function renderFeed() {
-    const feed = document.getElementById('riderOrdersFeed');
+    var feed = document.getElementById('riderOrdersFeed');
     if (!currentRider) {
-      feed.innerHTML = `<p style="text-align:center; color:#94a3b8; padding:40px;">Please Sign In or Register to view live dispatch feed.</p>`;
+      feed.innerHTML = '<p style="text-align:center; color:#94a3b8; padding:40px;">Please Sign In or Register to view live dispatch feed.</p>';
       return;
     }
 
     if ((currentRider.status || '').toLowerCase() !== 'active') {
-      feed.innerHTML = `<p style="text-align:center; color:#f59e0b; padding:40px;">⚠️ Access Restricted: Account verification required by warehouse admin.</p>`;
+      feed.innerHTML = '<p style="text-align:center; color:#f59e0b; padding:40px;">⚠️ Access Restricted: Account verification required by warehouse admin.</p>';
       return;
     }
 
-    let filtered = [];
+    var filtered = [];
     if (currentTab === 'active') {
-      filtered = cachedOrders.filter(o => !o.status.includes('Delivered') && !o.status.includes('OUT'));
+      filtered = cachedOrders.filter(function(o) { return !o.status.includes('Delivered') && !o.status.includes('OUT'); });
     } else if (currentTab === 'out') {
-      filtered = cachedOrders.filter(o => o.status.includes('OUT'));
+      filtered = cachedOrders.filter(function(o) { return o.status.includes('OUT'); });
     } else {
-      filtered = cachedOrders.filter(o => o.status.includes('Delivered'));
+      filtered = cachedOrders.filter(function(o) { return o.status.includes('Delivered'); });
     }
 
     if (filtered.length === 0) {
-      feed.innerHTML = `<p style="text-align:center; color:#64748b; padding:40px;">No orders in this category.</p>`;
+      feed.innerHTML = '<p style="text-align:center; color:#64748b; padding:40px;">No orders in this category.</p>';
       return;
     }
 
-    feed.innerHTML = filtered.map(o => {
-      const expiryMs = parseInt(o.expiryTimestamp) || (parseAnyDateToMs(o.date) + (o.etaMinutes || 20) * 60000);
-      const isDelivered = o.status.includes('Delivered');
-      const isOut = o.status.includes('OUT');
+    feed.innerHTML = filtered.map(function(o) {
+      var expiryMs = parseInt(o.expiryTimestamp) || (parseAnyDateToMs(o.date) + (o.etaMinutes || 20) * 60000);
+      var isDelivered = o.status.includes('Delivered');
+      var isOut = o.status.includes('OUT');
 
-      let statusBadge = `<span class="status-badge status-pending">● Dispatch Ready</span>`;
-      let actionBtn = `<button class="btn-status btn-out" onclick="updateStatus('${o.orderId}', 'OUT FOR DELIVERY')">🛵 Accept & Start Delivery</button>`;
-      let timerBadge = `<span id="rider_timer_${o.orderId}" data-expiry="${expiryMs}" class="badge-ticking">⏱️ Loading...</span>`;
+      var statusBadge = '<span class="status-badge status-pending">● Dispatch Ready</span>';
+      var actionBtn = `<button class="btn-status btn-out" onclick="updateStatus('${o.orderId}', 'OUT FOR DELIVERY')">🛵 Accept & Start Delivery</button>`;
+      var timerBadge = `<span id="rider_timer_${o.orderId}" data-expiry="${expiryMs}" class="badge-ticking">⏱️ Loading...</span>`;
 
       if (isOut) {
         statusBadge = `<span class="status-badge status-out">● In Transit (${o.riderName || 'Rider'})</span>`;
         actionBtn = `<button class="btn-status btn-verify" onclick="triggerCustomerDeliveryOtpModal('${o.orderId}')">🔐 Arrived / Verify Customer PIN</button>`;
       } else if (isDelivered) {
-        statusBadge = `<span class="status-badge status-done">✔ Delivered</span>`;
-        actionBtn = ``;
+        statusBadge = '<span class="status-badge status-done">✔ Delivered</span>';
+        actionBtn = '';
         timerBadge = calculateDeliveryStatusBadge(o.date, o.etaMinutes || 20, expiryMs, o.deliveredTimestamp || 0);
       }
 
@@ -596,20 +590,20 @@
 
   function startRiderCountdownTicker() {
     clearInterval(tickerInterval);
-    tickerInterval = setInterval(() => {
-      const now = Date.now();
-      document.querySelectorAll('[id^="rider_timer_"]').forEach(el => {
-        const expiry = parseInt(el.getAttribute('data-expiry'));
-        const diff = expiry - now;
+    tickerInterval = setInterval(function() {
+      var now = Date.now();
+      document.querySelectorAll('[id^="rider_timer_"]').forEach(function(el) {
+        var expiry = parseInt(el.getAttribute('data-expiry'));
+        var diff = expiry - now;
 
         if (diff <= 0) {
           el.className = "badge-late";
           el.innerText = "00:00 (EXPIRED)";
         } else {
           el.className = "badge-ticking";
-          const totalSec = Math.floor(diff / 1000);
-          const mins = Math.floor(totalSec / 60);
-          const secs = totalSec % 60;
+          var totalSec = Math.floor(diff / 1000);
+          var mins = Math.floor(totalSec / 60);
+          var secs = totalSec % 60;
           el.innerText = `⏱️ ${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
         }
       });
@@ -621,8 +615,8 @@
     
     await callAppsScriptApi({ 
       action: 'assignRiderToOrder', 
-      orderId, 
-      newStatus,
+      orderId: orderId, 
+      newStatus: newStatus,
       riderName: currentRider.name,
       riderPhone: currentRider.phone,
       riderEmail: currentRider.email
@@ -637,37 +631,37 @@
     document.getElementById('custDeliveryOtpInput').value = "";
     document.getElementById('deliveryOtpModal').style.display = 'flex';
 
-    const res = await callAppsScriptApi({ action: 'sendDeliveryOtp', orderId });
-    if (res.status === 'success') {
+    var res = await callAppsScriptApi({ action: 'sendDeliveryOtp', orderId: orderId });
+    if (res && res.status === 'success') {
       document.getElementById('dOtpModalEmailHint').innerText = res.emailHint || "Registered Customer Email";
     } else {
-      alert(res.message);
+      alert(res ? res.message : "Failed to send PIN.");
     }
   }
 
   async function resendCustomerDeliveryOtp() {
     if (!activeOtpVerificationOrderId) return;
     document.getElementById('dOtpModalEmailHint').innerText = "Resending...";
-    const res = await callAppsScriptApi({ action: 'sendDeliveryOtp', orderId: activeOtpVerificationOrderId });
-    if (res.status === 'success') {
+    var res = await callAppsScriptApi({ action: 'sendDeliveryOtp', orderId: activeOtpVerificationOrderId });
+    if (res && res.status === 'success') {
       document.getElementById('dOtpModalEmailHint').innerText = res.emailHint || "Registered Customer Email";
       alert("PIN resent successfully!");
     } else {
-      alert(res.message);
+      alert(res ? res.message : "Failed to resend PIN.");
     }
   }
 
   async function confirmCustomerDeliveryOtp() {
-    const otp = document.getElementById('custDeliveryOtpInput').value.trim();
+    var otp = document.getElementById('custDeliveryOtpInput').value.trim();
     if (!otp || otp.length < 4) return alert("Please enter the 4-digit PIN provided by customer.");
 
-    const res = await callAppsScriptApi({ action: 'verifyDeliveryOtp', orderId: activeOtpVerificationOrderId, otp });
-    if (res.status === 'success') {
+    var res = await callAppsScriptApi({ action: 'verifyDeliveryOtp', orderId: activeOtpVerificationOrderId, otp: otp });
+    if (res && res.status === 'success') {
       alert("✅ Delivery Successfully Verified & Recorded!");
       closeDeliveryOtpModal();
       fetchRiderFeed();
     } else {
-      alert(res.message);
+      alert(res ? res.message : "Verification failed.");
     }
   }
 
