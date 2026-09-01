@@ -97,7 +97,7 @@
     <b>⏳ Account Verification Required:</b> Your profile has been registered and is awaiting Admin Verification. You will become an active rider once approved by warehouse admin.
   </div>
 
-  <!-- RIDER METRICS (SCOPED TO THIS ACTIVE RIDER) -->
+  <!-- RIDER METRICS -->
   <div class="metrics-grid">
     <div class="metric-card">
       <div id="mActiveCount" class="metric-val">0</div>
@@ -213,9 +213,28 @@
     currentRider = null;
   }
   var cachedOrders = [];
+  var previousActiveCount = 0;
   var currentTab = 'active';
   var tickerInterval = null;
   var activeOtpVerificationOrderId = null;
+
+  // WEB AUDIO DISPATCH ALERT CHIME (FEATURE #4)
+  function playDispatchAlertSound() {
+    try {
+      var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      var osc = audioCtx.createOscillator();
+      var gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+      osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.2); // A5
+      gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.35);
+    } catch(e) {}
+  }
 
   // ROBUST GAS API TRANSPORT LAYER
   async function callAppsScriptApi(payload) {
@@ -245,8 +264,25 @@
   window.onload = function() {
     updateRiderHeaderUI();
     validateRiderStatus();
+    startLiveGpsTelemetryTracking();
     setInterval(validateRiderStatus, 12000);
   };
+
+  // LIVE RIDER TELEMETRY BROADCASTER (FEATURE #1)
+  function startLiveGpsTelemetryTracking() {
+    if (navigator.geolocation) {
+      navigator.geolocation.watchPosition(function(pos) {
+        if (currentRider && currentRider.email && (currentRider.status || '').toLowerCase() === 'active') {
+          callAppsScriptApi({
+            action: 'updateRiderTelemetry',
+            email: currentRider.email,
+            lat: pos.coords.latitude.toFixed(5),
+            lng: pos.coords.longitude.toFixed(5)
+          });
+        }
+      }, function() {}, { enableHighAccuracy: true, maximumAge: 10000 });
+    }
+  }
 
   function parseAnyDateToMs(dateStr) {
     if (!dateStr) return 0;
@@ -500,6 +536,11 @@
       return o.status.includes('Delivered') && (o.riderName && o.riderName.trim().toLowerCase() === riderName); 
     });
 
+    if (ready.length > previousActiveCount) {
+      playDispatchAlertSound();
+    }
+    previousActiveCount = ready.length;
+
     document.getElementById('mActiveCount').innerText = ready.length;
     document.getElementById('mTodayDelivered').innerText = myDone.length;
     document.getElementById('countActive').innerText = ready.length;
@@ -539,20 +580,15 @@
     var riderName = (currentRider && currentRider.name) ? currentRider.name.trim().toLowerCase() : "";
     var filtered = [];
     
-    // TAB 1: Available tasks ready for pickup
     if (currentTab === 'active') {
       filtered = cachedOrders.filter(function(o) { 
         return !o.status.includes('Delivered') && !o.status.includes('OUT') && !o.status.includes('Out'); 
       });
-    } 
-    // TAB 2: ONLY tasks accepted by THIS particular logged-in rider
-    else if (currentTab === 'out') {
+    } else if (currentTab === 'out') {
       filtered = cachedOrders.filter(function(o) { 
         return (o.status.includes('OUT') || o.status.includes('Out')) && (o.riderName && o.riderName.trim().toLowerCase() === riderName); 
       });
-    } 
-    // TAB 3: ONLY tasks successfully delivered by THIS particular logged-in rider
-    else {
+    } else {
       filtered = cachedOrders.filter(function(o) { 
         return o.status.includes('Delivered') && (o.riderName && o.riderName.trim().toLowerCase() === riderName); 
       });
