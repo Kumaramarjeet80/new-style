@@ -120,12 +120,14 @@
 
 </div>
 
-<!-- QR CAMERA SCANNER POPUP MODAL -->
+<!-- CONTINUOUS BATCH SCANNER & 2-STEP DOORSTEP VERIFIER -->
 <div id="scannerModal" class="modal-overlay" style="display:none;">
   <div class="modal-card" style="text-align:center;">
-    <h3 id="scannerTitle" style="margin-top:0; color:#38bdf8;">📷 Scan Label QR Code</h3>
+    <div id="scannerNotificationToast" style="display:none; background:#16a34a; color:white; padding:8px 12px; border-radius:8px; font-size:13px; font-weight:bold; margin-bottom:8px;"></div>
+    <h3 id="scannerTitle" style="margin-top:0; color:#38bdf8;">📷 Scanner Active</h3>
+    <p id="scannerSubtext" style="font-size:12px; color:#94a3b8; margin:0 0 10px 0;">Aim camera at parcel label</p>
     <div id="qr-reader" style="width: 100%; border-radius: 12px; overflow: hidden; background:#000;"></div>
-    <button type="button" class="btn" style="background:#ef4444; color:white; width:100%; margin-top:14px;" onclick="stopQrScanner()">✕ Cancel Camera Scan</button>
+    <button type="button" class="btn" style="background:#ef4444; color:white; width:100%; margin-top:14px;" onclick="stopQrScanner()">Done / Close Scanner</button>
   </div>
 </div>
 
@@ -195,8 +197,10 @@
   var activeOtpVerificationOrderId = null;
 
   var html5QrCode = null;
-  var activeScanMode = null;
+  var activeScanMode = null; // 'batch_pickup', 'step1_parcel', 'step2_customer'
   var activeTargetOrderId = null;
+  var scannedParcelTokenHolder = null;
+  var isScanThrottled = false;
 
   function playDispatchAlertSound() {
     try {
@@ -594,11 +598,10 @@
       var statusBadge = '<span class="status-badge status-pending">● Packed & Ready</span>';
       var timerBadge = `<span id="rider_timer_${o.orderId}" data-expiry="${expiryMs}" class="badge-ticking">⏱️ Loading...</span>`;
 
-      // DUAL ACTION BUTTONS (MANUAL + SCAN)
       var dualActionBtns = `
         <div class="dual-action-grid">
           <button type="button" class="btn-out" onclick="updateStatus('${o.orderId}', 'OUT FOR DELIVERY')">⚡ Accept (Click)</button>
-          <button type="button" class="btn-scan-action" onclick="startScanner('pickup', '${o.orderId}')">📷 Scan Bag QR</button>
+          <button type="button" class="btn-scan-action" onclick="startBatchPickupScanner()">📷 Batch Scan Labels</button>
         </div>
       `;
 
@@ -607,7 +610,7 @@
         dualActionBtns = `
           <div class="dual-action-grid">
             <button type="button" class="btn-verify" onclick="triggerCustomerDeliveryOtpModal('${o.orderId}')">🔐 Verify PIN</button>
-            <button type="button" class="btn-scan-action" onclick="startScanner('deliver', '${o.orderId}')">📷 Scan to Deliver</button>
+            <button type="button" class="btn-scan-action" onclick="startTwoStepDeliveryScanner('${o.orderId}')">📷 2-Step QR Handover</button>
           </div>
         `;
       } else if (isDelivered) {
@@ -663,7 +666,6 @@
     }, 1000);
   }
 
-  // MANUAL DISPATCH ACCEPTANCE
   async function updateStatus(orderId, newStatus) {
     if (!currentRider || (currentRider.status || '').toLowerCase() !== 'active') return alert("Account verification required to accept tasks.");
     
@@ -683,23 +685,41 @@
     }
   }
 
-  // QR SCANNER LAUNCHER FOR PICKUP & DOORSTEP HANDOVER
-  function startScanner(mode, targetOrderId) {
+  function startBatchPickupScanner() {
     if (!currentRider || (currentRider.status || '').toLowerCase() !== 'active') return alert("Account verification required.");
-    activeScanMode = mode;
-    activeTargetOrderId = targetOrderId;
+    activeScanMode = 'batch_pickup';
+    scannedParcelTokenHolder = null;
 
-    document.getElementById('scannerTitle').innerText = (mode === 'pickup') 
-      ? '📷 Scan Parcel Label to Accept' 
-      : '📷 Scan Parcel Label to Deliver';
+    document.getElementById('scannerTitle').innerText = '📷 Continuous Batch Scan';
+    document.getElementById('scannerSubtext').innerText = 'Scan packages one after another. No need to tap or confirm.';
     document.getElementById('scannerModal').style.display = 'flex';
 
+    launchCamera();
+  }
+
+  function startTwoStepDeliveryScanner(orderId) {
+    if (!currentRider || (currentRider.status || '').toLowerCase() !== 'active') return alert("Account verification required.");
+    activeScanMode = 'step1_parcel';
+    activeTargetOrderId = orderId;
+    scannedParcelTokenHolder = null;
+
+    document.getElementById('scannerTitle').innerText = 'Step 1/2: Scan Physical Parcel';
+    document.getElementById('scannerSubtext').innerText = 'Scan the QR code on the package label first.';
+    document.getElementById('scannerModal').style.display = 'flex';
+
+    launchCamera();
+  }
+
+  function launchCamera() {
+    if (html5QrCode) {
+      try { html5QrCode.stop(); } catch(e) {}
+    }
     html5QrCode = new Html5Qrcode("qr-reader");
     html5QrCode.start(
       { facingMode: "environment" },
-      { fps: 10, qrbox: 240 },
+      { fps: 15, qrbox: 240 },
       onScanSuccessCallback
-    ).catch(err => alert("Camera permission required: " + err));
+    ).catch(err => alert("Camera permission error: " + err));
   }
 
   function stopQrScanner() {
@@ -712,46 +732,91 @@
     } else {
       document.getElementById('scannerModal').style.display = 'none';
     }
+    activeScanMode = null;
+    activeTargetOrderId = null;
+    scannedParcelTokenHolder = null;
+  }
+
+  function showScannerToast(msg, isError) {
+    var toast = document.getElementById('scannerNotificationToast');
+    toast.style.display = 'block';
+    toast.style.background = isError ? '#dc2626' : '#16a34a';
+    toast.innerText = msg;
+    setTimeout(() => { toast.style.display = 'none'; }, 2200);
   }
 
   async function onScanSuccessCallback(decodedText) {
-    var scannedId = decodedText;
+    if (isScanThrottled) return;
+    isScanThrottled = true;
+    setTimeout(() => { isScanThrottled = false; }, 1600);
+
+    var parsed = null;
     try {
-      var parsed = JSON.parse(decodedText);
-      scannedId = parsed.orderId || decodedText;
-    } catch(e) {}
+      parsed = JSON.parse(decodedText);
+    } catch(e) {
+      showScannerToast("⚠️ Unrecognized QR code format.", true);
+      return;
+    }
 
-    stopQrScanner();
+    if (activeScanMode === 'batch_pickup') {
+      if (parsed.type !== "MOHNA_PARCEL_LABEL" || !parsed.orderId) {
+        showScannerToast("⚠️ Not a valid Mohna parcel label.", true);
+        return;
+      }
 
-    if (activeScanMode === 'pickup') {
       var res = await callAppsScriptApi({
         action: 'assignRiderViaScan',
-        orderId: scannedId,
+        orderId: parsed.orderId,
+        parcelToken: parsed.parcelToken,
         riderName: currentRider.name,
         riderPhone: currentRider.phone,
         riderEmail: currentRider.email
       });
+
       if (res && res.status === 'success') {
-        alert("✅ Order " + scannedId + " accepted and moved to In-Transit!");
+        playDispatchAlertSound();
+        showScannerToast("✅ Accepted: " + parsed.orderId + "! Scan next...", false);
         fetchRiderFeed();
       } else {
-        alert(res ? res.message : "Failed to accept order via scan.");
+        showScannerToast("⚠️ " + (res ? res.message : "Accept failed"), true);
       }
-    } else if (activeScanMode === 'deliver') {
-      if (activeTargetOrderId && activeTargetOrderId !== scannedId) {
-        alert("⚠️ Wrong Parcel Scanned! This label does not match Order " + activeTargetOrderId);
+      return;
+    }
+
+    if (activeScanMode === 'step1_parcel') {
+      if (parsed.type !== "MOHNA_PARCEL_LABEL" || parsed.orderId !== activeTargetOrderId) {
+        showScannerToast("⚠️ Wrong parcel! Expected " + activeTargetOrderId, true);
         return;
       }
+
+      scannedParcelTokenHolder = parsed.parcelToken;
+      activeScanMode = 'step2_customer';
+      playDispatchAlertSound();
+      document.getElementById('scannerTitle').innerText = 'Step 2/2: Scan Customer Phone QR';
+      document.getElementById('scannerSubtext').innerText = 'Now scan the handover QR on the customer\'s screen.';
+      showScannerToast("✔ Parcel Verified! Now scan customer's screen.", false);
+      return;
+    }
+
+    if (activeScanMode === 'step2_customer') {
+      if (parsed.type !== "MOHNA_DELIVERY_HANDOVER" || parsed.orderId !== activeTargetOrderId) {
+        showScannerToast("⚠️ Handover QR does not match Order " + activeTargetOrderId, true);
+        return;
+      }
+
       var resDeliv = await callAppsScriptApi({
-        action: 'completeDeliveryViaScan',
-        orderId: scannedId,
-        riderEmail: currentRider.email
+        action: 'verifyTwoFactorQrDelivery',
+        orderId: activeTargetOrderId,
+        parcelToken: scannedParcelTokenHolder,
+        deliveryToken: parsed.deliveryToken
       });
+
       if (resDeliv && resDeliv.status === 'success') {
-        alert("🎉 Delivery Successfully Verified via QR Scan!");
+        stopQrScanner();
+        alert("🎉 Order " + activeTargetOrderId + " successfully delivered and verified via 2-Factor QR!");
         fetchRiderFeed();
       } else {
-        alert(resDeliv ? resDeliv.message : "Handover verification failed.");
+        showScannerToast("⚠️ " + (resDeliv ? resDeliv.message : "Verification failed"), true);
       }
     }
   }
