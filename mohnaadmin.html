@@ -397,6 +397,7 @@
   var SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbyZ11fczqVaeZx8yyL1IXUDkJ92U7cMhX7_AgaqNXygIuj3tMdwkwiYa_lY9a0GR9btsg/exec";
 
   var activeZones = [], cachedProducts = [], cachedCategories = [], cachedOrders = [], cachedUsers = [], cachedRiders = [], cachedCoupons = [], adminOrdersInterval = null;
+  var adminAutoSyncInterval = null;
   var activeFilterFromMs = 0, activeFilterToMs = Infinity;
 
   function parseAnyDateToMs(dateInput) {
@@ -552,7 +553,13 @@
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
   map.pm.addControls({ position: 'topleft', drawPolygon: true, drawRectangle: true, editMode: true, removalMode: false });
 
-  window.onload = function() { fetchAllData(); };
+  window.onload = function() {
+    fetchAllData();
+    if (adminAutoSyncInterval) clearInterval(adminAutoSyncInterval);
+    adminAutoSyncInterval = setInterval(function() {
+      loadOrders(); // Real-time background sync for orders & packing queue
+    }, 5000);
+  };
 
   function fetchAllData() {
     loadOrders();
@@ -1013,7 +1020,7 @@
       rows = cachedOrders.filter(o => {
         var oTime = parseAnyDateToMs(o.orderTimestampMs || o.date);
         if (activeFilterFromMs === 0 && activeFilterToMs === Infinity) return true;
-        return uTime === 0 || (uTime >= activeFilterFromMs && uTime <= activeFilterToMs);
+        return uTime === 0 || (oTime >= activeFilterFromMs && oTime <= activeFilterToMs);
       }).map(o => [o.orderId, formatIndianDate(o.orderTimestampMs || o.date), o.name, o.address || 'N/A', o.riderName || 'None', o.amount, (o.etaMinutes || 20) + " Mins", o.status]);
     } else if (type === 'products') {
       reportTitle = "INVENTORY VALUATION & STOCK LEVEL REPORT";
