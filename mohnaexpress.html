@@ -239,27 +239,13 @@
       padding: 2px 6px; 
       border-radius: 4px; 
     }
-    .product-price-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin: 4px 0 8px 0;
-    }
     .product-price { 
       font-size: 17px; 
       font-weight: 900; 
+      margin: 4px 0 8px 0; 
     }
     .theme-retail .product-price { color: #4338ca; }
     .theme-wholesale .product-price { color: #be123c; }
-
-    .card-rating-badge {
-      font-size: 11px;
-      font-weight: 800;
-      background: #fef08a;
-      color: #854d0e;
-      padding: 2px 6px;
-      border-radius: 4px;
-    }
 
     .stockout-badge {
       position: absolute; 
@@ -326,7 +312,7 @@
       margin-bottom: 4px; 
       color: #475569; 
     }
-    .form-group input, .form-group select, .form-group textarea { 
+    .form-group input, .form-group select { 
       width: 100%; 
       padding: 10px; 
       border: 1px solid #cbd5e1; 
@@ -592,28 +578,8 @@
       object-fit: cover; 
       border-radius: 12px; 
       background: #f8fafc; 
-      margin-bottom: 8px; 
+      margin-bottom: 12px; 
     }
-    .gallery-thumb-row {
-      display: flex;
-      gap: 8px;
-      overflow-x: auto;
-      margin-bottom: 12px;
-      padding-bottom: 4px;
-    }
-    .gallery-thumb {
-      width: 50px;
-      height: 50px;
-      object-fit: cover;
-      border-radius: 6px;
-      border: 2px solid #cbd5e1;
-      cursor: pointer;
-      flex-shrink: 0;
-    }
-    .gallery-thumb.active-thumb {
-      border-color: #2563eb;
-    }
-
     .p-spec-box { 
       background: #f8fafc; 
       border: 1px solid #e2e8f0; 
@@ -760,7 +726,7 @@
         <h3 style="margin:0;">📦 My Order History</h3>
         <button class="btn-submit" style="width:auto; padding:6px 12px; font-size:12px; background:#0f172a;" onclick="fetchInitialStoreData(true)">🔄 Refresh</button>
       </div>
-      <p style="font-size:12px; color:#64748b; margin:0 0 10px 0;">💡 Click any order to view details, review delivered items (within 1 hour), and access tax receipts.</p>
+      <p style="font-size:12px; color:#64748b; margin:0 0 10px 0;">💡 Click any order to view details, itemized breakdown, and tax receipts.</p>
       <div id="customerOrdersList">
         <p style="text-align:center; color:#94a3b8; font-size:13px;">Loading orders...</p>
       </div>
@@ -839,7 +805,7 @@
   </div>
 </div>
 
-<!-- PRODUCT DETAILS MODAL WITH SWIPE GALLERY & REVIEWS FEED -->
+<!-- PRODUCT DETAILS MODAL -->
 <div id="productDetailsModal" class="modal-overlay" style="display:none;">
   <div class="modal-card">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
@@ -847,12 +813,7 @@
       <button type="button" onclick="closeProductModal()" style="background:none; border:none; font-size:20px; cursor:pointer; color:#64748b;">✕</button>
     </div>
 
-    <!-- MAIN PRODUCT IMAGE -->
     <img id="modalProdImg" src="" class="p-modal-img" alt="Product" />
-    
-    <!-- SECONDARY GALLERY THUMBNAILS (SWIPE/CLICK GALLERY) -->
-    <div class="gallery-thumb-row" id="modalGalleryThumbnails"></div>
-
     <h2 style="margin:0 0 4px 0; font-size:18px; color:#0f172a;" id="modalProdTitle">Product Name</h2>
     
     <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:8px;">
@@ -881,14 +842,6 @@
       <div class="p-spec-box" id="modalProdTerms">Guaranteed 100% genuine product. Returnable upon delivery inspection.</div>
     </div>
 
-    <!-- PRODUCT REVIEWS BOTTOM SECTION -->
-    <div style="border-top:1px solid #e2e8f0; padding-top:12px; margin-top:12px; margin-bottom:14px;">
-      <h4 style="margin:0 0 8px 0; font-size:14px; color:#0f172a;">⭐ Customer Reviews & Ratings</h4>
-      <div id="modalProductReviewsFeed" style="max-height:160px; overflow-y:auto; display:flex; flex-direction:column; gap:6px;">
-        <p style="font-size:12px; color:#94a3b8; text-align:center;">No reviews yet.</p>
-      </div>
-    </div>
-
     <div style="display:flex; gap:8px;">
       <button type="button" class="btn-submit" style="background:#f1f5f9; color:#0f172a; border:1px solid #cbd5e1; flex:1;" id="modalBtnAddCart" onclick="toggleCartFromModal()">🛒 Add</button>
       <button type="button" class="btn-submit" style="flex:1;" id="modalBtnBuyNow" onclick="directBuyNowFromModal()">⚡ Buy Now</button>
@@ -896,7 +849,7 @@
   </div>
 </div>
 
-<!-- ORDER DETAILS MODAL WITH 1-HOUR POST-DELIVERY REVIEW SUBMISSION -->
+<!-- ORDER DETAILS MODAL -->
 <div id="orderDetailsModal" class="modal-overlay" style="display:none;">
   <div class="modal-card">
     <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:10px; margin-bottom:12px;">
@@ -918,9 +871,9 @@
       </div>
 
       <div style="margin: 12px 0;">
-        <label style="font-size: 12px; font-weight: bold; color: #475569; margin-bottom: 4px; display: block;">Itemized Breakdown & 1-Hour Review Section:</label>
-        <div id="dtlItemizedList" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px; max-height:200px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">
-          <!-- Dynamically populated items with review buttons -->
+        <label style="font-size: 12px; font-weight: bold; color: #475569; margin-bottom: 4px; display: block;">Itemized Breakdown:</label>
+        <div id="dtlItemizedList" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px; max-height:160px; overflow-y:auto;">
+          <!-- Dynamically populated items -->
         </div>
       </div>
       
@@ -945,33 +898,6 @@
       <button type="button" id="btnDownloadDriveReceipt" class="btn-submit" style="background:#0f172a;" onclick="downloadSelectedOrderReceipt()">📥 Download Official PDF Tax Invoice</button>
       <button type="button" class="btn-submit" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1;" onclick="closeOrderModal()">Close Window</button>
     </div>
-  </div>
-</div>
-
-<!-- PRODUCT REVIEW SUBMISSION MODAL -->
-<div id="productReviewModal" class="modal-overlay" style="display:none;">
-  <div class="modal-card">
-    <h3 style="margin-top:0; color:#2563eb;">⭐ Rate & Review Product</h3>
-    <p id="reviewModalProdName" style="font-size:13px; color:#475569; margin:4px 0 12px 0; font-weight:bold;"></p>
-
-    <div class="form-group">
-      <label>Star Rating</label>
-      <select id="reviewStarSelect">
-        <option value="5">⭐⭐⭐⭐⭐ (5 Stars - Excellent)</option>
-        <option value="4">⭐⭐⭐⭐ (4 Stars - Very Good)</option>
-        <option value="3">⭐⭐⭐ (3 Stars - Average)</option>
-        <option value="2">⭐⭐ (2 Stars - Poor)</option>
-        <option value="1">⭐ (1 Star - Terrible)</option>
-      </select>
-    </div>
-
-    <div class="form-group">
-      <label>Your Comments / Feedback</label>
-      <textarea id="reviewCommentInput" rows="3" placeholder="Write your experience with this item..."></textarea>
-    </div>
-
-    <button type="button" class="btn-submit" onclick="submitProductReviewPayload()">Submit Review</button>
-    <button type="button" style="background:none; border:none; color:#64748b; font-size:12px; width:100%; text-align:center; margin-top:10px; cursor:pointer;" onclick="closeReviewModal()">Cancel</button>
   </div>
 </div>
 
@@ -1045,13 +971,13 @@
   var userWalletBalance = 0;
   var pendingAvatarBase64 = "";
   var activeSelectedModalOrder = null;
-  var activeReviewTarget = null; // { orderId, productId, productName }
 
   var persistentTimerInterval = null, cardTickersInterval = null;
   var sessionCheckInterval = null;
   var autoSyncInterval = null;
   var trackingLeafletMap = null, riderMapMarker = null, userMapMarker = null;
 
+  // Universal helper for always rendering Xh YYm ZZs format
   function formatTimeHms(totalSecs) {
     if (totalSecs < 0) totalSecs = 0;
     var h = Math.floor(totalSecs / 3600);
@@ -1670,12 +1596,6 @@
       var stock = parseInt(p.stockQty) || 0;
       var isOutOfStock = stock <= 0;
 
-      var avgRating = "New";
-      if (p.reviews && p.reviews.length > 0) {
-        var sum = p.reviews.reduce((acc, r) => acc + Number(r.rating), 0);
-        avgRating = "⭐ " + (sum / p.reviews.length).toFixed(1);
-      }
-
       return `
         <div class="product-card" onclick="${isOutOfStock ? '' : `openProductModal('${p.id}')`}">
           ${isOutOfStock ? '<div class="stockout-badge">OUT OF STOCK</div>' : ''}
@@ -1685,10 +1605,7 @@
             <span class="product-mrp">₹${mrp}</span>
             <span class="product-off-badge">${discount > 0 ? discount : 10}% OFF</span>
           </div>
-          <div class="product-price-row">
-            <div class="product-price">₹${price}</div>
-            <div class="card-rating-badge">${avgRating}</div>
-          </div>
+          <div class="product-price">₹${price}</div>
           <div class="card-actions-row" onclick="event.stopPropagation();">
             <button class="btn-card-add ${inCart ? 'is-added' : ''}" ${isOutOfStock ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : `onclick="toggleCartItem('${p.id}')"`}>
               ${isOutOfStock ? 'Sold Out' : (inCart ? '✔ Added' : '🛒 Add')}
@@ -1716,17 +1633,6 @@
 
     document.getElementById('modalProdCategory').innerText = p.category;
     document.getElementById('modalProdImg').src = p.img || 'https://via.placeholder.com/300?text=Product';
-    
-    var thumbRow = document.getElementById('modalGalleryThumbnails');
-    var allImages = [p.img];
-    if (p.gallery && Array.isArray(p.gallery)) {
-      allImages = allImages.concat(p.gallery);
-    }
-    
-    thumbRow.innerHTML = allImages.map((imgUrl, idx) => `
-      <img src="${imgUrl}" class="gallery-thumb ${idx === 0 ? 'active-thumb' : ''}" onclick="switchModalMainImage('${imgUrl}', this)" />
-    `).join('');
-
     document.getElementById('modalProdTitle').innerText = p.name;
     document.getElementById('modalProdPrice').innerText = `₹${price}`;
     document.getElementById('modalProdMrp').innerText = `₹${mrp}`;
@@ -1736,22 +1642,6 @@
     document.getElementById('modalProdDesc').innerText = p.description || "Fresh and guaranteed fast dispatch item.";
     document.getElementById('modalProdSpecs').innerText = p.specifications || "Standard Quality Grade A";
     document.getElementById('modalProdTerms').innerText = p.terms || "Returnable upon delivery if damaged.";
-
-    var reviewsFeed = document.getElementById('modalProductReviewsFeed');
-    if (p.reviews && p.reviews.length > 0) {
-      reviewsFeed.innerHTML = p.reviews.map(rev => `
-        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:8px; font-size:12px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
-            <b>${rev.userName || 'Customer'} <small style="color:#64748b;">(${rev.userId})</small></b>
-            <span style="color:#f59e0b; font-weight:bold;">${'⭐'.repeat(Number(rev.rating) || 5)}</span>
-          </div>
-          <div style="color:#334155; margin-bottom:2px;">${rev.comment || 'No comment provided.'}</div>
-          <div style="font-size:10px; color:#94a3b8; text-align:right;">${rev.date || ''}</div>
-        </div>
-      `).join('');
-    } else {
-      reviewsFeed.innerHTML = '<p style="font-size:12px; color:#94a3b8; text-align:center;">No reviews yet for this product.</p>';
-    }
 
     var addBtn = document.getElementById('modalBtnAddCart');
     var buyBtn = document.getElementById('modalBtnBuyNow');
@@ -1770,12 +1660,6 @@
     }
 
     document.getElementById('productDetailsModal').style.display = 'flex';
-  }
-
-  function switchModalMainImage(url, thumbEl) {
-    document.getElementById('modalProdImg').src = url;
-    document.querySelectorAll('.gallery-thumb').forEach(t => t.classList.remove('active-thumb'));
-    thumbEl.classList.add('active-thumb');
   }
 
   function closeProductModal() {
@@ -2329,35 +2213,14 @@
     document.getElementById('dtlTimestamp').innerText = formatIndianDate(startMs);
     document.getElementById('dtlTotalQty').innerText = order.qty;
     
-    var deliveredTime = Number(order.deliveredTimestamp) || 0;
-    var isDelivered = order.status && (order.status.includes('Delivered') || order.status.includes('Delivered (Verified)'));
-    var canReview = isDelivered && deliveredTime > 0 && ((Date.now() - deliveredTime) <= 60 * 60 * 1000);
-
     var itemizedContainer = document.getElementById('dtlItemizedList');
     if (order.items && Array.isArray(order.items) && order.items.length > 0) {
-      itemizedContainer.innerHTML = order.items.map(it => {
-        var existingRev = order.reviews ? order.reviews.find(r => r.productId === it.id) : null;
-        var reviewActionHtml = "";
-
-        if (existingRev) {
-          reviewActionHtml = `<div style="font-size:11px; color:#16a34a; font-weight:bold; margin-top:2px;">✔ Reviewed (${existingRev.rating}⭐) on ${existingRev.date || ''}</div>`;
-        } else if (canReview) {
-          reviewActionHtml = `<button onclick="openReviewModal('${order.orderId}', '${it.id}', '${it.name.replace(/'/g, "\\'")}')" style="background:#2563eb; color:white; border:none; border-radius:4px; padding:3px 8px; font-size:11px; font-weight:bold; cursor:pointer; margin-top:4px;">⭐ Review Product</button>`;
-        } else if (isDelivered) {
-          reviewActionHtml = `<div style="font-size:10.5px; color:#94a3b8; margin-top:2px;">Review window closed (1h limit)</div>`;
-        }
-
-        return `
-          <div style="background:white; border:1px solid #cbd5e1; border-radius:6px; padding:8px; font-size:12.5px;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <b>${it.name}</b>
-              <b style="color:#16a34a;">₹${it.price * it.qty}</b>
-            </div>
-            <div style="font-size:11.5px; color:#64748b; margin-top:2px;">₹${it.price} each × ${it.qty} units</div>
-            ${reviewActionHtml}
-          </div>
-        `;
-      }).join('');
+      itemizedContainer.innerHTML = order.items.map(it => `
+        <div style="display:flex; justify-content:space-between; align-items:center; font-size:12.5px; padding:4px 0; border-bottom:1px dashed #e2e8f0;">
+          <div><b>${it.name}</b> <small style="color:#64748b;">(₹${it.price} × ${it.qty})</small></div>
+          <b style="color:#16a34a;">₹${it.price * it.qty}</b>
+        </div>
+      `).join('');
     } else {
       itemizedContainer.innerHTML = `<div style="font-size:12.5px; color:#334155;">${order.item} (Qty: ${order.qty})</div>`;
     }
@@ -2400,51 +2263,6 @@
     }
 
     document.getElementById('orderDetailsModal').style.display = 'flex';
-  }
-
-  function openReviewModal(orderId, productId, productName) {
-    if (!currentUser) return alert("Please log in.");
-    activeReviewTarget = { orderId, productId, productName };
-    document.getElementById('reviewModalProdName').innerText = productName;
-    document.getElementById('reviewStarSelect').value = "5";
-    document.getElementById('reviewCommentInput').value = "";
-    document.getElementById('productReviewModal').style.display = 'flex';
-  }
-
-  function closeReviewModal() {
-    document.getElementById('productReviewModal').style.display = 'none';
-    activeReviewTarget = null;
-  }
-
-  function submitProductReviewPayload() {
-    if (!activeReviewTarget || !currentUser) return;
-    var rating = document.getElementById('reviewStarSelect').value;
-    var comment = document.getElementById('reviewCommentInput').value.trim();
-
-    var payload = {
-      action: "submitProductReview",
-      orderId: activeReviewTarget.orderId,
-      productId: activeReviewTarget.productId,
-      rating: rating,
-      comment: comment,
-      userId: currentUser.id || currentUser.email,
-      userName: currentUser.name || "Customer"
-    };
-
-    fetch(SPREADSHEET_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(payload)
-    }).then(r => r.json()).then(res => {
-      if (res.status === "success") {
-        alert("⭐ Review submitted successfully!");
-        closeReviewModal();
-        closeOrderModal();
-        fetchInitialStoreData();
-      } else {
-        alert(res.message || "Failed to submit review.");
-      }
-    });
   }
 
   function closeOrderModal() {
