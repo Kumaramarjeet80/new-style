@@ -149,7 +149,7 @@
           <tr>
             <th>Order ID</th>
             <th>Order Timestamp (IST)</th>
-            <th>Customer</th>
+            <th>Customer & Address</th>
             <th>Email</th>
             <th>Phone</th>
             <th>Assigned Rider</th>
@@ -581,8 +581,12 @@
       .then(r => r.json())
       .then(data => {
         cachedOrders = data.orders || [];
-        renderOrdersTable();
-        renderPickerTable();
+        if (cachedOrders.length > 0 && activeFilterFromMs === 0 && activeFilterToMs === Infinity) {
+          applyUniversalFilters();
+        } else {
+          renderOrdersTable();
+          renderPickerTable();
+        }
         startAdminLiveCountdownTicker();
       })
       .catch(err => {
@@ -624,7 +628,7 @@
         <tr>
           <td><b>${o.orderId}</b></td>
           <td><small>${formatIndianDate(startMs)}</small></td>
-          <td>${o.name}</td>
+          <td><b>${o.name}</b><br><small style="color:#475569;">📍 ${o.address || 'GPS Location'}</small></td>
           <td>${o.email || 'N/A'}</td>
           <td>${o.phone}</td>
           <td>${riderInfo}</td>
@@ -655,7 +659,7 @@
       <tr>
         <td><b>${o.orderId}</b></td>
         <td><small>${formatIndianDate(o.orderTimestampMs || o.date)}</small></td>
-        <td><b>${o.name}</b><br><small>${o.address}</small></td>
+        <td><b>${o.name}</b><br><small>📍 ${o.address || 'GPS Coordinates'}</small></td>
         <td><div style="background:#f8fafc; padding:6px; border-radius:6px; border:1px solid #cbd5e1; font-size:12px;">📋 <b>${o.item}</b></div></td>
         <td><b>${o.qty} Units</b></td>
         <td><span style="background:#fef08a; color:#854d0e; padding:3px 8px; border-radius:4px; font-weight:800; font-size:11px;">${o.status}</span></td>
@@ -1005,12 +1009,12 @@
       }).map(u => [u.id, u.date || 'N/A', u.name, u.email, u.phone, "₹" + (u.walletBalance || 0), u.status]);
     } else if (type === 'orders') {
       reportTitle = "EXECUTIVE SALES & DISPATCH AUDIT REPORT";
-      headers = ["Order ID", "Timestamp (IST)", "Customer Name", "Rider", "Total Paid", "Guaranteed ETA", "Current Status"];
+      headers = ["Order ID", "Timestamp (IST)", "Customer Name", "Delivery Address", "Rider", "Total Paid", "Guaranteed ETA", "Current Status"];
       rows = cachedOrders.filter(o => {
         var oTime = parseAnyDateToMs(o.orderTimestampMs || o.date);
         if (activeFilterFromMs === 0 && activeFilterToMs === Infinity) return true;
-        return oTime === 0 || (oTime >= activeFilterFromMs && oTime <= activeFilterToMs);
-      }).map(o => [o.orderId, formatIndianDate(o.orderTimestampMs || o.date), o.name, o.riderName || 'None', o.amount, (o.etaMinutes || 20) + " Mins", o.status]);
+        return uTime === 0 || (uTime >= activeFilterFromMs && uTime <= activeFilterToMs);
+      }).map(o => [o.orderId, formatIndianDate(o.orderTimestampMs || o.date), o.name, o.address || 'N/A', o.riderName || 'None', o.amount, (o.etaMinutes || 20) + " Mins", o.status]);
     } else if (type === 'products') {
       reportTitle = "INVENTORY VALUATION & STOCK LEVEL REPORT";
       headers = ["SKU / Product ID", "Product Name", "Catalog Scope", "Retail Price", "Wholesale Price", "Warehouse Stock Qty"];
