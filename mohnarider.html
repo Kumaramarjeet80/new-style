@@ -32,6 +32,34 @@
       border-radius: 12px; margin-bottom: 16px; font-size: 13.5px; line-height: 1.4; display: none;
     }
 
+    /* GLOBAL MASTER BATCH BUTTON */
+    .master-batch-collect-bar {
+      background: linear-gradient(135deg, #0284c7, #2563eb);
+      border-radius: 14px;
+      padding: 14px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 15px rgba(2, 132, 199, 0.35);
+      border: 1px solid #38bdf8;
+    }
+    .btn-master-batch {
+      background: #ffffff;
+      color: #0284c7;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 18px;
+      font-weight: 900;
+      font-size: 13.5px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .btn-master-batch:active { transform: scale(0.97); }
+
     .metrics-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 16px; }
     .metric-card { background: #1e293b; border: 1px solid #334155; padding: 12px; border-radius: 12px; text-align: center; }
     .metric-val { font-size: 20px; font-weight: 900; color: #38bdf8; font-family: monospace; }
@@ -69,13 +97,12 @@
     .btn-scan-action { background: #0284c7; color: white; padding: 12px 8px; border: none; border-radius: 8px; font-weight: 800; font-size: 12.5px; cursor: pointer; }
     .btn-verify { background: #16a34a; color: white; padding: 12px 8px; border: none; border-radius: 8px; font-weight: 800; font-size: 12.5px; cursor: pointer; }
 
-    .modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(5px); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 14px; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.88); backdrop-filter: blur(5px); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 14px; }
     .modal-card { background: #1e293b; border-radius: 16px; width: 100%; max-width: 460px; padding: 20px; border: 1px solid #334155; max-height: 92vh; overflow-y: auto; }
     .form-group { margin-bottom: 12px; }
     .form-group label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 4px; color: #94a3b8; }
     .form-group input { width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; color: white; border-radius: 8px; font-size: 14px; }
 
-    /* PARCEL & CUSTOMER VERIFICATION CARD */
     .verification-details-panel {
       background: #0f172a;
       border: 1.5px solid #22c55e;
@@ -110,6 +137,21 @@
     }
     .info-lbl { color: #94a3b8; font-weight: 600; }
     .info-val { color: #f8fafc; font-weight: 700; text-align: right; }
+
+    /* IN-CAMERA BATCH COUNTER PILL */
+    .batch-counter-pill {
+      background: #0f172a;
+      border: 1px solid #38bdf8;
+      color: #38bdf8;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12.5px;
+      font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
   </style>
 </head>
 <body>
@@ -144,6 +186,17 @@
     </div>
   </div>
 
+  <!-- MASTER BATCH COLLECT BAR -->
+  <div class="master-batch-collect-bar" id="masterBatchBar">
+    <div>
+      <b style="font-size:15px; color:#ffffff; display:block;">📦 Bulk Warehouse Pickup</b>
+      <span style="font-size:11.5px; color:#e0f2fe;">Scan many parcel labels continuously</span>
+    </div>
+    <button type="button" class="btn-master-batch" onclick="startBatchPickupScanner()">
+      📷 Scan & Collect All
+    </button>
+  </div>
+
   <div class="tab-bar">
     <button class="tab-btn active" id="tabActive" onclick="filterRiderTab('active')">⚡ Ready for Pickup (<span id="countActive">0</span>)</button>
     <button class="tab-btn" id="tabOut" onclick="filterRiderTab('out')">🛵 My In-Transit (<span id="countOut">0</span>)</button>
@@ -162,12 +215,18 @@
     <div id="scannerNotificationToast" style="display:none; background:#16a34a; color:white; padding:8px 12px; border-radius:8px; font-size:13px; font-weight:bold; margin-bottom:8px;"></div>
     
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-      <h3 id="scannerTitle" style="margin:0; color:#38bdf8; font-size:16px;">📷 Fast Camera Scanner</h3>
-      <button type="button" style="background:none; border:none; color:#ef4444; font-size:16px; cursor:pointer; font-weight:bold;" onclick="stopQrScanner()">✕ Close</button>
+      <h3 id="scannerTitle" style="margin:0; color:#38bdf8; font-size:16px;">📷 Continuous Scanner</h3>
+      <button type="button" style="background:none; border:none; color:#ef4444; font-size:16px; cursor:pointer; font-weight:bold;" onclick="stopQrScanner()">✕ Done / Close</button>
     </div>
-    <p id="scannerSubtext" style="font-size:11.5px; color:#94a3b8; margin:0 0 10px 0;">Align camera with QR code to scan</p>
 
-    <!-- LIVE HTML5 VIEWFINDER -->
+    <!-- BATCH COLLECT COUNTER (Shown during batch mode) -->
+    <div id="batchCounterDisplay" class="batch-counter-pill" style="display:none;">
+      📦 Accepted in this batch: <span id="batchCountVal" style="color:#22c55e;">0</span> bags
+    </div>
+
+    <p id="scannerSubtext" style="font-size:11.5px; color:#94a3b8; margin:0 0 10px 0;">Hold phone over packages one by one</p>
+
+    <!-- VIEWFINDER -->
     <div id="qr-reader" style="width: 100%; border-radius: 12px; overflow: hidden; background:#000; min-height:260px;"></div>
   </div>
 </div>
@@ -283,7 +342,8 @@
   var activeTargetOrderId = null;
   var scannedParcelTokenHolder = null;
   var isScanThrottled = false;
-  var activeInspectedOrderObj = null;
+  var batchAcceptedSessionCount = 0;
+  var processedBatchIds = new Set();
 
   function playDispatchAlertSound(isSuccess = true) {
     try {
@@ -624,6 +684,11 @@
     document.getElementById('countOut').innerText = myOut.length;
     document.getElementById('countDone').innerText = myDone.length;
 
+    var masterBar = document.getElementById('masterBatchBar');
+    if (masterBar) {
+      masterBar.style.display = (ready.length > 0 && currentTab === 'active') ? 'flex' : (currentTab === 'active' ? 'flex' : 'none');
+    }
+
     if (myDone.length > 0) {
       var onTimeCount = myDone.filter(function(o) {
         var startMs = parseAnyDateToMs(o.orderTimestampMs || o.date);
@@ -640,6 +705,10 @@
     document.getElementById('tabActive').classList.toggle('active', tab === 'active');
     document.getElementById('tabOut').classList.toggle('active', tab === 'out');
     document.getElementById('tabDone').classList.toggle('active', tab === 'done');
+    
+    var masterBar = document.getElementById('masterBatchBar');
+    if (masterBar) masterBar.style.display = (tab === 'active') ? 'flex' : 'none';
+
     renderFeed();
   }
 
@@ -689,7 +758,7 @@
       var dualActionBtns = `
         <div class="dual-action-grid">
           <button type="button" class="btn-out" onclick="updateStatus('${o.orderId}', 'OUT FOR DELIVERY')">⚡ Accept (Click)</button>
-          <button type="button" class="btn-scan-action" onclick="startBatchPickupScanner()">📷 Batch Scan</button>
+          <button type="button" class="btn-scan-action" onclick="startBatchPickupScanner()">📷 Scan Bag QR</button>
         </div>
       `;
 
@@ -773,14 +842,18 @@
     }
   }
 
-  // 1. BATCH ACCEPTANCE SCANNER
+  // 1. MASTER BATCH ACCEPTANCE SCANNER (COLLECT MANY BAGS CONTINUOUSLY)
   function startBatchPickupScanner() {
     if (!currentRider || (currentRider.status || '').toLowerCase() !== 'active') return alert("Account verification required.");
     activeScanMode = 'batch_pickup';
     scannedParcelTokenHolder = null;
+    batchAcceptedSessionCount = 0;
+    processedBatchIds.clear();
 
-    document.getElementById('scannerTitle').innerText = '📷 Continuous Batch Scan';
-    document.getElementById('scannerSubtext').innerText = 'Scan parcel labels continuously. The app auto-accepts each parcel.';
+    document.getElementById('batchCounterDisplay').style.display = 'inline-flex';
+    document.getElementById('batchCountVal').innerText = '0';
+    document.getElementById('scannerTitle').innerText = '📷 Batch Bag Scanner Active';
+    document.getElementById('scannerSubtext').innerText = 'Hold camera over parcel stickers continuously. Auto-accepts each.';
     document.getElementById('scannerModal').style.display = 'flex';
 
     launchCamera();
@@ -793,6 +866,7 @@
     activeTargetOrderId = orderId;
     scannedParcelTokenHolder = null;
 
+    document.getElementById('batchCounterDisplay').style.display = 'none';
     document.getElementById('scannerTitle').innerText = 'Step 1/2: Scan Parcel Label';
     document.getElementById('scannerSubtext').innerText = 'Align camera with the QR on the parcel sticker to verify package';
     document.getElementById('scannerModal').style.display = 'flex';
@@ -805,6 +879,7 @@
     closeInspectModal();
     activeScanMode = 'step2_customer';
 
+    document.getElementById('batchCounterDisplay').style.display = 'none';
     document.getElementById('scannerTitle').innerText = 'Step 2/2: Scan Customer In-App QR';
     document.getElementById('scannerSubtext').innerText = 'Scan the delivery QR displayed on the customer\'s screen';
     document.getElementById('scannerModal').style.display = 'flex';
@@ -812,7 +887,7 @@
     launchCamera();
   }
 
-  // CAMERA LAUNCHER
+  // FAST CAMERA LAUNCHER
   function launchCamera() {
     if (html5QrCode && html5QrCode.isScanning) {
       return;
@@ -853,6 +928,11 @@
     } else {
       document.getElementById('scannerModal').style.display = 'none';
     }
+
+    // If rider just finished a batch pickup session, jump them to transit tab
+    if (activeScanMode === 'batch_pickup' && batchAcceptedSessionCount > 0) {
+      filterRiderTab('out');
+    }
   }
 
   function showScannerToast(msg, isError) {
@@ -866,7 +946,7 @@
   async function onScanSuccessCallback(decodedText) {
     if (isScanThrottled) return;
     isScanThrottled = true;
-    setTimeout(() => { isScanThrottled = false; }, 1200);
+    setTimeout(() => { isScanThrottled = false; }, 900);
 
     var parsed = null;
     try {
@@ -876,10 +956,15 @@
       return;
     }
 
-    // MODE 1: CONTINUOUS BATCH ACCEPTANCE
+    // MODE 1: CONTINUOUS BATCH ACCEPTANCE (COLLECT MULTIPLE PRODUCTS)
     if (activeScanMode === 'batch_pickup') {
       if (parsed.type !== "MOHNA_PARCEL_LABEL" || !parsed.orderId) {
         showScannerToast("⚠️ Not a valid Mohna parcel label.", true);
+        return;
+      }
+
+      if (processedBatchIds.has(parsed.orderId)) {
+        showScannerToast("ℹ️ " + parsed.orderId + " already collected!", false);
         return;
       }
 
@@ -893,8 +978,11 @@
       });
 
       if (res && res.status === 'success') {
+        processedBatchIds.add(parsed.orderId);
+        batchAcceptedSessionCount++;
+        document.getElementById('batchCountVal').innerText = batchAcceptedSessionCount;
         playDispatchAlertSound(true);
-        showScannerToast("✅ Accepted: " + parsed.orderId + "! Scan next...", false);
+        showScannerToast("✅ Collected: " + parsed.orderId + " (" + batchAcceptedSessionCount + " Total)", false);
         fetchRiderFeed();
       } else {
         playDispatchAlertSound(false);
@@ -919,8 +1007,6 @@
 
       // Look up full order details from cached feed
       var orderObj = cachedOrders.find(o => o.orderId === activeTargetOrderId);
-      activeInspectedOrderObj = orderObj;
-
       if (orderObj) {
         document.getElementById('insOrderId').innerText = orderObj.orderId;
         document.getElementById('insItems').innerText = orderObj.item;
@@ -943,7 +1029,6 @@
         playDispatchAlertSound(false);
         showScannerToast("❌ Authentication Failed: Customer QR does not match!", true);
         
-        // Instant Reset: Allow rider to restart the verification smoothly
         setTimeout(() => {
           stopQrScanner();
           if (confirm("❌ QR Mismatch! Delivery failed. Do you want to re-scan this parcel?")) {
@@ -967,7 +1052,6 @@
         alert("🎉 Order " + activeTargetOrderId + " successfully authenticated and delivered!");
         scannedParcelTokenHolder = null;
         activeTargetOrderId = null;
-        activeInspectedOrderObj = null;
         fetchRiderFeed();
       } else {
         playDispatchAlertSound(false);
