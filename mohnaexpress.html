@@ -679,8 +679,8 @@
       </div>
 
       <div class="form-group">
-        <label>Delivery Street Address</label>
-        <input type="text" id="orderAddress" required placeholder="House / Flat No, Landmark, Sector / Mohalla" />
+        <label>Resolved Delivery Address (Landmark, City, Pin, State)</label>
+        <input type="text" id="orderAddress" required placeholder="Detecting exact location..." />
       </div>
 
       <div style="background:#f8fafc; border:1px dashed #cbd5e1; padding:10px; border-radius:8px; margin-bottom:14px;">
@@ -884,7 +884,7 @@
         </div>
       </div>
 
-      <div class="bill-row"><span><b>Delivery Address:</b></span><span id="dtlAddress" style="max-width:60%; text-align:right;"></span></div>
+      <div class="bill-row" style="align-items:flex-start;"><span><b>Delivery Address:</b></span><span id="dtlAddress" style="max-width:65%; text-align:right; font-weight:600;"></span></div>
       <div class="bill-row"><span><b>Guaranteed ETA:</b></span><span id="dtlEta"></span></div>
       <div class="bill-row"><span><b>Payment Status:</b></span><span id="dtlStatus" style="color:#15803d; font-weight:bold;"></span></div>
     </div>
@@ -907,7 +907,7 @@
     <div id="loginView">
       <div class="form-group"><label>Email Address</label><input type="email" id="loginEmail" placeholder="name@gmail.com" /></div>
       <div class="form-group"><label>Password</label><input type="password" id="loginPassword" placeholder="••••••••" /></div>
-      <div id="loginGpsStatus" style="font-size:12px; color:#2563eb; margin-bottom:12px; font-weight:bold;">📍 Detecting login GPS coordinates...</div>
+      <div id="loginGpsStatus" style="font-size:12px; color:#2563eb; margin-bottom:12px; font-weight:bold;">📍 Detecting login GPS coordinates & address...</div>
       <button type="button" class="btn-submit" onclick="processUserPasswordLogin()">🔑 Log In</button>
     </div>
 
@@ -916,7 +916,7 @@
       <div class="form-group"><label>Mobile Number</label><input type="tel" id="signupPhone" placeholder="10-digit mobile" /></div>
       <div class="form-group"><label>Email Address</label><input type="email" id="signupEmail" placeholder="name@gmail.com" /></div>
       <div class="form-group"><label>Create Password</label><input type="password" id="signupPassword" placeholder="Minimum 6 characters" /></div>
-      <div id="signupGpsStatus" style="font-size:12px; color:#2563eb; margin-bottom:12px; font-weight:bold;">📍 Locking registered GPS location...</div>
+      <div id="signupGpsStatus" style="font-size:12px; color:#2563eb; margin-bottom:12px; font-weight:bold;">📍 Locking registered GPS location & address...</div>
       <button type="button" class="btn-submit" id="btnRequestSignupOtp" onclick="requestSignupOtp()">Send Verification Code</button>
     </div>
 
@@ -952,6 +952,7 @@
   try { cart = JSON.parse(localStorage.getItem('mohna_cart')) || []; } catch(e) {}
 
   var userCoords = null;
+  var resolvedAddressString = "Detecting nearby landmark, city & pin...";
   var adminZonesData = null;
   var currentTheme = 'retail';
   var activeCategory = 'all';
@@ -1030,6 +1031,40 @@
       if (intersect) inside = !inside;
     }
     return inside;
+  }
+
+  // REVERSE GEOCODING TO RESOLVE LANDMARK, CITY, PIN, STATE FROM LAT/LNG
+  function reverseGeocodeCoordinates(lat, lng, callback) {
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`, {
+      headers: { 'Accept-Language': 'en' }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data && data.address) {
+        var addr = data.address;
+        var road = addr.road || addr.suburb || addr.neighbourhood || addr.residential || "";
+        var suburb = addr.city_district || addr.suburb || addr.town || addr.village || "";
+        var city = addr.city || addr.town || addr.county || "";
+        var state = addr.state || "";
+        var postcode = addr.postcode || "";
+
+        var parts = [];
+        if (road) parts.push(road);
+        if (suburb && suburb !== road) parts.push(suburb);
+        if (city) parts.push(city);
+        if (postcode) parts.push("Pin: " + postcode);
+        if (state) parts.push(state);
+
+        resolvedAddressString = parts.length > 0 ? parts.join(", ") : (data.display_name || `Lat: ${lat}, Lng: ${lng}`);
+      } else {
+        resolvedAddressString = `GPS Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+      }
+      if (callback) callback(resolvedAddressString);
+    })
+    .catch(() => {
+      resolvedAddressString = `GPS Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+      if (callback) callback(resolvedAddressString);
+    });
   }
 
   function evaluateDeliveryZoneEligibility(showAlert) {
@@ -1191,6 +1226,14 @@
       navigator.geolocation.getCurrentPosition(
         function(pos) {
           userCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          
+          reverseGeocodeCoordinates(userCoords.lat, userCoords.lng, function(resolvedAddr) {
+            var addrField = document.getElementById('orderAddress');
+            if (addrField && !addrField.value) {
+              addrField.value = resolvedAddr;
+            }
+          });
+
           var s1 = document.getElementById('loginGpsStatus');
           var s2 = document.getElementById('signupGpsStatus');
           if (s1) s1.innerText = `✅ GPS Locked (${userCoords.lat.toFixed(4)}, ${userCoords.lng.toFixed(4)})`;
@@ -1833,7 +1876,7 @@
       name: currentUser.name,
       email: currentUser.email,
       phone: currentUser.phone,
-      address: document.getElementById('orderAddress').value || `GPS Destination (${currentMatchedZoneName})`,
+      address: document.getElementById('orderAddress').value || resolvedAddressString,
       item: itemSummary,
       qty: totalQty,
       amount: "₹" + finalAmount,
@@ -1855,7 +1898,14 @@
     })
     .then(r => r.json())
     .then((res) => {
+      // CLEAR CART & COUPON STATE UPON SUCCESSFUL ORDER
       cart = [];
+      appliedDiscountPercent = 0;
+      var cpnInput = document.getElementById('couponCodeInput');
+      if (cpnInput) cpnInput.value = "";
+      var cpnMsg = document.getElementById('couponStatusMsg');
+      if (cpnMsg) cpnMsg.innerText = "";
+
       updateCartUI();
       startPersistentCountdown(res.expiryTimestamp, orderId, "PAID (Verified)", 0, nowMs, currentMatchedZoneTiming, null, null, null);
       fetchInitialStoreData();
@@ -1877,7 +1927,7 @@
     if (pageId === 'homePage') document.getElementById('navHome').classList.add('active');
     if (pageId === 'checkoutPage') {
       document.getElementById('navCheckout').classList.add('active');
-      renderCheckoutCart();
+      requestUserGPS(() => renderCheckoutCart());
     }
     if (pageId === 'ordersPage') {
       document.getElementById('navOrders').classList.add('active');
@@ -2026,7 +2076,8 @@
           ${trackRiderBtn}
 
           <div style="font-size:12px; color:#64748b; margin-top:4px;">
-            🕒 Timestamp (IST): <b style="color:#0f172a;">${formatIndianDate(startMs)}</b>
+            🕒 Timestamp (IST): <b style="color:#0f172a;">${formatIndianDate(startMs)}</b><br>
+            📍 Address: <b style="color:#334155;">${o.address || 'GPS Location'}</b>
           </div>
         </div>
       `;
