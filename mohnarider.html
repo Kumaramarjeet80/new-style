@@ -32,7 +32,6 @@
       border-radius: 12px; margin-bottom: 16px; font-size: 13.5px; line-height: 1.4; display: none;
     }
 
-    /* ACTION BARS (PICKUP & COMMON TRANSIT SCANNER) */
     .master-batch-collect-bar {
       background: linear-gradient(135deg, #0284c7, #2563eb);
       border-radius: 14px;
@@ -114,7 +113,6 @@
     .form-group label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 4px; color: #94a3b8; }
     .form-group input { width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; color: white; border-radius: 8px; font-size: 14px; }
 
-    /* PARCEL & CUSTOMER VERIFICATION CARD */
     .verification-details-panel {
       background: #0f172a;
       border: 1.5px solid #22c55e;
@@ -897,7 +895,7 @@
   function startStep1ParcelScan(orderId = null) {
     if (!currentRider || (currentRider.status || '').toLowerCase() !== 'active') return alert("Account verification required.");
     activeScanMode = 'step1_parcel';
-    activeTargetOrderId = orderId; // If null, accepts ANY parcel assigned to this rider in transit!
+    activeTargetOrderId = orderId; // If null, acts as Common Scanner matching any in-transit order
     scannedParcelTokenHolder = null;
 
     document.getElementById('batchCounterDisplay').style.display = 'none';
@@ -910,10 +908,13 @@
 
   // 3. STEP 2: OPEN SCANNER FOR CUSTOMER DELIVERY QR
   function startCustomerQrScanPhase() {
-    closeInspectModal();
+    // Hide the inspect card without wiping scannedParcelTokenHolder
+    document.getElementById('parcelDetailsInspectModal').style.display = 'none';
     activeScanMode = 'step2_customer';
 
-    document.getElementById('batchCounterDisplay').style.display = 'none';
+    var counterEl = document.getElementById('batchCounterDisplay');
+    if (counterEl) counterEl.style.display = 'none';
+
     document.getElementById('scannerTitle').innerText = `Step 2/2: Scan Customer In-App QR`;
     document.getElementById('scannerSubtext').innerText = `Scan the delivery QR displayed on customer's phone for Order ${activeTargetOrderId}`;
     document.getElementById('scannerModal').style.display = 'flex';
@@ -1053,11 +1054,13 @@
         return;
       }
 
+      // Lock in the order ID and token securely
       activeTargetOrderId = matchedOrder.orderId;
-      scannedParcelTokenHolder = parsed.parcelToken;
+      scannedParcelTokenHolder = parsed.parcelToken || matchedOrder.parcelToken;
+      
       playDispatchAlertSound(true);
 
-      // Stop scanner completely so it rests
+      // Stop camera so it is completely on rest
       stopQrScanner();
 
       // Populate details modal for rider inspection
@@ -1080,17 +1083,10 @@
       if (parsed.type !== "MOHNA_DELIVERY_HANDOVER" || parsed.orderId !== activeTargetOrderId) {
         playDispatchAlertSound(false);
         showScannerToast("❌ Authentication Failed: Customer QR does not match!", true);
-        
-        setTimeout(() => {
-          stopQrScanner();
-          if (confirm("❌ Customer QR Mismatch! Delivery failed. Do you want to re-scan this parcel?")) {
-            startStep1ParcelScan(activeTargetOrderId);
-          }
-        }, 1200);
         return;
       }
 
-      // Both QRs verified: submit tokens to backend
+      // Send payload with explicit verification tokens
       var resDeliv = await callAppsScriptApi({
         action: 'verifyTwoFactorQrDelivery',
         orderId: activeTargetOrderId,
@@ -1108,19 +1104,13 @@
       } else {
         playDispatchAlertSound(false);
         showScannerToast("❌ " + (resDeliv ? resDeliv.message : "Handover verification failed"), true);
-        setTimeout(() => {
-          stopQrScanner();
-          if (confirm("❌ Backend verification failed. Do you want to re-scan the parcel?")) {
-            startStep1ParcelScan(activeTargetOrderId);
-          }
-        }, 1200);
       }
     }
   }
 
   function closeInspectModal() {
     document.getElementById('parcelDetailsInspectModal').style.display = 'none';
-    scannedParcelTokenHolder = null;
+    activeScanMode = null;
   }
 
   async function triggerCustomerDeliveryOtpModal(orderId) {
