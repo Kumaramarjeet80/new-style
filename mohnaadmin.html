@@ -79,7 +79,7 @@
     @media print {
       body * { visibility: hidden; }
       #slipPrintContainer, #slipPrintContainer * { visibility: visible; }
-      #slipPrintContainer { display: block !important; position: absolute; left: 0; top: 0; width: 100%; }
+      #slipPrintContainer { display: block !important; position: absolute; left: 0; top: 0; width: 100%; background: white; }
     }
   </style>
 </head>
@@ -139,7 +139,7 @@
           <p style="margin:2px 0 0; font-size:12px; color:#64748b;">Filtered by selected date range. Rider details persist forever upon acceptance and delivery.</p>
         </div>
         <div style="display:flex; gap:8px;">
-          <button class="btn btn-primary" onclick="printMultiOrderParcelStickers()">🏷️ Print QR Parcel Labels (A4 Grid)</button>
+          <button class="btn btn-primary" onclick="printMultiOrderParcelStickers()">🏷️ Print Professional Parcel Labels (8 Per A4)</button>
           <button class="btn btn-dark" onclick="printLast24HoursSlips()">🖨️ A4 Manifest Print</button>
           <button class="btn btn-refresh" onclick="loadOrders()">🔄 Refresh</button>
         </div>
@@ -557,7 +557,7 @@
     fetchAllData();
     if (adminAutoSyncInterval) clearInterval(adminAutoSyncInterval);
     adminAutoSyncInterval = setInterval(function() {
-      loadOrders(); // Real-time background sync for orders & packing queue
+      loadOrders(); // Auto-updates order table & packing hub every 5 seconds
     }, 5000);
   };
 
@@ -597,7 +597,7 @@
         startAdminLiveCountdownTicker();
       })
       .catch(err => {
-        document.getElementById('ordersBody').innerHTML = `<tr><td colspan="12" style="text-align:center; color:#ef4444; padding:20px;">Failed to load orders. Check your Apps Script deployment permissions.</td></tr>`;
+        console.error("Orders sync error:", err);
       });
   }
 
@@ -657,6 +657,8 @@
     }
 
     var tbody = document.getElementById('pickerTableBody');
+    if (!tbody) return;
+
     if (packingQueue.length === 0) {
       tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#16a34a; padding:20px; font-weight:bold;">🎉 All orders packed and ready for dispatch!</td></tr>`;
       return;
@@ -1020,7 +1022,7 @@
       rows = cachedOrders.filter(o => {
         var oTime = parseAnyDateToMs(o.orderTimestampMs || o.date);
         if (activeFilterFromMs === 0 && activeFilterToMs === Infinity) return true;
-        return uTime === 0 || (oTime >= activeFilterFromMs && oTime <= activeFilterToMs);
+        return uTime === 0 || (uTime >= activeFilterFromMs && oTime <= activeFilterToMs);
       }).map(o => [o.orderId, formatIndianDate(o.orderTimestampMs || o.date), o.name, o.address || 'N/A', o.riderName || 'None', o.amount, (o.etaMinutes || 20) + " Mins", o.status]);
     } else if (type === 'products') {
       reportTitle = "INVENTORY VALUATION & STOCK LEVEL REPORT";
@@ -1124,7 +1126,7 @@
     });
   }
 
-  // DYNAMIC A4 PARCEL LABELS WITH EMBEDDED RIDER SCANNER QR
+  // PROFESSIONAL 8-PER-PAGE A4 ADHESIVE PARCEL LABELS GRID
   function printMultiOrderParcelStickers() {
     var pendingOrders = cachedOrders.filter(o => !o.status.includes('Delivered'));
     if (pendingOrders.length === 0) {
@@ -1134,25 +1136,26 @@
 
     var container = document.getElementById('slipPrintContainer');
     container.innerHTML = `
-      <div style="font-family: Arial, sans-serif; padding: 10px; background: white;">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%;">
+      <div style="font-family: Arial, sans-serif; padding: 10px; background: white; width: 210mm; min-height: 297mm; margin: 0 auto;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: repeat(4, auto); gap: 12px; width: 100%;">
           ${pendingOrders.map(o => `
-            <div style="border: 2px solid #0f172a; border-radius: 8px; padding: 10px; background: #ffffff; page-break-inside: avoid; font-size: 11px; display: flex; flex-direction: column; justify-content: space-between;">
-              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #0f172a; padding-bottom: 4px; margin-bottom: 6px;">
-                <b style="font-size: 13px; color: #0284c7;">⚡ MOHNA EXPRESS</b>
-                <b style="font-size: 12px; font-family: monospace;">${o.orderId}</b>
+            <div style="border: 2px solid #0f172a; border-radius: 10px; padding: 12px; background: #ffffff; page-break-inside: avoid; height: 65mm; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.05);">
+              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #2563eb; padding-bottom: 6px; margin-bottom: 6px;">
+                <b style="font-size: 14px; color: #2563eb; font-weight: 900;">⚡ MOHNA EXPRESS</b>
+                <b style="font-size: 13px; font-family: monospace; background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">${o.orderId}</b>
               </div>
-              <div style="display: flex; gap: 10px; align-items: center;">
-                <div id="print_qr_${o.orderId}" style="min-width: 85px; min-height: 85px;"></div>
-                <div>
-                  <div style="margin-bottom: 3px;"><b>To:</b> <span style="font-size: 12px; font-weight: bold;">${o.name}</span> (📞 ${o.phone})</div>
-                  <div style="font-size: 10px; color: #334155; line-height: 1.2; margin-bottom: 4px;">📍 ${o.address}</div>
-                  <div style="font-size: 10.5px;"><b>Items:</b> ${o.item.length > 25 ? o.item.slice(0,22) + '...' : o.item} (Qty: ${o.qty})</div>
+              <div style="display: flex; gap: 12px; align-items: center;">
+                <div id="print_qr_${o.orderId}" style="min-width: 95px; min-height: 95px; background: #f8fafc; padding: 4px; border: 1px solid #cbd5e1; border-radius: 6px;"></div>
+                <div style="font-size: 11.5px; line-height: 1.35;">
+                  <div style="margin-bottom: 3px;"><b>To:</b> <span style="font-size: 13px; font-weight: 800; color: #0f172a;">${o.name}</span></div>
+                  <div style="margin-bottom: 3px;"><b>Phone:</b> 📞 ${o.phone}</div>
+                  <div style="font-size: 10px; color: #334155; margin-bottom: 4px; max-height: 28px; overflow: hidden;">📍 <b>Destination:</b> ${o.address}</div>
+                  <div style="font-size: 11px; color: #1e293b;"><b>Items:</b> ${o.item.length > 30 ? o.item.slice(0,27) + '...' : o.item} (Qty: ${o.qty})</div>
                 </div>
               </div>
-              <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; padding-top: 4px; margin-top: 6px; font-size: 10.5px;">
-                <span style="font-size: 9.5px; color: #64748b;">Secure Scan Label</span>
-                <span style="font-weight: 900; color: #15803d; font-size: 13px;">${o.amount}</span>
+              <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; padding-top: 6px; margin-top: 6px; font-size: 11px;">
+                <span style="font-size: 9.5px; color: #64748b; font-weight: 700; text-transform: uppercase;">Secure 2FA Scan Label</span>
+                <span style="font-weight: 900; color: #16a34a; font-size: 14px;">Total: ${o.amount}</span>
               </div>
             </div>
           `).join('')}
@@ -1167,8 +1170,8 @@
           orderId: o.orderId,
           parcelToken: o.parcelToken
         }),
-        width: 85,
-        height: 85
+        width: 92,
+        height: 92
       });
     });
 
