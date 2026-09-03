@@ -382,7 +382,7 @@
       text-align: center; 
     }
     .timer-clock { 
-      font-size: 44px; 
+      font-size: 36px; 
       font-weight: 900; 
       font-family: monospace; 
       color: #38bdf8; 
@@ -425,8 +425,8 @@
       color: #38bdf8; 
       font-family: monospace; 
       font-weight: 800; 
-      font-size: 12px; 
-      padding: 4px 10px; 
+      font-size: 11.5px; 
+      padding: 4px 8px; 
       border-radius: 6px; 
       border: 1px solid #38bdf8; 
     }
@@ -436,8 +436,8 @@
       color: #166534; 
       font-family: monospace; 
       font-weight: 800; 
-      font-size: 12px; 
-      padding: 4px 10px; 
+      font-size: 11.5px; 
+      padding: 4px 8px; 
       border-radius: 6px; 
       border: 1px solid #86efac; 
     }
@@ -447,10 +447,10 @@
       color: #b91c1c; 
       font-family: monospace; 
       font-weight: 800; 
-      font-size: 12px; 
-      padding: 4px 10px; 
+      font-size: 11.5px; 
+      padding: 4px 8px; 
       border-radius: 6px; 
-      border: 1px solid #f87171; 
+      border: 1px solid #fca5a5; 
     }
 
     .profile-avatar-container { 
@@ -717,7 +717,7 @@
         ⚡ LIVE DISPATCH COUNTDOWN ACTIVE
       </span>
       <div id="activeOrderIdDisplay" style="font-size: 13px; color: #94a3b8; margin-top: 8px;">Order: MHN-XXXXXX</div>
-      <div id="persistentTimerDisplay" class="timer-clock">15:00</div>
+      <div id="persistentTimerDisplay" class="timer-clock">0h 15m 00s</div>
       <p id="timerSubtext" style="color: #cbd5e1; font-size: 12.5px; margin: 0;">Synchronized with Mohna Express Dispatch Hub</p>
     </div>
 
@@ -977,6 +977,15 @@
   var autoSyncInterval = null;
   var trackingLeafletMap = null, riderMapMarker = null, userMapMarker = null;
 
+  // Universal helper for always rendering Xh YYm ZZs format
+  function formatTimeHms(totalSecs) {
+    if (totalSecs < 0) totalSecs = 0;
+    var h = Math.floor(totalSecs / 3600);
+    var m = Math.floor((totalSecs % 3600) / 60);
+    var s = totalSecs % 60;
+    return `${h}h ${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`;
+  }
+
   function parseAnyDateToMs(dateInput) {
     if (!dateInput) return 0;
     if (typeof dateInput === "number") return dateInput;
@@ -1038,7 +1047,6 @@
     return inside;
   }
 
-  // REVERSE GEOCODING: DETECTS PIN CODE AND NEAREST REGISTERED SHOP, MALL OR LANDMARK
   function reverseGeocodeCoordinates(lat, lng, callback) {
     fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`, {
       headers: { 'Accept-Language': 'en' }
@@ -1150,7 +1158,7 @@
         if (width > height) {
           if (width > maxWidth) { height = Math.round((height * maxWidth) / width); width = maxWidth; }
         } else {
-          if (height > maxHeight) { width = Math.round((width * maxHeight) / height); height = maxHeight; }
+          if (height > maxHeight) { width = Math.round((height * maxHeight) / height); height = maxHeight; }
         }
 
         canvas.width = width;
@@ -1170,16 +1178,13 @@
     var expMs = Number(expiryTimestamp) || (startMs + (etaMinutes * 60000));
 
     var totalElapsedSec = Math.max(0, Math.floor((endMs - startMs) / 1000));
-    var elapsedMins = Math.floor(totalElapsedSec / 60);
-    var elapsedSecs = totalElapsedSec % 60;
-    var timeFormatted = `${elapsedMins}m ${elapsedSecs}s`;
+    var timeFormatted = formatTimeHms(totalElapsedSec);
 
     if (endMs <= expMs) {
       return `<span class="badge-ontime">✔ Delivered in ${timeFormatted} (On Time)</span>`;
     } else {
       var lateSec = Math.floor((endMs - expMs) / 1000);
-      var lateMins = Math.floor(lateSec / 60);
-      return `<span class="badge-late">⚠️ Delivered in ${timeFormatted} (${lateMins}m Late)</span>`;
+      return `<span class="badge-late">⚠️ Delivered in ${timeFormatted} (${formatTimeHms(lateSec)} Late)</span>`;
     }
   }
 
@@ -1922,7 +1927,6 @@
     })
     .then(r => r.json())
     .then((res) => {
-      // CLEAR CART & COUPON STATE UPON SUCCESSFUL ORDER
       cart = [];
       appliedDiscountPercent = 0;
       var cpnInput = document.getElementById('couponCodeInput');
@@ -2013,7 +2017,7 @@
     if (status && status.includes('Delivered')) {
       var endMs = parseAnyDateToMs(deliveredTimestamp) || Date.now();
       var totalElapsedSec = Math.max(0, Math.floor((endMs - startMs) / 1000));
-      var timeFormatted = `${Math.floor(totalElapsedSec / 60)}m ${totalElapsedSec % 60}s`;
+      var timeFormatted = formatTimeHms(totalElapsedSec);
 
       if (endMs <= expMs) {
         clock.style.color = "#22c55e";
@@ -2043,13 +2047,13 @@
       var remainingMs = expMs - Date.now();
       if (remainingMs <= 0) {
         clearInterval(persistentTimerInterval);
-        clock.innerText = "00:00";
+        clock.innerText = "0h 00m 00s";
         clock.style.color = "#ef4444";
         subtext.innerHTML = "⚡ <b style='color:#ef4444;'>Delivery Time Guarantee Reached (Cashback Eligible)</b>";
         return;
       }
       var totalSec = Math.floor(remainingMs / 1000);
-      clock.innerText = `${String(Math.floor(totalSec / 60)).padStart(2, '0')}:${String(totalSec % 60).padStart(2, '0')}`;
+      clock.innerText = formatTimeHms(totalSec);
     }, 1000);
   }
 
@@ -2120,11 +2124,11 @@
 
         if (diff <= 0) {
           el.className = "badge-late";
-          el.innerText = "00:00 (EXPIRED)";
+          el.innerText = "0h 00m 00s (EXPIRED)";
         } else {
           el.className = "badge-ticking";
           var totalSec = Math.floor(diff / 1000);
-          el.innerText = `⏱️ ${String(Math.floor(totalSec / 60)).padStart(2, '0')}:${String(totalSec % 60).padStart(2, '0')}`;
+          el.innerText = `⏱️ ${formatTimeHms(totalSec)}`;
         }
       });
     }, 1000);
@@ -2209,7 +2213,6 @@
     document.getElementById('dtlTimestamp').innerText = formatIndianDate(startMs);
     document.getElementById('dtlTotalQty').innerText = order.qty;
     
-    // Render itemized breakdown list
     var itemizedContainer = document.getElementById('dtlItemizedList');
     if (order.items && Array.isArray(order.items) && order.items.length > 0) {
       itemizedContainer.innerHTML = order.items.map(it => `
@@ -2252,10 +2255,10 @@
       var remainingMs = expiryMs - Date.now();
       if (remainingMs <= 0) {
         timerBadge.className = "badge-late";
-        timerBadge.innerText = "00:00 (EXPIRED)";
+        timerBadge.innerText = "0h 00m 00s (EXPIRED)";
       } else {
         var totalSec = Math.floor(remainingMs / 1000);
-        timerBadge.innerText = `⏱️ ${Math.floor(totalSec / 60)}m ${totalSec % 60}s`;
+        timerBadge.innerText = `⏱️ ${formatTimeHms(totalSec)}`;
       }
     }
 
