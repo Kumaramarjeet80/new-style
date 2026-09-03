@@ -679,7 +679,7 @@
       </div>
 
       <div class="form-group">
-        <label>Resolved Delivery Address (Landmark, City, Pin, State)</label>
+        <label>Resolved Delivery Address (Nearest Shop/Mall, Landmark, City, Pin, State)</label>
         <input type="text" id="orderAddress" required placeholder="Detecting exact location..." />
       </div>
 
@@ -952,7 +952,7 @@
   try { cart = JSON.parse(localStorage.getItem('mohna_cart')) || []; } catch(e) {}
 
   var userCoords = null;
-  var resolvedAddressString = "Detecting nearby landmark, city & pin...";
+  var resolvedAddressString = "Detecting nearest shop, mall & pin code...";
   var adminZonesData = null;
   var currentTheme = 'retail';
   var activeCategory = 'all';
@@ -1033,7 +1033,7 @@
     return inside;
   }
 
-  // REVERSE GEOCODING TO RESOLVE LANDMARK, CITY, PIN, STATE FROM LAT/LNG
+  // REVERSE GEOCODING: DETECTS PIN CODE AND NEAREST REGISTERED SHOP, MALL OR LANDMARK
   function reverseGeocodeCoordinates(lat, lng, callback) {
     fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`, {
       headers: { 'Accept-Language': 'en' }
@@ -1042,6 +1042,7 @@
     .then(data => {
       if (data && data.address) {
         var addr = data.address;
+        var poi = addr.shop || addr.mall || addr.amenity || addr.building || addr.commercial || addr.leisure || "";
         var road = addr.road || addr.suburb || addr.neighbourhood || addr.residential || "";
         var suburb = addr.city_district || addr.suburb || addr.town || addr.village || "";
         var city = addr.city || addr.town || addr.county || "";
@@ -1049,6 +1050,7 @@
         var postcode = addr.postcode || "";
 
         var parts = [];
+        if (poi) parts.push("Near " + poi);
         if (road) parts.push(road);
         if (suburb && suburb !== road) parts.push(suburb);
         if (city) parts.push(city);
@@ -1143,7 +1145,7 @@
         if (width > height) {
           if (width > maxWidth) { height = Math.round((height * maxWidth) / width); width = maxWidth; }
         } else {
-          if (height > maxHeight) { width = Math.round((width * maxHeight) / height); height = maxHeight; }
+          if (height > maxHeight) { width = Math.round((height * maxHeight) / height); height = maxHeight; }
         }
 
         canvas.width = width;
@@ -1361,6 +1363,7 @@
 
   function openAuthModal(mode) {
     document.getElementById('authModal').style.display = 'flex';
+    toggleRiderAuthTab(mode || 'login'); // fixed fallback
     toggleAuthTab(mode || 'login');
     requestUserGPS();
   }
