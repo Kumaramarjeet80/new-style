@@ -1670,7 +1670,6 @@
       var stock = parseInt(p.stockQty) || 0;
       var isOutOfStock = stock <= 0;
 
-      // Compute average star rating
       var avgRating = "New";
       if (p.reviews && p.reviews.length > 0) {
         var sum = p.reviews.reduce((acc, r) => acc + Number(r.rating), 0);
@@ -1718,7 +1717,6 @@
     document.getElementById('modalProdCategory').innerText = p.category;
     document.getElementById('modalProdImg').src = p.img || 'https://via.placeholder.com/300?text=Product';
     
-    // Render gallery thumbnails
     var thumbRow = document.getElementById('modalGalleryThumbnails');
     var allImages = [p.img];
     if (p.gallery && Array.isArray(p.gallery)) {
@@ -1739,7 +1737,6 @@
     document.getElementById('modalProdSpecs').innerText = p.specifications || "Standard Quality Grade A";
     document.getElementById('modalProdTerms').innerText = p.terms || "Returnable upon delivery if damaged.";
 
-    // Render reviews feed
     var reviewsFeed = document.getElementById('modalProductReviewsFeed');
     if (p.reviews && p.reviews.length > 0) {
       reviewsFeed.innerHTML = p.reviews.map(rev => `
@@ -2332,7 +2329,6 @@
     document.getElementById('dtlTimestamp').innerText = formatIndianDate(startMs);
     document.getElementById('dtlTotalQty').innerText = order.qty;
     
-    // Check if delivery completed within 1 hour for review eligibility
     var deliveredTime = Number(order.deliveredTimestamp) || 0;
     var isDelivered = order.status && (order.status.includes('Delivered') || order.status.includes('Delivered (Verified)'));
     var canReview = isDelivered && deliveredTime > 0 && ((Date.now() - deliveredTime) <= 60 * 60 * 1000);
@@ -2340,7 +2336,6 @@
     var itemizedContainer = document.getElementById('dtlItemizedList');
     if (order.items && Array.isArray(order.items) && order.items.length > 0) {
       itemizedContainer.innerHTML = order.items.map(it => {
-        // Check if this specific item has already been reviewed in this order
         var existingRev = order.reviews ? order.reviews.find(r => r.productId === it.id) : null;
         var reviewActionHtml = "";
 
