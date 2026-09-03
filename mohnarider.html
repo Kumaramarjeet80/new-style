@@ -93,9 +93,9 @@
     .status-out { background: #fed7aa; color: #9a3412; }
     .status-done { background: #bbf7d0; color: #166534; }
 
-    .badge-ticking { background: #0f172a; color: #38bdf8; font-family: monospace; font-weight: 900; font-size: 12px; padding: 4px 10px; border-radius: 6px; border: 1px solid #38bdf8; }
-    .badge-ontime { background: #064e3b; color: #86efac; font-family: monospace; font-weight: 900; font-size: 12px; padding: 4px 10px; border-radius: 6px; border: 1px solid #22c55e; }
-    .badge-late { background: #450a0a; color: #fca5a5; font-family: monospace; font-weight: 900; font-size: 12px; padding: 4px 10px; border-radius: 6px; border: 1px solid #ef4444; }
+    .badge-ticking { background: #0f172a; color: #38bdf8; font-family: monospace; font-weight: 900; font-size: 11.5px; padding: 4px 8px; border-radius: 6px; border: 1px solid #38bdf8; }
+    .badge-ontime { background: #064e3b; color: #86efac; font-family: monospace; font-weight: 900; font-size: 11.5px; padding: 4px 8px; border-radius: 6px; border: 1px solid #22c55e; }
+    .badge-late { background: #450a0a; color: #fca5a5; font-family: monospace; font-weight: 900; font-size: 11.5px; padding: 4px 8px; border-radius: 6px; border: 1px solid #ef4444; }
 
     .action-btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
     .btn { padding: 10px; border: none; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
@@ -374,6 +374,15 @@
   var batchAcceptedSessionCount = 0;
   var processedBatchIds = new Set();
 
+  // Universal helper for always rendering Xh YYm ZZs format
+  function formatTimeHms(totalSecs) {
+    if (totalSecs < 0) totalSecs = 0;
+    var h = Math.floor(totalSecs / 3600);
+    var m = Math.floor((totalSecs % 3600) / 60);
+    var s = totalSecs % 60;
+    return `${h}h ${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`;
+  }
+
   function playDispatchAlertSound(isSuccess = true) {
     try {
       var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -472,16 +481,13 @@
     var expMs = Number(expiryTimestamp) || (startMs + (etaMinutes * 60000));
 
     var totalElapsedSec = Math.max(0, Math.floor((endMs - startMs) / 1000));
-    var elapsedMins = Math.floor(totalElapsedSec / 60);
-    var elapsedSecs = totalElapsedSec % 60;
-    var timeFormatted = `${elapsedMins}m ${elapsedSecs}s`;
+    var timeFormatted = formatTimeHms(totalElapsedSec);
 
     if (endMs <= expMs) {
       return `<span class="badge-ontime">✔ Delivered in ${timeFormatted} (On Time)</span>`;
     } else {
       var lateSec = Math.floor((endMs - expMs) / 1000);
-      var lateMins = Math.floor(lateSec / 60);
-      return `<span class="badge-late">⚠️ Delivered in ${timeFormatted} (${lateMins}m Late)</span>`;
+      return `<span class="badge-late">⚠️ Delivered in ${timeFormatted} (${formatTimeHms(lateSec)} Late)</span>`;
     }
   }
 
@@ -852,13 +858,11 @@
 
         if (diff <= 0) {
           el.className = "badge-late";
-          el.innerText = "00:00 (EXPIRED)";
+          el.innerText = "0h 00m 00s (EXPIRED)";
         } else {
           el.className = "badge-ticking";
           var totalSec = Math.floor(diff / 1000);
-          var mins = Math.floor(totalSec / 60);
-          var secs = totalSec % 60;
-          el.innerText = `⏱️ ${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+          el.innerText = `⏱️ ${formatTimeHms(totalSec)}`;
         }
       });
     }, 1000);
@@ -883,7 +887,6 @@
     }
   }
 
-  // 1. MASTER BATCH ACCEPTANCE SCANNER (COLLECT MANY BAGS CONTINUOUSLY)
   function startBatchPickupScanner() {
     if (!currentRider || (currentRider.status || '').toLowerCase() !== 'active') return alert("Account verification required.");
     activeScanMode = 'batch_pickup';
@@ -900,11 +903,10 @@
     launchCamera();
   }
 
-  // 2. STEP 1: SCAN PARCEL LABEL (Specific Order OR Common Scan)
   function startStep1ParcelScan(orderId = null) {
     if (!currentRider || (currentRider.status || '').toLowerCase() !== 'active') return alert("Account verification required.");
     activeScanMode = 'step1_parcel';
-    activeTargetOrderId = orderId; // If null, acts as Common Scanner matching any in-transit order
+    activeTargetOrderId = orderId;
     scannedParcelTokenHolder = null;
 
     document.getElementById('batchCounterDisplay').style.display = 'none';
@@ -915,9 +917,7 @@
     launchCamera();
   }
 
-  // 3. STEP 2: OPEN SCANNER FOR CUSTOMER DELIVERY QR
   function startCustomerQrScanPhase() {
-    // Hide the inspect card without wiping scannedParcelTokenHolder
     document.getElementById('parcelDetailsInspectModal').style.display = 'none';
     activeScanMode = 'step2_customer';
 
@@ -931,7 +931,6 @@
     launchCamera();
   }
 
-  // FAST CAMERA ENGINE
   function launchCamera() {
     if (html5QrCode && html5QrCode.isScanning) {
       return;
@@ -999,7 +998,6 @@
       return;
     }
 
-    // MODE 1: BATCH PICKUP SCANNER
     if (activeScanMode === 'batch_pickup') {
       if (parsed.type !== "MOHNA_PARCEL_LABEL" || !parsed.orderId) {
         showScannerToast("⚠️ Not a valid Mohna parcel label.", true);
@@ -1034,7 +1032,6 @@
       return;
     }
 
-    // MODE 2: STEP 1 - PARCEL QR SCANNED (Specific OR Common Scan)
     if (activeScanMode === 'step1_parcel') {
       if (parsed.type !== "MOHNA_PARCEL_LABEL" || !parsed.orderId) {
         playDispatchAlertSound(false);
@@ -1042,14 +1039,12 @@
         return;
       }
 
-      // If launched from specific card, verify exact match
       if (activeTargetOrderId && parsed.orderId !== activeTargetOrderId) {
         playDispatchAlertSound(false);
         showScannerToast("⚠️ Wrong parcel! Expected " + activeTargetOrderId, true);
         return;
       }
 
-      // If launched from Common Scanner, verify this parcel is in transit and assigned to this rider
       var riderName = (currentRider && currentRider.name) ? currentRider.name.trim().toLowerCase() : "";
       var matchedOrder = cachedOrders.find(o => 
         o.orderId === parsed.orderId && 
@@ -1063,16 +1058,12 @@
         return;
       }
 
-      // Lock in the order ID and token securely
       activeTargetOrderId = matchedOrder.orderId;
       scannedParcelTokenHolder = parsed.parcelToken || matchedOrder.parcelToken;
       
       playDispatchAlertSound(true);
-
-      // Stop camera so it is completely on rest
       stopQrScanner();
 
-      // Populate details modal for rider inspection with itemized ledger
       document.getElementById('insOrderId').innerText = matchedOrder.orderId;
       document.getElementById('insTotalQty').innerText = `${matchedOrder.qty} Units`;
       document.getElementById('insAmount').innerText = matchedOrder.amount;
@@ -1093,12 +1084,10 @@
         itemizedContainer.innerHTML = `<div>${matchedOrder.item} (Qty: ${matchedOrder.qty})</div>`;
       }
 
-      // Open resting inspect modal
       document.getElementById('parcelDetailsInspectModal').style.display = 'flex';
       return;
     }
 
-    // MODE 3: STEP 2 - CUSTOMER DELIVERY QR SCANNED -> AUTHENTICATE & FINALIZE
     if (activeScanMode === 'step2_customer') {
       if (parsed.type !== "MOHNA_DELIVERY_HANDOVER" || parsed.orderId !== activeTargetOrderId) {
         playDispatchAlertSound(false);
@@ -1106,7 +1095,6 @@
         return;
       }
 
-      // Send payload with explicit verification tokens
       var resDeliv = await callAppsScriptApi({
         action: 'verifyTwoFactorQrDelivery',
         orderId: activeTargetOrderId,
