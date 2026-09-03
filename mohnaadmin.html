@@ -297,11 +297,11 @@
     </div>
   </div>
 
-  <!-- TAB 5: 📦 PRODUCTS & STOCK (WITH MULTI-IMAGE UPLOAD & THUMBNAIL SELECTOR) -->
+  <!-- TAB 5: 📦 PRODUCTS & STOCK -->
   <div id="viewProducts" class="admin-page-view">
     <div class="grid-2">
       <div class="card">
-        <h3>📦 Add Product (Multi-Image & Thumbnail Selector)</h3>
+        <h3>📦 Add Product to Catalog</h3>
         <form onsubmit="handleAddProduct(event)" style="margin-top:10px;">
           <div class="form-group"><label>Product Title</label><input type="text" id="prodName" required placeholder="e.g. Mustard Oil 1L" /></div>
           <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
@@ -327,17 +327,10 @@
           <div class="form-group"><label>Product Description</label><textarea id="prodDescription" rows="2" placeholder="100% Pure cold pressed oil..."></textarea></div>
           <div class="form-group"><label>Specifications</label><input type="text" id="prodSpecifications" placeholder="Grade A, 1L Bottle, Shelf Life 12M" /></div>
           <div class="form-group"><label>Terms & Conditions</label><input type="text" id="prodTerms" placeholder="100% Genuine. Check upon delivery." /></div>
-          
           <div class="form-group">
-            <label>⭐ Primary Thumbnail Image (Shown on Catalog Grid)</label>
-            <input type="file" id="prodThumbnailInput" accept="image/*" required />
+            <label>Upload Product Photo (Saved to Google Drive)</label>
+            <input type="file" id="prodFileInput" accept="image/*" required />
           </div>
-
-          <div class="form-group">
-            <label>🖼️ Secondary Gallery Images (Multiple selection for swipe carousel)</label>
-            <input type="file" id="prodGalleryInput" accept="image/*" multiple />
-          </div>
-
           <button type="submit" id="btnSaveProduct" class="btn btn-primary" style="width:100%;">+ Save & Publish Product</button>
         </form>
       </div>
@@ -457,7 +450,7 @@
         if (width > height) {
           if (width > maxWidth) { height = Math.round((height * maxWidth) / width); width = maxWidth; }
         } else {
-          if (height > maxHeight) { width = Math.round((height * maxHeight) / height); height = maxHeight; }
+          if (height > maxHeight) { width = Math.round((width * maxHeight) / height); height = maxHeight; }
         }
 
         canvas.width = width;
@@ -564,7 +557,7 @@
     fetchAllData();
     if (adminAutoSyncInterval) clearInterval(adminAutoSyncInterval);
     adminAutoSyncInterval = setInterval(function() {
-      loadOrders();
+      loadOrders(); // Real-time background sync for orders & packing queue
     }, 5000);
   };
 
@@ -876,68 +869,46 @@
     `).join('');
   }
 
-  // HANDLE MULTI-IMAGE PRODUCT UPLOAD WITH THUMBNAIL SELECTOR
   function handleAddProduct(e) {
     e.preventDefault();
-    var thumbFile = document.getElementById('prodThumbnailInput').files[0];
-    if (!thumbFile) return alert("Please choose a primary thumbnail image.");
+    var file = document.getElementById('prodFileInput').files[0];
+    if (!file) return alert("Please choose an image file to upload.");
 
-    var galleryFiles = document.getElementById('prodGalleryInput').files;
     var btn = document.getElementById('btnSaveProduct');
-    btn.innerText = "Processing & Uploading to Google Drive...";
+    btn.innerText = "Uploading to Google Drive...";
     btn.disabled = true;
 
-    compressImageFile(thumbFile, 600, 600, function(thumbBase64) {
-      var galleryBase64Array = [];
-      var processedCount = 0;
+    compressImageFile(file, 600, 600, function(compressedBase64) {
+      var payload = {
+        action: "addProduct",
+        name: document.getElementById('prodName').value.trim(),
+        category: document.getElementById('prodCategorySelect').value,
+        scope: document.getElementById('prodScope').value,
+        retailPrice: parseInt(document.getElementById('prodRetailPrice').value) || 0,
+        wholesalePrice: parseInt(document.getElementById('prodWholesalePrice').value) || 0,
+        mrp: parseInt(document.getElementById('prodMrp').value) || 0,
+        stockQty: parseInt(document.getElementById('prodStockQty').value) || 0,
+        deliveryFee: parseInt(document.getElementById('prodDeliveryFee').value) || 0,
+        description: document.getElementById('prodDescription').value.trim(),
+        specifications: document.getElementById('prodSpecifications').value.trim(),
+        terms: document.getElementById('prodTerms').value.trim(),
+        imageBase64: compressedBase64
+      };
 
-      function checkAndFinish() {
-        var payload = {
-          action: "addProduct",
-          name: document.getElementById('prodName').value.trim(),
-          category: document.getElementById('prodCategorySelect').value,
-          scope: document.getElementById('prodScope').value,
-          retailPrice: parseInt(document.getElementById('prodRetailPrice').value) || 0,
-          wholesalePrice: parseInt(document.getElementById('prodWholesalePrice').value) || 0,
-          mrp: parseInt(document.getElementById('prodMrp').value) || 0,
-          stockQty: parseInt(document.getElementById('prodStockQty').value) || 0,
-          deliveryFee: parseInt(document.getElementById('prodDeliveryFee').value) || 0,
-          description: document.getElementById('prodDescription').value.trim(),
-          specifications: document.getElementById('prodSpecifications').value.trim(),
-          terms: document.getElementById('prodTerms').value.trim(),
-          img: thumbBase64,
-          galleryImagesBase64: galleryBase64Array
-        };
-
-        fetch(SPREADSHEET_API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify(payload)
-        }).then(() => {
-          btn.innerText = "+ Save & Publish Product";
-          btn.disabled = false;
-          e.target.reset();
-          loadProducts();
-        }).catch(() => {
-          btn.innerText = "+ Save & Publish Product";
-          btn.disabled = false;
-          alert("Upload failed. Verify Apps Script Drive permissions.");
-        });
-      }
-
-      if (!galleryFiles || galleryFiles.length === 0) {
-        checkAndFinish();
-      } else {
-        for (let i = 0; i < galleryFiles.length; i++) {
-          compressImageFile(galleryFiles[i], 600, 600, function(gBase64) {
-            galleryBase64Array.push(gBase64);
-            processedCount++;
-            if (processedCount === galleryFiles.length) {
-              checkAndFinish();
-            }
-          });
-        }
-      }
+      fetch(SPREADSHEET_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload)
+      }).then(() => {
+        btn.innerText = "+ Save & Publish Product";
+        btn.disabled = false;
+        e.target.reset();
+        loadProducts();
+      }).catch(() => {
+        btn.innerText = "+ Save & Publish Product";
+        btn.disabled = false;
+        alert("Upload failed. Verify Apps Script Drive permissions.");
+      });
     });
   }
 
