@@ -818,7 +818,7 @@
 
           <div style="font-size:14px; font-weight:700; color:#f8fafc; margin-bottom:4px;">${o.item} (Qty: ${o.qty})</div>
           <div style="font-size:13px; color:#94a3b8; margin-bottom:6px;">👤 ${o.name} | <b>${o.amount}</b></div>
-          <div style="font-size:12.5px; color:#cbd5e1; margin-bottom:10px; background:#0f172a; padding:8px; border-radius:8px;">📍 ${o.address}</div>
+          <div style="font-size:12.5px; color:#cbd5e1; margin-bottom:10px; background:#0f172a; padding:8px; border-radius:8px;">📍 <b>Delivery Address:</b> ${o.address || 'GPS Location'}</div>
 
           <div class="action-btn-row">
             <a href="${o.mapsUrl}" target="_blank" class="btn btn-maps">🗺️ Direct GPS Navigation</a>
