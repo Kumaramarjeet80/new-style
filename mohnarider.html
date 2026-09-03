@@ -374,7 +374,6 @@
   var batchAcceptedSessionCount = 0;
   var processedBatchIds = new Set();
 
-  // Universal helper for always rendering Xh YYm ZZs format
   function formatTimeHms(totalSecs) {
     if (totalSecs < 0) totalSecs = 0;
     var h = Math.floor(totalSecs / 3600);
@@ -1069,7 +1068,7 @@
       document.getElementById('insAmount').innerText = matchedOrder.amount;
       document.getElementById('insCustName').innerText = matchedOrder.name;
       document.getElementById('insCustPhone').innerText = matchedOrder.phone;
-      document.getElementById('insCustPhone').href = "tel:" + matchedOrder.phone;
+      document.getElementById('insCustPhone'].href = "tel:" + matchedOrder.phone;
       document.getElementById('insCustAddress').innerText = matchedOrder.address || "GPS Location";
 
       var itemizedContainer = document.getElementById('insItemizedList');
