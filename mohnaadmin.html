@@ -139,7 +139,7 @@
           <p style="margin:2px 0 0; font-size:12px; color:#64748b;">Filtered by selected date range. Rider details persist forever upon acceptance and delivery.</p>
         </div>
         <div style="display:flex; gap:8px;">
-          <button class="btn btn-primary" onclick="printMultiOrderParcelStickers()">🏷️ Print Professional Parcel Labels (8 Per A4)</button>
+          <button class="btn btn-primary" onclick="printMultiOrderParcelStickers()">🏷️ Print Enlarged QR Parcel Labels (8 Per A4)</button>
           <button class="btn btn-dark" onclick="printLast24HoursSlips()">🖨️ A4 Manifest Print</button>
           <button class="btn btn-refresh" onclick="loadOrders()">🔄 Refresh</button>
         </div>
@@ -450,7 +450,7 @@
         if (width > height) {
           if (width > maxWidth) { height = Math.round((height * maxWidth) / width); width = maxWidth; }
         } else {
-          if (height > maxHeight) { width = Math.round((width * maxHeight) / height); height = maxHeight; }
+          if (height > maxHeight) { width = Math.round((height * maxHeight) / height); height = maxHeight; }
         }
 
         canvas.width = width;
@@ -557,7 +557,7 @@
     fetchAllData();
     if (adminAutoSyncInterval) clearInterval(adminAutoSyncInterval);
     adminAutoSyncInterval = setInterval(function() {
-      loadOrders(); // Auto-updates order table & packing hub every 5 seconds
+      loadOrders(); // Real-time background sync for orders & packing queue
     }, 5000);
   };
 
@@ -1022,7 +1022,7 @@
       rows = cachedOrders.filter(o => {
         var oTime = parseAnyDateToMs(o.orderTimestampMs || o.date);
         if (activeFilterFromMs === 0 && activeFilterToMs === Infinity) return true;
-        return uTime === 0 || (uTime >= activeFilterFromMs && oTime <= activeFilterToMs);
+        return uTime === 0 || (uTime >= activeFilterFromMs && uTime <= activeFilterToMs);
       }).map(o => [o.orderId, formatIndianDate(o.orderTimestampMs || o.date), o.name, o.address || 'N/A', o.riderName || 'None', o.amount, (o.etaMinutes || 20) + " Mins", o.status]);
     } else if (type === 'products') {
       reportTitle = "INVENTORY VALUATION & STOCK LEVEL REPORT";
@@ -1126,7 +1126,7 @@
     });
   }
 
-  // PROFESSIONAL 8-PER-PAGE A4 ADHESIVE PARCEL LABELS GRID
+  // PROFESSIONAL 8-PER-PAGE A4 ADHESIVE PARCEL LABELS WITH UPGRADED ENLARGED QR CODES
   function printMultiOrderParcelStickers() {
     var pendingOrders = cachedOrders.filter(o => !o.status.includes('Delivered'));
     if (pendingOrders.length === 0) {
@@ -1145,7 +1145,7 @@
                 <b style="font-size: 13px; font-family: monospace; background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">${o.orderId}</b>
               </div>
               <div style="display: flex; gap: 12px; align-items: center;">
-                <div id="print_qr_${o.orderId}" style="min-width: 95px; min-height: 95px; background: #f8fafc; padding: 4px; border: 1px solid #cbd5e1; border-radius: 6px;"></div>
+                <div id="print_qr_${o.orderId}" style="min-width: 110px; min-height: 110px; background: #f8fafc; padding: 4px; border: 1px solid #cbd5e1; border-radius: 6px;"></div>
                 <div style="font-size: 11.5px; line-height: 1.35;">
                   <div style="margin-bottom: 3px;"><b>To:</b> <span style="font-size: 13px; font-weight: 800; color: #0f172a;">${o.name}</span></div>
                   <div style="margin-bottom: 3px;"><b>Phone:</b> 📞 ${o.phone}</div>
@@ -1170,8 +1170,8 @@
           orderId: o.orderId,
           parcelToken: o.parcelToken
         }),
-        width: 92,
-        height: 92
+        width: 108,
+        height: 108
       });
     });
 
