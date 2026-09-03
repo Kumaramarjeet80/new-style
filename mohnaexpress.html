@@ -1363,7 +1363,6 @@
 
   function openAuthModal(mode) {
     document.getElementById('authModal').style.display = 'flex';
-    toggleRiderAuthTab(mode || 'login'); // fixed fallback
     toggleAuthTab(mode || 'login');
     requestUserGPS();
   }
@@ -1673,7 +1672,7 @@
         name: p.name,
         price: price,
         deliveryFee: parseInt(p.deliveryFee) || 0,
-        qty: (currentTheme === 'wholesale' ? 5 : 1),
+        qty: 1,
         theme: currentTheme
       });
     }
@@ -1698,14 +1697,19 @@
     if ((parseInt(p.stockQty) || 0) <= 0) return alert("Product is currently out of stock.");
 
     var price = (currentTheme === 'wholesale') ? p.wholesalePrice : p.retailPrice;
-    cart = [{
-      id: p.id,
-      name: p.name,
-      price: price,
-      deliveryFee: parseInt(p.deliveryFee) || 0,
-      qty: (currentTheme === 'wholesale' ? 5 : 1),
-      theme: currentTheme
-    }];
+    
+    // Check if already in cart, otherwise add
+    var existing = cart.find(x => x.id === productId && x.theme === currentTheme);
+    if (!existing) {
+      cart.push({
+        id: p.id,
+        name: p.name,
+        price: price,
+        deliveryFee: parseInt(p.deliveryFee) || 0,
+        qty: 1,
+        theme: currentTheme
+      });
+    }
 
     updateCartUI();
     switchPage('checkoutPage');
@@ -1715,6 +1719,16 @@
     if (!currentSelectedProduct) return;
     closeProductModal();
     directBuyNow(currentSelectedProduct.id);
+  }
+
+  function changeCartItemQty(idx, delta) {
+    if (!cart[idx]) return;
+    cart[idx].qty += delta;
+    if (cart[idx].qty <= 0) {
+      cart.splice(idx, 1);
+    }
+    updateCartUI();
+    renderCheckoutCart();
   }
 
   function renderCheckoutCart() {
@@ -1754,11 +1768,15 @@
         <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px; margin-bottom:8px;">
           <div>
             <b>${item.name}</b>
-            <div style="font-size:11px; color:#64748b;">₹${item.price} x ${item.qty} units</div>
+            <div style="font-size:11px; color:#64748b;">₹${item.price} each</div>
           </div>
-          <div style="display:flex; align-items:center; gap:8px;">
-            <b style="color:#16a34a;">₹${itemTotal}</b>
-            <button onclick="removeCartItem(${idx})" style="background:#fee2e2; color:#dc2626; border:none; border-radius:4px; padding:4px 8px; cursor:pointer; font-weight:bold;">✕</button>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div style="display:flex; align-items:center; gap:6px; background:white; border:1px solid #cbd5e1; border-radius:6px; padding:2px 6px;">
+              <button onclick="changeCartItemQty(${idx}, -1)" style="background:none; border:none; font-weight:bold; cursor:pointer; font-size:14px; color:#ef4444;">-</button>
+              <span style="font-weight:bold; font-size:13px; min-width:16px; text-align:center;">${item.qty}</span>
+              <button onclick="changeCartItemQty(${idx}, 1)" style="background:none; border:none; font-weight:bold; cursor:pointer; font-size:14px; color:#16a34a;">+</button>
+            </div>
+            <b style="color:#16a34a; min-width:55px; text-align:right;">₹${itemTotal}</b>
           </div>
         </div>
       `;
