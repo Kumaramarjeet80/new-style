@@ -1140,7 +1140,7 @@
                 </div>
               </div>
               <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; padding-top: 4px; margin-top: 6px; font-size: 10.5px;">
-                <span style="font-size: 9.5px; color: #64748b;">Scan to Accept / Deliver</span>
+                <span style="font-size: 9.5px; color: #64748b;">Secure Scan Label</span>
                 <span style="font-weight: 900; color: #15803d; font-size: 13px;">${o.amount}</span>
               </div>
             </div>
@@ -1151,7 +1151,11 @@
 
     pendingOrders.forEach(o => {
       new QRCode(document.getElementById(`print_qr_${o.orderId}`), {
-        text: JSON.stringify({ type: "MOHNA_DISPATCH", orderId: o.orderId }),
+        text: JSON.stringify({
+          type: "MOHNA_PARCEL_LABEL",
+          orderId: o.orderId,
+          parcelToken: o.parcelToken
+        }),
         width: 85,
         height: 85
       });
