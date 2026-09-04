@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mohna Express - Rider Partner Hub</title>
+
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
+  <script src="https://unpkg.com/html5-qrcode"></script>
+
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { margin: 0; padding: 0 0 75px 0; background: #0f172a; color: #f8fafc; min-height: 100vh; }
+
+    .rider-container { max-width: 800px; margin: 0 auto; padding: 16px; }
+
+    .rider-header {
+      display: flex; justify-content: space-between; align-items: center; background: #1e293b;
+      padding: 14px 18px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: 1px solid #334155;
+      margin-bottom: 16px;
+    }
+    .rider-brand { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 18px; color: #38bdf8; }
+    .rider-brand span { background: #0284c7; color: white; border-radius: 8px; padding: 4px 8px; font-size: 14px; }
+    
+    .rider-auth-pill {
+      display: flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 20px; font-size: 13px;
+      font-weight: 700; cursor: pointer; background: #38bdf8; color: #0f172a; border: none;
+    }
+
+    .verification-alert-banner {
+      background: #78350f; border: 1.5px solid #f59e0b; color: #fef3c7; padding: 14px;
+      border-radius: 12px; margin-bottom: 16px; font-size: 13.5px; line-height: 1.4; display: none;
+    }
+
+    .master-batch-collect-bar {
+      background: linear-gradient(135deg, #0284c7, #2563eb);
+      border-radius: 14px;
+      padding: 14px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 15px rgba(2, 132, 199, 0.35);
+      border: 1px solid #38bdf8;
+    }
+    .transit-common-scan-bar {
+      background: linear-gradient(135deg, #059669, #10b981);
+      border-radius: 14px;
+      padding: 14px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+      border: 1px solid #6ee7b7;
+    }
+    .btn-bar-action {
+      background: #ffffff;
+      color: #0f172a;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 18px;
+      font-weight: 900;
+      font-size: 13px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .btn-bar-action:active { transform: scale(0.97); }
+
+    .metrics-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+    .metric-card { background: #1e293b; border: 1px solid #334155; padding: 12px; border-radius: 12px; text-align: center; }
+    .metric-val { font-size: 20px; font-weight: 900; color: #38bdf8; font-family: monospace; }
+    .metric-lbl { font-size: 11px; color: #94a3b8; font-weight: 600; margin-top: 2px; }
+
+    .tab-bar { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 16px; }
+    .tab-btn {
+      flex: 1; padding: 10px; border-radius: 10px; border: 1px solid #334155; background: #1e293b;
+      color: #94a3b8; font-weight: 700; font-size: 13px; cursor: pointer; text-align: center; white-space: nowrap;
+    }
+    .tab-btn.active { background: #0284c7; color: white; border-color: #38bdf8; }
+
+    .order-card {
+      background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 16px;
+      margin-bottom: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .order-id-badge { font-weight: 800; font-size: 15px; color: #f8fafc; }
+    .status-badge { font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 12px; text-transform: uppercase; }
+    .status-pending { background: #fef08a; color: #854d0e; }
+    .status-out { background: #fed7aa; color: #9a3412; }
+    .status-done { background: #bbf7d0; color: #166534; }
+
+    .badge-ticking { background: #0f172a; color: #38bdf8; font-family: monospace; font-weight: 900; font-size: 11.5px; padding: 4px 8px; border-radius: 6px; border: 1px solid #38bdf8; }
+    .badge-ontime { background: #064e3b; color: #86efac; font-family: monospace; font-weight: 900; font-size: 11.5px; padding: 4px 8px; border-radius: 6px; border: 1px solid #22c55e; }
+    .badge-late { background: #450a0a; color: #fca5a5; font-family: monospace; font-weight: 900; font-size: 11.5px; padding: 4px 8px; border-radius: 6px; border: 1px solid #ef4444; }
+
+    .action-btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+    .btn { padding: 10px; border: none; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+    .btn-maps { background: #2563eb; color: white; text-decoration: none; }
+    .btn-call { background: #059669; color: white; text-decoration: none; }
+    
+    .dual-action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+    .btn-out { background: #ea580c; color: white; padding: 12px 8px; border: none; border-radius: 8px; font-weight: 800; font-size: 12.5px; cursor: pointer; }
+    .btn-scan-action { background: #0284c7; color: white; padding: 12px 8px; border: none; border-radius: 8px; font-weight: 800; font-size: 12.5px; cursor: pointer; }
+    .btn-verify { background: #16a34a; color: white; padding: 12px 8px; border: none; border-radius: 8px; font-weight: 800; font-size: 12.5px; cursor: pointer; }
+
+    .modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.88); backdrop-filter: blur(5px); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 14px; }
+    .modal-card { background: #1e293b; border-radius: 16px; width: 100%; max-width: 460px; padding: 20px; border: 1px solid #334155; max-height: 92vh; overflow-y: auto; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 4px; color: #94a3b8; }
+    .form-group input { width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; color: white; border-radius: 8px; font-size: 14px; }
+
+    .verification-details-panel {
+      background: #0f172a;
+      border: 1.5px solid #22c55e;
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 14px;
+      text-align: left;
+    }
+    .panel-section-title {
+      font-size: 11.5px;
+      font-weight: 800;
+      color: #38bdf8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 6px;
+      margin-bottom: 12px;
+      font-size: 13px;
+    }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .info-lbl { color: #94a3b8; font-weight: 600; }
+    .info-val { color: #f8fafc; font-weight: 700; text-align: right; }
+
+    .batch-counter-pill {
+      background: #0f172a;
+      border: 1px solid #38bdf8;
+      color: #38bdf8;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12.5px;
+      font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="rider-container">
+  
+  <header class="rider-header">
+    <div class="rider-brand">
+      <span>⚡</span> Mohna Rider Hub
+    </div>
+    <div id="riderAuthContainer">
+      <button class="rider-auth-pill" onclick="openRiderAuth('login')">🔑 Rider Sign In</button>
+    </div>
+  </header>
+
+  <div id="verificationAlert" class="verification-alert-banner">
+    <b>⏳ Account Verification Required:</b> Your profile has been registered and is awaiting Admin Verification. You will become an active rider once approved by warehouse admin.
+  </div>
+
+  <div class="metrics-grid">
+    <div class="metric-card">
+      <div id="mActiveCount" class="metric-val">0</div>
+      <div class="metric-lbl">Available Dispatches</div>
+    </div>
+    <div class="metric-card">
+      <div id="mTodayDelivered" class="metric-val">0</div>
+      <div class="metric-lbl">My Completed</div>
+    </div>
+    <div class="metric-card">
+      <div id="mGuaranteeRate" class="metric-val">100%</div>
+      <div class="metric-lbl">My On-Time Rate</div>
+    </div>
+  </div>
+
+  <!-- 1. BATCH COLLECT BAR (FOR PICKUP TAB) -->
+  <div class="master-batch-collect-bar" id="masterBatchBar">
+    <div>
+      <b style="font-size:15px; color:#ffffff; display:block;">📦 Bulk Warehouse Pickup</b>
+      <span style="font-size:11.5px; color:#e0f2fe;">Scan many parcel labels continuously</span>
+    </div>
+    <button type="button" class="btn-bar-action" style="color:#0284c7;" onclick="startBatchPickupScanner()">
+      📷 Scan & Collect All
+    </button>
+  </div>
+
+  <!-- 2. COMMON TRANSIT SCANNER BAR (FOR IN-TRANSIT TAB) -->
+  <div class="transit-common-scan-bar" id="transitCommonScanBar" style="display:none;">
+    <div>
+      <b style="font-size:15px; color:#ffffff; display:block;">🛵 Quick Doorstep Handover</b>
+      <span style="font-size:11.5px; color:#ecfdf5;">Scan any parcel in your bag to deliver</span>
+    </div>
+    <button type="button" class="btn-bar-action" style="color:#059669;" onclick="startStep1ParcelScan(null)">
+      📷 Common Scan Parcel
+    </button>
+  </div>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" id="tabActive" onclick="filterRiderTab('active')">⚡ Ready for Pickup (<span id="countActive">0</span>)</button>
+    <button class="tab-btn" id="tabOut" onclick="filterRiderTab('out')">🛵 My In-Transit (<span id="countOut">0</span>)</button>
+    <button class="tab-btn" id="tabDone" onclick="filterRiderTab('done')">✅ My Delivered (<span id="countDone">0</span>)</button>
+  </div>
+
+  <div id="riderOrdersFeed">
+    <p style="text-align:center; color:#94a3b8; padding:30px;">Loading live delivery tasks...</p>
+  </div>
+
+</div>
+
+<!-- HIGH-SPEED CAMERA SCANNER MODAL -->
+<div id="scannerModal" class="modal-overlay" style="display:none;">
+  <div class="modal-card" style="text-align:center;">
+    <div id="scannerNotificationToast" style="display:none; background:#16a34a; color:white; padding:8px 12px; border-radius:8px; font-size:13px; font-weight:bold; margin-bottom:8px;"></div>
+    
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+      <h3 id="scannerTitle" style="margin:0; color:#38bdf8; font-size:16px;">📷 Fast Camera Scanner</h3>
+      <button type="button" style="background:none; border:none; color:#ef4444; font-size:16px; cursor:pointer; font-weight:bold;" onclick="stopQrScanner()">✕ Done / Close</button>
+    </div>
+
+    <!-- BATCH COLLECT COUNTER -->
+    <div id="batchCounterDisplay" class="batch-counter-pill" style="display:none;">
+      📦 Accepted in this batch: <span id="batchCountVal" style="color:#22c55e;">0</span> bags
+    </div>
+
+    <p id="scannerSubtext" style="font-size:11.5px; color:#94a3b8; margin:0 0 10px 0;">Align camera with QR code to scan</p>
+
+    <!-- LIVE VIEWFINDER -->
+    <div id="qr-reader" style="width: 100%; border-radius: 12px; overflow: hidden; background:#000; min-height:260px;"></div>
+  </div>
+</div>
+
+<!-- STEP 2: RESTING DETAILS CARD WITH ITEMIZED PRICE & QTY BREAKDOWN + RIDER DETAILS -->
+<div id="parcelDetailsInspectModal" class="modal-overlay" style="display:none;">
+  <div class="modal-card">
+    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #334155; padding-bottom:8px; margin-bottom:14px;">
+      <h3 style="margin:0; color:#22c55e; font-size:17px;">✅ Parcel Verified (Scanner On Rest)</h3>
+      <button type="button" onclick="closeInspectModal()" style="background:none; border:none; color:#94a3b8; font-size:18px; cursor:pointer;">✕</button>
+    </div>
+
+    <div class="verification-details-panel">
+      <!-- RIDER DETAILS INFO BOX -->
+      <div class="panel-section-title" style="color:#38bdf8;">🛵 Assigned Rider Partner Info</div>
+      <div class="info-grid" style="margin-bottom:10px; background:#1e293b; padding:8px; border-radius:8px;">
+        <div class="info-row"><span class="info-lbl">Rider Name:</span><b id="insRiderName" class="info-val" style="color:#38bdf8;"></b></div>
+        <div class="info-row"><span class="info-lbl">Rider Phone:</span><span id="insRiderPhone" class="info-val"></span></div>
+      </div>
+
+      <!-- PARCEL DETAILS -->
+      <div class="panel-section-title">📦 Itemized Parcel Details</div>
+      <div class="info-grid">
+        <div class="info-row"><span class="info-lbl">Order ID:</span><b id="insOrderId" class="info-val" style="color:#38bdf8; font-family:monospace;"></b></div>
+      </div>
+
+      <div style="margin: 8px 0;">
+        <label style="font-size: 11.5px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px; display: block;">Items Breakdown:</label>
+        <div id="insItemizedList" style="background:#0f172a; border:1px solid #334155; border-radius:8px; padding:8px; max-height:120px; overflow-y:auto; font-size:12.5px;">
+          <!-- Dynamically populated item ledger -->
+        </div>
+      </div>
+
+      <div class="info-grid" style="border-top:1px dashed #334155; padding-top:8px; margin-top:8px;">
+        <div class="info-row"><span class="info-lbl">Total Quantity:</span><span id="insTotalQty" class="info-val" style="font-weight:bold;">0</span></div>
+        <div class="info-row"><span class="info-lbl">Collectable Amount:</span><b id="insAmount" class="info-val" style="color:#22c55e; font-size:15px;"></b></div>
+      </div>
+
+      <!-- CUSTOMER DETAILS -->
+      <div class="panel-section-title" style="border-top:1px dashed #334155; padding-top:10px; margin-top:10px; color:#f59e0b;">👤 Customer Details</div>
+      <div class="info-grid">
+        <div class="info-row"><span class="info-lbl">Customer Name:</span><b id="insCustName" class="info-val"></b></div>
+        <div class="info-row"><span class="info-lbl">Phone Number:</span><a id="insCustPhone" href="tel:" class="info-val" style="color:#38bdf8; text-decoration:none;"></a></div>
+        <div class="info-row"><span class="info-lbl">Delivery Address:</span><span id="insCustAddress" class="info-val" style="max-width:65%;"></span></div>
+      </div>
+    </div>
+
+    <p style="font-size:12px; color:#94a3b8; margin:0 0 14px 0; text-align:center;">
+      Verify the physical parcel box against the details above. When ready, click below to scan the customer's delivery QR.
+    </p>
+
+    <!-- PROCEED BUTTON: OPENS SCANNER FOR CUSTOMER DELIVERY QR -->
+    <button type="button" class="btn" style="background:#16a34a; color:white; width:100%; padding:14px; font-size:14px; font-weight:800;" onclick="startCustomerQrScanPhase()">
+      ⚡ Verify & Deliver Product (Scan Customer QR)
+    </button>
+    <button type="button" style="background:none; border:none; color:#94a3b8; font-size:12px; width:100%; text-align:center; margin-top:10px; cursor:pointer;" onclick="closeInspectModal()">
+      ✕ Cancel & Re-scan
+    </button>
+  </div>
+</div>
+
+<!-- RIDER AUTH MODAL -->
+<div id="riderAuthModal" class="modal-overlay" style="display:none;">
+  <div class="modal-card">
+    <div style="display:flex; gap:6px; margin-bottom:14px;">
+      <button class="tab-btn active" id="btnRTabLogin" style="flex:1;" onclick="toggleRiderAuthTab('login')">Partner Log In</button>
+      <button class="tab-btn" id="btnRTabSignup" style="flex:1;" onclick="toggleRiderAuthTab('signup')">Partner Sign Up (OTP)</button>
+    </div>
+
+    <div id="rLoginView">
+      <div class="form-group"><label>Rider Email Address</label><input type="email" id="rLoginEmail" placeholder="rider@gmail.com" /></div>
+      <div class="form-group"><label>Password</label><input type="password" id="rLoginPassword" placeholder="••••••••" /></div>
+      <button type="button" id="btnRiderSubmitLogin" class="btn" style="background:#0284c7; color:white; width:100%; padding:12px; margin-top:6px;" onclick="processRiderPasswordLogin()">🔑 Log In & Go Online</button>
+    </div>
+
+    <div id="rSignupStep1" style="display:none;">
+      <div class="form-group"><label>Full Name</label><input type="text" id="rSignupName" placeholder="e.g. Rahul Rider" /></div>
+      <div class="form-group"><label>Mobile Number</label><input type="tel" id="rSignupPhone" placeholder="10-digit mobile number" /></div>
+      <div class="form-group"><label>Email Address</label><input type="email" id="rSignupEmail" placeholder="rider@gmail.com" /></div>
+      <div class="form-group"><label>Create New Password</label><input type="password" id="rSignupPassword" placeholder="Minimum 6 characters" /></div>
+      <button type="button" class="btn" id="btnSendRiderSignupOtp" style="background:#0284c7; color:white; width:100%; padding:12px; margin-top:6px;" onclick="sendRiderSignupOtp()">Send Verification OTP</button>
+    </div>
+
+    <div id="rSignupStep2" style="display:none;">
+      <p style="font-size:13px; color:#94a3b8;">Enter 6-digit OTP sent to <b id="rTargetEmailDisplay" style="color:#38bdf8;"></b></p>
+      <div class="form-group"><input type="text" id="rSignupOtpCode" maxlength="6" style="text-align:center; font-size:24px; letter-spacing:6px;" placeholder="••••••" /></div>
+      <button type="button" id="btnVerifyRiderSignupOtp" class="btn" style="background:#16a34a; color:white; width:100%; padding:12px;" onclick="verifyRiderSignupAndCreateAccount()">Verify OTP & Submit Profile</button>
+      <button type="button" style="background:none; border:none; color:#38bdf8; font-size:12px; width:100%; text-align:center; margin-top:10px; cursor:pointer;" onclick="toggleRiderSignupStep(1)">← Back / Resend OTP</button>
+    </div>
+
+    <button type="button" style="background:none; border:none; color:#64748b; font-size:12px; width:100%; text-align:center; margin-top:14px; cursor:pointer;" onclick="closeRiderAuth()">✕ Cancel</button>
+  </div>
+</div>
+
+<!-- SECURE CUSTOMER DELIVERY OTP MODAL -->
+<div id="deliveryOtpModal" class="modal-overlay" style="display:none;">
+  <div class="modal-card">
+    <h3 style="margin-top:0; color:#22c55e;">📦 Customer Delivery Verification</h3>
+    
+    <div style="background:#0f172a; padding:10px; border-radius:8px; border:1px solid #334155; margin-bottom:12px; font-size:13px;">
+      Order: <b id="dOtpModalOrderId" style="color:#38bdf8;">MHN-XXXXXX</b><br>
+      <span style="font-size:12px; color:#94a3b8;">PIN sent to: <b id="dOtpModalEmailHint" style="color:#22c55e;">Fetching email...</b></span>
+    </div>
+
+    <div class="form-group">
+      <label>4-Digit Customer PIN</label>
+      <input type="text" id="custDeliveryOtpInput" maxlength="4" style="text-align:center; font-size:24px; letter-spacing:8px;" placeholder="••••" />
+    </div>
+
+    <button type="button" class="btn" style="background:#16a34a; color:white; width:100%; padding:12px;" onclick="confirmCustomerDeliveryOtp()">✅ Verify & Handover Parcel</button>
+    <button type="button" style="background:none; border:none; color:#38bdf8; font-size:12px; width:100%; text-align:center; margin-top:8px; cursor:pointer;" onclick="resendCustomerDeliveryOtp()">📩 Resend PIN to Customer</button>
+    <button type="button" style="background:none; border:none; color:#64748b; font-size:12px; width:100%; text-align:center; margin-top:8px; cursor:pointer;" onclick="closeDeliveryOtpModal()">✕ Cancel</button>
+  </div>
+</div>
+
+<script>
+  var SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbzU3HoF5MLrOGXtRJPW-b4uZ3t97RPwnA1-QuzgwSTtZPXIFLxyym9tFNEmLP93tvvDHw/exec";
+  var currentRider = null;
+  try { currentRider = JSON.parse(localStorage.getItem('mohna_rider')) || null; } catch(e) { currentRider = null; }
+  var cachedOrders = [];
+  var previousActiveCount = 0;
+  var currentTab = 'active';
+  var tickerInterval = null;
+  var autoSyncInterval = null;
+  var activeOtpVerificationOrderId = null;
+
+  var html5QrCode = null;
+  var activeScanMode = null; // 'batch_pickup', 'step1_parcel', 'step2_customer'
+  var activeTargetOrderId = null; // If null, acts as Common Scanner matching any in-transit order
+  var scannedParcelTokenHolder = null;
+  var isScanThrottled = false;
+  var batchAcceptedSessionCount = 0;
+  var processedBatchIds = new Set();
+
+  function formatTimeHms(totalSecs) {
+    if (totalSecs < 0) totalSecs = 0;
+    var h = Math.floor(totalSecs / 3600);
+    var m = Math.floor((totalSecs % 3600) / 60);
+    var s = totalSecs % 60;
+    return `${h}h ${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`;
+  }
+
+  function playDispatchAlertSound(isSuccess = true) {
+    try {
+      var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      var osc = audioCtx.createOscillator();
+      var gain = audioCtx.createGain();
+      osc.type = "sine";
+      if (isSuccess) {
+        osc.frequency.setValueAtTime(587.33, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.18);
+      } else {
+        osc.frequency.setValueAtTime(220, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(110, audioCtx.currentTime + 0.25);
+      }
+      gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.3);
+    } catch(e) {}
+  }
+
+  async function callAppsScriptApi(payload) {
+    var params = new URLSearchParams();
+    for (var key in payload) {
+      params.append(key, typeof payload[key] === 'object' ? JSON.stringify(payload[key]) : payload[key]);
+    }
+    try {
+      var getUrl = SPREADSHEET_API_URL + '?' + params.toString();
+      var response = await fetch(getUrl, { method: 'GET', headers: { 'Accept': 'application/json' } });
+      return await response.json();
+    } catch (e1) {
+      var postResponse = await fetch(SPREADSHEET_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+      var text = await postResponse.text();
+      return JSON.parse(text);
+    }
+  }
+
+  window.onload = function() {
+    updateRiderHeaderUI();
+    validateRiderStatus();
+    startLiveGpsTelemetryTracking();
+
+    if (autoSyncInterval) clearInterval(autoSyncInterval);
+    autoSyncInterval = setInterval(function() {
+      validateRiderStatus();
+    }, 5000);
+  };
+
+  function startLiveGpsTelemetryTracking() {
+    if (navigator.geolocation) {
+      navigator.geolocation.watchPosition(function(pos) {
+        if (currentRider && currentRider.email && (currentRider.status || '').toLowerCase() === 'active') {
+          callAppsScriptApi({
+            action: 'updateRiderTelemetry',
+            email: currentRider.email,
+            lat: pos.coords.latitude.toFixed(5),
+            lng: pos.coords.longitude.toFixed(5)
+          });
+        }
+      }, function() {}, { enableHighAccuracy: true, maximumAge: 10000 });
+    }
+  }
+
+  function parseAnyDateToMs(dateInput) {
+    if (!dateInput) return 0;
+    if (typeof dateInput === "number") return dateInput;
+    var s = dateInput.toString().trim();
+    
+    var num = Number(s);
+    if (!isNaN(num) && num > 1000000000000) return num;
+
+    var directMs = new Date(s).getTime();
+    if (!isNaN(directMs) && directMs > 1000000000000) return directMs;
+
+    var match = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:[,\s]+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+    if (match) {
+      var day = parseInt(match[1], 10);
+      var month = parseInt(match[2], 10) - 1;
+      var year = parseInt(match[3], 10);
+      var hours = match[4] ? parseInt(match[4], 10) : 0;
+      var mins = match[5] ? parseInt(match[5], 10) : 0;
+      var secs = match[6] ? parseInt(match[6], 10) : 0;
+      return new Date(year, month, day, hours, mins, secs).getTime();
+    }
+    return 0;
+  }
+
+  function calculateDeliveryStatusBadge(orderTimestampInput, etaMinutes, expiryTimestamp, deliveredTimestampInput) {
+    var startMs = parseAnyDateToMs(orderTimestampInput);
+    var endMs = parseAnyDateToMs(deliveredTimestampInput) || Date.now();
+    var expMs = Number(expiryTimestamp) || (startMs + (etaMinutes * 60000));
+
+    var totalElapsedSec = Math.max(0, Math.floor((endMs - startMs) / 1000));
+    var timeFormatted = formatTimeHms(totalElapsedSec);
+
+    if (endMs <= expMs) {
+      return `<span class="badge-ontime">✔ Delivered in ${timeFormatted} (On Time)</span>`;
+    } else {
+      var lateSec = Math.floor((endMs - expMs) / 1000);
+      return `<span class="badge-late">⚠️ Delivered in ${timeFormatted} (${formatTimeHms(lateSec)} Late)</span>`;
+    }
+  }
+
+  function updateRiderHeaderUI() {
+    var container = document.getElementById('riderAuthContainer');
+    if (currentRider && currentRider.email) {
+      var isVerified = (currentRider.status || '').toLowerCase() === 'active';
+      container.innerHTML = `
+        <button class="rider-auth-pill" style="background:${isVerified ? '#166534' : '#854d0e'}; color:${isVerified ? '#bbf7d0' : '#fef08a'};" onclick="logoutRider()">
+          ${isVerified ? '🟢' : '⏳'} ${currentRider.name || currentRider.email.split('@')[0]} (${currentRider.status || 'Pending'})
+        </button>
+      `;
+    } else {
+      container.innerHTML = `<button class="rider-auth-pill" onclick="openRiderAuth('login')">🔑 Rider Sign In</button>`;
+    }
+  }
+
+  function validateRiderStatus() {
+    if (!currentRider || !currentRider.email) {
+      var alertBox = document.getElementById('verificationAlert');
+      if (alertBox) alertBox.style.display = 'none';
+      renderFeed();
+      return;
+    }
+
+    callAppsScriptApi({ action: 'checkRiderStatus', email: currentRider.email })
+      .then(function(res) {
+        if (res && res.status === 'success') {
+          currentRider.status = res.riderStatus;
+          localStorage.setItem('mohna_rider', JSON.stringify(currentRider));
+          updateRiderHeaderUI();
+
+          var alertBox = document.getElementById('verificationAlert');
+          var normalizedStatus = (currentRider.status || '').toLowerCase();
+
+          if (normalizedStatus.includes('pending')) {
+            if (alertBox) {
+              alertBox.style.display = 'block';
+              alertBox.style.background = '#78350f';
+              alertBox.style.borderColor = '#f59e0b';
+              alertBox.innerHTML = '<b>⏳ Verification In Progress:</b> Your profile has been submitted and requires 1st-time Admin Verification. You will be able to accept tasks once approved by warehouse admin.';
+            }
+          } else if (normalizedStatus.includes('block')) {
+            if (alertBox) {
+              alertBox.style.display = 'block';
+              alertBox.style.background = '#450a0a';
+              alertBox.style.borderColor = '#ef4444';
+              alertBox.innerHTML = '<b>🚫 Account Blocked:</b> Your rider access has been suspended by the administrator. Contact your warehouse manager.';
+            }
+          } else {
+            if (alertBox) alertBox.style.display = 'none';
+            fetchRiderFeed();
+          }
+        }
+      }).catch(function(){});
+  }
+
+  function openRiderAuth(mode) {
+    document.getElementById('riderAuthModal').style.display = 'flex';
+    toggleRiderAuthTab(mode || 'login');
+  }
+
+  function closeRiderAuth() {
+    document.getElementById('riderAuthModal').style.display = 'none';
+  }
+
+  function toggleRiderAuthTab(tab) {
+    document.getElementById('btnRTabLogin').classList.toggle('active', tab === 'login');
+    document.getElementById('btnRTabSignup').classList.toggle('active', tab === 'signup');
+    document.getElementById('rLoginView').style.display = (tab === 'login') ? 'block' : 'none';
+    document.getElementById('rSignupStep1').style.display = (tab === 'signup') ? 'block' : 'none';
+    document.getElementById('rSignupStep2').style.display = 'none';
+  }
+
+  function toggleRiderSignupStep(step) {
+    document.getElementById('rSignupStep1').style.display = (step === 1) ? 'block' : 'none';
+    document.getElementById('rSignupStep2').style.display = (step === 2) ? 'block' : 'none';
+  }
+
+  async function processRiderPasswordLogin() {
+    var emailInput = document.getElementById('rLoginEmail');
+    var passInput = document.getElementById('rLoginPassword');
+    var email = emailInput ? emailInput.value.trim() : "";
+    var password = passInput ? passInput.value.trim() : "";
+
+    if (!email || !password) return alert("Please enter both email and password.");
+
+    var btn = document.getElementById('btnRiderSubmitLogin');
+    btn.innerText = "Authenticating...";
+    btn.disabled = true;
+
+    try {
+      var res = await callAppsScriptApi({ action: 'riderPasswordLogin', email: email, password: password });
+      btn.innerText = "🔑 Log In & Go Online";
+      btn.disabled = false;
+
+      var riderPayload = res ? (res.rider || res.user) : null;
+      if (res && res.status === 'success' && riderPayload) {
+        currentRider = riderPayload;
+        localStorage.setItem('mohna_rider', JSON.stringify(currentRider));
+        closeRiderAuth();
+        updateRiderHeaderUI();
+        validateRiderStatus();
+        fetchRiderFeed();
+      } else if (res && res.status === 'blocked') {
+        alert(res.message);
+        if (riderPayload) {
+          currentRider = riderPayload;
+          localStorage.setItem('mohna_rider', JSON.stringify(currentRider));
+          updateRiderHeaderUI();
+          validateRiderStatus();
+        }
+      } else {
+        alert((res && res.message) ? res.message : "Login failed. Check your email and password.");
+      }
+    } catch(err) {
+      btn.innerText = "🔑 Log In & Go Online";
+      btn.disabled = false;
+      alert("Error: " + (err && err.message ? err.message : err.toString()));
+    }
+  }
+
+  async function sendRiderSignupOtp() {
+    var name = document.getElementById('rSignupName').value.trim();
+    var phone = document.getElementById('rSignupPhone').value.trim();
+    var email = document.getElementById('rSignupEmail').value.trim();
+    var password = document.getElementById('rSignupPassword').value.trim();
+
+    if (!name || !phone || !email || !password) return alert("Please fill all fields.");
+    if (password.length < 6) return alert("Password must be at least 6 characters.");
+
+    var btn = document.getElementById('btnSendRiderSignupOtp');
+    btn.innerText = 'Sending OTP...';
+    btn.disabled = true;
+
+    try {
+      var res = await callAppsScriptApi({ action: 'sendSignupOtp', email: email, role: 'rider' });
+      btn.innerText = 'Send Verification OTP';
+      btn.disabled = false;
+      if (res && res.status === 'success') {
+        document.getElementById('rTargetEmailDisplay').innerText = email;
+        toggleRiderSignupStep(2);
+      } else {
+        alert(res ? res.message : "Failed to send OTP.");
+      }
+    } catch(e) {
+      btn.innerText = 'Send Verification OTP';
+      btn.disabled = false;
+      alert("Failed to send OTP. Please try again.");
+    }
+  }
+
+  async function verifyRiderSignupAndCreateAccount() {
+    var name = document.getElementById('rSignupName').value.trim();
+    var phone = document.getElementById('rSignupPhone').value.trim();
+    var email = document.getElementById('rSignupEmail').value.trim();
+    var password = document.getElementById('rSignupPassword').value.trim();
+    var otp = document.getElementById('rSignupOtpCode').value.trim();
+
+    if (!otp || otp.length < 6) return alert("Please enter valid 6-digit OTP.");
+
+    var btn = document.getElementById('btnVerifyRiderSignupOtp');
+    btn.innerText = 'Verifying...';
+    btn.disabled = true;
+
+    try {
+      var res = await callAppsScriptApi({
+        action: 'completeRiderSignup',
+        name: name, phone: phone, email: email, password: password, otp: otp
+      });
+      btn.innerText = 'Verify OTP & Submit Profile';
+      btn.disabled = false;
+
+      if (res && (res.status === 'success' || res.status === 'pending_approval')) {
+        alert(res.message || "Account registered successfully! First-time Admin Verification is mandatory. Redirecting you to login page...");
+        document.getElementById('rLoginEmail').value = email;
+        document.getElementById('rLoginPassword').value = "";
+        toggleRiderAuthTab('login');
+      } else {
+        alert(res ? res.message : "Verification failed.");
+      }
+    } catch(e) {
+      btn.innerText = 'Verify OTP & Submit Profile';
+      btn.disabled = false;
+      alert("Verification submission error. Please retry.");
+    }
+  }
+
+  function logoutRider() {
+    if (confirm("Log out from rider portal?")) {
+      localStorage.removeItem('mohna_rider');
+      currentRider = null;
+      location.reload();
+    }
+  }
+
+  function fetchRiderFeed() {
+    if (!currentRider || (currentRider.status || '').toLowerCase() !== 'active') return;
+    
+    callAppsScriptApi({ action: 'getRiderOrders' })
+      .then(function(data) {
+        cachedOrders = (data && data.orders) ? data.orders : [];
+        updateMetrics();
+        renderFeed();
+      })
+      .catch(function(){});
+  }
+
+  function updateMetrics() {
+    var riderName = (currentRider && currentRider.name) ? currentRider.name.trim().toLowerCase() : "";
+    var ready = cachedOrders.filter(function(o) { 
+      return (o.status && o.status.includes('PACKED')) && !o.status.includes('Delivered') && !o.status.includes('OUT') && !o.status.includes('Out'); 
+    });
+    var myOut = cachedOrders.filter(function(o) { 
+      return (o.status.includes('OUT') || o.status.includes('Out')) && (o.riderName && o.riderName.trim().toLowerCase() === riderName); 
+    });
+    var myDone = cachedOrders.filter(function(o) { 
+      return o.status.includes('Delivered') && (o.riderName && o.riderName.trim().toLowerCase() === riderName); 
+    });
+
+    if (ready.length > previousActiveCount) {
+      playDispatchAlertSound(true);
+    }
+    previousActiveCount = ready.length;
+
+    document.getElementById('mActiveCount').innerText = ready.length;
+    document.getElementById('mTodayDelivered').innerText = myDone.length;
+    document.getElementById('countActive').innerText = ready.length;
+    document.getElementById('countOut').innerText = myOut.length;
+    document.getElementById('countDone').innerText = myDone.length;
+
+    var masterBar = document.getElementById('masterBatchBar');
+    if (masterBar) {
+      masterBar.style.display = (currentTab === 'active') ? 'flex' : 'none';
+    }
+
+    var transitScanBar = document.getElementById('transitCommonScanBar');
+    if (transitScanBar) {
+      transitScanBar.style.display = (currentTab === 'out' && myOut.length > 0) ? 'flex' : 'none';
+    }
+
+    if (myDone.length > 0) {
+      var onTimeCount = myDone.filter(function(o) {
+        var startMs = parseAnyDateToMs(o.orderTimestampMs || o.date);
+        var exp = Number(o.expiryTimestamp) || (startMs + (Number(o.etaMinutes) || 20) * 60000);
+        var del = Number(o.deliveredTimestamp) || exp;
+        return del <= exp;
+      }).length;
+      document.getElementById('mGuaranteeRate').innerText = Math.round((onTimeCount / myDone.length) * 100) + "%";
+    }
+  }
+
+  function filterRiderTab(tab) {
+    currentTab = tab;
+    document.getElementById('tabActive').classList.toggle('active', tab === 'active');
+    document.getElementById('tabOut').classList.toggle('active', tab === 'out');
+    document.getElementById('tabDone').classList.toggle('active', tab === 'done');
+    
+    var masterBar = document.getElementById('masterBatchBar');
+    if (masterBar) masterBar.style.display = (tab === 'active') ? 'flex' : 'none';
+
+    var riderName = (currentRider && currentRider.name) ? currentRider.name.trim().toLowerCase() : "";
+    var myOut = cachedOrders.filter(function(o) { 
+      return (o.status.includes('OUT') || o.status.includes('Out')) && (o.riderName && o.riderName.trim().toLowerCase() === riderName); 
+    });
+    var transitScanBar = document.getElementById('transitCommonScanBar');
+    if (transitScanBar) transitScanBar.style.display = (tab === 'out' && myOut.length > 0) ? 'flex' : 'none';
+
+    renderFeed();
+  }
+
+  function renderFeed() {
+    var feed = document.getElementById('riderOrdersFeed');
+    if (!currentRider) {
+      feed.innerHTML = '<p style="text-align:center; color:#94a3b8; padding:40px;">Please Sign In or Register to view live dispatch feed.</p>';
+      return;
+    }
+
+    if ((currentRider.status || '').toLowerCase() !== 'active') {
+      feed.innerHTML = '<p style="text-align:center; color:#f59e0b; padding:40px;">⚠️ Access Restricted: Account verification required by warehouse admin.</p>';
+      return;
+    }
+
+    var riderName = (currentRider && currentRider.name) ? currentRider.name.trim().toLowerCase() : "";
+    var filtered = [];
+    
+    if (currentTab === 'active') {
+      filtered = cachedOrders.filter(function(o) { 
+        return (o.status && o.status.includes('PACKED')) && !o.status.includes('Delivered') && !o.status.includes('OUT') && !o.status.includes('Out'); 
+      });
+    } else if (currentTab === 'out') {
+      filtered = cachedOrders.filter(function(o) { 
+        return (o.status.includes('OUT') || o.status.includes('Out')) && (o.riderName && o.riderName.trim().toLowerCase() === riderName); 
+      });
+    } else {
+      filtered = cachedOrders.filter(function(o) { 
+        return o.status.includes('Delivered') && (o.riderName && o.riderName.trim().toLowerCase() === riderName); 
+      });
+    }
+
+    if (filtered.length === 0) {
+      feed.innerHTML = '<p style="text-align:center; color:#64748b; padding:40px;">No orders in this category.</p>';
+      return;
+    }
+
+    feed.innerHTML = filtered.map(function(o) {
+      var startMs = parseAnyDateToMs(o.orderTimestampMs || o.date);
+      var expiryMs = Number(o.expiryTimestamp) || (startMs + (Number(o.etaMinutes) || 20) * 60000);
+      var isDelivered = o.status.includes('Delivered');
+      var isOut = o.status.includes('OUT') || o.status.includes('Out');
+
+      var statusBadge = '<span class="status-badge status-pending">● Packed & Ready</span>';
+      var timerBadge = `<span id="rider_timer_${o.orderId}" data-expiry="${expiryMs}" class="badge-ticking">⏱️ Loading...</span>`;
+
+      var dualActionBtns = `
+        <div class="dual-action-grid">
+          <button type="button" class="btn-out" onclick="updateStatus('${o.orderId}', 'OUT FOR DELIVERY')">⚡ Accept (Click)</button>
+          <button type="button" class="btn-scan-action" onclick="startBatchPickupScanner()">📷 Scan Bag QR</button>
+        </div>
+      `;
+
+      if (isOut) {
+        statusBadge = `<span class="status-badge status-out">● In Transit (Assigned to You)</span>`;
+        dualActionBtns = `
+          <div class="dual-action-grid">
+            <button type="button" class="btn-verify" onclick="triggerCustomerDeliveryOtpModal('${o.orderId}')">🔐 Verify PIN</button>
+            <button type="button" class="btn-scan-action" onclick="startStep1ParcelScan('${o.orderId}')">📷 Scan Parcel QR</button>
+          </div>
+        `;
+      } else if (isDelivered) {
+        statusBadge = '<span class="status-badge status-done">✔ Delivered by You</span>';
+        dualActionBtns = '';
+        timerBadge = calculateDeliveryStatusBadge(startMs, o.etaMinutes || 20, expiryMs, o.deliveredTimestamp || 0);
+      }
+
+      return `
+        <div class="order-card">
+          <div class="card-top">
+            <span class="order-id-badge">${o.orderId}</span>
+            ${timerBadge}
+            ${statusBadge}
+          </div>
+
+          <div style="font-size:14px; font-weight:700; color:#f8fafc; margin-bottom:4px;">${o.item} (Total Qty: ${o.qty})</div>
+          <div style="font-size:13px; color:#94a3b8; margin-bottom:6px;">👤 ${o.name} | <b>${o.amount}</b></div>
+          <div style="font-size:12.5px; color:#cbd5e1; margin-bottom:10px; background:#0f172a; padding:8px; border-radius:8px;">📍 <b>Delivery Address:</b> ${o.address || 'GPS Location'}</div>
+
+          <div class="action-btn-row">
+            <a href="${o.mapsUrl}" target="_blank" class="btn btn-maps">🗺️ Direct GPS Navigation</a>
+            <a href="tel:${o.phone}" class="btn btn-call">📞 Call Customer</a>
+          </div>
+
+          ${dualActionBtns}
+        </div>
+      `;
+    }).join('');
+
+    startRiderCountdownTicker();
+  }
+
+  function startRiderCountdownTicker() {
+    clearInterval(tickerInterval);
+    tickerInterval = setInterval(function() {
+      var now = Date.now();
+      document.querySelectorAll('[id^="rider_timer_"]').forEach(function(el) {
+        var expiry = parseInt(el.getAttribute('data-expiry'));
+        var diff = expiry - now;
+
+        if (diff <= 0) {
+          el.className = "badge-late";
+          el.innerText = "0h 00m 00s (EXPIRED)";
+        } else {
+          el.className = "badge-ticking";
+          var totalSec = Math.floor(diff / 1000);
+          el.innerText = `⏱️ ${formatTimeHms(totalSec)}`;
+        }
+      });
+    }, 1000);
+  }
+
+  async function updateStatus(orderId, newStatus) {
+    if (!currentRider || (currentRider.status || '').toLowerCase() !== 'active') return alert("Account verification required to accept tasks.");
+    
+    var res = await callAppsScriptApi({ 
+      action: 'assignRiderToOrder', 
+      orderId: orderId, 
+      newStatus: newStatus,
+      riderName: currentRider.name,
+      riderPhone: currentRider.phone,
+      riderEmail: currentRider.email
+    });
+
+    if (res && res.status === 'success') {
+      fetchRiderFeed();
+    } else {
+      alert(res ? res.message : "Action could not be completed.");
+    }
+  }
+
+  function startBatchPickupScanner() {
+    if (!currentRider || (currentRider.status || '').toLowerCase() !== 'active') return alert("Account verification required.");
+    activeScanMode = 'batch_pickup';
+    scannedParcelTokenHolder = null;
+    batchAcceptedSessionCount = 0;
+    processedBatchIds.clear();
+
+    document.getElementById('batchCounterDisplay').style.display = 'inline-flex';
+    document.getElementById('batchCountVal').innerText = '0';
+    document.getElementById('scannerTitle').innerText = '📷 Continuous Batch Scan';
+    document.getElementById('scannerSubtext').innerText = 'Hold camera over parcel stickers continuously. Auto-accepts each.';
+    document.getElementById('scannerModal').style.display = 'flex';
+
+    launchCamera();
+  }
+
+  function startStep1ParcelScan(orderId = null) {
+    if (!currentRider || (currentRider.status || '').toLowerCase() !== 'active') return alert("Account verification required.");
+    activeScanMode = 'step1_parcel';
+    activeTargetOrderId = orderId;
+    scannedParcelTokenHolder = null;
+
+    document.getElementById('batchCounterDisplay').style.display = 'none';
+    document.getElementById('scannerTitle').innerText = orderId ? `Scan Parcel (${orderId})` : '📷 Common Scanner: Scan Any Parcel';
+    document.getElementById('scannerSubtext').innerText = 'Align camera with the QR code on the parcel label to verify package';
+    document.getElementById('scannerModal').style.display = 'flex';
+
+    launchCamera();
+  }
+
+  function startCustomerQrScanPhase() {
+    document.getElementById('parcelDetailsInspectModal').style.display = 'none';
+    activeScanMode = 'step2_customer';
+
+    var counterEl = document.getElementById('batchCounterDisplay');
+    if (counterEl) counterEl.style.display = 'none';
+
+    document.getElementById('scannerTitle').innerText = `Step 2/2: Scan Customer In-App QR`;
+    document.getElementById('scannerSubtext').innerText = `Scan the delivery QR displayed on customer's phone for Order ${activeTargetOrderId}`;
+    document.getElementById('scannerModal').style.display = 'flex';
+
+    launchCamera();
+  }
+
+  function launchCamera() {
+    if (html5QrCode && html5QrCode.isScanning) {
+      return;
+    }
+    
+    html5QrCode = new Html5Qrcode("qr-reader");
+    
+    var config = {
+      fps: 25,
+      qrbox: { width: 250, height: 250 },
+      aspectRatio: 1.0,
+      experimentalFeatures: {
+        useBarCodeDetectorIfSupported: true
+      }
+    };
+
+    html5QrCode.start(
+      { facingMode: "environment" },
+      config,
+      onScanSuccessCallback
+    ).catch(err => {
+      console.warn("Camera start err:", err);
+      html5QrCode.start(
+        { facingMode: "user" },
+        { fps: 20, qrbox: 240 },
+        onScanSuccessCallback
+      ).catch(e => alert("Camera permission error: " + e));
+    });
+  }
+
+  function stopQrScanner() {
+    if (html5QrCode) {
+      html5QrCode.stop().then(() => {
+        document.getElementById('scannerModal').style.display = 'none';
+      }).catch(() => {
+        document.getElementById('scannerModal').style.display = 'none';
+      });
+    } else {
+      document.getElementById('scannerModal').style.display = 'none';
+    }
+
+    if (activeScanMode === 'batch_pickup' && batchAcceptedSessionCount > 0) {
+      filterRiderTab('out');
+    }
+  }
+
+  function showScannerToast(msg, isError) {
+    var toast = document.getElementById('scannerNotificationToast');
+    toast.style.display = 'block';
+    toast.style.background = isError ? '#dc2626' : '#16a34a';
+    toast.innerText = msg;
+    setTimeout(() => { toast.style.display = 'none'; }, 2400);
+  }
+
+  async function onScanSuccessCallback(decodedText) {
+    if (isScanThrottled) return;
+    isScanThrottled = true;
+    setTimeout(() => { isScanThrottled = false; }, 900);
+
+    var parsed = null;
+    try {
+      parsed = JSON.parse(decodedText);
+    } catch(e) {
+      showScannerToast("⚠️ Unrecognized QR format.", true);
+      return;
+    }
+
+    if (activeScanMode === 'batch_pickup') {
+      if (parsed.type !== "MOHNA_PARCEL_LABEL" || !parsed.orderId) {
+        showScannerToast("⚠️ Not a valid Mohna parcel label.", true);
+        return;
+      }
+
+      if (processedBatchIds.has(parsed.orderId)) {
+        showScannerToast("ℹ️ " + parsed.orderId + " already collected!", false);
+        return;
+      }
+
+      var res = await callAppsScriptApi({
+        action: 'assignRiderViaScan',
+        orderId: parsed.orderId,
+        parcelToken: parsed.parcelToken,
+        riderName: currentRider.name,
+        riderPhone: currentRider.phone,
+        riderEmail: currentRider.email
+      });
+
+      if (res && res.status === 'success') {
+        processedBatchIds.add(parsed.orderId);
+        batchAcceptedSessionCount++;
+        document.getElementById('batchCountVal').innerText = batchAcceptedSessionCount;
+        playDispatchAlertSound(true);
+        showScannerToast("✅ Collected: " + parsed.orderId + " (" + batchAcceptedSessionCount + " Total)", false);
+        fetchRiderFeed();
+      } else {
+        playDispatchAlertSound(false);
+        showScannerToast("⚠️ " + (res ? res.message : "Accept failed"), true);
+      }
+      return;
+    }
+
+    if (activeScanMode === 'step1_parcel') {
+      if (parsed.type !== "MOHNA_PARCEL_LABEL" || !parsed.orderId) {
+        playDispatchAlertSound(false);
+        showScannerToast("⚠️ Not a valid parcel label QR!", true);
+        return;
+      }
+
+      if (activeTargetOrderId && parsed.orderId !== activeTargetOrderId) {
+        playDispatchAlertSound(false);
+        showScannerToast("⚠️ Wrong parcel! Expected " + activeTargetOrderId, true);
+        return;
+      }
+
+      var riderName = (currentRider && currentRider.name) ? currentRider.name.trim().toLowerCase() : "";
+      var matchedOrder = cachedOrders.find(o => 
+        o.orderId === parsed.orderId && 
+        (o.status.includes('OUT') || o.status.includes('Out')) &&
+        (o.riderName && o.riderName.trim().toLowerCase() === riderName)
+      );
+
+      if (!matchedOrder) {
+        playDispatchAlertSound(false);
+        showScannerToast("⚠️ Order " + parsed.orderId + " is not in your In-Transit list!", true);
+        return;
+      }
+
+      activeTargetOrderId = matchedOrder.orderId;
+      scannedParcelTokenHolder = parsed.parcelToken || matchedOrder.parcelToken;
+      
+      playDispatchAlertSound(true);
+      stopQrScanner();
+
+      // Populate rider details inside the inspection modal
+      document.getElementById('insRiderName').innerText = currentRider.name || "Assigned Rider";
+      document.getElementById('insRiderPhone').innerText = currentRider.phone || "N/A";
+
+      document.getElementById('insOrderId').innerText = matchedOrder.orderId;
+      document.getElementById('insTotalQty').innerText = `${matchedOrder.qty} Units`;
+      document.getElementById('insAmount').innerText = matchedOrder.amount;
+      document.getElementById('insCustName').innerText = matchedOrder.name;
+      document.getElementById('insCustPhone').innerText = matchedOrder.phone;
+      document.getElementById('insCustPhone').href = "tel:" + matchedOrder.phone;
+      document.getElementById('insCustAddress').innerText = matchedOrder.address || "GPS Location";
+
+      var itemizedContainer = document.getElementById('insItemizedList');
+      if (matchedOrder.items && Array.isArray(matchedOrder.items) && matchedOrder.items.length > 0) {
+        itemizedContainer.innerHTML = matchedOrder.items.map(it => `
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px dashed #334155;">
+            <div><b>${it.name}</b> <small style="color:#94a3b8;">(₹${it.price} × ${it.qty})</small></div>
+            <b style="color:#22c55e;">₹${it.price * it.qty}</b>
+          </div>
+        `).join('');
+      } else {
+        itemizedContainer.innerHTML = `<div>${matchedOrder.item} (Qty: ${matchedOrder.qty})</div>`;
+      }
+
+      document.getElementById('parcelDetailsInspectModal').style.display = 'flex';
+      return;
+    }
+
+    if (activeScanMode === 'step2_customer') {
+      if (parsed.type !== "MOHNA_DELIVERY_HANDOVER" || parsed.orderId !== activeTargetOrderId) {
+        playDispatchAlertSound(false);
+        showScannerToast("❌ Authentication Failed: Customer QR does not match!", true);
+        return;
+      }
+
+      var resDeliv = await callAppsScriptApi({
+        action: 'verifyTwoFactorQrDelivery',
+        orderId: activeTargetOrderId,
+        parcelToken: scannedParcelTokenHolder,
+        deliveryToken: parsed.deliveryToken
+      });
+
+      if (resDeliv && resDeliv.status === 'success') {
+        playDispatchAlertSound(true);
+        stopQrScanner();
+        alert("🎉 Order " + activeTargetOrderId + " successfully authenticated and delivered!");
+        scannedParcelTokenHolder = null;
+        activeTargetOrderId = null;
+        fetchRiderFeed();
+      } else {
+        playDispatchAlertSound(false);
+        showScannerToast("❌ " + (resDeliv ? resDeliv.message : "Handover verification failed"), true);
+      }
+    }
+  }
+
+  function closeInspectModal() {
+    document.getElementById('parcelDetailsInspectModal').style.display = 'none';
+    scannedParcelTokenHolder = null;
+  }
+
+  async function triggerCustomerDeliveryOtpModal(orderId) {
+    activeOtpVerificationOrderId = orderId;
+    document.getElementById('dOtpModalOrderId').innerText = orderId;
+    document.getElementById('dOtpModalEmailHint').innerText = "Sending PIN...";
+    document.getElementById('custDeliveryOtpInput').value = "";
+    document.getElementById('deliveryOtpModal').style.display = 'flex';
+
+    var res = await callAppsScriptApi({ action: 'sendDeliveryOtp', orderId: orderId });
+    if (res && res.status === 'success') {
+      document.getElementById('dOtpModalEmailHint').innerText = res.emailHint || "Registered Customer Email";
+    } else {
+      alert(res ? res.message : "Failed to send PIN.");
+    }
+  }
+
+  async function resendCustomerDeliveryOtp() {
+    if (!activeOtpVerificationOrderId) return;
+    document.getElementById('dOtpModalEmailHint').innerText = "Resending...";
+    var res = await callAppsScriptApi({ action: 'sendDeliveryOtp', orderId: activeOtpVerificationOrderId });
+    if (res && res.status === 'success') {
+      document.getElementById('dOtpModalEmailHint').innerText = res.emailHint || "Registered Customer Email";
+      alert("PIN resent successfully!");
+    } else {
+      alert(res ? res.message : "Failed to resend PIN.");
+    }
+  }
+
+  async function confirmCustomerDeliveryOtp() {
+    var otp = document.getElementById('custDeliveryOtpInput').value.trim();
+    if (!otp || otp.length < 4) return alert("Please enter the 4-digit PIN provided by customer.");
+
+    var res = await callAppsScriptApi({ action: 'verifyDeliveryOtp', orderId: activeOtpVerificationOrderId, otp: otp });
+    if (res && res.status === 'success') {
+      alert("✅ Delivery Successfully Verified & Recorded!");
+      closeDeliveryOtpModal();
+      fetchRiderFeed();
+    } else {
+      alert(res ? res.message : "Verification failed.");
+    }
+  }
+
+  function closeDeliveryOtpModal() {
+    document.getElementById('deliveryOtpModal').style.display = 'none';
+    activeOtpVerificationOrderId = null;
+  }
+</script>
+</body>
+</html>
