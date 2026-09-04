@@ -298,7 +298,7 @@
     </div>
   </div>
 
-  <!-- TAB 5: 📦 PRODUCTS & STOCK (FULL CRUD: ADD, EDIT, DELETE) -->
+  <!-- TAB 5: 📦 PRODUCTS & STOCK (FULL CRUD + MULTI-IMAGE UPLOAD) -->
   <div id="viewProducts" class="admin-page-view">
     <div class="grid-2">
       <div class="card">
@@ -330,7 +330,7 @@
           <div class="form-group"><label>Specifications</label><input type="text" id="prodSpecifications" placeholder="Grade A, 1L Bottle, Shelf Life 12M" /></div>
           <div class="form-group"><label>Terms & Conditions</label><input type="text" id="prodTerms" placeholder="100% Genuine. Check upon delivery." /></div>
           
-          <!-- THUMBNAIL & MULTI-IMAGE GALLERY UPLOAD -->
+          <!-- THUMBNAIL & MULTI-IMAGE GALLERY INPUTS -->
           <div class="form-group">
             <label>⭐ Primary Thumbnail Image (Catalog Grid)</label>
             <input type="file" id="prodThumbnailInput" accept="image/*" />
@@ -989,7 +989,6 @@
         processGalleryAndSave(thumbBase64);
       });
     } else {
-      // If editing and no new thumbnail selected, retain existing image URL if present
       var existingImg = "";
       if (editId) {
         var existingProd = cachedProducts.find(x => x.id === editId);
@@ -1049,7 +1048,12 @@
         });
       }
       renderZoneSidebar();
-      document.getElementById('cpnZoneSelect').innerHTML = '<option value="all">🌍 All Zones</option>' + activeZones.map(z => `<option value="${z.id}">📍 ${z.name}</option>`).join('');
+
+      // DYNAMICALLY POPULATE COUPON ZONE SELECTOR WITH DRAWN ZONES
+      var cpnZoneSelect = document.getElementById('cpnZoneSelect');
+      if (cpnZoneSelect) {
+        cpnZoneSelect.innerHTML = '<option value="all">🌍 All Zones</option>' + activeZones.map(z => `<option value="${z.id}">📍 ${z.name}</option>`).join('');
+      }
     });
   }
 
@@ -1323,8 +1327,8 @@
         <div style="display: flex; justify-content: space-between; align-items: flex-end; border-top: 1.5px solid #cbd5e1; padding-top: 20px; margin-top: 25px;">
           <div>
             <p style="margin: 0; font-size: 11px; font-weight: bold;">Dispatch Verification Checklist:</p>
-            <p style="margin: 2px 0 0; font-size: 10px; color: #64748b;">✔ All bags packed & checked against barcode SKU.</p>
-            <p style="margin: 2px 0 0; font-size: 10px; color: #64748b;">✔ Rider assigned with GPS turn-by-turn routing.</p>
+            <p style="margin: 2px 0 0; font-size: 10.5px; color: #64748b;">✔ All bags packed & checked against barcode SKU.</p>
+            <p style="margin: 2px 0 0; font-size: 10.5px; color: #64748b;">✔ Rider assigned with GPS turn-by-turn routing.</p>
           </div>
 
           <div style="text-align: center; min-width: 140px; border-top: 1.5px solid #0f172a; padding-top: 4px;">
