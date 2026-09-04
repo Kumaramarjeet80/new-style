@@ -836,10 +836,10 @@
       <button type="button" onclick="closeProductModal()" style="background:none; border:none; font-size:20px; cursor:pointer; color:#64748b;">✕</button>
     </div>
 
-    <!-- MAIN ACTIVE DISPLAY IMAGE -->
+    <!-- MAIN PRODUCT IMAGE -->
     <img id="modalProdImg" src="" class="p-modal-img" alt="Product" />
     
-    <!-- SWIPEABLE GALLERY THUMBNAIL SELECTOR ROW -->
+    <!-- GALLERY THUMBNAILS CAROUSEL -->
     <div class="gallery-thumb-row" id="modalGalleryThumbnails"></div>
 
     <h2 style="margin:0 0 4px 0; font-size:18px; color:#0f172a;" id="modalProdTitle">Product Name</h2>
@@ -1661,16 +1661,18 @@
     document.getElementById('modalProdCategory').innerText = p.category;
     document.getElementById('modalProdImg').src = p.img || 'https://via.placeholder.com/300?text=Product';
     
-    // RENDER MULTI-IMAGE GALLERY THUMBNAILS (CAROUSEL)
+    // RENDER MULTI-IMAGE GALLERY THUMBNAILS CAROUSEL
     var thumbRow = document.getElementById('modalGalleryThumbnails');
-    var allImages = [p.img];
-    if (p.gallery && Array.isArray(p.gallery)) {
-      allImages = allImages.concat(p.gallery);
+    if (thumbRow) {
+      var allImages = [p.img];
+      if (p.gallery && Array.isArray(p.gallery)) {
+        allImages = allImages.concat(p.gallery);
+      }
+      
+      thumbRow.innerHTML = allImages.map((imgUrl, idx) => `
+        <img src="${imgUrl}" class="gallery-thumb ${idx === 0 ? 'active-thumb' : ''}" onclick="switchModalMainImage('${imgUrl}', this)" />
+      `).join('');
     }
-    
-    thumbRow.innerHTML = allImages.map((imgUrl, idx) => `
-      <img src="${imgUrl}" class="gallery-thumb ${idx === 0 ? 'active-thumb' : ''}" onclick="switchModalMainImage('${imgUrl}', this)" />
-    `).join('');
 
     document.getElementById('modalProdTitle').innerText = p.name;
     document.getElementById('modalProdPrice').innerText = `₹${price}`;
@@ -1925,7 +1927,7 @@
       if (typeof Razorpay === "undefined") throw new Error("Razorpay SDK not loaded");
       var rzp = new Razorpay(options);
       rzp.on('payment.failed', function () {
-        saveOrderToBackend("pay_mobile_fallback_" + Date.now(), finalAmount, subtotal, discountAmount, maxDeliveryFee, walletDeduction);
+        saveOrderToBackend("pay_mobile_fallback_" + Date.now(), finalAmount, subtotal, discountAmount, maxDeliveryFee, walletDenection);
       });
       rzp.open();
     } catch (err) {
