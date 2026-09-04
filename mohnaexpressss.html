@@ -580,29 +580,6 @@
       background: #f8fafc; 
       margin-bottom: 12px; 
     }
-
-    /* MULTI-IMAGE GALLERY CAROUSEL THUMBNAILS */
-    .gallery-thumb-row {
-      display: flex;
-      gap: 8px;
-      overflow-x: auto;
-      margin-bottom: 12px;
-      padding-bottom: 4px;
-    }
-    .gallery-thumb {
-      width: 54px;
-      height: 54px;
-      object-fit: cover;
-      border-radius: 8px;
-      border: 2px solid #cbd5e1;
-      cursor: pointer;
-      flex-shrink: 0;
-      transition: border-color 0.2s;
-    }
-    .gallery-thumb.active-thumb {
-      border-color: #2563eb;
-    }
-
     .p-spec-box { 
       background: #f8fafc; 
       border: 1px solid #e2e8f0; 
@@ -828,7 +805,7 @@
   </div>
 </div>
 
-<!-- PRODUCT DETAILS MODAL WITH MULTI-IMAGE GALLERY CAROUSEL -->
+<!-- PRODUCT DETAILS MODAL -->
 <div id="productDetailsModal" class="modal-overlay" style="display:none;">
   <div class="modal-card">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
@@ -836,12 +813,7 @@
       <button type="button" onclick="closeProductModal()" style="background:none; border:none; font-size:20px; cursor:pointer; color:#64748b;">✕</button>
     </div>
 
-    <!-- MAIN PRODUCT IMAGE -->
     <img id="modalProdImg" src="" class="p-modal-img" alt="Product" />
-    
-    <!-- GALLERY THUMBNAILS CAROUSEL -->
-    <div class="gallery-thumb-row" id="modalGalleryThumbnails"></div>
-
     <h2 style="margin:0 0 4px 0; font-size:18px; color:#0f172a;" id="modalProdTitle">Product Name</h2>
     
     <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:8px;">
@@ -1185,7 +1157,7 @@
         if (width > height) {
           if (width > maxWidth) { height = Math.round((height * maxWidth) / width); width = maxWidth; }
         } else {
-          if (height > maxHeight) { width = Math.round((width * maxHeight) / height); height = maxHeight; }
+          if (height > maxHeight) { width = Math.round((height * maxHeight) / height); height = maxHeight; }
         }
 
         canvas.width = width;
@@ -1660,20 +1632,6 @@
 
     document.getElementById('modalProdCategory').innerText = p.category;
     document.getElementById('modalProdImg').src = p.img || 'https://via.placeholder.com/300?text=Product';
-    
-    // RENDER MULTI-IMAGE GALLERY THUMBNAILS CAROUSEL
-    var thumbRow = document.getElementById('modalGalleryThumbnails');
-    if (thumbRow) {
-      var allImages = [p.img];
-      if (p.gallery && Array.isArray(p.gallery)) {
-        allImages = allImages.concat(p.gallery);
-      }
-      
-      thumbRow.innerHTML = allImages.map((imgUrl, idx) => `
-        <img src="${imgUrl}" class="gallery-thumb ${idx === 0 ? 'active-thumb' : ''}" onclick="switchModalMainImage('${imgUrl}', this)" />
-      `).join('');
-    }
-
     document.getElementById('modalProdTitle').innerText = p.name;
     document.getElementById('modalProdPrice').innerText = `₹${price}`;
     document.getElementById('modalProdMrp').innerText = `₹${mrp}`;
@@ -1701,12 +1659,6 @@
     }
 
     document.getElementById('productDetailsModal').style.display = 'flex';
-  }
-
-  function switchModalMainImage(url, thumbEl) {
-    document.getElementById('modalProdImg').src = url;
-    document.querySelectorAll('.gallery-thumb').forEach(t => t.classList.remove('active-thumb'));
-    thumbEl.classList.add('active-thumb');
   }
 
   function closeProductModal() {
@@ -1927,7 +1879,7 @@
       if (typeof Razorpay === "undefined") throw new Error("Razorpay SDK not loaded");
       var rzp = new Razorpay(options);
       rzp.on('payment.failed', function () {
-        saveOrderToBackend("pay_mobile_fallback_" + Date.now(), finalAmount, subtotal, discountAmount, maxDeliveryFee, walletDenection);
+        saveOrderToBackend("pay_mobile_fallback_" + Date.now(), finalAmount, subtotal, discountAmount, maxDeliveryFee, walletDeduction);
       });
       rzp.open();
     } catch (err) {
