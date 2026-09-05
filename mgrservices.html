@@ -15,7 +15,7 @@
     * { 
       box-sizing: border-box; 
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-      transition: background 0.2s ease, color 0.2s ease; 
+      transition: background 0.2s ease, color 0.2s ease, transform 0.1s ease, opacity 0.2s ease; 
     }
     body { 
       margin: 0; 
@@ -84,6 +84,8 @@
       font-size: 16px;
       cursor: pointer;
     }
+    .notif-bell-btn:active { transform: scale(0.92); }
+
     .notif-badge-count {
       position: absolute;
       top: -2px;
@@ -110,6 +112,8 @@
       cursor: pointer; 
       transition: 0.2s;
     }
+    .auth-pill:active { transform: scale(0.96); }
+
     .auth-logged-in { 
       background: #dcfce7; 
       color: #166534; 
@@ -145,6 +149,8 @@
       background: transparent; 
       color: #64748b; 
     }
+    .mode-btn:active { transform: scale(0.98); }
+
     .theme-retail .mode-btn.active { 
       background: linear-gradient(135deg, #4f46e5, #7c3aed); 
       color: white; 
@@ -182,6 +188,7 @@
       cursor: pointer; 
       border: 1px solid rgba(0,0,0,0.06); 
     }
+    .chip:active { transform: scale(0.95); }
     .chip.active { 
       background: #0f172a; 
       color: white; 
@@ -209,6 +216,8 @@
       transform: translateY(-3px); 
       box-shadow: 0 8px 20px rgba(0,0,0,0.08); 
     }
+    .product-card:active { transform: scale(0.98); }
+
     .product-img { 
       width: 100%; 
       height: 140px; 
@@ -276,6 +285,7 @@
       cursor: pointer; 
       color: #0f172a; 
     }
+    .btn-card-add:active { transform: scale(0.95); }
     .btn-card-add.is-added { 
       background: #dcfce7; 
       border-color: #86efac; 
@@ -291,6 +301,7 @@
       font-size: 12px; 
       cursor: pointer; 
     }
+    .btn-card-buy:active { transform: scale(0.95); }
     .theme-retail .btn-card-buy { background: #4f46e5; }
     .theme-wholesale .btn-card-buy { background: #e11d48; }
 
@@ -319,6 +330,7 @@
       border-radius: 8px; 
       font-size: 14px; 
     }
+    
     .btn-submit { 
       width: 100%; 
       padding: 12px; 
@@ -329,6 +341,13 @@
       font-weight: 700; 
       cursor: pointer; 
       font-size: 14px; 
+      transition: transform 0.1s ease, opacity 0.2s ease, background 0.2s;
+    }
+    .btn-submit:active { transform: scale(0.97); }
+    .btn-submit.loading-state {
+      opacity: 0.75;
+      cursor: wait;
+      pointer-events: none;
     }
 
     .bill-row { 
@@ -402,6 +421,7 @@
       transform: translateY(-2px); 
       border-color: #2563eb; 
     }
+    .order-history-card:active { transform: scale(0.99); }
 
     .btn-track-rider { 
       background: #0284c7; 
@@ -418,6 +438,7 @@
       margin-top: 6px; 
       box-shadow: 0 2px 6px rgba(2, 132, 199, 0.3); 
     }
+    .btn-track-rider:active { transform: scale(0.95); }
 
     .badge-ticking { 
       display: inline-block; 
@@ -484,6 +505,7 @@
       cursor: pointer; 
       background: #f8fafc; 
     }
+    .btn-photo-action:active { transform: scale(0.95); }
     .btn-photo-save { 
       background: #16a34a; 
       color: white; 
@@ -533,6 +555,7 @@
       padding: 6px 12px; 
       border-radius: 8px; 
     }
+    .nav-item:active { transform: scale(0.92); }
     .nav-item.active { color: #2563eb; }
     .nav-item span { font-size: 18px; }
 
@@ -567,6 +590,7 @@
       font-size: 13px; 
       color: #64748b; 
     }
+    .auth-tab-btn:active { transform: scale(0.97); }
     .auth-tab-btn.active { 
       background: #2563eb; 
       color: white; 
@@ -598,6 +622,7 @@
       flex-shrink: 0;
       transition: border-color 0.2s;
     }
+    .gallery-thumb:active { transform: scale(0.92); }
     .gallery-thumb.active-thumb {
       border-color: #2563eb;
     }
@@ -669,7 +694,7 @@
     </div>
 
     <div class="product-grid" id="productGrid">
-      <div style="grid-column:1/-1; text-align:center; color:#64748b; padding:40px;">Loading catalog...</div>
+      <div style="grid-column:1/-1; text-align:center; color:#64748b; padding:40px;">Loading catalog instantly...</div>
     </div>
   </div>
 
@@ -1026,7 +1051,7 @@
   var autoSyncInterval = null;
   var trackingLeafletMap = null, riderMapMarker = null, userMapMarker = null;
 
-  // CLOCK FORMATTER: If less than 60 mins, hides the hours digit (e.g., "15m 30s")
+  // CLOCK FORMATTER: If less than 60 mins, hides the hours digit
   function formatTimeHms(totalSecs) {
     if (totalSecs < 0) totalSecs = 0;
     var h = Math.floor(totalSecs / 3600);
@@ -1210,7 +1235,7 @@
         if (width > height) {
           if (width > maxWidth) { height = Math.round((height * maxWidth) / width); width = maxWidth; }
         } else {
-          if (height > maxHeight) { width = Math.round((height * maxHeight) / height); height = maxHeight; }
+          if (height > maxHeight) { width = Math.round((width * maxHeight) / height); height = maxHeight; }
         }
 
         canvas.width = width;
@@ -1460,7 +1485,9 @@
     if (password.length < 6) return alert("Password must be at least 6 characters.");
 
     var btn = document.getElementById('btnRequestSignupOtp');
-    btn.innerText = "Sending OTP...";
+    btn.classList.add('loading-state');
+    var origText = btn.innerText;
+    btn.innerText = "⏳ Sending OTP...";
     btn.disabled = true;
 
     fetch(SPREADSHEET_API_URL, {
@@ -1468,7 +1495,8 @@
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({ action: "sendSignupOtp", email: email, role: "customer" })
     }).then(r => r.json()).then(res => {
-      btn.innerText = "Send Verification Code";
+      btn.classList.remove('loading-state');
+      btn.innerText = origText;
       btn.disabled = false;
       if (res.status === "success") {
         document.getElementById('signupTargetEmail').innerText = email;
@@ -1554,7 +1582,9 @@
   function saveSelectedAvatar() {
     if (!currentUser || !pendingAvatarBase64) return;
     var btn = document.getElementById('btnSaveAvatar');
-    btn.innerText = "Saving...";
+    btn.classList.add('loading-state');
+    var origText = btn.innerText;
+    btn.innerText = "⏳ Saving...";
     btn.disabled = true;
 
     fetch(SPREADSHEET_API_URL, {
@@ -1562,7 +1592,8 @@
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({ action: "updateUserProfilePic", email: currentUser.email, imageBase64: pendingAvatarBase64 })
     }).then(r => r.json()).then(res => {
-      btn.innerText = "💾 Save Photo";
+      btn.classList.remove('loading-state');
+      btn.innerText = origText;
       btn.disabled = false;
       btn.style.display = "none";
       if (res.status === "success") {
@@ -1652,7 +1683,6 @@
       var stock = parseInt(p.stockQty) || 0;
       var isOutOfStock = stock <= 0;
 
-      // Calculate Average Product Rating
       var pReviews = rawReviews.filter(r => r.productId === p.id);
       var avgRating = 5.0;
       if (pReviews.length > 0) {
@@ -1842,7 +1872,6 @@
         fetchInitialStoreData();
         setTimeout(() => {
           if (activeSelectedModalOrder) {
-            // Find index and reopen order modal
             var idx = cachedMyOrders.findIndex(o => o.orderId === activeSelectedModalOrder.orderId);
             if (idx !== -1) openOrderModal(idx);
           }
@@ -2110,7 +2139,11 @@
     var nowMs = Date.now();
 
     var btn = document.getElementById('confirmPayBtn');
-    if (btn) { btn.innerText = "⏳ Confirming Order..."; btn.disabled = true; }
+    if (btn) {
+      btn.classList.add('loading-state');
+      btn.innerText = "⏳ Confirming & Placing Order...";
+      btn.disabled = true;
+    }
 
     var payload = {
       action: "saveOrder",
@@ -2153,10 +2186,18 @@
       startPersistentCountdown(res.expiryTimestamp, orderId, "PAID (Verified)", 0, nowMs, currentMatchedZoneTiming, null, null, null);
       fetchInitialStoreData();
       switchPage('ordersPage');
-      if (btn) { btn.innerText = "💳 Pay Securely with Razorpay"; btn.disabled = false; }
+      if (btn) {
+        btn.classList.remove('loading-state');
+        btn.innerText = "💳 Pay Securely with Razorpay";
+        btn.disabled = false;
+      }
     })
     .catch(function() {
-      if (btn) { btn.innerText = "💳 Pay Securely with Razorpay"; btn.disabled = false; }
+      if (btn) {
+        btn.classList.remove('loading-state');
+        btn.innerText = "💳 Pay Securely with Razorpay";
+        btn.disabled = false;
+      }
       alert("Order could not be saved. Check connection.");
     });
   }
