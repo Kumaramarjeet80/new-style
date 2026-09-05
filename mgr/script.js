@@ -1236,61 +1236,76 @@ var SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbwISME2C5UqmB
     var useWallet = document.getElementById('chkUseWallet')?.checked;
     var walletDeduction = (useWallet && userWalletBalance > 0) ? Math.min(netBeforeWallet, userWalletBalance) : 0;
     var finalAmount = Math.max(0, netBeforeWallet - walletDeduction);
+    var amountInPaise = Math.round(finalAmount * 100);
 
-    var rawPhone = (currentUser.phone || "9876543210").toString().replace(/[^0-9]/g, "");
-    var cleanPhone = rawPhone.length > 10 ? rawPhone.slice(-10) : rawPhone.padStart(10, "0");
-    var cleanEmail = (currentUser.email || "customer@mohnaexpress.com").trim();
+    var btn = document.getElementById('confirmPayBtn');
+    if (btn) {
+      btn.classList.add('loading-state');
+      btn.innerText = "⏳ Generating Secure Order...";
+      btn.disabled = true;
+    }
 
-    var options = {
-      "key": RAZORPAY_KEY_ID,
-      "amount": Math.round(finalAmount * 100),
-      "currency": "INR",
-      "name": "Mohna Express",
-      "description": `Guaranteed ${currentMatchedZoneTiming} Min Dispatch`,
-      "image": "https://via.placeholder.com/128?text=Mohna",
-      "prefill": {
-        "name": currentUser.name || "Customer",
-        "email": cleanEmail,
-        "contact": cleanPhone
-      },
-      "theme": { "color": "#2563eb" },
-      "modal": {
-        "confirm_close": true,
-        "ondismiss": function() { 
-          console.log("Payment modal dismissed by user.");
-          var btn = document.getElementById('confirmPayBtn');
-          if (btn) {
-            btn.classList.remove('loading-state');
-            btn.innerText = "💳 Pay Securely with Razorpay";
-            btn.disabled = false;
-          }
-        }
-      },
-      "handler": function (response) {
-        var razorpayPaymentId = response.razorpay_payment_id;
-        saveOrderToBackend(razorpayPaymentId, finalAmount, subtotal, discountAmount, maxDeliveryFee, walletDeduction);
-      }
-    };
-
-    try {
-      if (typeof Razorpay === "undefined") {
-        throw new Error("Razorpay script library is not loaded.");
-      }
-      
-      var btn = document.getElementById('confirmPayBtn');
-      if (btn) {
-        btn.classList.add('loading-state');
-        btn.innerText = "⏳ Opening Payment Gateway...";
-        btn.disabled = true;
-      }
-
-      var rzp = new Razorpay(options);
-      rzp.on('payment.failed', function (response) {
+    // Request server-side Razorpay Order ID for proper dashboard tracking
+    fetch(SPREADSHEET_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "createRazorpayOrder", amount: amountInPaise })
+    })
+    .then(r => r.json())
+    .then(res => {
+      if (res.status !== "success" || !res.orderId) {
         if (btn) {
           btn.classList.remove('loading-state');
           btn.innerText = "💳 Pay Securely with Razorpay";
           btn.disabled = false;
         }
+        showMohnaPopup({ type: 'error', title: 'Gateway Error', message: res.message || 'Could not initialize gateway order.', primaryText: 'OK' });
+        return;
+      }
+
+      var razorpayOrderId = res.orderId;
+      var rawPhone = (currentUser.phone || "9876543210").toString().replace(/[^0-9]/g, "");
+      var cleanPhone = rawPhone.length > 10 ? rawPhone.slice(-10) : rawPhone.padStart(10, "0");
+      var cleanEmail = (currentUser.email || "customer@mohnaexpress.com").trim();
+
+      var options = {
+        "key": RAZORPAY_KEY_ID,
+        "amount": amountInPaise,
+        "currency": "INR",
+        "name": "Mohna Express",
+        "description": `Guaranteed ${currentMatchedZoneTiming} Min Dispatch`,
+        "order_id": razorpayOrderId,
+        "image": "https://via.placeholder.com/128?text=Mohna",
+        "prefill": {
+          "name": currentUser.name || "Customer",
+          "email": cleanEmail,
+          "contact": cleanPhone
+        },
+        "theme": { "color": "#2563eb" },
+        "modal": {
+          "confirm_close": true,
+          "ondismiss": function() { 
+            if (btn) {
+              btn.classList.remove('loading-state');
+              btn.innerText = "💳 Pay Securely with Razorpay";
+              btn.disabled = false;
+            }
+          }
+        },
+        "handler": function (response) {
+          var razorpayPaymentId = response.razorpay_payment_id;
+          saveOrderToBackend(razorpayPaymentId, finalAmount, subtotal, discountAmount, maxDeliveryFee, walletDeduction);
+        }
+      };
+
+      if (btn) {
+        btn.classList.remove('loading-state');
+        btn.innerText = "💳 Pay Securely with Razorpay";
+        btn.disabled = false;
+      }
+
+      var rzp = new Razorpay(options);
+      rzp.on('payment.failed', function (response) {
         showMohnaPopup({ 
           type: 'error', 
           title: 'Payment Failed', 
@@ -1299,14 +1314,16 @@ var SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbwISME2C5UqmB
         });
       });
       rzp.open();
-    } catch (err) {
-      showMohnaPopup({ 
-        type: 'error', 
-        title: 'Gateway Error', 
-        message: 'Could not launch Razorpay checkout modal: ' + err.message, 
-        primaryText: 'OK' 
-      });
-    }
+
+    })
+    .catch(err => {
+      if (btn) {
+        btn.classList.remove('loading-state');
+        btn.innerText = "💳 Pay Securely with Razorpay";
+        btn.disabled = false;
+      }
+      showMohnaPopup({ type: 'error', title: 'Network Error', message: 'Failed to communicate with payment server.', primaryText: 'OK' });
+    });
   }
 
   function saveOrderToBackend(paymentId, finalAmount, subtotal, promoDiscount, maxDeliveryFee, walletDeduction) {
