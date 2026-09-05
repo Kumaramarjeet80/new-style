@@ -657,6 +657,83 @@
       text-align: center; 
       margin: 12px 0;
     }
+
+    /* CUSTOM PROFESSIONAL MODAL POPUP SYSTEM */
+    .mohna-popup-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 99999;
+      padding: 16px;
+      animation: mohnaFadeIn 0.2s ease-out;
+    }
+    @keyframes mohnaFadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .mohna-popup-card {
+      background: #ffffff;
+      border-radius: 20px;
+      width: 100%;
+      max-width: 400px;
+      padding: 24px;
+      box-shadow: 0 20px 40px rgba(15, 23, 42, 0.2);
+      text-align: center;
+      border: 1px solid rgba(226, 232, 240, 0.8);
+      animation: mohnaScaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes mohnaScaleUp {
+      from { transform: scale(0.92); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .mohna-popup-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      margin: 0 auto 16px;
+    }
+    .mohna-popup-icon.warn { background: #fef3c7; color: #d97706; border: 2px solid #fde68a; }
+    .mohna-popup-icon.error { background: #fee2e2; color: #dc2626; border: 2px solid #fecaca; }
+    .mohna-popup-icon.success { background: #dcfce7; color: #16a34a; border: 2px solid #bbf7d0; }
+    .mohna-popup-icon.info { background: #e0f2fe; color: #0284c7; border: 2px solid #bae6fd; }
+
+    .mohna-popup-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: #0f172a;
+      margin-bottom: 8px;
+    }
+    .mohna-popup-msg {
+      font-size: 13.5px;
+      color: #475569;
+      line-height: 1.5;
+      margin-bottom: 22px;
+    }
+    .mohna-popup-actions {
+      display: flex;
+      gap: 10px;
+    }
+    .mohna-popup-btn {
+      flex: 1;
+      padding: 12px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      border: none;
+      transition: transform 0.1s;
+    }
+    .mohna-popup-btn:active { transform: scale(0.96); }
+    .mohna-popup-btn.primary { background: #2563eb; color: white; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25); }
+    .mohna-popup-btn.secondary { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
   </style>
 </head>
 <body class="theme-retail">
@@ -1010,6 +1087,9 @@
   </div>
 </div>
 
+<!-- DYNAMIC MOHNA POPUP NOTIFICATION MODAL CONTAINER -->
+<div id="mohnaPopupContainer"></div>
+
 <!-- BOTTOM NAVIGATION -->
 <nav class="bottom-nav">
   <button class="nav-item active" id="navHome" onclick="switchPage('homePage')"><span>🏠</span> Home</button>
@@ -1050,6 +1130,51 @@
   var sessionCheckInterval = null;
   var autoSyncInterval = null;
   var trackingLeafletMap = null, riderMapMarker = null, userMapMarker = null;
+
+  // CUSTOM MOHNA PROFESSIONAL POPUP MODAL SYSTEM
+  function showMohnaPopup(options) {
+    var container = document.getElementById('mohnaPopupContainer');
+    if (!container) return;
+
+    var type = options.type || 'info'; // 'warn', 'error', 'success', 'info'
+    var title = options.title || 'Notice';
+    var message = options.message || '';
+    var primaryText = options.primaryText || 'OK';
+    var secondaryText = options.secondaryText || '';
+    var onPrimary = options.onPrimary || null;
+    var onSecondary = options.onSecondary || null;
+
+    var iconSymbol = 'ℹ️';
+    if (type === 'warn') iconSymbol = '⚠️';
+    if (type === 'error') iconSymbol = '🚫';
+    if (type === 'success') iconSymbol = '✅';
+
+    container.innerHTML = `
+      <div class="mohna-popup-overlay" id="mohnaOverlayEl">
+        <div class="mohna-popup-card">
+          <div class="mohna-popup-icon ${type}">${iconSymbol}</div>
+          <div class="mohna-popup-title">${title}</div>
+          <div class="mohna-popup-msg">${message}</div>
+          <div class="mohna-popup-actions">
+            ${secondaryText ? `<button class="mohna-popup-btn secondary" id="mohnaSecBtn">${secondaryText}</button>` : ''}
+            <button class="mohna-popup-btn primary" id="mohnaPriBtn">${primaryText}</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('mohnaPriBtn').onclick = function() {
+      document.getElementById('mohnaOverlayEl').remove();
+      if (onPrimary) onPrimary();
+    };
+
+    if (secondaryText) {
+      document.getElementById('mohnaSecBtn').onclick = function() {
+        document.getElementById('mohnaOverlayEl').remove();
+        if (onSecondary) onSecondary();
+      };
+    }
+  }
 
   // CLOCK FORMATTER: If less than 60 mins, hides the hours digit
   function formatTimeHms(totalSecs) {
@@ -1209,7 +1334,14 @@
         noticeText.innerHTML = `✅ <b>Deliverable Area:</b> ${currentMatchedZoneName} • Guaranteed <b>${currentMatchedZoneTiming} Mins ETA</b> (₹${props.lateCashback || 25} Late Cashback Guarantee)`;
       }
       if (payBtn && cart.length > 0) payBtn.disabled = false;
-      if (showAlert) alert(`✅ Deliverable Area: Your location is inside "${currentMatchedZoneName}". Guaranteed delivery in ${currentMatchedZoneTiming} minutes!`);
+      if (showAlert) {
+        showMohnaPopup({
+          type: 'success',
+          title: 'Delivery Zone Verified',
+          message: `Your location is inside "${currentMatchedZoneName}". Guaranteed delivery in ${currentMatchedZoneTiming} minutes!`,
+          primaryText: 'Continue'
+        });
+      }
       return true;
     } else {
       isDeliverableLocation = false;
@@ -1218,7 +1350,14 @@
         noticeText.innerHTML = `🚫 <b>Undeliverable Area:</b> Your current GPS location is outside Mohna Express coverage zones. Orders cannot be placed.`;
       }
       if (payBtn) payBtn.disabled = true;
-      if (showAlert) alert("🚫 Undeliverable: Your location is outside our operational service areas.");
+      if (showAlert) {
+        showMohnaPopup({
+          type: 'error',
+          title: 'Undeliverable Area',
+          message: 'Your current GPS location is outside our operational service areas. Orders cannot be placed.',
+          primaryText: 'Understand'
+        });
+      }
       return false;
     }
   }
@@ -1303,8 +1442,15 @@
           .then(r => r.json())
           .then(res => {
             if (res && res.valid === false) {
-              alert("⚠️ Logged out: Your account was accessed on another device.");
-              logoutCustomer(false);
+              showMohnaPopup({
+                type: 'warn',
+                title: 'Session Conflict Detected',
+                message: 'Your account was just accessed on another device. For security reasons, you have been securely logged out.',
+                primaryText: 'Log In Again',
+                onPrimary: function() {
+                  logoutCustomer(false);
+                }
+              });
             }
           }).catch(()=>{});
       }
@@ -1481,8 +1627,14 @@
     var email = document.getElementById('signupEmail').value.trim();
     var password = document.getElementById('signupPassword').value.trim();
 
-    if (!name || !email || !password) return alert("Please fill all required fields.");
-    if (password.length < 6) return alert("Password must be at least 6 characters.");
+    if (!name || !email || !password) {
+      showMohnaPopup({ type: 'warn', title: 'Missing Fields', message: 'Please fill all required fields.', primaryText: 'OK' });
+      return;
+    }
+    if (password.length < 6) {
+      showMohnaPopup({ type: 'warn', title: 'Weak Password', message: 'Password must be at least 6 characters.', primaryText: 'OK' });
+      return;
+    }
 
     var btn = document.getElementById('btnRequestSignupOtp');
     btn.classList.add('loading-state');
@@ -1502,7 +1654,7 @@
         document.getElementById('signupTargetEmail').innerText = email;
         toggleSignupStep(2);
       } else {
-        alert(res.message);
+        showMohnaPopup({ type: 'error', title: 'Verification Failed', message: res.message, primaryText: 'Retry' });
       }
     });
   }
@@ -1514,7 +1666,10 @@
     var password = document.getElementById('signupPassword').value.trim();
     var otp = document.getElementById('signupOtpCode').value.trim();
 
-    if (!otp || otp.length < 6) return alert("Enter valid 6-digit OTP.");
+    if (!otp || otp.length < 6) {
+      showMohnaPopup({ type: 'warn', title: 'Invalid OTP', message: 'Please enter a valid 6-digit verification code.', primaryText: 'OK' });
+      return;
+    }
 
     fetch(SPREADSHEET_API_URL, {
       method: "POST",
@@ -1534,7 +1689,7 @@
         startSingleSessionGuard();
         fetchInitialStoreData();
       } else {
-        alert(res.message);
+        showMohnaPopup({ type: 'error', title: 'Signup Error', message: res.message, primaryText: 'OK' });
       }
     });
   }
@@ -1543,7 +1698,10 @@
     var email = document.getElementById('loginEmail').value.trim();
     var password = document.getElementById('loginPassword').value.trim();
 
-    if (!email || !password) return alert("Please enter both email and password.");
+    if (!email || !password) {
+      showMohnaPopup({ type: 'warn', title: 'Missing Credentials', message: 'Please enter both email and password.', primaryText: 'OK' });
+      return;
+    }
 
     fetch(SPREADSHEET_API_URL, {
       method: "POST",
@@ -1563,7 +1721,7 @@
         startSingleSessionGuard();
         fetchInitialStoreData();
       } else {
-        alert(res.message);
+        showMohnaPopup({ type: 'error', title: 'Login Failed', message: res.message, primaryText: 'Try Again' });
       }
     });
   }
@@ -1600,35 +1758,58 @@
         currentUser.avatar = res.avatarUrl;
         localStorage.setItem('mohna_user', JSON.stringify(currentUser));
         updateHeaderAuthUI();
-        alert("Profile picture uploaded and saved to Google Drive!");
+        showMohnaPopup({ type: 'success', title: 'Profile Updated', message: 'Profile picture uploaded and saved successfully!', primaryText: 'Great' });
       }
     });
   }
 
   function deleteAvatarPhoto() {
-    if (!currentUser || !confirm("Delete profile picture?")) return;
-    fetch(SPREADSHEET_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: "updateUserProfilePic", email: currentUser.email, imageBase64: "" })
-    }).then(r => r.json()).then(res => {
-      if (res.status === "success") {
-        currentUser.avatar = "";
-        pendingAvatarBase64 = "";
-        localStorage.setItem('mohna_user', JSON.stringify(currentUser));
-        document.getElementById('profAvatarDisplay').src = "https://via.placeholder.com/96?text=User";
-        document.getElementById('btnSaveAvatar').style.display = "none";
-        updateHeaderAuthUI();
+    if (!currentUser) return;
+    showMohnaPopup({
+      type: 'warn',
+      title: 'Delete Photo',
+      message: 'Are you sure you want to remove your profile picture?',
+      primaryText: 'Yes, Delete',
+      secondaryText: 'Cancel',
+      onPrimary: function() {
+        fetch(SPREADSHEET_API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ action: "updateUserProfilePic", email: currentUser.email, imageBase64: "" })
+        }).then(r => r.json()).then(res => {
+          if (res.status === "success") {
+            currentUser.avatar = "";
+            pendingAvatarBase64 = "";
+            localStorage.setItem('mohna_user', JSON.stringify(currentUser));
+            document.getElementById('profAvatarDisplay').src = "https://via.placeholder.com/96?text=User";
+            document.getElementById('btnSaveAvatar').style.display = "none";
+            updateHeaderAuthUI();
+          }
+        });
       }
     });
   }
 
   function logoutCustomer(promptUser) {
-    if (promptUser === false || confirm("Log out from this device?")) {
+    if (promptUser === false) {
       localStorage.removeItem('mohna_user');
       currentUser = null;
       location.reload();
+      return;
     }
+
+    showMohnaPopup({
+      type: 'warn',
+      title: 'Log Out',
+      message: 'Are you sure you want to log out from this device?',
+      primaryText: 'Log Out',
+      secondaryText: 'Stay',
+      onPrimary: function() {
+        localStorage.removeItem('mohna_user');
+        currentUser = null;
+        location.reload();
+      }
+    });
   }
 
   function renderCategoryChips() {
@@ -1829,17 +2010,25 @@
   }
 
   function deleteMyReview(reviewId) {
-    if (!confirm("Delete this review?")) return;
-    fetch(SPREADSHEET_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: "deleteReview", reviewId: reviewId })
-    })
-    .then(r => r.json())
-    .then(res => {
-      if (res.status === "success") {
-        fetchInitialStoreData();
-        setTimeout(() => openMyReviewsModal(), 400);
+    showMohnaPopup({
+      type: 'warn',
+      title: 'Delete Review',
+      message: 'Are you sure you want to delete this review?',
+      primaryText: 'Delete',
+      secondaryText: 'Cancel',
+      onPrimary: function() {
+        fetch(SPREADSHEET_API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ action: "deleteReview", reviewId: reviewId })
+        })
+        .then(r => r.json())
+        .then(res => {
+          if (res.status === "success") {
+            fetchInitialStoreData();
+            setTimeout(() => openMyReviewsModal(), 400);
+          }
+        });
       }
     });
   }
@@ -1850,7 +2039,10 @@
     var rating = document.getElementById(`ord_rev_rating_${productId}`).value;
     var feedback = document.getElementById(`ord_rev_text_${productId}`).value.trim();
 
-    if (!feedback) return alert("Please enter feedback text.");
+    if (!feedback) {
+      showMohnaPopup({ type: 'warn', title: 'Feedback Required', message: 'Please enter feedback text before posting.', primaryText: 'OK' });
+      return;
+    }
 
     fetch(SPREADSHEET_API_URL, {
       method: "POST",
@@ -1868,7 +2060,7 @@
     .then(r => r.json())
     .then(res => {
       if (res.status === "success") {
-        alert("✅ Review successfully posted!");
+        showMohnaPopup({ type: 'success', title: 'Review Posted', message: 'Your verified product review has been published successfully!', primaryText: 'Awesome' });
         fetchInitialStoreData();
         setTimeout(() => {
           if (activeSelectedModalOrder) {
@@ -1877,7 +2069,7 @@
           }
         }, 400);
       } else {
-        alert(res.message);
+        showMohnaPopup({ type: 'error', title: 'Review Restricted', message: res.message, primaryText: 'Understood' });
       }
     });
   }
@@ -1895,7 +2087,10 @@
   function toggleCartItem(productId) {
     var p = rawProducts.find(x => x.id === productId);
     if (!p) return;
-    if ((parseInt(p.stockQty) || 0) <= 0) return alert("Product is currently out of stock.");
+    if ((parseInt(p.stockQty) || 0) <= 0) {
+      showMohnaPopup({ type: 'warn', title: 'Out of Stock', message: 'Product is currently out of stock.', primaryText: 'OK' });
+      return;
+    }
 
     var existingIdx = cart.findIndex(x => x.id === productId && x.theme === currentTheme);
     var price = (currentTheme === 'wholesale') ? p.wholesalePrice : p.retailPrice;
@@ -1930,7 +2125,10 @@
     if (!currentUser) { openAuthModal('login'); return; }
     var p = rawProducts.find(x => x.id === productId);
     if (!p) return;
-    if ((parseInt(p.stockQty) || 0) <= 0) return alert("Product is currently out of stock.");
+    if ((parseInt(p.stockQty) || 0) <= 0) {
+      showMohnaPopup({ type: 'warn', title: 'Out of Stock', message: 'Product is currently out of stock.', primaryText: 'OK' });
+      return;
+    }
 
     var price = (currentTheme === 'wholesale') ? p.wholesalePrice : p.retailPrice;
     var existing = cart.find(x => x.id === productId && x.theme === currentTheme);
@@ -2072,10 +2270,18 @@
 
   function initiateRazorpayPayment() {
     if (!currentUser) { openAuthModal('login'); return; }
-    if (cart.length === 0) return alert("Cart is empty.");
+    if (cart.length === 0) {
+      showMohnaPopup({ type: 'warn', title: 'Cart Empty', message: 'Your cart is empty. Add items before checking out.', primaryText: 'OK' });
+      return;
+    }
 
     if (!evaluateDeliveryZoneEligibility(false)) {
-      alert("🚫 Delivery Area Blocked: Your current GPS location is outside our operational service areas. Cannot proceed with order.");
+      showMohnaPopup({
+        type: 'error',
+        title: 'Delivery Restricted',
+        message: 'Your current GPS location is outside our operational service areas. Cannot proceed with order.',
+        primaryText: 'Close'
+      });
       return;
     }
 
@@ -2191,6 +2397,12 @@
         btn.innerText = "💳 Pay Securely with Razorpay";
         btn.disabled = false;
       }
+      showMohnaPopup({
+        type: 'success',
+        title: 'Order Placed Successfully!',
+        message: `Your order #${orderId} has been confirmed. Live countdown has started!`,
+        primaryText: 'View Orders'
+      });
     })
     .catch(function() {
       if (btn) {
@@ -2198,7 +2410,7 @@
         btn.innerText = "💳 Pay Securely with Razorpay";
         btn.disabled = false;
       }
-      alert("Order could not be saved. Check connection.");
+      showMohnaPopup({ type: 'error', title: 'Order Failed', message: 'Order could not be saved. Check connection.', primaryText: 'Retry' });
     });
   }
 
