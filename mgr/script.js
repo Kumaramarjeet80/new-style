@@ -1,5 +1,5 @@
 var SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbwISME2C5UqmBGIH5uqRZPjh357sXmlM2fppxm3_rEss8qVoCRsZh5d6QdfTED13jpt/exec";
-  var RAZORPAY_KEY_ID = "rzp_test_51MockKey12345";
+  var RAZORPAY_KEY_ID = "rzp_test_TYINZpDJ5bh2CP"; // <-- Replace with your live Razorpay Test Key ID
 
   var currentUser = null;
   try { currentUser = JSON.parse(localStorage.getItem('mohna_user')) || null; } catch(e) {}
@@ -1241,13 +1241,6 @@ var SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbwISME2C5UqmB
     var cleanPhone = rawPhone.length > 10 ? rawPhone.slice(-10) : rawPhone.padStart(10, "0");
     var cleanEmail = (currentUser.email || "customer@mohnaexpress.com").trim();
 
-    var isTestMockKey = !RAZORPAY_KEY_ID || RAZORPAY_KEY_ID.includes("MockKey") || RAZORPAY_KEY_ID.includes("12345");
-
-    if (isTestMockKey) {
-      saveOrderToBackend("pay_live_verified_" + Date.now(), finalAmount, subtotal, discountAmount, maxDeliveryFee, walletDeduction);
-      return;
-    }
-
     var options = {
       "key": RAZORPAY_KEY_ID,
       "amount": Math.round(finalAmount * 100),
@@ -1263,22 +1256,56 @@ var SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbwISME2C5UqmB
       "theme": { "color": "#2563eb" },
       "modal": {
         "confirm_close": true,
-        "ondismiss": function() { console.log("Payment modal dismissed."); }
+        "ondismiss": function() { 
+          console.log("Payment modal dismissed by user.");
+          var btn = document.getElementById('confirmPayBtn');
+          if (btn) {
+            btn.classList.remove('loading-state');
+            btn.innerText = "💳 Pay Securely with Razorpay";
+            btn.disabled = false;
+          }
+        }
       },
       "handler": function (response) {
-        saveOrderToBackend(response.razorpay_payment_id || ("pay_rzp_" + Date.now()), finalAmount, subtotal, discountAmount, maxDeliveryFee, walletDeduction);
+        var razorpayPaymentId = response.razorpay_payment_id;
+        saveOrderToBackend(razorpayPaymentId, finalAmount, subtotal, discountAmount, maxDeliveryFee, walletDeduction);
       }
     };
 
     try {
-      if (typeof Razorpay === "undefined") throw new Error("Razorpay SDK not loaded");
+      if (typeof Razorpay === "undefined") {
+        throw new Error("Razorpay script library is not loaded.");
+      }
+      
+      var btn = document.getElementById('confirmPayBtn');
+      if (btn) {
+        btn.classList.add('loading-state');
+        btn.innerText = "⏳ Opening Payment Gateway...";
+        btn.disabled = true;
+      }
+
       var rzp = new Razorpay(options);
-      rzp.on('payment.failed', function () {
-        saveOrderToBackend("pay_mobile_fallback_" + Date.now(), finalAmount, subtotal, discountAmount, maxDeliveryFee, walletDeduction);
+      rzp.on('payment.failed', function (response) {
+        if (btn) {
+          btn.classList.remove('loading-state');
+          btn.innerText = "💳 Pay Securely with Razorpay";
+          btn.disabled = false;
+        }
+        showMohnaPopup({ 
+          type: 'error', 
+          title: 'Payment Failed', 
+          message: response.error.description || 'The transaction was declined or failed.', 
+          primaryText: 'Try Again' 
+        });
       });
       rzp.open();
     } catch (err) {
-      saveOrderToBackend("pay_direct_" + Date.now(), finalAmount, subtotal, discountAmount, maxDeliveryFee, walletDeduction);
+      showMohnaPopup({ 
+        type: 'error', 
+        title: 'Gateway Error', 
+        message: 'Could not launch Razorpay checkout modal: ' + err.message, 
+        primaryText: 'OK' 
+      });
     }
   }
 
@@ -1335,7 +1362,6 @@ var SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbwISME2C5UqmB
 
       updateCartUI();
 
-      // Show success popup with instant navigation when clicking the primary action button
       showMohnaPopup({
         type: 'success',
         title: 'Order Confirmed! 🎉',
