@@ -1,4 +1,4 @@
-var SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbz5-suwemRQAVplZXiio8Uwkr3gX548wohCMTosOXIGMXjMoU5xFszUWMJ5ZaKj3fK_3A/exec";
+var SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbzU3HoF5MLrOGXtRJPW-b4uZ3t97RPwnA1-QuzgwSTtZPXIFLxyym9tFNEmLP93tvvDHw/exec";
   var RAZORPAY_KEY_ID = "rzp_test_TYINZpDJ5bh2CP"; // <-- Replace with your live Razorpay Test Key ID
 
   var currentUser = null;
