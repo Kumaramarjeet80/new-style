@@ -2030,3 +2030,56 @@ function applyMaxWalletAmount() {
     renderCheckoutCart();
   }
 }
+// =========================================================================
+// PWA SERVICE WORKER & CUSTOM INSTALL PROMPT
+// =========================================================================
+let deferredInstallPrompt = null;
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('Mohna Service Worker Active:', reg.scope))
+      .catch(err => console.log('Service Worker registration skipped:', err));
+  });
+}
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  showPwaInstallBanner();
+});
+
+function showPwaInstallBanner() {
+  if (document.getElementById('pwaInstallPromptBar')) return;
+  const bannerHtml = `
+    <div id="pwaInstallPromptBar" style="position:fixed; bottom:70px; left:16px; right:16px; max-width:500px; margin:0 auto; background:#0f172a; color:white; padding:12px 16px; border-radius:14px; display:flex; align-items:center; justify-content:space-between; z-index:9999; box-shadow:0 10px 25px rgba(0,0,0,0.3); border:1px solid #38bdf8;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span style="font-size:20px;">⚡</span>
+        <div>
+          <b style="font-size:13px; display:block;">Install Mohna Express App</b>
+          <span style="font-size:11px; color:#94a3b8;">Faster checkout & live alerts</span>
+        </div>
+      </div>
+      <div style="display:flex; gap:6px;">
+        <button onclick="triggerPwaInstall()" style="background:#2563eb; color:white; border:none; border-radius:8px; padding:6px 12px; font-size:12px; font-weight:bold; cursor:pointer;">Install</button>
+        <button onclick="dismissPwaInstall()" style="background:transparent; color:#94a3b8; border:none; font-size:14px; cursor:pointer;">✕</button>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', bannerHtml);
+}
+
+function triggerPwaInstall() {
+  if (deferredInstallPrompt) {
+    deferredInstallPrompt.prompt();
+    deferredInstallPrompt.userChoice.then(() => {
+      deferredInstallPrompt = null;
+      dismissPwaInstall();
+    });
+  }
+}
+
+function dismissPwaInstall() {
+  const bar = document.getElementById('pwaInstallPromptBar');
+  if (bar) bar.remove();
+}
