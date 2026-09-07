@@ -80,7 +80,12 @@
       display: flex; align-items: center; justify-content: center; z-index: 99999; padding: 16px;
     }
     .modal-card {
-      background: white; border-radius: 12px; width: 100%; max-width: 440px; padding: 20px;
+      background: white; border-radius: 12px; width: 100%; max-width: 460px; padding: 20px;
+    }
+
+    .banner-preview-img {
+      width: 100%; height: 180px; object-fit: cover; border-radius: 8px; border: 1.5px dashed #cbd5e1;
+      margin-top: 6px; background: #f8fafc; display: block;
     }
 
     #reportPdfTemplate, #slipPrintContainer { display: none; }
@@ -299,23 +304,91 @@
 
   <!-- TAB 2.9: 📢 DYNAMIC ANNOUNCEMENT POPUPS -->
   <div id="viewPopups" class="admin-page-view">
-    <div class="card" style="max-width:680px; margin:0 auto;">
-      <h3>📢 Global Announcement Popup Banner</h3>
-      <p style="font-size:13px; color:#64748b; margin:4px 0 14px 0;">Configure modal popups shown to all store visitors upon visiting the site.</p>
-      <form onsubmit="handleSavePopupConfig(event)">
-        <div class="form-group"><label>Popup Title</label><input type="text" id="popupTitle" placeholder="e.g. ⚡ Mega Monsoon Discount!" required /></div>
-        <div class="form-group"><label>Announcement Message</label><textarea id="popupMessage" rows="3" placeholder="Get 20% flat discount on all retail products..." required></textarea></div>
-        <div class="form-group"><label>Image Banner URL (Optional)</label><input type="url" id="popupImageUrl" placeholder="https://example.com/banner.jpg" /></div>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-          <div class="form-group"><label>Auto-Close Timer (Seconds, 0 for Manual Close)</label><input type="number" id="popupAutoClose" min="0" max="60" value="3" /></div>
-          <div class="form-group"><label>Active Status</label><select id="popupActive"><option value="true">✅ Enabled</option><option value="false">🚫 Disabled</option></select></div>
+    <div class="grid-2">
+      <div class="card">
+        <h3 id="popupFormHeading">📢 Create Announcement Popup</h3>
+        <p style="font-size:12px; color:#64748b; margin:4px 0 12px 0;">Configure modal popups with direct image upload, custom start/end time, redirect links, and auto-dismiss timers.</p>
+        
+        <form onsubmit="handleSavePopupConfig(event)">
+          <input type="hidden" id="editPopupId" value="" />
+          <input type="hidden" id="currentPopupImgUrl" value="" />
+
+          <div class="form-group">
+            <label>Popup Title</label>
+            <input type="text" id="popupTitle" placeholder="e.g. ⚡ Mega Monsoon Discount!" required />
+          </div>
+
+          <div class="form-group">
+            <label>Announcement Message</label>
+            <textarea id="popupMessage" rows="3" placeholder="Get 20% flat discount on all retail products..." required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>🖼️ Direct Banner Image Upload (Shown in High-Resolution Modal)</label>
+            <input type="file" id="popupImageFileInput" accept="image/*" onchange="previewPopupImage(event)" />
+            <img id="popupImgPreview" src="" class="banner-preview-img" style="display:none;" alt="Banner Preview" />
+          </div>
+
+          <div class="form-group">
+            <label>🔗 Redirect Click Link URL (Opens when customer clicks popup banner)</label>
+            <input type="url" id="popupRedirectUrl" placeholder="https://mohnaexpress.com/sale or index.html" />
+          </div>
+
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+            <div class="form-group">
+              <label>Auto-Close Timer (Seconds, 0 = Manual 'X' Close)</label>
+              <input type="number" id="popupAutoClose" min="0" max="60" value="3" />
+            </div>
+            <div class="form-group">
+              <label>Status</label>
+              <select id="popupActive">
+                <option value="true">✅ Enabled (Active)</option>
+                <option value="false">🚫 Disabled</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+            <div class="form-group">
+              <label>Custom Start Date & Time</label>
+              <input type="datetime-local" id="popupStartDate" required />
+            </div>
+            <div class="form-group">
+              <label>Custom End Date & Time</label>
+              <input type="datetime-local" id="popupEndDate" required />
+            </div>
+          </div>
+
+          <div style="display:flex; gap:6px; margin-top:8px;">
+            <button type="submit" id="btnSavePopup" class="btn btn-primary" style="flex:1;">💾 Save Announcement</button>
+            <button type="button" id="btnCancelEditPopup" class="btn btn-refresh" style="display:none;" onclick="resetPopupForm()">Cancel</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h3>📋 Published Announcements</h3>
+            <p style="margin:2px 0 0; font-size:12px; color:#64748b;">View, edit, or delete active banners.</p>
+          </div>
+          <button class="btn btn-refresh" onclick="loadPopupConfig()">🔄 Refresh</button>
         </div>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-          <div class="form-group"><label>Start Date & Time</label><input type="datetime-local" id="popupStartDate" /></div>
-          <div class="form-group"><label>End Date & Time</label><input type="datetime-local" id="popupEndDate" /></div>
-        </div>
-        <button type="submit" class="btn btn-primary" style="width:100%; margin-top:10px;">💾 Save Announcement Popup</button>
-      </form>
+        <table>
+          <thead>
+            <tr>
+              <th>Banner</th>
+              <th>Title & Message</th>
+              <th>Schedule (Start ➔ End)</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="popupTableBody">
+            <tr><td colspan="5" style="text-align:center; color:#64748b; padding:20px;">Loading announcements...</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -504,19 +577,18 @@
 <script>
   var SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbzhrrlGWsh4tkQOYKPKH3sKrMETdGuvTy-1kE8N_VWW7Wt3nrYGx3eRyyRi0sqlSBP2tw/exec";
 
-  var activeZones = [], cachedProducts = [], cachedCategories = [], cachedOrders = [], cachedUsers = [], cachedRiders = [], cachedCoupons = [], cachedReviews = [], adminOrdersInterval = null;
+  var activeZones = [], cachedProducts = [], cachedCategories = [], cachedOrders = [], cachedUsers = [], cachedRiders = [], cachedCoupons = [], cachedReviews = [], cachedPopups = [], adminOrdersInterval = null;
   var adminAutoSyncInterval = null;
   var activeFilterFromMs = 0, activeFilterToMs = Infinity;
   var targetAdjustEmail = "";
+  var pendingPopupBase64 = "";
 
   function formatTimeHms(totalSecs) {
     if (totalSecs < 0) totalSecs = 0;
     var h = Math.floor(totalSecs / 3600);
     var m = Math.floor((totalSecs % 3600) / 60);
     var s = totalSecs % 60;
-    if (h > 0) {
-      return `${h}h ${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`;
-    }
+    if (h > 0) return `${h}h ${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`;
     return `${m}m ${String(s).padStart(2, '0')}s`;
   }
 
@@ -524,23 +596,10 @@
     if (!dateInput) return 0;
     if (typeof dateInput === "number") return dateInput;
     var s = dateInput.toString().trim();
-    
     var num = Number(s);
     if (!isNaN(num) && num > 1000000000000) return num;
-
     var directMs = new Date(s).getTime();
     if (!isNaN(directMs) && directMs > 1000000000000) return directMs;
-
-    var match = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:[,\s]+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
-    if (match) {
-      var day = parseInt(match[1], 10);
-      var month = parseInt(match[2], 10) - 1;
-      var year = parseInt(match[3], 10);
-      var hours = match[4] ? parseInt(match[4], 10) : 0;
-      var mins = match[5] ? parseInt(match[5], 10) : 0;
-      var secs = match[6] ? parseInt(match[6], 10) : 0;
-      return new Date(year, month, day, hours, mins, secs).getTime();
-    }
     return 0;
   }
 
@@ -548,13 +607,7 @@
     var ms = parseAnyDateToMs(dateInput);
     if (!ms || ms === 0) return dateInput || "N/A";
     return new Date(ms).toLocaleString('en-IN', {
-      timeZone: 'Asia/Kolkata',
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
+      timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true
     });
   }
 
@@ -566,38 +619,27 @@
         var canvas = document.createElement("canvas");
         var width = img.width;
         var height = img.height;
-
-        if (width > height) {
-          if (width > maxWidth) { height = Math.round((height * maxWidth) / width); width = maxWidth; }
-        } else {
-          if (height > maxHeight) { width = Math.round((width * maxHeight) / height); height = maxHeight; }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
+        if (width > height) { if (width > maxWidth) { height = Math.round((height * maxWidth) / width); width = maxWidth; } }
+        else { if (height > maxHeight) { width = Math.round((width * maxHeight) / height); height = maxHeight; } }
+        canvas.width = width; canvas.height = height;
         var ctx = canvas.getContext("2d");
         ctx.drawImage(img, 0, 0, width, height);
-        callback(canvas.toDataURL("image/jpeg", 0.78));
+        callback(canvas.toDataURL("image/jpeg", 0.82));
       };
       img.src = e.target.result;
     };
     reader.readAsDataURL(file);
   }
 
-  function calculateDeliveryStatusBadge(orderTimestampInput, etaMinutes, expiryTimestamp, deliveredTimestampInput) {
-    var startMs = parseAnyDateToMs(orderTimestampInput);
-    var endMs = parseAnyDateToMs(deliveredTimestampInput) || Date.now();
-    var expMs = Number(expiryTimestamp) || (startMs + (etaMinutes * 60000));
-
-    var totalElapsedSec = Math.max(0, Math.floor((endMs - startMs) / 1000));
-    var timeFormatted = formatTimeHms(totalElapsedSec);
-
-    if (endMs <= expMs) {
-      return `<span class="badge-ontime">✔ Delivered in ${timeFormatted} (On Time)</span>`;
-    } else {
-      var lateSec = Math.floor((endMs - expMs) / 1000);
-      return `<span class="badge-late">⚠️ Delivered in ${timeFormatted} (${formatTimeHms(lateSec)} Late)</span>`;
-    }
+  function previewPopupImage(e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    compressImageFile(file, 900, 600, function(b64) {
+      pendingPopupBase64 = b64;
+      var prev = document.getElementById('popupImgPreview');
+      prev.src = b64;
+      prev.style.display = 'block';
+    });
   }
 
   function handlePresetChange(preset) {
@@ -609,32 +651,18 @@
   function applyUniversalFilters() {
     var preset = document.getElementById('datePresetSelect').value;
     var now = Date.now();
-
-    if (preset === 'all') {
-      activeFilterFromMs = 0;
-      activeFilterToMs = Infinity;
-    } else if (preset === '24h') {
-      activeFilterFromMs = now - (24 * 60 * 60 * 1000);
-      activeFilterToMs = now;
-    } else if (preset === '7d') {
-      activeFilterFromMs = now - (7 * 24 * 60 * 60 * 1000);
-      activeFilterToMs = now;
-    } else if (preset === '30d') {
-      activeFilterFromMs = now - (30 * 24 * 60 * 60 * 1000);
-      activeFilterToMs = now;
-    } else if (preset === 'custom') {
+    if (preset === 'all') { activeFilterFromMs = 0; activeFilterToMs = Infinity; }
+    else if (preset === '24h') { activeFilterFromMs = now - (24 * 60 * 60 * 1000); activeFilterToMs = now; }
+    else if (preset === '7d') { activeFilterFromMs = now - (7 * 24 * 60 * 60 * 1000); activeFilterToMs = now; }
+    else if (preset === '30d') { activeFilterFromMs = now - (30 * 24 * 60 * 60 * 1000); activeFilterToMs = now; }
+    else if (preset === 'custom') {
       var fVal = document.getElementById('filterFromDate').value;
       var tVal = document.getElementById('filterToDate').value;
       activeFilterFromMs = fVal ? new Date(fVal).getTime() : 0;
       activeFilterToMs = tVal ? new Date(tVal).setHours(23,59,59,999) : Infinity;
     }
-
     var q = document.getElementById('masterAdminSearch').value.trim().toLowerCase();
-    renderOrdersTable(q);
-    renderPickerTable(q);
-    renderUsersTable(q);
-    renderRidersTable(q);
-    renderReviewsTable(q);
+    renderOrdersTable(q); renderPickerTable(q); renderUsersTable(q); renderRidersTable(q); renderReviewsTable(q);
   }
 
   function resetUniversalFilters() {
@@ -642,17 +670,14 @@
     document.getElementById('customDateContainer').style.display = 'none';
     document.getElementById('filterFromDate').value = '';
     document.getElementById('filterToDate').value = '';
-    activeFilterFromMs = 0;
-    activeFilterToMs = Infinity;
+    activeFilterFromMs = 0; activeFilterToMs = Infinity;
     applyUniversalFilters();
   }
 
   function switchAdminTab(viewId) {
     document.querySelectorAll('.admin-page-view').forEach(v => v.classList.remove('active-view'));
     document.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.remove('active-tab'));
-
     document.getElementById(viewId).classList.add('active-view');
-
     var btnMap = {
       'viewOrders': 'tabBtnOrders', 'viewPicker': 'tabBtnPicker', 'viewUsers': 'tabBtnUsers',
       'viewRiders': 'tabBtnRiders', 'viewReviews': 'tabBtnReviews', 'viewPopups': 'tabBtnPopups',
@@ -671,49 +696,24 @@
   window.onload = function() {
     fetchAllData();
     if (adminAutoSyncInterval) clearInterval(adminAutoSyncInterval);
-    adminAutoSyncInterval = setInterval(function() {
-      loadOrders();
-    }, 5000);
+    adminAutoSyncInterval = setInterval(loadOrders, 5000);
   };
 
   function fetchAllData() {
-    loadOrders();
-    loadUsers();
-    loadRiders();
-    loadReviews();
-    loadCoupons();
-    loadCategories();
-    loadProducts();
-    loadZones();
-    loadPopupConfig();
+    loadOrders(); loadUsers(); loadRiders(); loadReviews(); loadCoupons(); loadCategories(); loadProducts(); loadZones(); loadPopupConfig();
   }
 
   function handleAdminOmniSearch(q) {
     var query = q.trim().toLowerCase();
-    renderOrdersTable(query);
-    renderPickerTable(query);
-    renderUsersTable(query);
-    renderRidersTable(query);
-    renderReviewsTable(query);
-    renderCouponsTable(query);
-    renderCategoriesTable(query);
-    renderProductsTable(query);
-    renderZoneSidebar(query);
+    renderOrdersTable(query); renderPickerTable(query); renderUsersTable(query); renderRidersTable(query);
+    renderReviewsTable(query); renderCouponsTable(query); renderCategoriesTable(query); renderProductsTable(query);
   }
 
   function loadOrders() {
-    fetch(`${SPREADSHEET_API_URL}?action=getOrders`)
-      .then(r => r.json())
-      .then(data => {
-        cachedOrders = data.orders || [];
-        if (cachedOrders.length > 0 && activeFilterFromMs === 0 && activeFilterToMs === Infinity) {
-          applyUniversalFilters();
-        } else {
-          renderOrdersTable();
-          renderPickerTable();
-        }
-        startAdminLiveCountdownTicker();
-      });
+    fetch(`${SPREADSHEET_API_URL}?action=getOrders`).then(r => r.json()).then(data => {
+      cachedOrders = data.orders || [];
+      renderOrdersTable(); renderPickerTable(); startAdminLiveCountdownTicker();
+    });
   }
 
   function renderOrdersTable(q = "") {
@@ -722,44 +722,23 @@
       if (activeFilterFromMs === 0 && activeFilterToMs === Infinity) return true;
       return oTime === 0 || (oTime >= activeFilterFromMs && oTime <= activeFilterToMs);
     });
-
-    if (q) {
-      filtered = filtered.filter(o => o.orderId.toLowerCase().includes(q) || o.name.toLowerCase().includes(q) || (o.email && o.email.toLowerCase().includes(q)) || o.phone.toString().includes(q) || (o.riderName && o.riderName.toLowerCase().includes(q)));
-    }
-    
-    if (filtered.length === 0) {
-      document.getElementById('ordersBody').innerHTML = `<tr><td colspan="12" style="text-align:center; color:#64748b; padding:20px;">No orders found matching the filter criteria.</td></tr>`;
-      return;
-    }
-
-    document.getElementById('ordersBody').innerHTML = filtered.map(o => {
+    if (q) filtered = filtered.filter(o => o.orderId.toLowerCase().includes(q) || o.name.toLowerCase().includes(q) || (o.email && o.email.toLowerCase().includes(q)));
+    var tbody = document.getElementById('ordersBody');
+    if (!tbody) return;
+    if (filtered.length === 0) { tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; color:#64748b; padding:20px;">No orders found.</td></tr>`; return; }
+    tbody.innerHTML = filtered.map(o => {
       var startMs = parseAnyDateToMs(o.orderTimestampMs || o.date);
       var expiryMs = Number(o.expiryTimestamp) || (startMs + (Number(o.etaMinutes) || 20) * 60000);
       var isDelivered = o.status && o.status.includes('Delivered');
-      var receiptLink = o.receiptPdfUrl ? `<a href="${o.receiptPdfUrl}" target="_blank" style="color:#0f172a; font-weight:bold; font-size:12px;">📄 Receipt</a>` : `<span style="color:#94a3b8; font-size:11px;">N/A</span>`;
-      var riderInfo = o.riderName ? `<b>${o.riderName}</b><br><small>📞 ${o.riderPhone || 'N/A'}</small>` : `<span style="color:#94a3b8; font-size:11px;">Unassigned</span>`;
-
-      var timerBadge = "";
-      if (isDelivered) {
-        timerBadge = calculateDeliveryStatusBadge(startMs, o.etaMinutes || 20, expiryMs, o.deliveredTimestamp || 0);
-      } else {
-        timerBadge = `<span id="admin_timer_${o.orderId}" data-expiry="${expiryMs}" class="badge-ticking">Loading...</span>`;
-      }
-
+      var timerBadge = isDelivered ? `<span class="badge-ontime">Delivered</span>` : `<span id="admin_timer_${o.orderId}" data-expiry="${expiryMs}" class="badge-ticking">Loading...</span>`;
       return `
         <tr>
-          <td><b>${o.orderId}</b></td>
-          <td><small>${formatIndianDate(startMs)}</small></td>
-          <td><b>${o.name}</b><br><small style="color:#475569;">📍 ${o.address || 'GPS Location'}</small></td>
-          <td>${o.email || 'N/A'}</td>
-          <td>${o.phone}</td>
-          <td>${riderInfo}</td>
-          <td><b>${o.amount}</b></td>
-          <td><span style="background:#dbeafe; color:#1e40af; padding:2px 6px; border-radius:4px; font-weight:bold;">⚡ ${o.etaMinutes || 20}m</span></td>
-          <td>${timerBadge}</td>
-          <td><span style="background:#dcfce7; color:#166534; padding:2px 6px; border-radius:4px; font-weight:bold;">${o.status}</span></td>
-          <td>${receiptLink}</td>
-          <td><a href="${o.mapsUrl}" target="_blank" style="color:#2563eb; font-size:12px;">🗺️ Route</a></td>
+          <td><b>${o.orderId}</b></td><td><small>${formatIndianDate(startMs)}</small></td>
+          <td><b>${o.name}</b><br><small style="color:#475569;">📍 ${o.address || 'GPS'}</small></td>
+          <td>${o.email || 'N/A'}</td><td>${o.phone}</td><td>${o.riderName ? `<b>${o.riderName}</b>` : 'Unassigned'}</td>
+          <td><b>${o.amount}</b></td><td>⚡ ${o.etaMinutes || 20}m</td><td>${timerBadge}</td>
+          <td><b>${o.status}</b></td><td>${o.receiptPdfUrl ? `<a href="${o.receiptPdfUrl}" target="_blank">📄 PDF</a>` : 'N/A'}</td>
+          <td><a href="${o.mapsUrl}" target="_blank">🗺️ Map</a></td>
         </tr>
       `;
     }).join('');
@@ -767,37 +746,23 @@
 
   function renderPickerTable(q = "") {
     var packingQueue = cachedOrders.filter(o => !o.status.includes('Delivered') && !o.status.includes('OUT') && !o.status.includes('Out'));
-    if (q) {
-      packingQueue = packingQueue.filter(o => o.orderId.toLowerCase().includes(q) || o.item.toLowerCase().includes(q));
-    }
-
+    if (q) packingQueue = packingQueue.filter(o => o.orderId.toLowerCase().includes(q) || o.item.toLowerCase().includes(q));
     var tbody = document.getElementById('pickerTableBody');
     if (!tbody) return;
-
-    if (packingQueue.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#16a34a; padding:20px; font-weight:bold;">🎉 All orders packed and ready for dispatch!</td></tr>`;
-      return;
-    }
-
+    if (packingQueue.length === 0) { tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#16a34a; padding:20px;">🎉 All orders packed!</td></tr>`; return; }
     tbody.innerHTML = packingQueue.map(o => `
       <tr>
-        <td><b>${o.orderId}</b></td>
-        <td><small>${formatIndianDate(o.orderTimestampMs || o.date)}</small></td>
-        <td><b>${o.name}</b><br><small>📍 ${o.address || 'GPS Coordinates'}</small></td>
-        <td><div style="background:#f8fafc; padding:6px; border-radius:6px; border:1px solid #cbd5e1; font-size:12px;">📋 <b>${o.item}</b></div></td>
-        <td><b>${o.qty} Units</b></td>
-        <td><span style="background:#fef08a; color:#854d0e; padding:3px 8px; border-radius:4px; font-weight:800; font-size:11px;">${o.status}</span></td>
-        <td>
-          <button class="btn btn-primary" onclick="markOrderAsPacked('${o.orderId}')">📦 Mark Packed & Ready</button>
-        </td>
+        <td><b>${o.orderId}</b></td><td><small>${formatIndianDate(o.orderTimestampMs || o.date)}</small></td>
+        <td><b>${o.name}</b><br><small>${o.address}</small></td><td><b>${o.item}</b></td><td><b>${o.qty} Units</b></td>
+        <td><span style="background:#fef08a; padding:3px 8px; border-radius:4px; font-weight:bold;">${o.status}</span></td>
+        <td><button class="btn btn-primary" onclick="markOrderAsPacked('${o.orderId}')">📦 Mark Packed</button></td>
       </tr>
     `).join('');
   }
 
   function markOrderAsPacked(orderId) {
     fetch(SPREADSHEET_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({ action: "updateOrderStatus", orderId: orderId, newStatus: "PACKED & READY FOR PICKUP" })
     }).then(() => loadOrders());
   }
@@ -807,17 +772,9 @@
     adminOrdersInterval = setInterval(() => {
       var now = Date.now();
       document.querySelectorAll('[id^="admin_timer_"]').forEach(el => {
-        var expiry = parseInt(el.getAttribute('data-expiry'));
-        var diff = expiry - now;
-
-        if (diff <= 0) {
-          el.className = "badge-late";
-          el.innerText = "0m 00s (EXPIRED)";
-        } else {
-          el.className = "badge-ticking";
-          var totalSec = Math.floor(diff / 1000);
-          el.innerText = `⏱️ ${formatTimeHms(totalSec)}`;
-        }
+        var diff = parseInt(el.getAttribute('data-expiry')) - now;
+        if (diff <= 0) { el.className = "badge-late"; el.innerText = "0m 00s (EXPIRED)"; }
+        else { el.className = "badge-ticking"; el.innerText = `⏱️ ${formatTimeHms(Math.floor(diff / 1000))}`; }
       });
     }, 1000);
   }
@@ -830,38 +787,19 @@
   }
 
   function renderUsersTable(q = "") {
-    var filtered = cachedUsers.filter(u => {
-      var uTime = parseAnyDateToMs(u.date);
-      if (activeFilterFromMs === 0 && activeFilterToMs === Infinity) return true;
-      return uTime === 0 || (uTime >= activeFilterFromMs && uTime <= activeFilterToMs);
-    });
-
-    if (q) {
-      filtered = filtered.filter(u => u.name.toLowerCase().includes(q) || (u.email && u.email.toLowerCase().includes(q)) || u.phone.includes(q) || (u.username && u.username.toLowerCase().includes(q)));
-    }
-
-    if (filtered.length === 0) {
-      document.getElementById('userTableBody').innerHTML = `<tr><td colspan="12" style="text-align:center; color:#64748b; padding:20px;">No customers found.</td></tr>`;
-      return;
-    }
-
-    document.getElementById('userTableBody').innerHTML = filtered.map(u => `
+    var filtered = cachedUsers;
+    if (q) filtered = filtered.filter(u => u.name.toLowerCase().includes(q) || (u.email && u.email.toLowerCase().includes(q)) || (u.username && u.username.toLowerCase().includes(q)));
+    var tbody = document.getElementById('userTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = filtered.map(u => `
       <tr>
         <td><img src="${u.avatar || 'https://via.placeholder.com/32?text=U'}" style="width:32px; height:32px; border-radius:50%; object-fit:cover;" /></td>
-        <td><b>${u.id}</b></td>
-        <td><small>${u.date || 'N/A'}</small></td>
-        <td><b style="color:#0f172a;">@${u.username || 'user'}</b></td>
-        <td><b>${u.name}</b></td>
-        <td>${u.email}</td>
-        <td>📞 ${u.phone}</td>
-        <td><b style="color:#16a34a; font-size:14px;">₹${u.walletBalance || 0}</b></td>
-        <td>📍 ${u.regLat ? u.regLat + ', ' + u.regLng : 'N/A'}</td>
-        <td>📍 ${u.loginLat ? u.loginLat + ', ' + u.loginLng : 'Same as Reg'}</td>
-        <td><span style="background:#dcfce7; color:#166534; padding:2px 6px; border-radius:4px; font-weight:bold;">${u.status}</span></td>
+        <td><b>${u.id}</b></td><td>${u.date || 'N/A'}</td><td><b style="color:#0f172a;">@${u.username || 'user'}</b></td><td><b>${u.name}</b></td><td>${u.email}</td><td>${u.phone}</td>
+        <td><b style="color:#16a34a;">₹${u.walletBalance || 0}</b></td><td>📍 ${u.regLat ? u.regLat + ', ' + u.regLng : 'N/A'}</td><td>📍 ${u.loginLat ? u.loginLat + ', ' + u.loginLng : 'Same'}</td><td>${u.status}</td>
         <td>
           <div style="display:flex; gap:4px;">
             <button class="btn btn-edit" onclick="openAdminWalletModal('${u.email}')">🪙 Wallet</button>
-            <button class="btn btn-del" onclick="toggleUserStatus('${u.id}', '${u.email}', '${u.status === 'Blocked' ? 'Active' : 'Blocked'}')">${u.status === 'Blocked' ? '🔓 Unblock' : '🚫 Block'}</button>
+            <button class="btn btn-del" onclick="toggleUserStatus('${u.id}', '${u.email}', '${u.status === 'Blocked' ? 'Active' : 'Blocked'}')">${u.status === 'Blocked' ? 'Unblock' : 'Block'}</button>
           </div>
         </td>
       </tr>
@@ -897,8 +835,10 @@
   }
 
   function toggleUserStatus(userId, email, newStatus) {
-    fetch(SPREADSHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "toggleUserStatus", userId, email, newStatus }) })
-      .then(() => loadUsers());
+    fetch(SPREADSHEET_API_URL, {
+      method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "toggleUserStatus", userId, email, newStatus })
+    }).then(() => loadUsers());
   }
 
   function loadRiders() {
@@ -909,59 +849,25 @@
   }
 
   function renderRidersTable(q = "") {
-    var filtered = cachedRiders.filter(r => {
-      var rTime = parseAnyDateToMs(r.date);
-      if (activeFilterFromMs === 0 && activeFilterToMs === Infinity) return true;
-      return rTime === 0 || (rTime >= activeFilterFromMs && rTime <= activeFilterToMs);
-    });
-
-    if (q) {
-      filtered = filtered.filter(r => r.name.toLowerCase().includes(q) || (r.email && r.email.toLowerCase().includes(q)) || r.phone.includes(q));
-    }
-
-    if (filtered.length === 0) {
-      document.getElementById('riderTableBody').innerHTML = `<tr><td colspan="8" style="text-align:center; color:#64748b; padding:20px;">No rider partners registered.</td></tr>`;
-      return;
-    }
-
-    document.getElementById('riderTableBody').innerHTML = filtered.map(r => {
-      var isPending = r.status.toLowerCase().includes('pending');
-      var isBlocked = r.status.toLowerCase().includes('block');
-      var statusColor = isPending ? '#854d0e' : (isBlocked ? '#991b1b' : '#166534');
-      var statusBg = isPending ? '#fef08a' : (isBlocked ? '#fee2e2' : '#dcfce7');
-
-      var actionButtons = '';
-      if (isPending) {
-        actionButtons = `
-          <button class="btn btn-approve" onclick="updateRiderVerification('${r.id}', '${r.email}', 'Active')">✔ Verify & Activate</button>
-          <button class="btn btn-del" onclick="updateRiderVerification('${r.id}', '${r.email}', 'Blocked')">🚫 Reject</button>
-        `;
-      } else if (isBlocked) {
-        actionButtons = `<button class="btn btn-approve" onclick="updateRiderVerification('${r.id}', '${r.email}', 'Active')">🔓 Unblock Rider</button>`;
-      } else {
-        actionButtons = `<button class="btn btn-del" onclick="updateRiderVerification('${r.id}', '${r.email}', 'Blocked')">🚫 Block Rider</button>`;
-      }
-
-      return `
-        <tr>
-          <td><b>${r.id}</b></td>
-          <td><small>${r.date || 'N/A'}</small></td>
-          <td><b>${r.name}</b></td>
-          <td>${r.email}</td>
-          <td>📞 ${r.phone}</td>
-          <td>📍 <small>${r.liveLat ? `${r.liveLat}, ${r.liveLng}` : 'Offline'}</small></td>
-          <td><span style="background:${statusBg}; color:${statusColor}; padding:2px 8px; border-radius:4px; font-weight:800; font-size:11px;">${r.status}</span></td>
-          <td><div style="display:flex; gap:6px;">${actionButtons}</div></td>
-        </tr>
-      `;
-    }).join('');
+    var filtered = cachedRiders;
+    if (q) filtered = filtered.filter(r => r.name.toLowerCase().includes(q) || (r.email && r.email.toLowerCase().includes(q)));
+    var tbody = document.getElementById('riderTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = filtered.map(r => `
+      <tr>
+        <td><b>${r.id}</b></td><td>${r.date || 'N/A'}</td><td><b>${r.name}</b></td><td>${r.email}</td><td>${r.phone}</td>
+        <td><small>${r.liveLat ? `${r.liveLat}, ${r.liveLng}` : 'Offline'}</small></td><td><b>${r.status}</b></td>
+        <td>
+          <button class="btn btn-approve" onclick="updateRiderVerification('${r.id}', '${r.email}', 'Active')">Verify</button>
+          <button class="btn btn-del" onclick="updateRiderVerification('${r.id}', '${r.email}', 'Blocked')">Block</button>
+        </td>
+      </tr>
+    `).join('');
   }
 
   function updateRiderVerification(riderId, email, newStatus) {
-    if (!confirm(`Confirm changing Rider status to: ${newStatus}?`)) return;
     fetch(SPREADSHEET_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({ action: "toggleRiderStatus", riderId, email, newStatus })
     }).then(() => loadRiders());
   }
@@ -975,111 +881,174 @@
 
   function renderReviewsTable(q = "") {
     var filtered = cachedReviews;
-    if (q) {
-      filtered = filtered.filter(rv => rv.productName.toLowerCase().includes(q) || rv.userName.toLowerCase().includes(q) || rv.feedback.toLowerCase().includes(q));
-    }
-
+    if (q) filtered = filtered.filter(rv => rv.productName.toLowerCase().includes(q) || rv.feedback.toLowerCase().includes(q));
     var tbody = document.getElementById('adminReviewsTableBody');
     if (!tbody) return;
-
-    if (filtered.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#64748b; padding:20px;">No customer reviews found.</td></tr>`;
-      return;
-    }
-
     tbody.innerHTML = filtered.map(rv => `
       <tr>
-        <td><small>${rv.date}</small></td>
-        <td><b>${rv.productName}</b></td>
-        <td>${rv.userName}<br><small style="color:#64748b;">${rv.userEmail}</small></td>
-        <td><span style="color:#f59e0b; font-weight:bold;">${'⭐'.repeat(rv.rating)} (${rv.rating})</span></td>
-        <td><input type="text" id="admin_rev_text_${rv.id}" value="${rv.feedback}" style="padding:4px 8px; border:1px solid #cbd5e1; border-radius:4px; width:100%; font-size:12.5px;" /></td>
-        <td>
-          <div style="display:flex; gap:4px;">
-            <button class="btn btn-edit" onclick="adminUpdateReview('${rv.id}', '${rv.productId}', '${rv.productName}', '${rv.userEmail}', '${rv.userName}', '${rv.rating}')">💾 Save</button>
-            <button class="btn btn-del" onclick="adminDeleteReview('${rv.id}')">🗑️</button>
-          </div>
-        </td>
+        <td>${rv.date}</td><td><b>${rv.productName}</b></td><td>${rv.userName} (${rv.userEmail})</td>
+        <td>⭐ ${rv.rating}</td><td>${rv.feedback}</td>
+        <td><button class="btn btn-del" onclick="adminDeleteReview('${rv.id}')">Delete</button></td>
       </tr>
     `).join('');
   }
 
-  function adminUpdateReview(reviewId, productId, productName, userEmail, userName, rating) {
-    var updatedText = document.getElementById(`admin_rev_text_${reviewId}`).value.trim();
-    if (!updatedText) return alert("Review text cannot be empty.");
-
-    fetch(SPREADSHEET_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({
-        action: "updateReview",
-        reviewId: reviewId,
-        productId: productId,
-        productName: productName,
-        userEmail: userEmail,
-        userName: userName,
-        rating: rating,
-        feedback: updatedText
-      })
-    })
-    .then(r => r.json())
-    .then(res => {
-      if (res.status === "success") {
-        alert("Review updated successfully!");
-        loadReviews();
-      }
-    });
-  }
-
   function adminDeleteReview(reviewId) {
-    if (!confirm("Delete this review permanently?")) return;
+    if (!confirm("Delete review?")) return;
     fetch(SPREADSHEET_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: "deleteReview", reviewId: reviewId })
-    })
-    .then(r => r.json())
-    .then(res => {
-      if (res.status === "success") {
-        loadReviews();
-      }
-    });
+      method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "deleteReview", reviewId })
+    }).then(() => loadReviews());
   }
 
+  // =========================================================================
+  // DYNAMIC POPUPS ENGINE
+  // =========================================================================
   function loadPopupConfig() {
     fetch(`${SPREADSHEET_API_URL}?action=getAdminPopup`).then(r => r.json()).then(res => {
-      if (res && res.popup) {
-        var p = res.popup;
-        document.getElementById('popupTitle').value = p.title || '';
-        document.getElementById('popupMessage').value = p.message || '';
-        document.getElementById('popupImageUrl').value = p.imageUrl || '';
-        document.getElementById('popupAutoClose').value = p.autoCloseSeconds || 3;
-        document.getElementById('popupActive').value = p.active ? "true" : "false";
-        if (p.startDate) document.getElementById('popupStartDate').value = p.startDate;
-        if (p.endDate) document.getElementById('popupEndDate').value = p.endDate;
-      }
+      cachedPopups = res.popups || (res.popup ? [res.popup] : []);
+      renderPopupTable();
     });
+  }
+
+  function renderPopupTable() {
+    var tbody = document.getElementById('popupTableBody');
+    if (!tbody) return;
+
+    if (cachedPopups.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#64748b; padding:20px;">No announcement popups created yet.</td></tr>`;
+      return;
+    }
+
+    var now = Date.now();
+    tbody.innerHTML = cachedPopups.map((p, idx) => {
+      var sMs = p.startDateMs || (p.startDate ? new Date(p.startDate).getTime() : 0);
+      var eMs = p.endDateMs || (p.endDate ? new Date(p.endDate).getTime() : Infinity);
+      var isRunning = p.active && now >= sMs && now <= eMs;
+      var statusBadge = isRunning 
+        ? `<span style="background:#dcfce7; color:#166534; padding:3px 8px; border-radius:4px; font-weight:bold; font-size:11px;">● LIVE NOW</span>` 
+        : (p.active ? `<span style="background:#fef08a; color:#854d0e; padding:3px 8px; border-radius:4px; font-weight:bold; font-size:11px;">Scheduled</span>` : `<span style="background:#fee2e2; color:#b91c1c; padding:3px 8px; border-radius:4px; font-weight:bold; font-size:11px;">Disabled</span>`);
+
+      var linkHtml = p.redirectUrl ? `<br><a href="${p.redirectUrl}" target="_blank" style="font-size:11px; color:#2563eb;">🔗 Redirect Link</a>` : '';
+      var imgHtml = p.imageUrl ? `<img src="${p.imageUrl}" style="width:70px; height:50px; object-fit:cover; border-radius:4px; border:1px solid #cbd5e1;" />` : `<span style="color:#94a3b8; font-size:11px;">No Image</span>`;
+
+      return `
+        <tr>
+          <td>${imgHtml}</td>
+          <td>
+            <b>${p.title}</b>
+            <div style="color:#64748b; font-size:12px; margin-top:2px;">${p.message.length > 50 ? p.message.slice(0, 47) + '...' : p.message}</div>
+            ${linkHtml}
+          </td>
+          <td>
+            <small style="color:#0f172a; font-weight:600;">Start: ${p.startDate || 'Immediate'}</small><br>
+            <small style="color:#dc2626; font-weight:600;">End: ${p.endDate || 'No Expiry'}</small>
+          </td>
+          <td>${statusBadge}</td>
+          <td>
+            <div style="display:flex; gap:4px;">
+              <button class="btn btn-edit" onclick="editSinglePopup('${p.id}')">✏️ Edit</button>
+              <button class="btn btn-del" onclick="deleteSinglePopup('${p.id}')">🗑️</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function editSinglePopup(popupId) {
+    var p = cachedPopups.find(x => x.id === popupId);
+    if (!p) return;
+
+    document.getElementById('editPopupId').value = p.id;
+    document.getElementById('popupTitle').value = p.title || '';
+    document.getElementById('popupMessage').value = p.message || '';
+    document.getElementById('popupRedirectUrl').value = p.redirectUrl || '';
+    document.getElementById('popupAutoClose').value = p.autoCloseSeconds || 0;
+    document.getElementById('popupActive').value = p.active ? "true" : "false";
+    document.getElementById('popupStartDate').value = p.startDate || '';
+    document.getElementById('popupEndDate').value = p.endDate || '';
+    document.getElementById('currentPopupImgUrl').value = p.imageUrl || '';
+
+    var prev = document.getElementById('popupImgPreview');
+    if (p.imageUrl) {
+      prev.src = p.imageUrl;
+      prev.style.display = 'block';
+    } else {
+      prev.style.display = 'none';
+    }
+
+    document.getElementById('popupFormHeading').innerText = "✏️ Edit Announcement Popup";
+    document.getElementById('btnSavePopup').innerText = "💾 Update Announcement";
+    document.getElementById('btnCancelEditPopup').style.display = "inline-block";
+  }
+
+  function resetPopupForm() {
+    document.getElementById('editPopupId').value = '';
+    document.getElementById('currentPopupImgUrl').value = '';
+    pendingPopupBase64 = "";
+    document.getElementById('popupImageFileInput').value = "";
+    document.getElementById('popupImgPreview').style.display = 'none';
+    document.querySelector('#viewPopups form').reset();
+    document.getElementById('popupFormHeading').innerText = "📢 Create Announcement Popup";
+    document.getElementById('btnSavePopup').innerText = "💾 Save Announcement";
+    document.getElementById('btnCancelEditPopup').style.display = "none";
   }
 
   function handleSavePopupConfig(e) {
     e.preventDefault();
+    var editId = document.getElementById('editPopupId').value;
     var sVal = document.getElementById('popupStartDate').value;
     var eVal = document.getElementById('popupEndDate').value;
+
+    if (sVal && eVal && new Date(sVal).getTime() >= new Date(eVal).getTime()) {
+      return alert("Custom End Time must be strictly after the Start Time.");
+    }
+
+    var btn = document.getElementById('btnSavePopup');
+    btn.innerText = "Processing & Saving...";
+    btn.disabled = true;
+
     var config = {
+      id: editId || ("POP-" + Date.now()),
       title: document.getElementById('popupTitle').value.trim(),
       message: document.getElementById('popupMessage').value.trim(),
-      imageUrl: document.getElementById('popupImageUrl').value.trim(),
+      imageUrl: document.getElementById('currentPopupImgUrl').value,
+      imageBase64: pendingPopupBase64,
+      redirectUrl: document.getElementById('popupRedirectUrl').value.trim(),
       autoCloseSeconds: parseInt(document.getElementById('popupAutoClose').value) || 0,
       active: document.getElementById('popupActive').value === "true",
       startDate: sVal,
-      endDate: eVal,
-      startDateMs: sVal ? new Date(sVal).getTime() : 0,
-      endDateMs: eVal ? new Date(eVal).getTime() : Infinity
+      endDate: eVal
     };
+
     fetch(SPREADSHEET_API_URL, {
       method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({ action: "saveAdminPopup", popupConfig: config })
-    }).then(() => alert("Popup settings saved successfully!"));
+    })
+    .then(r => r.json())
+    .then(res => {
+      btn.innerText = editId ? "💾 Update Announcement" : "💾 Save Announcement";
+      btn.disabled = false;
+      alert("Announcement saved successfully!");
+      resetPopupForm();
+      loadPopupConfig();
+    })
+    .catch(err => {
+      btn.disabled = false;
+      alert("Failed to save announcement: " + err.toString());
+    });
+  }
+
+  function deleteSinglePopup(popupId) {
+    if (!confirm("Are you sure you want to delete this announcement?")) return;
+    fetch(SPREADSHEET_API_URL, {
+      method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "deleteAdminPopup", popupId: popupId })
+    })
+    .then(() => {
+      loadPopupConfig();
+    });
   }
 
   function loadCoupons() {
@@ -1131,7 +1100,9 @@
 
   function renderProductsTable(q = "") {
     var filtered = q ? cachedProducts.filter(p => p.name.toLowerCase().includes(q)) : cachedProducts;
-    document.getElementById('prodTableBody').innerHTML = filtered.map(p => `
+    var tbody = document.getElementById('prodTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = filtered.map(p => `
       <tr>
         <td><img src="${p.img || 'https://via.placeholder.com/34?text=Item'}" style="width:34px; height:34px; border-radius:6px; object-fit:cover;"></td>
         <td><b>${p.name}</b></td><td><span style="font-size:11px; background:#e0f2fe; color:#0369a1; padding:2px 6px; border-radius:4px; font-weight:bold;">${p.scope || 'both'}</span></td>
@@ -1271,7 +1242,9 @@
 
   function renderCategoriesTable(q = "") {
     var filtered = q ? cachedCategories.filter(c => c.name.toLowerCase().includes(q)) : cachedCategories;
-    document.getElementById('catTableBody').innerHTML = filtered.map(c => `
+    var tbody = document.getElementById('catTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = filtered.map(c => `
       <tr>
         <td><b>${c.name}</b></td><td>${c.scope}</td><td>${c.slug}</td>
         <td><button class="btn btn-del" onclick="deleteCategory('${c.id}', '${c.name}')">🗑️</button></td>
@@ -1392,7 +1365,7 @@
       rows = cachedOrders.filter(o => {
         var oTime = parseAnyDateToMs(o.orderTimestampMs || o.date);
         if (activeFilterFromMs === 0 && activeFilterToMs === Infinity) return true;
-        return uTime === 0 || (uTime >= activeFilterFromMs && uTime <= activeFilterToMs);
+        return uTime === 0 || (oTime >= activeFilterFromMs && oTime <= activeFilterToMs);
       }).map(o => [o.orderId, formatIndianDate(o.orderTimestampMs || o.date), o.name, o.address || 'N/A', o.riderName || 'None', o.amount, (o.etaMinutes || 20) + " Mins", o.status]);
     } else if (type === 'products') {
       reportTitle = "INVENTORY VALUATION & STOCK LEVEL REPORT";
