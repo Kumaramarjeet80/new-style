@@ -1,4 +1,4 @@
-var SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbzhrrlGWsh4tkQOYKPKH3sKrMETdGuvTy-1kE8N_VWW7Wt3nrYGx3eRyyRi0sqlSBP2tw/exec";
+var SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbw1IwZbdVZTjj1L7eT_RZA8RHMH0QP9VkUBQm3sGcRGGs9OXjlwStSTkhOdp43So20P/exec";
 var RAZORPAY_KEY_ID = "rzp_test_TYINZpDJ5bh2CP";
 
 var currentUser = null;
@@ -68,258 +68,6 @@ function showMohnaPopup(options) {
       document.getElementById('mohnaOverlayEl').remove();
       if (onSecondary) onSecondary();
     };
-  }
-}
-
-// =========================================================================
-// AUTO ANNOUNCEMENT POPUP BANNER SYSTEM
-// =========================================================================
-function checkAndDisplayAdminPopup() {
-  fetch(`${SPREADSHEET_API_URL}?action=getAdminPopup`)
-    .then(r => r.json())
-    .then(data => {
-      if (!data || !data.popup || !data.popup.active) return;
-      var p = data.popup;
-      var nowMs = Date.now();
-      var startMs = p.startDateMs ? Number(p.startDateMs) : 0;
-      var endMs = p.endDateMs ? Number(p.endDateMs) : Infinity;
-
-      if (nowMs < startMs || nowMs > endMs) return;
-
-      var autoCloseSec = p.autoCloseSeconds || 0;
-      var overlayHtml = `
-        <div id="adminBroadcastOverlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:99999; display:flex; align-items:center; justify-content:center; padding:16px;">
-          <div style="background:#ffffff; border-radius:16px; max-width:400px; width:100%; padding:20px; text-align:center; position:relative; box-shadow:0 10px 30px rgba(0,0,0,0.3);">
-            <button onclick="document.getElementById('adminBroadcastOverlay').remove()" style="position:absolute; top:12px; right:12px; background:#f1f5f9; border:none; border-radius:50%; width:28px; height:28px; cursor:pointer; font-weight:bold;">✕</button>
-            ${p.imageUrl ? `<img src="${p.imageUrl}" style="max-width:100%; max-height:180px; object-fit:cover; border-radius:10px; margin-bottom:12px;" />` : ''}
-            <h3 style="margin:0 0 8px; color:#0f172a;">${p.title || 'Announcement'}</h3>
-            <p style="color:#475569; font-size:13.5px; margin-bottom:16px;">${p.message || ''}</p>
-            <div id="popupTimerDisplay" style="font-size:12px; color:#64748b; font-weight:bold;"></div>
-          </div>
-        </div>
-      `;
-
-      document.body.insertAdjacentHTML('beforeend', overlayHtml);
-
-      if (autoCloseSec > 0) {
-        var timerEl = document.getElementById('popupTimerDisplay');
-        var remaining = autoCloseSec;
-        if (timerEl) timerEl.innerText = `Closing in ${remaining}s...`;
-        var pInterval = setInterval(function() {
-          remaining--;
-          if (remaining <= 0) {
-            clearInterval(pInterval);
-            var ov = document.getElementById('adminBroadcastOverlay');
-            if (ov) ov.remove();
-          } else if (timerEl) {
-            timerEl.innerText = `Closing in ${remaining}s...`;
-          }
-        }, 1000);
-      }
-    }).catch(function(){});
-}
-
-// =========================================================================
-// REAL-TIME USERNAME AVAILABILITY CHECKER
-// =========================================================================
-var usernameCheckTimeout = null;
-function handleUsernameValidation(val) {
-  clearTimeout(usernameCheckTimeout);
-  var msg = document.getElementById('usernameCheckMsg');
-  if (!msg) return;
-  var username = val.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
-  if (username.length < 3) {
-    msg.style.color = "#dc2626";
-    msg.innerText = "Must be at least 3 characters (letters, numbers, _)";
-    return;
-  }
-  msg.style.color = "#64748b";
-  msg.innerText = "Checking availability...";
-
-  usernameCheckTimeout = setTimeout(() => {
-    fetch(SPREADSHEET_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: "checkUsernameAvailability", username: username })
-    })
-    .then(r => r.json())
-    .then(res => {
-      if (res.available) {
-        msg.style.color = "#16a34a";
-        msg.innerText = `✅ @${username} is available!`;
-      } else {
-        msg.style.color = "#dc2626";
-        msg.innerText = `❌ @${username} is already taken.`;
-      }
-    });
-  }, 400);
-}
-
-// =========================================================================
-// FORGOT PASSWORD HANDLERS
-// =========================================================================
-function openForgotPasswordModal() {
-  var modal = document.getElementById('forgotPasswordModal');
-  if (modal) modal.style.display = 'flex';
-  var s1 = document.getElementById('forgotStep1');
-  var s2 = document.getElementById('forgotStep2');
-  if (s1) s1.style.display = 'block';
-  if (s2) s2.style.display = 'none';
-}
-
-function closeForgotPasswordModal() {
-  var modal = document.getElementById('forgotPasswordModal');
-  if (modal) modal.style.display = 'none';
-}
-
-function handleSendForgotOtp() {
-  var email = document.getElementById('forgotEmail').value.trim().toLowerCase();
-  if (!email || !email.includes('@')) {
-    showMohnaPopup({ type: 'warn', title: 'Invalid Email', message: 'Please enter a valid email address.', primaryText: 'OK' });
-    return;
-  }
-  var btn = document.getElementById('btnSendForgotOtp');
-  btn.classList.add('loading-state');
-  var origText = btn.innerText;
-  btn.innerText = "Sending code...";
-  btn.disabled = true;
-
-  fetch(SPREADSHEET_API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({ action: "sendForgotPasswordOtp", email: email })
-  })
-  .then(r => r.json())
-  .then(res => {
-    btn.classList.remove('loading-state');
-    btn.innerText = origText;
-    btn.disabled = false;
-    if (res.status === "success") {
-      document.getElementById('forgotTargetEmail').innerText = email;
-      document.getElementById('forgotStep1').style.display = 'none';
-      document.getElementById('forgotStep2').style.display = 'block';
-    } else {
-      showMohnaPopup({ type: 'error', title: 'Error', message: res.message || 'Failed to send OTP.', primaryText: 'OK' });
-    }
-  });
-}
-
-function handleResetPasswordSubmit() {
-  var email = document.getElementById('forgotEmail').value.trim().toLowerCase();
-  var otp = document.getElementById('forgotOtpInput').value.trim();
-  var newPassword = document.getElementById('forgotNewPassword').value.trim();
-
-  if (!otp || otp.length < 6 || newPassword.length < 6) {
-    showMohnaPopup({ type: 'warn', title: 'Validation Error', message: 'Please enter the 6-digit OTP and new password (minimum 6 characters).', primaryText: 'OK' });
-    return;
-  }
-
-  fetch(SPREADSHEET_API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({ action: "resetUserPassword", email: email, otp: otp, newPassword: newPassword })
-  })
-  .then(r => r.json())
-  .then(res => {
-    if (res.status === "success") {
-      showMohnaPopup({
-        type: 'success',
-        title: 'Password Updated',
-        message: 'Your password has been changed successfully! Please log in.',
-        primaryText: 'Log In',
-        onPrimary: function() {
-          closeForgotPasswordModal();
-          toggleAuthTab('login');
-        }
-      });
-    } else {
-      showMohnaPopup({ type: 'error', title: 'Reset Failed', message: res.message || 'Invalid or expired OTP.', primaryText: 'Retry' });
-    }
-  });
-}
-
-// =========================================================================
-// WALLET TOP UP (PROFILE)
-// =========================================================================
-function openTopUpWalletModal() {
-  var m = document.getElementById('topUpWalletModal');
-  if (m) m.style.display = 'flex';
-}
-
-function closeTopUpWalletModal() {
-  var m = document.getElementById('topUpWalletModal');
-  if (m) m.style.display = 'none';
-}
-
-function processWalletTopUpPayment() {
-  var amt = parseFloat(document.getElementById('topUpCustomAmount').value);
-  if (isNaN(amt) || amt < 10) {
-    showMohnaPopup({ type: 'warn', title: 'Invalid Amount', message: 'Please enter a valid amount (minimum ₹10).', primaryText: 'OK' });
-    return;
-  }
-  var amountInPaise = Math.round(amt * 100);
-
-  var btn = document.getElementById('btnPayTopUp');
-  btn.classList.add('loading-state');
-  var origText = btn.innerText;
-  btn.innerText = "Processing...";
-  btn.disabled = true;
-
-  fetch(SPREADSHEET_API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({ action: "createRazorpayOrder", amount: amountInPaise })
-  })
-  .then(r => r.json())
-  .then(res => {
-    btn.classList.remove('loading-state');
-    btn.innerText = origText;
-    btn.disabled = false;
-
-    if (res.status !== "success" || !res.orderId) {
-      showMohnaPopup({ type: 'error', title: 'Gateway Error', message: res.message || 'Could not initiate top-up.', primaryText: 'OK' });
-      return;
-    }
-
-    var options = {
-      "key": RAZORPAY_KEY_ID,
-      "amount": amountInPaise,
-      "currency": "INR",
-      "name": "Mohna Express Wallet Top-Up",
-      "description": `Add ₹${amt} to user wallet balance`,
-      "order_id": res.orderId,
-      "prefill": {
-        "name": currentUser.name || "Customer",
-        "email": currentUser.email,
-        "contact": currentUser.phone || ""
-      },
-      "theme": { "color": "#16a34a" },
-      "handler": function (response) {
-        fetch(SPREADSHEET_API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({ action: "addWalletBalance", email: currentUser.email, amount: amt })
-        })
-        .then(r => r.json())
-        .then(data => {
-          if (data.status === "success") {
-            userWalletBalance = data.newBalance;
-            closeTopUpWalletModal();
-            renderProfilePage();
-            showMohnaPopup({ type: 'success', title: 'Wallet Credited', message: `₹${amt} added successfully! New Wallet Balance: ₹${userWalletBalance}`, primaryText: 'Great' });
-          }
-        });
-      }
-    };
-    new Razorpay(options).open();
-  });
-}
-
-function applyMaxWalletAmount() {
-  var inp = document.getElementById('customWalletInput');
-  if (inp) {
-    inp.value = userWalletBalance;
-    renderCheckoutCart();
   }
 }
 
@@ -2012,5 +1760,273 @@ function downloadSelectedOrderReceipt() {
   if (!activeSelectedModalOrder) return;
   if (activeSelectedModalOrder.receiptPdfUrl && activeSelectedModalOrder.receiptPdfUrl.includes('drive.google.com')) {
     window.open(activeSelectedModalOrder.receiptPdfUrl, '_blank');
+  }
+}
+
+// =========================================================================
+// AUTO ANNOUNCEMENT POPUP BANNER SYSTEM (ENHANCED DISPLAY & REDIRECT)
+// =========================================================================
+function checkAndDisplayAdminPopup() {
+  fetch(`${SPREADSHEET_API_URL}?action=getAdminPopup`)
+    .then(r => r.json())
+    .then(data => {
+      if (!data || !data.popup || !data.popup.active) return;
+      var p = data.popup;
+      var nowMs = Date.now();
+      var startMs = p.startDateMs ? Number(p.startDateMs) : (p.startDate ? new Date(p.startDate).getTime() : 0);
+      var endMs = p.endDateMs ? Number(p.endDateMs) : (p.endDate ? new Date(p.endDate).getTime() : Infinity);
+
+      if (nowMs < startMs || nowMs > endMs) return;
+
+      var autoCloseSec = Number(p.autoCloseSeconds) || 0;
+      var hasRedirect = Boolean(p.redirectUrl && p.redirectUrl.trim().length > 3);
+      var redirectTarget = hasRedirect ? p.redirectUrl.trim() : "";
+
+      var imgHtml = p.imageUrl ? `
+        <div style="width:100%; max-height:240px; overflow:hidden; border-radius:12px; margin-bottom:14px; background:#f1f5f9; cursor:${hasRedirect ? 'pointer' : 'default'};" ${hasRedirect ? `onclick="window.location.href='${redirectTarget}'"` : ''}>
+          <img src="${p.imageUrl}" style="width:100%; height:100%; object-fit:cover; display:block;" alt="Announcement Banner" />
+        </div>
+      ` : '';
+
+      var actionBtnHtml = hasRedirect ? `
+        <button type="button" class="btn-submit" style="background:#2563eb; margin-top:8px;" onclick="window.location.href='${redirectTarget}'">
+          👉 View Special Offer
+        </button>
+      ` : '';
+
+      var overlayHtml = `
+        <div id="adminBroadcastOverlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.72); backdrop-filter:blur(5px); z-index:99999; display:flex; align-items:center; justify-content:center; padding:16px;">
+          <div style="background:#ffffff; border-radius:18px; max-width:440px; width:100%; padding:22px; text-align:center; position:relative; box-shadow:0 15px 40px rgba(0,0,0,0.35); border:1px solid #e2e8f0;">
+            <button onclick="document.getElementById('adminBroadcastOverlay').remove()" style="position:absolute; top:12px; right:12px; background:#f1f5f9; border:none; border-radius:50%; width:30px; height:30px; cursor:pointer; font-weight:bold; font-size:14px; color:#64748b; z-index:2;">✕</button>
+            ${imgHtml}
+            <h3 style="margin:0 0 8px; color:#0f172a; font-size:18px; font-weight:800;">${p.title || 'Special Announcement'}</h3>
+            <p style="color:#475569; font-size:13.5px; line-height:1.5; margin:0 0 12px 0;">${p.message || ''}</p>
+            ${actionBtnHtml}
+            <div id="popupTimerDisplay" style="font-size:12px; color:#64748b; font-weight:bold; margin-top:10px;"></div>
+          </div>
+        </div>
+      `;
+
+      document.body.insertAdjacentHTML('beforeend', overlayHtml);
+
+      if (autoCloseSec > 0) {
+        var timerEl = document.getElementById('popupTimerDisplay');
+        var remaining = autoCloseSec;
+        if (timerEl) timerEl.innerText = `Auto-closing in ${remaining}s...`;
+        var pInterval = setInterval(function() {
+          remaining--;
+          if (remaining <= 0) {
+            clearInterval(pInterval);
+            var ov = document.getElementById('adminBroadcastOverlay');
+            if (ov) ov.remove();
+          } else if (timerEl) {
+            timerEl.innerText = `Auto-closing in ${remaining}s...`;
+          }
+        }, 1000);
+      }
+    }).catch(function(){});
+}
+
+// =========================================================================
+// REAL-TIME USERNAME AVAILABILITY CHECKER
+// =========================================================================
+var usernameCheckTimeout = null;
+function handleUsernameValidation(val) {
+  clearTimeout(usernameCheckTimeout);
+  var msg = document.getElementById('usernameCheckMsg');
+  if (!msg) return;
+  var username = val.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+  if (username.length < 3) {
+    msg.style.color = "#dc2626";
+    msg.innerText = "Must be at least 3 characters (letters, numbers, _)";
+    return;
+  }
+  msg.style.color = "#64748b";
+  msg.innerText = "Checking availability...";
+
+  usernameCheckTimeout = setTimeout(() => {
+    fetch(SPREADSHEET_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "checkUsernameAvailability", username: username })
+    })
+    .then(r => r.json())
+    .then(res => {
+      if (res.available) {
+        msg.style.color = "#16a34a";
+        msg.innerText = `✅ @${username} is available!`;
+      } else {
+        msg.style.color = "#dc2626";
+        msg.innerText = `❌ @${username} is already taken.`;
+      }
+    });
+  }, 400);
+}
+
+// =========================================================================
+// FORGOT PASSWORD HANDLERS
+// =========================================================================
+function openForgotPasswordModal() {
+  var modal = document.getElementById('forgotPasswordModal');
+  if (modal) modal.style.display = 'flex';
+  var s1 = document.getElementById('forgotStep1');
+  var s2 = document.getElementById('forgotStep2');
+  if (s1) s1.style.display = 'block';
+  if (s2) s2.style.display = 'none';
+}
+
+function closeForgotPasswordModal() {
+  var modal = document.getElementById('forgotPasswordModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function handleSendForgotOtp() {
+  var email = document.getElementById('forgotEmail').value.trim().toLowerCase();
+  if (!email || !email.includes('@')) {
+    showMohnaPopup({ type: 'warn', title: 'Invalid Email', message: 'Please enter a valid email address.', primaryText: 'OK' });
+    return;
+  }
+  var btn = document.getElementById('btnSendForgotOtp');
+  btn.classList.add('loading-state');
+  var origText = btn.innerText;
+  btn.innerText = "Sending code...";
+  btn.disabled = true;
+
+  fetch(SPREADSHEET_API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({ action: "sendForgotPasswordOtp", email: email })
+  })
+  .then(r => r.json())
+  .then(res => {
+    btn.classList.remove('loading-state');
+    btn.innerText = origText;
+    btn.disabled = false;
+    if (res.status === "success") {
+      document.getElementById('forgotTargetEmail').innerText = email;
+      document.getElementById('forgotStep1').style.display = 'none';
+      document.getElementById('forgotStep2').style.display = 'block';
+    } else {
+      showMohnaPopup({ type: 'error', title: 'Error', message: res.message || 'Failed to send OTP.', primaryText: 'OK' });
+    }
+  });
+}
+
+function handleResetPasswordSubmit() {
+  var email = document.getElementById('forgotEmail').value.trim().toLowerCase();
+  var otp = document.getElementById('forgotOtpInput').value.trim();
+  var newPassword = document.getElementById('forgotNewPassword').value.trim();
+
+  if (!otp || otp.length < 6 || newPassword.length < 6) {
+    showMohnaPopup({ type: 'warn', title: 'Validation Error', message: 'Please enter the 6-digit OTP and new password (minimum 6 characters).', primaryText: 'OK' });
+    return;
+  }
+
+  fetch(SPREADSHEET_API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({ action: "resetUserPassword", email: email, otp: otp, newPassword: newPassword })
+  })
+  .then(r => r.json())
+  .then(res => {
+    if (res.status === "success") {
+      showMohnaPopup({
+        type: 'success',
+        title: 'Password Updated',
+        message: 'Your password has been changed successfully! Please log in.',
+        primaryText: 'Log In',
+        onPrimary: function() {
+          closeForgotPasswordModal();
+          toggleAuthTab('login');
+        }
+      });
+    } else {
+      showMohnaPopup({ type: 'error', title: 'Reset Failed', message: res.message || 'Invalid or expired OTP.', primaryText: 'Retry' });
+    }
+  });
+}
+
+// =========================================================================
+// WALLET TOP UP (PROFILE)
+// =========================================================================
+function openTopUpWalletModal() {
+  var m = document.getElementById('topUpWalletModal');
+  if (m) m.style.display = 'flex';
+}
+
+function closeTopUpWalletModal() {
+  var m = document.getElementById('topUpWalletModal');
+  if (m) m.style.display = 'none';
+}
+
+function processWalletTopUpPayment() {
+  var amt = parseFloat(document.getElementById('topUpCustomAmount').value);
+  if (isNaN(amt) || amt < 10) {
+    showMohnaPopup({ type: 'warn', title: 'Invalid Amount', message: 'Please enter a valid amount (minimum ₹10).', primaryText: 'OK' });
+    return;
+  }
+  var amountInPaise = Math.round(amt * 100);
+
+  var btn = document.getElementById('btnPayTopUp');
+  btn.classList.add('loading-state');
+  var origText = btn.innerText;
+  btn.innerText = "Processing...";
+  btn.disabled = true;
+
+  fetch(SPREADSHEET_API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({ action: "createRazorpayOrder", amount: amountInPaise })
+  })
+  .then(r => r.json())
+  .then(res => {
+    btn.classList.remove('loading-state');
+    btn.innerText = origText;
+    btn.disabled = false;
+
+    if (res.status !== "success" || !res.orderId) {
+      showMohnaPopup({ type: 'error', title: 'Gateway Error', message: res.message || 'Could not initiate top-up.', primaryText: 'OK' });
+      return;
+    }
+
+    var options = {
+      "key": RAZORPAY_KEY_ID,
+      "amount": amountInPaise,
+      "currency": "INR",
+      "name": "Mohna Express Wallet Top-Up",
+      "description": `Add ₹${amt} to user wallet balance`,
+      "order_id": res.orderId,
+      "prefill": {
+        "name": currentUser.name || "Customer",
+        "email": currentUser.email,
+        "contact": currentUser.phone || ""
+      },
+      "theme": { "color": "#16a34a" },
+      "handler": function (response) {
+        fetch(SPREADSHEET_API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ action: "addWalletBalance", email: currentUser.email, amount: amt })
+        })
+        .then(r => r.json())
+        .then(data => {
+          if (data.status === "success") {
+            userWalletBalance = data.newBalance;
+            closeTopUpWalletModal();
+            renderProfilePage();
+            showMohnaPopup({ type: 'success', title: 'Wallet Credited', message: `₹${amt} added successfully! New Wallet Balance: ₹${userWalletBalance}`, primaryText: 'Great' });
+          }
+        });
+      }
+    };
+    new Razorpay(options).open();
+  });
+}
+
+function applyMaxWalletAmount() {
+  var inp = document.getElementById('customWalletInput');
+  if (inp) {
+    inp.value = userWalletBalance;
+    renderCheckoutCart();
   }
 }
