@@ -1478,26 +1478,105 @@
 
     var container = document.getElementById('slipPrintContainer');
     container.innerHTML = `
-      <div style="font-family: Arial, sans-serif; padding: 10px; background: white; width: 210mm; min-height: 297mm; margin: 0 auto;">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: repeat(4, auto); gap: 12px; width: 100%;">
+      <style>
+        @page {
+          size: A4 portrait;
+          margin: 8mm;
+        }
+        .sticker-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          grid-auto-rows: 68mm;
+          gap: 6mm;
+          width: 100%;
+          box-sizing: border-box;
+        }
+        .sticker-card {
+          border: 1.5px solid #0f172a;
+          border-radius: 8px;
+          padding: 8px 10px;
+          background: #ffffff;
+          page-break-inside: avoid;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          box-sizing: border-box;
+          overflow: hidden;
+          height: 68mm;
+        }
+        .sticker-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          border-bottom: 1.5px solid #2563eb;
+          padding-bottom: 4px;
+        }
+        .sticker-body {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+          flex: 1;
+          margin: 4px 0;
+          overflow: hidden;
+        }
+        .sticker-qr-box {
+          width: 82px;
+          height: 82px;
+          min-width: 82px;
+          min-height: 82px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #ffffff;
+          padding: 2px;
+          border: 1px solid #cbd5e1;
+          border-radius: 6px;
+        }
+        .sticker-qr-box img, .sticker-qr-box canvas {
+          width: 80px !important;
+          height: 80px !important;
+          display: block;
+        }
+        .sticker-details {
+          font-size: 11px;
+          line-height: 1.3;
+          color: #0f172a;
+          overflow: hidden;
+        }
+        .sticker-footer {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          border-top: 1px solid #e2e8f0;
+          padding-top: 4px;
+          font-size: 11px;
+        }
+      </style>
+
+      <div style="background: white; width: 100%; margin: 0 auto;">
+        <div class="sticker-grid">
           ${pendingOrders.map(o => `
-            <div style="border: 2px solid #0f172a; border-radius: 10px; padding: 12px; background: #ffffff; page-break-inside: avoid; height: 65mm; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.05);">
-              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #2563eb; padding-bottom: 6px; margin-bottom: 6px;">
-                <b style="font-size: 14px; color: #2563eb; font-weight: 900;">⚡ MOHNA EXPRESS</b>
-                <b style="font-size: 13px; font-family: monospace; background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">${o.orderId}</b>
+            <div class="sticker-card">
+              <div class="sticker-header">
+                <span style="font-size: 12px; color: #2563eb; font-weight: 900;">⚡ MOHNA EXPRESS</span>
+                <span style="font-size: 11px; font-family: monospace; font-weight: bold; background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">${o.orderId}</span>
               </div>
-              <div style="display: flex; gap: 12px; align-items: center;">
-                <div id="print_qr_${o.orderId}" style="min-width: 110px; min-height: 110px; background: #f8fafc; padding: 4px; border: 1px solid #cbd5e1; border-radius: 6px;"></div>
-                <div style="font-size: 11.5px; line-height: 1.35;">
-                  <div style="margin-bottom: 3px;"><b>To:</b> <span style="font-size: 13px; font-weight: 800; color: #0f172a;">${o.name}</span></div>
-                  <div style="margin-bottom: 3px;"><b>Phone:</b> 📞 ${o.phone}</div>
-                  <div style="font-size: 10px; color: #334155; margin-bottom: 4px; max-height: 28px; overflow: hidden;">📍 <b>Destination:</b> ${o.address}</div>
-                  <div style="font-size: 11px; color: #1e293b;"><b>Items:</b> ${o.item.length > 30 ? o.item.slice(0,27) + '...' : o.item} (Qty: ${o.qty})</div>
+              <div class="sticker-body">
+                <div id="print_qr_${o.orderId}" class="sticker-qr-box"></div>
+                <div class="sticker-details">
+                  <div style="margin-bottom: 2px;"><b>To:</b> <span style="font-size: 12px; font-weight: 800; color: #0f172a;">${o.name}</span></div>
+                  <div style="margin-bottom: 2px;"><b>Phone:</b> 📞 ${o.phone}</div>
+                  <div style="font-size: 10px; color: #334155; margin-bottom: 2px; max-height: 26px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
+                    📍 <b>Dest:</b> ${o.address}
+                  </div>
+                  <div style="font-size: 10px; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    <b>Items:</b> ${o.item} (Qty: ${o.qty})
+                  </div>
                 </div>
               </div>
-              <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; padding-top: 6px; margin-top: 6px; font-size: 11px;">
-                <span style="font-size: 9.5px; color: #64748b; font-weight: 700; text-transform: uppercase;">Secure 2FA Scan Label</span>
-                <span style="font-weight: 900; color: #16a34a; font-size: 14px;">Total: ${o.amount}</span>
+              <div class="sticker-footer">
+                <span style="font-size: 9px; color: #64748b; font-weight: 700; text-transform: uppercase;">Secure 2FA Scan Label</span>
+                <span style="font-weight: 900; color: #16a34a; font-size: 13px;">Total: ${o.amount}</span>
               </div>
             </div>
           `).join('')}
@@ -1512,8 +1591,9 @@
           orderId: o.orderId,
           parcelToken: o.parcelToken
         }),
-        width: 108,
-        height: 108
+        width: 80,
+        height: 80,
+        correctLevel: QRCode.CorrectLevel.M
       });
     });
 
@@ -1521,9 +1601,8 @@
     setTimeout(() => {
       window.print();
       setTimeout(() => { container.style.display = "none"; }, 1000);
-    }, 400);
+    }, 450);
   }
-
   function printLast24HoursSlips() {
     var filtered = cachedOrders.filter(o => {
       var oTime = parseAnyDateToMs(o.orderTimestampMs || o.date);
