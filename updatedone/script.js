@@ -1,4 +1,4 @@
-var SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbw1IwZbdVZTjj1L7eT_RZA8RHMH0QP9VkUBQm3sGcRGGs9OXjlwStSTkhOdp43So20P/exec";
+var SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbzhrrlGWsh4tkQOYKPKH3sKrMETdGuvTy-1kE8N_VWW7Wt3nrYGx3eRyyRi0sqlSBP2tw/exec";
 var RAZORPAY_KEY_ID = "rzp_test_TYINZpDJ5bh2CP";
 
 var currentUser = null;
