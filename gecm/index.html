@@ -1,21 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Assignment Cover Page Generator</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=EB+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300&family=Montserrat:wght@400;600;700&family=Playfair+Display:ital,wght@0,500;0,700;1,400&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <link rel="stylesheet" href="css/style.css">
+<meta charset="UTF-8">
+<title>Assignment Cover Page Generator</title>
+<!-- Google Fonts: Merriweather default -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=EB+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300&family=Montserrat:wght@400;600;700&family=Playfair+Display:ital,wght@0,500;0,700;1,400&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+
+<!-- html2pdf.js Bundle for direct downloads -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<link rel="stylesheet" href="css/style.css">
 </head>
 <body class="user-body">
 
+  <!-- Controls Sidebar -->
   <div class="editor-sidebar">
+
+    <!-- Direct Download Button -->
     <button class="download-btn" id="btnDirectDownload">Download PDF Document</button>
     <div style="font-size: 11px; color: #666; text-align: center; margin: 6px 0 14px 0;">Saves directly to local downloads</div>
 
+    <!-- Academic Details (Semester & Reg No Condition) -->
     <div class="sidebar-section">
       <h3>Academic Selection</h3>
       <div class="form-group">
@@ -31,16 +37,20 @@
           <option value="8th">8th Semester</option>
         </select>
       </div>
+
+      <!-- Conditional Checkbox for 1st & 3rd Semesters -->
       <div class="checkbox-group" id="regToggleWrapper">
         <input type="checkbox" id="includeRegCheckbox" checked>
         <label for="includeRegCheckbox">Include Registration No.</label>
       </div>
+
       <div class="form-group" id="regInputFieldGroup" style="margin-top: 9px;">
         <label>Registration Number</label>
         <input type="text" id="inRegNo" value="25103144005">
       </div>
     </div>
 
+    <!-- Border Settings -->
     <div class="sidebar-section">
       <h3>Border Settings</h3>
       <div class="form-group">
@@ -58,6 +68,7 @@
       </div>
     </div>
 
+    <!-- Typography Controls -->
     <div class="sidebar-section">
       <h3>Font & Size Controls</h3>
       <div class="form-group">
@@ -78,50 +89,113 @@
       </div>
     </div>
 
+    <!-- Content Details -->
     <div class="sidebar-section">
       <h3>Content Details</h3>
-      <div class="form-group"><label>College Line 1</label><input type="text" id="inCollege1" value="GOVERNMENT ENGINEERING COLLAGE,"></div>
-      <div class="form-group"><label>College Line 2</label><input type="text" id="inCollege2" value="MUNGER"></div>
-      <div class="form-group"><label>Affiliation</label><input type="text" id="inAffiliation" value="(Affiliated to Bihar Engineering University, Patna, Bihar)"></div>
-      <div class="form-group"><label>Document Heading</label><input type="text" id="inDocTitle" value="ASSIGNMENT WORK"></div>
-      <div class="form-group"><label>Subject Name</label><input type="text" id="inCourseName" value="Engineering chemistry"></div>
-      <div class="form-group"><label>Subject Code</label><input type="text" id="inCourseCode" value="(100103)"></div>
-      <div class="form-group"><label>Student Name</label><input type="text" id="inStudentName" value="Aastha kumari"></div>
-      <div class="form-group"><label>Roll Number</label><input type="text" id="inRollNo" value="25103042"></div>
-      <div class="form-group"><label>Faculty Guide</label><input type="text" id="inFacultyName" value="Dr. Gautam Kumar"></div>
-      <div class="form-group"><label>Designation</label><input type="text" id="inFacultyRole" value="Assistant Professor"></div>
-      <div class="form-group"><label>Department</label><input type="text" id="inFacultyDept" value="(Applied Science and Humanities)"></div>
-      <div class="form-group"><label>Degree</label><input type="text" id="inDegree" value="Bachelor of Technology"></div>
-      <div class="form-group"><label>Branch</label><input type="text" id="inBranch" value="Civil Engineering"></div>
-      <div class="form-group"><label>Session</label><input type="text" id="inSession" value="(2026-2030)"></div>
-      <div class="form-group"><label>Footer College Line</label><input type="text" id="inFooterCollege" value="Government Engineering College, Munger"></div>
-      <div class="form-group"><label>Footer Department Subtext</label><input type="text" id="inFooterDept" value="(Department of Science, Technology and Technical Education, Government of Bihar)"></div>
+      <div class="form-group">
+        <label>College Line 1</label>
+        <input type="text" id="inCollege1" value="GOVERNMENT ENGINEERING COLLAGE,">
+      </div>
+      <div class="form-group">
+        <label>College Line 2</label>
+        <input type="text" id="inCollege2" value="MUNGER">
+      </div>
+      <div class="form-group">
+        <label>Affiliation</label>
+        <input type="text" id="inAffiliation" value="(Affiliated to Bihar Engineering University, Patna, Bihar)">
+      </div>
+      <div class="form-group">
+        <label>Document Heading</label>
+        <input type="text" id="inDocTitle" value="ASSIGNMENT WORK">
+      </div>
+      <div class="form-group">
+        <label>Subject Name</label>
+        <input type="text" id="inCourseName" value="Engineering chemistry">
+      </div>
+      <div class="form-group">
+        <label>Subject Code</label>
+        <input type="text" id="inCourseCode" value="(100103)">
+      </div>
+      <div class="form-group">
+        <label>Student Name</label>
+        <input type="text" id="inStudentName" value="Aastha kumari">
+      </div>
+      <div class="form-group">
+        <label>Roll Number</label>
+        <input type="text" id="inRollNo" value="25103042">
+      </div>
+      <div class="form-group">
+        <label>Faculty Guide</label>
+        <input type="text" id="inFacultyName" value="Dr. Gautam Kumar">
+      </div>
+      <div class="form-group">
+        <label>Designation</label>
+        <input type="text" id="inFacultyRole" value="Assistant Professor">
+      </div>
+      <div class="form-group">
+        <label>Department</label>
+        <input type="text" id="inFacultyDept" value="(Applied Science and Humanities)">
+      </div>
+      <div class="form-group">
+        <label>Degree</label>
+        <input type="text" id="inDegree" value="Bachelor of Technology">
+      </div>
+      <div class="form-group">
+        <label>Branch</label>
+        <input type="text" id="inBranch" value="Civil Engineering">
+      </div>
+      <div class="form-group">
+        <label>Session</label>
+        <input type="text" id="inSession" value="(2026-2030)">
+      </div>
+      <div class="form-group">
+        <label>Footer College Line</label>
+        <input type="text" id="inFooterCollege" value="Government Engineering College, Munger">
+      </div>
+      <div class="form-group">
+        <label>Footer Department Subtext</label>
+        <input type="text" id="inFooterDept" value="(Department of Science, Technology and Technical Education, Government of Bihar)">
+      </div>
     </div>
   </div>
 
+  <!-- A4 Output Preview -->
   <div class="preview-wrapper">
     <div class="page" id="pageDocument">
       <div class="page-border-outer" id="outerBorder">
         <div class="page-border-inner" id="innerBorder">
+
           <div>
-            <div class="college-title"><span id="outCollege1"></span><br><span id="outCollege2"></span></div>
+            <div class="college-title">
+              <span id="outCollege1"></span><br>
+              <span id="outCollege2"></span>
+            </div>
             <div class="college-subtitle" id="outAffiliation"></div>
-            <div class="top-logo-container"><img id="topLogoImg" crossorigin="anonymous" alt="Logo"></div>
+
+            <!-- Top Logo Position -->
+            <div class="top-logo-container">
+              <img id="topLogoImg" crossorigin="anonymous" alt="GEC Munger Logo">
+            </div>
+
             <div class="doc-title" id="outDocTitle"></div>
+
             <div class="course-label">Submitted for the Course</div>
             <div class="course-name" id="outCourseName"></div>
             <div class="course-code" id="outCourseCode"></div>
+
             <div class="connector-label">by</div>
             <div class="student-name" id="outStudentName"></div>
             <div class="meta-data">Roll no: <span id="outRollNo"></span></div>
             <div class="meta-data" id="outRegNoLine">Registration no: <span id="outRegNo"></span></div>
             <div class="meta-data">Semester: <span id="outSemester"></span></div>
+
             <div class="faculty-box">
               <div class="connector-label">Under the Guidance of</div>
               <div class="faculty-name" id="outFacultyName"></div>
               <div class="faculty-role" id="outFacultyRole"></div>
               <div class="faculty-role" id="outFacultyDept"></div>
             </div>
+
             <div class="degree-block">
               <div class="degree-lead">In partial fulfillment of the requirements for the award of</div>
               <div class="degree-name" id="outDegree"></div>
@@ -130,25 +204,40 @@
               <div class="session-text" id="outSession"></div>
             </div>
           </div>
+
+          <!-- Bottom Logo Position -->
           <div class="page-footer">
-            <div class="signature-row"><span>Prof. Signature:- _____________</span></div>
-            <div class="bottom-logo-container"><img id="bottomLogoImg" crossorigin="anonymous" alt="Emblem"></div>
+            <div class="signature-row">
+              <span>Prof. Signature:- _____________</span>
+            </div>
+
+            <div class="bottom-logo-container">
+              <img id="bottomLogoImg" crossorigin="anonymous" alt="GEC Munger Emblem">
+            </div>
+
             <div class="footer-college" id="outFooterCollege"></div>
             <div class="footer-dept" id="outFooterDept"></div>
           </div>
+
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Dynamic Admin Announcement Modal -->
+  <!-- Dynamic Admin Announcement Modal with Auto-Timer Elements -->
   <div class="modal-overlay" id="adminBroadcastModal">
     <div class="modal-box">
-      <button class="modal-close-btn" onclick="document.getElementById('adminBroadcastModal').style.display='none'">&times;</button>
+      <button class="modal-close-btn" id="adPopupCloseBtn">&times;</button>
       <img id="adPopupImg" class="modal-img" src="" alt="Popup Image">
       <h3 id="adPopupTitle" class="modal-title">Special Announcement</h3>
       <p id="adPopupBody" class="modal-desc"></p>
       <a id="adPopupBtn" class="modal-action-btn" href="#" target="_blank">Visit Link</a>
+      
+      <!-- Timing Progress Indicator -->
+      <div class="popup-timer-bar-wrap" id="popupTimerWrap">
+        <div class="popup-timer-bar" id="popupTimerBar"></div>
+      </div>
+      <span class="timer-badge" id="popupTimerBadge"></span>
     </div>
   </div>
 
