@@ -226,39 +226,71 @@ function initUserPage() {
 }
 
 function setupPopupRecurrence(p) {
-  // Show first time immediately
   showUserPopup(p);
 
-  // Setup recurrence timer every N minutes
   const intervalMinutes = Math.max(0.5, Number(p.intervalMinutes) || 1);
   const intervalMs = intervalMinutes * 60 * 1000;
 
   setInterval(() => {
     const modal = document.getElementById('adminBroadcastModal');
-    // Re-trigger popup if not already visible
     if (modal && modal.style.display !== 'flex') {
       showUserPopup(p);
     }
   }, intervalMs);
 }
 
+function formatYouTubeUrl(url) {
+  if (!url) return "";
+  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
+  if (match && match[1]) {
+    return `https://www.youtube.com/embed/${match[1]}?autoplay=1&mute=1&playsinline=1`;
+  }
+  return url;
+}
+
 function showUserPopup(p) {
   const modal = document.getElementById('adminBroadcastModal');
+  const modalBox = document.getElementById('adminModalBox');
   const closeBtn = document.getElementById('adPopupCloseBtn');
   const timerWrap = document.getElementById('popupTimerWrap');
   const timerBar = document.getElementById('popupTimerBar');
   const timerBadge = document.getElementById('popupTimerBadge');
 
-  const img = document.getElementById('adPopupImg');
   const heroWrap = document.getElementById('adPopupHeroWrap');
+  const imgEl = document.getElementById('adPopupImg');
+  const videoEl = document.getElementById('adPopupVideo');
+  const iframeEl = document.getElementById('adPopupIframe');
 
-  if (p.imageUrl) {
-    img.src = p.imageUrl;
-    heroWrap.style.display = 'flex';
+  // Handle Photo vs. Video Media Rendering
+  const mediaType = p.mediaType || "image";
+  const mediaUrl = p.mediaUrl || "";
+
+  imgEl.style.display = "none";
+  videoEl.style.display = "none";
+  iframeEl.style.display = "none";
+  videoEl.pause();
+  iframeEl.src = "";
+
+  if (mediaUrl) {
+    heroWrap.style.display = "flex";
+    if (mediaType === "video") {
+      if (mediaUrl.includes("youtube.com") || mediaUrl.includes("youtu.be")) {
+        iframeEl.src = formatYouTubeUrl(mediaUrl);
+        iframeEl.style.display = "block";
+      } else {
+        videoEl.src = mediaUrl;
+        videoEl.style.display = "block";
+        videoEl.play().catch(() => {});
+      }
+    } else {
+      imgEl.src = mediaUrl;
+      imgEl.style.display = "block";
+    }
   } else {
-    heroWrap.style.display = 'none';
+    heroWrap.style.display = "none";
   }
 
+  // Text content
   document.getElementById('adPopupTitle').textContent = p.title || "Announcement";
   document.getElementById('adPopupBody').textContent = p.body || "";
   
@@ -266,6 +298,21 @@ function showUserPopup(p) {
   actionBtn.textContent = p.buttonText || "Open Link";
   actionBtn.href = p.buttonLink || "#";
 
+  // Handle Entire Card Clickable vs. Button Only
+  const clickMode = p.clickMode || "button";
+  if (clickMode === "card" && p.buttonLink) {
+    modalBox.classList.add('clickable-card');
+    modalBox.onclick = (e) => {
+      // Do not trigger if user clicks close button
+      if (e.target.closest('#adPopupCloseBtn')) return;
+      window.open(p.buttonLink, '_blank');
+    };
+  } else {
+    modalBox.classList.remove('clickable-card');
+    modalBox.onclick = null;
+  }
+
+  // Closing Mode Configuration
   const mode = p.closeMode || "both";
   const seconds = Math.max(1, Number(p.timerSeconds) || 5);
 
@@ -273,6 +320,12 @@ function showUserPopup(p) {
     closeBtn.style.display = "none";
   } else {
     closeBtn.style.display = "flex";
+  }
+
+  function hideModal() {
+    modal.style.display = "none";
+    videoEl.pause();
+    iframeEl.src = "";
   }
 
   if (mode === "timer" || mode === "both") {
@@ -291,19 +344,21 @@ function showUserPopup(p) {
         timerBadge.textContent = `Closing automatically in ${remaining}s...`;
       } else {
         clearInterval(interval);
-        modal.style.display = "none";
+        hideModal();
       }
     }, 1000);
 
-    closeBtn.onclick = () => {
+    closeBtn.onclick = (e) => {
+      e.stopPropagation();
       clearInterval(interval);
-      modal.style.display = "none";
+      hideModal();
     };
   } else {
     timerWrap.style.display = "none";
     timerBadge.style.display = "none";
-    closeBtn.onclick = () => {
-      modal.style.display = "none";
+    closeBtn.onclick = (e) => {
+      e.stopPropagation();
+      hideModal();
     };
   }
 
@@ -315,7 +370,7 @@ function showUserPopup(p) {
 ========================================================= */
 let authPass = "";
 let userRecords = [];
-let pendingImageFile = null;
+let pendingMediaFile = null;
 
 function initAdminPage() {
   const loginBtn = document.getElementById('btnLogin');
@@ -373,7 +428,7 @@ function initAdminPage() {
     });
   }
 
-  // Handle direct image file selection
+  // Handle direct file upload (photo or video)
   const fileInput = document.getElementById('popupFileInput');
   if (fileInput) {
     fileInput.addEventListener('change', (e) => {
@@ -381,23 +436,32 @@ function initAdminPage() {
       if (file) {
         const reader = new FileReader();
         reader.onload = function(evt) {
-          pendingImageFile = {
+          pendingMediaFile = {
             base64: evt.target.result,
             name: file.name
           };
-          // Show immediately in preview
-          const pImg = document.getElementById('previewImg');
-          pImg.src = evt.target.result;
-          pImg.classList.remove('hidden');
+          updateMediaPreviewLocal(evt.target.result, file.type.startsWith("video") ? "video" : "image");
         };
         reader.readAsDataURL(file);
       }
     });
   }
 
+  // Media Type Change Listener
+  const mediaTypeSelect = document.getElementById('popupMediaType');
+  if (mediaTypeSelect) {
+    mediaTypeSelect.addEventListener('change', () => {
+      const isVideo = mediaTypeSelect.value === 'video';
+      document.getElementById('videoUrlInputWrap').style.display = isVideo ? 'block' : 'none';
+      updatePopupPreview();
+    });
+  }
+
+  // Input Listeners for Real-time Preview
   [
     'popupTitle', 'popupBody', 'popupButtonText', 
-    'popupButtonLink', 'popupCloseMode', 'popupTimerSeconds', 'popupIntervalMinutes'
+    'popupButtonLink', 'popupMediaUrl', 'popupClickMode',
+    'popupCloseMode', 'popupTimerSeconds', 'popupIntervalMinutes'
   ].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('input', updatePopupPreview);
@@ -418,26 +482,28 @@ function initAdminPage() {
     });
   }
 
+  // Deactivate & Clear Popup
   const clearBtn = document.getElementById('btnDeletePopup');
   if (clearBtn) {
     clearBtn.addEventListener('click', async () => {
       if (!confirm('Deactivate and delete this popup from all user screens?')) return;
 
       document.getElementById('popupActive').checked = false;
+      document.getElementById('popupMediaType').value = "image";
+      document.getElementById('popupMediaUrl').value = "";
       document.getElementById('popupTitle').value = "";
       document.getElementById('popupBody').value = "";
       document.getElementById('popupButtonText').value = "";
       document.getElementById('popupButtonLink').value = "";
+      document.getElementById('popupClickMode').value = "button";
       document.getElementById('popupCloseMode').value = "both";
       document.getElementById('popupTimerSeconds').value = "5";
       document.getElementById('popupIntervalMinutes').value = "1";
       document.getElementById('popupFileInput').value = "";
-      pendingImageFile = null;
+      document.getElementById('videoUrlInputWrap').style.display = "none";
+      pendingMediaFile = null;
 
-      const pImg = document.getElementById('previewImg');
-      pImg.src = "";
-      pImg.classList.add('hidden');
-
+      hideAllPreviewMedia();
       updatePopupPreview();
       savePopupToServer();
     });
@@ -449,20 +515,63 @@ function initAdminPage() {
   }
 }
 
+function hideAllPreviewMedia() {
+  const pImg = document.getElementById('previewImg');
+  const pVideo = document.getElementById('previewVideo');
+  const pIframe = document.getElementById('previewIframe');
+  pImg.classList.add('hidden');
+  pVideo.classList.add('hidden');
+  pIframe.classList.add('hidden');
+  pVideo.pause();
+  pIframe.src = "";
+}
+
+function updateMediaPreviewLocal(src, type) {
+  hideAllPreviewMedia();
+  if (type === "video") {
+    const pVideo = document.getElementById('previewVideo');
+    pVideo.src = src;
+    pVideo.classList.remove('hidden');
+    pVideo.play().catch(() => {});
+  } else {
+    const pImg = document.getElementById('previewImg');
+    pImg.src = src;
+    pImg.classList.remove('hidden');
+  }
+}
+
 function populateAdminPopupForm(p) {
   document.getElementById('popupActive').checked = p.active;
+  document.getElementById('popupMediaType').value = p.mediaType || "image";
+  document.getElementById('popupMediaUrl').value = p.mediaUrl || "";
   document.getElementById('popupTitle').value = p.title || "";
   document.getElementById('popupBody').value = p.body || "";
   document.getElementById('popupButtonText').value = p.buttonText || "";
   document.getElementById('popupButtonLink').value = p.buttonLink || "";
+  document.getElementById('popupClickMode').value = p.clickMode || "button";
   document.getElementById('popupCloseMode').value = p.closeMode || "both";
   document.getElementById('popupTimerSeconds').value = p.timerSeconds || 5;
   document.getElementById('popupIntervalMinutes').value = p.intervalMinutes || 1;
 
-  if (p.imageUrl) {
-    const pImg = document.getElementById('previewImg');
-    pImg.src = p.imageUrl;
-    pImg.classList.remove('hidden');
+  const isVideo = p.mediaType === "video";
+  document.getElementById('videoUrlInputWrap').style.display = isVideo ? "block" : "none";
+
+  if (p.mediaUrl) {
+    if (isVideo) {
+      if (p.mediaUrl.includes("youtube.com") || p.mediaUrl.includes("youtu.be")) {
+        const pIframe = document.getElementById('previewIframe');
+        pIframe.src = formatYouTubeUrl(p.mediaUrl);
+        pIframe.classList.remove('hidden');
+      } else {
+        const pVideo = document.getElementById('previewVideo');
+        pVideo.src = p.mediaUrl;
+        pVideo.classList.remove('hidden');
+      }
+    } else {
+      const pImg = document.getElementById('previewImg');
+      pImg.src = p.mediaUrl;
+      pImg.classList.remove('hidden');
+    }
   }
 
   const timerGroup = document.getElementById('timerInputGroup');
@@ -473,6 +582,7 @@ function populateAdminPopupForm(p) {
     timerGroup.style.opacity = '1';
     document.getElementById('popupTimerSeconds').disabled = false;
   }
+
   updatePopupPreview();
 }
 
@@ -481,17 +591,22 @@ async function savePopupToServer() {
   saveBtn.disabled = true;
   saveBtn.textContent = "Uploading & Saving...";
 
+  const mediaType = document.getElementById('popupMediaType').value;
+  const manualUrl = document.getElementById('popupMediaUrl').value;
+
   const payload = {
     action: "save_popup",
     key: authPass,
     popup: {
       active: document.getElementById('popupActive').checked,
-      imageFile: pendingImageFile,
-      imageUrl: pendingImageFile ? "" : (document.getElementById('previewImg').src || ""),
+      mediaType: mediaType,
+      mediaFile: pendingMediaFile,
+      mediaUrl: pendingMediaFile ? "" : manualUrl,
       title: document.getElementById('popupTitle').value,
       body: document.getElementById('popupBody').value,
       buttonText: document.getElementById('popupButtonText').value,
       buttonLink: document.getElementById('popupButtonLink').value,
+      clickMode: document.getElementById('popupClickMode').value,
       closeMode: document.getElementById('popupCloseMode').value,
       timerSeconds: Number(document.getElementById('popupTimerSeconds').value) || 5,
       intervalMinutes: Number(document.getElementById('popupIntervalMinutes').value) || 1
@@ -506,8 +621,8 @@ async function savePopupToServer() {
     });
     const data = await res.json();
     if (data.status === "success") {
-      alert('Popup published! Direct image uploaded to Drive and recurring interval set.');
-      pendingImageFile = null;
+      alert('Popup published successfully! All changes applied.');
+      pendingMediaFile = null;
     } else {
       alert('Failed: ' + data.message);
     }
@@ -547,6 +662,7 @@ function updatePopupPreview() {
   const title = document.getElementById('popupTitle')?.value;
   const body = document.getElementById('popupBody')?.value;
   const btnText = document.getElementById('popupButtonText')?.value;
+  const clickMode = document.getElementById('popupClickMode')?.value;
   const mode = document.getElementById('popupCloseMode')?.value;
   const seconds = document.getElementById('popupTimerSeconds')?.value;
   const interval = document.getElementById('popupIntervalMinutes')?.value;
@@ -562,7 +678,7 @@ function updatePopupPreview() {
 
   const pClose = document.getElementById('previewCloseIcon');
   if (pClose) {
-    pClose.style.display = (mode === "timer") ? "none" : "block";
+    pClose.style.display = (mode === "timer") ? "none" : "flex";
   }
 
   const pBadge = document.getElementById('previewTimingBadge');
@@ -572,6 +688,7 @@ function updatePopupPreview() {
     else if (mode === "timer") modeText = `Auto-closes in ${seconds}s`;
     else modeText = `Closes via × or after ${seconds}s`;
 
-    pBadge.textContent = `${modeText} • Re-triggers every ${interval} min`;
+    const clickText = clickMode === "card" ? "Whole Card Clickable" : "Button Only Clickable";
+    pBadge.textContent = `${clickText} • ${modeText} • Re-triggers every ${interval} min`;
   }
 }
