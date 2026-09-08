@@ -1,5 +1,5 @@
 // ================= CONFIGURATION =================
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw-VTgrEjQcMCETJ0wEqg04biCvw0fsG32fwg6N8UDE4kyQZ3dAOvdQgoopZBdBewOcqQ/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwhT3ciWfe0Yst0lwhekIs1wAzuXeX7GclWKkrHAV3eU7-PMrPGt6NZ0ubKuMrgFaGGTg/exec";
 
 window.addEventListener('DOMContentLoaded', () => {
   if (document.body.classList.contains('user-body')) {
@@ -239,12 +239,24 @@ function setupPopupRecurrence(p) {
   }, intervalMs);
 }
 
-function formatYouTubeUrl(url) {
+// Convert Drive links, YouTube URLs, and video sources into safe embed links
+function formatVideoEmbedUrl(url) {
   if (!url) return "";
-  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
-  if (match && match[1]) {
-    return `https://www.youtube.com/embed/${match[1]}?autoplay=1&mute=1&playsinline=1`;
+
+  // 1. Google Drive Links (lh3, uc?id=, or /file/d/ links) converted to /preview embed
+  if (url.includes("drive.google.com") || url.includes("googleusercontent.com")) {
+    const driveMatch = url.match(/(?:\/d\/|id=)([a-zA-Z0-9_-]+)/);
+    if (driveMatch && driveMatch[1]) {
+      return `https://drive.google.com/file/d/${driveMatch[1]}/preview`;
+    }
   }
+
+  // 2. YouTube Links converted to embed format
+  const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
+  if (ytMatch && ytMatch[1]) {
+    return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&mute=1&playsinline=1`;
+  }
+
   return url;
 }
 
@@ -274,10 +286,18 @@ function showUserPopup(p) {
   if (mediaUrl) {
     heroWrap.style.display = "flex";
     if (mediaType === "video") {
-      if (mediaUrl.includes("youtube.com") || mediaUrl.includes("youtu.be")) {
-        iframeEl.src = formatYouTubeUrl(mediaUrl);
+      const isDirectRawFile = mediaUrl.endsWith(".mp4") || mediaUrl.endsWith(".webm");
+      const isDriveOrYt = mediaUrl.includes("google.com") || 
+                          mediaUrl.includes("googleusercontent.com") || 
+                          mediaUrl.includes("youtube.com") || 
+                          mediaUrl.includes("youtu.be");
+
+      if (isDriveOrYt || !isDirectRawFile) {
+        // Drive uploads and YouTube must use iframe preview
+        iframeEl.src = formatVideoEmbedUrl(mediaUrl);
         iframeEl.style.display = "block";
       } else {
+        // Direct standalone external .mp4 files use native HTML5 video
         videoEl.src = mediaUrl;
         videoEl.style.display = "block";
         videoEl.play().catch(() => {});
@@ -556,11 +576,19 @@ function populateAdminPopupForm(p) {
   const isVideo = p.mediaType === "video";
   document.getElementById('videoUrlInputWrap').style.display = isVideo ? "block" : "none";
 
+  hideAllPreviewMedia();
+
   if (p.mediaUrl) {
     if (isVideo) {
-      if (p.mediaUrl.includes("youtube.com") || p.mediaUrl.includes("youtu.be")) {
+      const isDirectRawFile = p.mediaUrl.endsWith(".mp4") || p.mediaUrl.endsWith(".webm");
+      const isDriveOrYt = p.mediaUrl.includes("google.com") || 
+                          p.mediaUrl.includes("googleusercontent.com") || 
+                          p.mediaUrl.includes("youtube.com") || 
+                          p.mediaUrl.includes("youtu.be");
+
+      if (isDriveOrYt || !isDirectRawFile) {
         const pIframe = document.getElementById('previewIframe');
-        pIframe.src = formatYouTubeUrl(p.mediaUrl);
+        pIframe.src = formatVideoEmbedUrl(p.mediaUrl);
         pIframe.classList.remove('hidden');
       } else {
         const pVideo = document.getElementById('previewVideo');
