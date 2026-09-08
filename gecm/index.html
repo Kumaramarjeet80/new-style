@@ -231,14 +231,16 @@
     </div>
   </div>
 
-  <!-- Dynamic Admin Announcement Modal (Enlarged Hero Format) -->
+  <!-- Dynamic Admin Media Announcement Modal (Photo or Video & Click Modes) -->
   <div class="modal-overlay" id="adminBroadcastModal">
-    <div class="modal-box">
+    <div class="modal-box" id="adminModalBox">
       <button class="modal-close-btn" id="adPopupCloseBtn">&times;</button>
       
-      <!-- Prominent Top Banner Image -->
-      <div class="modal-hero-img-wrap" id="adPopupHeroWrap">
-        <img id="adPopupImg" class="modal-hero-img" src="" alt="Announcement Banner">
+      <!-- Media Wrap (Image, HTML5 Video, or Embedded Player) -->
+      <div class="modal-hero-media-wrap" id="adPopupHeroWrap">
+        <img id="adPopupImg" class="modal-hero-img" src="" alt="Announcement Banner" style="display:none;">
+        <video id="adPopupVideo" class="modal-hero-video" controls autoplay muted loop playsinline style="display:none;"></video>
+        <iframe id="adPopupIframe" class="modal-hero-iframe" src="" allow="autoplay; encrypted-media" allowfullscreen style="display:none;"></iframe>
       </div>
 
       <!-- Content Area -->
