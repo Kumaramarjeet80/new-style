@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Assignment Cover Page Generator</title>
 <!-- Google Fonts: Merriweather default -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,6 +14,12 @@
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="user-body">
+
+  <!-- Mobile Top Utility Bar -->
+  <div class="mobile-toggle-bar">
+    <span style="font-weight: bold; font-size: 14px;">Cover Page Generator</span>
+    <button id="btnToggleMobileSidebar">⚙ Open Controls</button>
+  </div>
 
   <!-- Controls Sidebar -->
   <div class="editor-sidebar">
@@ -159,7 +166,7 @@
     </div>
   </div>
 
-  <!-- A4 Output Preview -->
+  <!-- A4 Output Preview (Original Dimension & Styling Preserved) -->
   <div class="preview-wrapper">
     <div class="page" id="pageDocument">
       <div class="page-border-outer" id="outerBorder">
@@ -224,30 +231,40 @@
     </div>
   </div>
 
-  <!-- Dynamic Admin Announcement Modal with Auto-Timer Elements -->
+  <!-- Dynamic Admin Announcement Modal (Enlarged Hero Format) -->
   <div class="modal-overlay" id="adminBroadcastModal">
     <div class="modal-box">
       <button class="modal-close-btn" id="adPopupCloseBtn">&times;</button>
-      <img id="adPopupImg" class="modal-img" src="" alt="Popup Image">
-      <h3 id="adPopupTitle" class="modal-title">Special Announcement</h3>
-      <p id="adPopupBody" class="modal-desc"></p>
-      <a id="adPopupBtn" class="modal-action-btn" href="#" target="_blank">Visit Link</a>
       
-      <!-- Timing Progress Indicator -->
-      <div class="popup-timer-bar-wrap" id="popupTimerWrap">
-        <div class="popup-timer-bar" id="popupTimerBar"></div>
+      <!-- Prominent Top Banner Image -->
+      <div class="modal-hero-img-wrap" id="adPopupHeroWrap">
+        <img id="adPopupImg" class="modal-hero-img" src="" alt="Announcement Banner">
       </div>
-      <span class="timer-badge" id="popupTimerBadge"></span>
+
+      <!-- Content Area -->
+      <div class="modal-content-area">
+        <h3 id="adPopupTitle" class="modal-title">Special Announcement</h3>
+        <p id="adPopupBody" class="modal-desc"></p>
+        <a id="adPopupBtn" class="modal-action-btn" href="#" target="_blank">Visit Link</a>
+        
+        <!-- Timer Progress Bar -->
+        <div class="popup-timer-bar-wrap" id="popupTimerWrap">
+          <div class="popup-timer-bar" id="popupTimerBar"></div>
+        </div>
+        <span class="timer-badge" id="popupTimerBadge"></span>
+      </div>
     </div>
   </div>
 
   <!-- Download Complete Success Modal -->
   <div class="modal-overlay" id="thankYouModal">
-    <div class="modal-box">
-      <div style="font-size: 40px; margin-bottom: 8px;">🎉</div>
-      <h3 class="modal-title">Download Complete!</h3>
-      <p class="modal-desc">Thank you for using the Assignment Cover Page Generator. Your academic cover sheet has been generated successfully.</p>
-      <button class="modal-action-btn" style="background:#059669; border:none; cursor:pointer;" onclick="document.getElementById('thankYouModal').style.display='none'">Done</button>
+    <div class="modal-box" style="max-width: 440px;">
+      <div class="modal-content-area">
+        <div style="font-size: 42px; margin-bottom: 8px;">🎉</div>
+        <h3 class="modal-title">Download Complete!</h3>
+        <p class="modal-desc">Thank you for using the Assignment Cover Page Generator. Your academic cover sheet has been generated successfully.</p>
+        <button class="modal-action-btn" style="background:#059669; border:none; cursor:pointer;" onclick="document.getElementById('thankYouModal').style.display='none'">Done</button>
+      </div>
     </div>
   </div>
 
