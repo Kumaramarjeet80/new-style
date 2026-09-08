@@ -1,5 +1,5 @@
 // ================= CONFIGURATION =================
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzMs5b66_rnL5F4jYgtEdlJOm9GgLl9RS5ky62upZqbzFH31mvhET0y2MNCgQQEQMifkA/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw-VTgrEjQcMCETJ0wEqg04biCvw0fsG32fwg6N8UDE4kyQZ3dAOvdQgoopZBdBewOcqQ/exec";
 
 window.addEventListener('DOMContentLoaded', () => {
   if (document.body.classList.contains('user-body')) {
@@ -13,6 +13,16 @@ window.addEventListener('DOMContentLoaded', () => {
    1. USER FRONTEND RUNTIME
 ========================================================= */
 function initUserPage() {
+  // Mobile drawer toggle
+  const mobileToggleBtn = document.getElementById('btnToggleMobileSidebar');
+  const sidebar = document.querySelector('.editor-sidebar');
+  if (mobileToggleBtn && sidebar) {
+    mobileToggleBtn.addEventListener('click', () => {
+      sidebar.classList.toggle('open');
+      mobileToggleBtn.textContent = sidebar.classList.contains('open') ? '✕ Close Editor' : '⚙ Open Controls';
+    });
+  }
+
   // Drive direct stream URL for file ID 1Pg1tZ-1Uodqzi5iciN61hq8jMooT0eo2
   const driveFileId = "1Pg1tZ-1Uodqzi5iciN61hq8jMooT0eo2";
   const logoDirectUrl = `https://lh3.googleusercontent.com/d/${driveFileId}`;
@@ -132,19 +142,19 @@ function initUserPage() {
     document.getElementById('pageDocument').style.fontSize = (scalePercent / 100) + 'em';
   });
 
-  // Fetch Live Popup Engine
+  // Fetch Live Popup with Recurrence Engine
   if (APPS_SCRIPT_URL && !APPS_SCRIPT_URL.includes("YOUR_APPS_SCRIPT")) {
     fetch(`${APPS_SCRIPT_URL}?action=get_popup`)
       .then(res => res.json())
       .then(data => {
         if (data.status === "success" && data.popup && data.popup.active) {
-          showUserPopup(data.popup);
+          setupPopupRecurrence(data.popup);
         }
       })
       .catch(() => {});
   }
 
-  // ================= PDF GENERATION (UNCHANGED) =================
+  // ================= PDF GENERATION (IDENTICAL - ZERO MODIFICATIONS) =================
   function getIncrementalFilename() {
     const baseName = "Kumaramarjeet80 Assignment cover page";
     let count = parseInt(localStorage.getItem("download_file_counter") || "0", 10);
@@ -182,7 +192,7 @@ function initUserPage() {
       }).catch(() => {});
     }
 
-    // 2. Exact PDF Execution (Zero modifications)
+    // 2. Exact PDF Execution (Untouched)
     const element = document.getElementById('pageDocument');
     const filename = getIncrementalFilename();
     const btn = document.getElementById('btnDirectDownload');
@@ -215,6 +225,23 @@ function initUserPage() {
   updateRegVisibility();
 }
 
+function setupPopupRecurrence(p) {
+  // Show first time immediately
+  showUserPopup(p);
+
+  // Setup recurrence timer every N minutes
+  const intervalMinutes = Math.max(0.5, Number(p.intervalMinutes) || 1);
+  const intervalMs = intervalMinutes * 60 * 1000;
+
+  setInterval(() => {
+    const modal = document.getElementById('adminBroadcastModal');
+    // Re-trigger popup if not already visible
+    if (modal && modal.style.display !== 'flex') {
+      showUserPopup(p);
+    }
+  }, intervalMs);
+}
+
 function showUserPopup(p) {
   const modal = document.getElementById('adminBroadcastModal');
   const closeBtn = document.getElementById('adPopupCloseBtn');
@@ -223,11 +250,13 @@ function showUserPopup(p) {
   const timerBadge = document.getElementById('popupTimerBadge');
 
   const img = document.getElementById('adPopupImg');
+  const heroWrap = document.getElementById('adPopupHeroWrap');
+
   if (p.imageUrl) {
     img.src = p.imageUrl;
-    img.style.display = 'block';
+    heroWrap.style.display = 'flex';
   } else {
-    img.style.display = 'none';
+    heroWrap.style.display = 'none';
   }
 
   document.getElementById('adPopupTitle').textContent = p.title || "Announcement";
@@ -243,7 +272,7 @@ function showUserPopup(p) {
   if (mode === "timer") {
     closeBtn.style.display = "none";
   } else {
-    closeBtn.style.display = "block";
+    closeBtn.style.display = "flex";
   }
 
   if (mode === "timer" || mode === "both") {
@@ -286,6 +315,7 @@ function showUserPopup(p) {
 ========================================================= */
 let authPass = "";
 let userRecords = [];
+let pendingImageFile = null;
 
 function initAdminPage() {
   const loginBtn = document.getElementById('btnLogin');
@@ -343,10 +373,31 @@ function initAdminPage() {
     });
   }
 
+  // Handle direct image file selection
+  const fileInput = document.getElementById('popupFileInput');
+  if (fileInput) {
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          pendingImageFile = {
+            base64: evt.target.result,
+            name: file.name
+          };
+          // Show immediately in preview
+          const pImg = document.getElementById('previewImg');
+          pImg.src = evt.target.result;
+          pImg.classList.remove('hidden');
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  }
+
   [
-    'popupImage', 'popupTitle', 'popupBody', 
-    'popupButtonText', 'popupButtonLink', 
-    'popupCloseMode', 'popupTimerSeconds'
+    'popupTitle', 'popupBody', 'popupButtonText', 
+    'popupButtonLink', 'popupCloseMode', 'popupTimerSeconds', 'popupIntervalMinutes'
   ].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('input', updatePopupPreview);
@@ -373,15 +424,21 @@ function initAdminPage() {
       if (!confirm('Deactivate and delete this popup from all user screens?')) return;
 
       document.getElementById('popupActive').checked = false;
-      document.getElementById('popupImage').value = "";
       document.getElementById('popupTitle').value = "";
       document.getElementById('popupBody').value = "";
       document.getElementById('popupButtonText').value = "";
       document.getElementById('popupButtonLink').value = "";
       document.getElementById('popupCloseMode').value = "both";
       document.getElementById('popupTimerSeconds').value = "5";
-      updatePopupPreview();
+      document.getElementById('popupIntervalMinutes').value = "1";
+      document.getElementById('popupFileInput').value = "";
+      pendingImageFile = null;
 
+      const pImg = document.getElementById('previewImg');
+      pImg.src = "";
+      pImg.classList.add('hidden');
+
+      updatePopupPreview();
       savePopupToServer();
     });
   }
@@ -394,13 +451,19 @@ function initAdminPage() {
 
 function populateAdminPopupForm(p) {
   document.getElementById('popupActive').checked = p.active;
-  document.getElementById('popupImage').value = p.imageUrl || "";
   document.getElementById('popupTitle').value = p.title || "";
   document.getElementById('popupBody').value = p.body || "";
   document.getElementById('popupButtonText').value = p.buttonText || "";
   document.getElementById('popupButtonLink').value = p.buttonLink || "";
   document.getElementById('popupCloseMode').value = p.closeMode || "both";
   document.getElementById('popupTimerSeconds').value = p.timerSeconds || 5;
+  document.getElementById('popupIntervalMinutes').value = p.intervalMinutes || 1;
+
+  if (p.imageUrl) {
+    const pImg = document.getElementById('previewImg');
+    pImg.src = p.imageUrl;
+    pImg.classList.remove('hidden');
+  }
 
   const timerGroup = document.getElementById('timerInputGroup');
   if (p.closeMode === 'manual') {
@@ -416,20 +479,22 @@ function populateAdminPopupForm(p) {
 async function savePopupToServer() {
   const saveBtn = document.getElementById('btnSavePopup');
   saveBtn.disabled = true;
-  saveBtn.textContent = "Publishing...";
+  saveBtn.textContent = "Uploading & Saving...";
 
   const payload = {
     action: "save_popup",
     key: authPass,
     popup: {
       active: document.getElementById('popupActive').checked,
-      imageUrl: document.getElementById('popupImage').value,
+      imageFile: pendingImageFile,
+      imageUrl: pendingImageFile ? "" : (document.getElementById('previewImg').src || ""),
       title: document.getElementById('popupTitle').value,
       body: document.getElementById('popupBody').value,
       buttonText: document.getElementById('popupButtonText').value,
       buttonLink: document.getElementById('popupButtonLink').value,
       closeMode: document.getElementById('popupCloseMode').value,
-      timerSeconds: Number(document.getElementById('popupTimerSeconds').value) || 5
+      timerSeconds: Number(document.getElementById('popupTimerSeconds').value) || 5,
+      intervalMinutes: Number(document.getElementById('popupIntervalMinutes').value) || 1
     }
   };
 
@@ -441,7 +506,8 @@ async function savePopupToServer() {
     });
     const data = await res.json();
     if (data.status === "success") {
-      alert('Popup successfully updated!');
+      alert('Popup published! Direct image uploaded to Drive and recurring interval set.');
+      pendingImageFile = null;
     } else {
       alert('Failed: ' + data.message);
     }
@@ -464,36 +530,26 @@ function renderUsers(list) {
   list.forEach(u => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td class="p-3 text-slate-500">${u.timestamp}</td>
-      <td class="p-3 font-semibold text-slate-900">${u.name}</td>
-      <td class="p-3">${u.roll}</td>
-      <td class="p-3">${u.reg}</td>
-      <td class="p-3">${u.semester}</td>
-      <td class="p-3">${u.branch}</td>
-      <td class="p-3">${u.college}</td>
-      <td class="p-3 text-slate-600">${u.course}</td>
+      <td class="p-3 text-slate-500 whitespace-nowrap">${u.timestamp}</td>
+      <td class="p-3 font-semibold text-slate-900 whitespace-nowrap">${u.name}</td>
+      <td class="p-3 whitespace-nowrap">${u.roll}</td>
+      <td class="p-3 whitespace-nowrap">${u.reg}</td>
+      <td class="p-3 whitespace-nowrap">${u.semester}</td>
+      <td class="p-3 whitespace-nowrap">${u.branch}</td>
+      <td class="p-3 whitespace-nowrap">${u.college}</td>
+      <td class="p-3 text-slate-600 whitespace-nowrap">${u.course}</td>
     `;
     tbody.appendChild(tr);
   });
 }
 
 function updatePopupPreview() {
-  const imgUrl = document.getElementById('popupImage')?.value;
   const title = document.getElementById('popupTitle')?.value;
   const body = document.getElementById('popupBody')?.value;
   const btnText = document.getElementById('popupButtonText')?.value;
   const mode = document.getElementById('popupCloseMode')?.value;
   const seconds = document.getElementById('popupTimerSeconds')?.value;
-
-  const pImg = document.getElementById('previewImg');
-  if (pImg) {
-    if (imgUrl) {
-      pImg.src = imgUrl;
-      pImg.classList.remove('hidden');
-    } else {
-      pImg.classList.add('hidden');
-    }
-  }
+  const interval = document.getElementById('popupIntervalMinutes')?.value;
 
   const pTitle = document.getElementById('previewTitle');
   if (pTitle) pTitle.textContent = title || "Announcement Title";
@@ -511,12 +567,11 @@ function updatePopupPreview() {
 
   const pBadge = document.getElementById('previewTimingBadge');
   if (pBadge) {
-    if (mode === "manual") {
-      pBadge.textContent = "Manual close only (User must click ×)";
-    } else if (mode === "timer") {
-      pBadge.textContent = `Auto-closes in ${seconds}s (No close button)`;
-    } else {
-      pBadge.textContent = `Closes via × button or automatically after ${seconds}s`;
-    }
+    let modeText = "";
+    if (mode === "manual") modeText = "Manual close only";
+    else if (mode === "timer") modeText = `Auto-closes in ${seconds}s`;
+    else modeText = `Closes via × or after ${seconds}s`;
+
+    pBadge.textContent = `${modeText} • Re-triggers every ${interval} min`;
   }
 }
