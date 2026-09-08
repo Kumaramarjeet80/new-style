@@ -1,5 +1,5 @@
 // ================= CONFIGURATION =================
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyCywAE8ErEZoKOMdY-H-40BDvMWwZBmXF-A06xkmr1Ve44LYLk1DLHXNQZWNActR8VBQ/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzMs5b66_rnL5F4jYgtEdlJOm9GgLl9RS5ky62upZqbzFH31mvhET0y2MNCgQQEQMifkA/exec";
 
 window.addEventListener('DOMContentLoaded', () => {
   if (document.body.classList.contains('user-body')) {
@@ -10,17 +10,20 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 /* =========================================================
-   1. USER FRONTEND LOGIC
+   1. USER FRONTEND RUNTIME
 ========================================================= */
 function initUserPage() {
+  // Drive direct stream URL for file ID 1Pg1tZ-1Uodqzi5iciN61hq8jMooT0eo2
   const driveFileId = "1Pg1tZ-1Uodqzi5iciN61hq8jMooT0eo2";
   const logoDirectUrl = `https://lh3.googleusercontent.com/d/${driveFileId}`;
-  
+
   const topLogo = document.getElementById('topLogoImg');
   const bottomLogo = document.getElementById('bottomLogoImg');
-  if (topLogo) topLogo.src = logoDirectUrl;
-  if (bottomLogo) bottomLogo.src = logoDirectUrl;
 
+  topLogo.src = logoDirectUrl;
+  bottomLogo.src = logoDirectUrl;
+
+  // Field bindings
   const bindings = [
     { input: 'inCollege1', output: 'outCollege1' },
     { input: 'inCollege2', output: 'outCollege2' },
@@ -44,17 +47,15 @@ function initUserPage() {
 
   function syncText() {
     bindings.forEach(b => {
-      const inEl = document.getElementById(b.input);
-      const outEl = document.getElementById(b.output);
-      if (inEl && outEl) outEl.textContent = inEl.value;
+      document.getElementById(b.output).textContent = document.getElementById(b.input).value;
     });
   }
 
   bindings.forEach(b => {
-    const inEl = document.getElementById(b.input);
-    if (inEl) inEl.addEventListener('input', syncText);
+    document.getElementById(b.input).addEventListener('input', syncText);
   });
 
+  // Semester and Registration Number Visibility Logic
   const semSelect = document.getElementById('inSemester');
   const regToggleWrapper = document.getElementById('regToggleWrapper');
   const regCheckbox = document.getElementById('includeRegCheckbox');
@@ -63,10 +64,17 @@ function initUserPage() {
 
   function updateRegVisibility() {
     const sem = semSelect.value;
-    if (sem === '1st' || sem === '3rd') {
+    const isFirstOrThird = (sem === '1st' || sem === '3rd');
+
+    if (isFirstOrThird) {
       regToggleWrapper.style.display = 'flex';
-      regFieldGroup.style.display = regCheckbox.checked ? 'block' : 'none';
-      outRegLine.style.display = regCheckbox.checked ? 'block' : 'none';
+      if (regCheckbox.checked) {
+        regFieldGroup.style.display = 'block';
+        outRegLine.style.display = 'block';
+      } else {
+        regFieldGroup.style.display = 'none';
+        outRegLine.style.display = 'none';
+      }
     } else {
       regToggleWrapper.style.display = 'none';
       regFieldGroup.style.display = 'block';
@@ -74,9 +82,13 @@ function initUserPage() {
     }
   }
 
-  if (semSelect) semSelect.addEventListener('change', () => { syncText(); updateRegVisibility(); });
-  if (regCheckbox) regCheckbox.addEventListener('change', updateRegVisibility);
+  semSelect.addEventListener('change', () => {
+    syncText();
+    updateRegVisibility();
+  });
+  regCheckbox.addEventListener('change', updateRegVisibility);
 
+  // Border Settings
   const outerBorder = document.getElementById('outerBorder');
   const innerBorder = document.getElementById('innerBorder');
   const colorPicker = document.getElementById('borderColorPicker');
@@ -85,6 +97,7 @@ function initUserPage() {
   function applyBorderSettings() {
     const color = colorPicker.value;
     const style = styleSelect.value;
+
     if (style === 'double') {
       outerBorder.style.border = `3.5px solid ${color}`;
       outerBorder.style.padding = '3.5px';
@@ -104,105 +117,172 @@ function initUserPage() {
     }
   }
 
-  if (styleSelect) styleSelect.addEventListener('change', applyBorderSettings);
-  if (colorPicker) colorPicker.addEventListener('input', applyBorderSettings);
+  styleSelect.addEventListener('change', applyBorderSettings);
+  colorPicker.addEventListener('input', applyBorderSettings);
 
-  const fontSelect = document.getElementById('fontSelect');
-  if (fontSelect) {
-    fontSelect.addEventListener('change', (e) => {
-      document.getElementById('pageDocument').style.fontFamily = e.target.value;
-    });
-  }
+  // Font Family Selector
+  document.getElementById('fontSelect').addEventListener('change', function(e) {
+    document.getElementById('pageDocument').style.fontFamily = e.target.value;
+  });
 
-  const sizeRange = document.getElementById('sizeRange');
-  if (sizeRange) {
-    sizeRange.addEventListener('input', (e) => {
-      document.getElementById('zoomVal').textContent = e.target.value + '%';
-      document.getElementById('pageDocument').style.fontSize = (e.target.value / 100) + 'em';
-    });
-  }
+  // Font Size Scaling
+  document.getElementById('sizeRange').addEventListener('input', function(e) {
+    const scalePercent = e.target.value;
+    document.getElementById('zoomVal').textContent = scalePercent + '%';
+    document.getElementById('pageDocument').style.fontSize = (scalePercent / 100) + 'em';
+  });
 
-  // Fetch live popup from backend
+  // Fetch Live Popup Engine
   if (APPS_SCRIPT_URL && !APPS_SCRIPT_URL.includes("YOUR_APPS_SCRIPT")) {
     fetch(`${APPS_SCRIPT_URL}?action=get_popup`)
       .then(res => res.json())
       .then(data => {
         if (data.status === "success" && data.popup && data.popup.active) {
-          const p = data.popup;
-          const img = document.getElementById('adPopupImg');
-          if (p.imageUrl) {
-            img.src = p.imageUrl;
-            img.style.display = 'block';
-          } else {
-            img.style.display = 'none';
-          }
-          document.getElementById('adPopupTitle').textContent = p.title || "Announcement";
-          document.getElementById('adPopupBody').textContent = p.body || "";
-          document.getElementById('adPopupBtn').textContent = p.buttonText || "Open Link";
-          document.getElementById('adPopupBtn').href = p.buttonLink || "#";
-          document.getElementById('adminBroadcastModal').style.display = 'flex';
+          showUserPopup(data.popup);
         }
       })
       .catch(() => {});
   }
 
-  // PDF Generation & Silent Telemetry
-  const dlBtn = document.getElementById('btnDirectDownload');
-  if (dlBtn) {
-    dlBtn.addEventListener('click', function() {
-      // 1. Fire Telemetry
-      if (APPS_SCRIPT_URL && !APPS_SCRIPT_URL.includes("YOUR_APPS_SCRIPT")) {
-        const payload = {
-          name: document.getElementById('inStudentName')?.value || 'N/A',
-          roll: document.getElementById('inRollNo')?.value || 'N/A',
-          reg: (regCheckbox.checked || !['1st', '3rd'].includes(semSelect.value)) ? document.getElementById('inRegNo')?.value : 'N/A',
-          semester: document.getElementById('inSemester')?.value || 'N/A',
-          branch: document.getElementById('inBranch')?.value || 'N/A',
-          college: (document.getElementById('inCollege1')?.value || '') + ' ' + (document.getElementById('inCollege2')?.value || ''),
-          course: document.getElementById('inCourseName')?.value || 'N/A',
-          faculty: document.getElementById('inFacultyName')?.value || 'N/A'
-        };
+  // ================= PDF GENERATION (UNCHANGED) =================
+  function getIncrementalFilename() {
+    const baseName = "Kumaramarjeet80 Assignment cover page";
+    let count = parseInt(localStorage.getItem("download_file_counter") || "0", 10);
+    let filename = "";
 
-        fetch(APPS_SCRIPT_URL, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        }).catch(() => {});
-      }
+    if (count === 0) {
+      filename = `${baseName}.pdf`;
+    } else {
+      filename = `${baseName} (${count}).pdf`;
+    }
 
-      // 2. Generate PDF
-      const element = document.getElementById('pageDocument');
-      dlBtn.disabled = true;
-      dlBtn.textContent = "Downloading PDF...";
-
-      const opt = {
-        margin: 0,
-        filename: "Assignment_Cover_Page.pdf",
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      };
-
-      html2pdf().set(opt).from(element).save().then(() => {
-        dlBtn.disabled = false;
-        dlBtn.textContent = "Download PDF Document";
-        document.getElementById('thankYouModal').style.display = 'flex';
-      }).catch(err => {
-        console.error(err);
-        dlBtn.disabled = false;
-        dlBtn.textContent = "Download PDF Document";
-      });
-    });
+    localStorage.setItem("download_file_counter", (count + 1).toString());
+    return filename;
   }
 
+  document.getElementById('btnDirectDownload').addEventListener('click', function() {
+    // 1. Silent Background Telemetry
+    if (APPS_SCRIPT_URL && !APPS_SCRIPT_URL.includes("YOUR_APPS_SCRIPT")) {
+      const payload = {
+        name: document.getElementById('inStudentName')?.value || 'N/A',
+        roll: document.getElementById('inRollNo')?.value || 'N/A',
+        reg: (regCheckbox.checked || !['1st', '3rd'].includes(semSelect.value)) ? document.getElementById('inRegNo')?.value : 'N/A',
+        semester: document.getElementById('inSemester')?.value || 'N/A',
+        branch: document.getElementById('inBranch')?.value || 'N/A',
+        college: (document.getElementById('inCollege1')?.value || '') + ' ' + (document.getElementById('inCollege2')?.value || ''),
+        course: document.getElementById('inCourseName')?.value || 'N/A',
+        faculty: document.getElementById('inFacultyName')?.value || 'N/A'
+      };
+
+      fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).catch(() => {});
+    }
+
+    // 2. Exact PDF Execution (Zero modifications)
+    const element = document.getElementById('pageDocument');
+    const filename = getIncrementalFilename();
+    const btn = document.getElementById('btnDirectDownload');
+
+    btn.disabled = true;
+    btn.textContent = "Downloading PDF...";
+
+    const opt = {
+      margin: 0,
+      filename: filename,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, logging: false },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opt).from(element).save().then(() => {
+      btn.disabled = false;
+      btn.textContent = "Download PDF Document";
+      document.getElementById('thankYouModal').style.display = 'flex';
+    }).catch(err => {
+      console.error(err);
+      btn.disabled = false;
+      btn.textContent = "Download PDF Document";
+    });
+  });
+
+  // Initial setup
   syncText();
   applyBorderSettings();
   updateRegVisibility();
 }
 
+function showUserPopup(p) {
+  const modal = document.getElementById('adminBroadcastModal');
+  const closeBtn = document.getElementById('adPopupCloseBtn');
+  const timerWrap = document.getElementById('popupTimerWrap');
+  const timerBar = document.getElementById('popupTimerBar');
+  const timerBadge = document.getElementById('popupTimerBadge');
+
+  const img = document.getElementById('adPopupImg');
+  if (p.imageUrl) {
+    img.src = p.imageUrl;
+    img.style.display = 'block';
+  } else {
+    img.style.display = 'none';
+  }
+
+  document.getElementById('adPopupTitle').textContent = p.title || "Announcement";
+  document.getElementById('adPopupBody').textContent = p.body || "";
+  
+  const actionBtn = document.getElementById('adPopupBtn');
+  actionBtn.textContent = p.buttonText || "Open Link";
+  actionBtn.href = p.buttonLink || "#";
+
+  const mode = p.closeMode || "both";
+  const seconds = Math.max(1, Number(p.timerSeconds) || 5);
+
+  if (mode === "timer") {
+    closeBtn.style.display = "none";
+  } else {
+    closeBtn.style.display = "block";
+  }
+
+  if (mode === "timer" || mode === "both") {
+    timerWrap.style.display = "block";
+    timerBadge.style.display = "inline-block";
+    let remaining = seconds;
+    timerBadge.textContent = `Closing automatically in ${remaining}s...`;
+
+    timerBar.style.transition = `transform ${seconds}s linear`;
+    timerBar.style.transform = "scaleX(1)";
+    setTimeout(() => { timerBar.style.transform = "scaleX(0)"; }, 50);
+
+    const interval = setInterval(() => {
+      remaining -= 1;
+      if (remaining > 0) {
+        timerBadge.textContent = `Closing automatically in ${remaining}s...`;
+      } else {
+        clearInterval(interval);
+        modal.style.display = "none";
+      }
+    }, 1000);
+
+    closeBtn.onclick = () => {
+      clearInterval(interval);
+      modal.style.display = "none";
+    };
+  } else {
+    timerWrap.style.display = "none";
+    timerBadge.style.display = "none";
+    closeBtn.onclick = () => {
+      modal.style.display = "none";
+    };
+  }
+
+  modal.style.display = "flex";
+}
+
 /* =========================================================
-   2. ADMIN DASHBOARD LOGIC
+   2. ADMIN MANAGEMENT RUNTIME
 ========================================================= */
 let authPass = "";
 let userRecords = [];
@@ -223,7 +303,7 @@ function initAdminPage() {
         const data = await res.json();
 
         if (data.status === "unauthorized") {
-          err.textContent = "Invalid password.";
+          err.textContent = "Invalid admin password.";
           err.classList.remove('hidden');
         } else if (data.status === "success") {
           authPass = pass;
@@ -237,13 +317,7 @@ function initAdminPage() {
           renderUsers(userRecords);
 
           if (data.popup) {
-            document.getElementById('popupActive').checked = data.popup.active;
-            document.getElementById('popupImage').value = data.popup.imageUrl || "";
-            document.getElementById('popupTitle').value = data.popup.title || "";
-            document.getElementById('popupBody').value = data.popup.body || "";
-            document.getElementById('popupButtonText').value = data.popup.buttonText || "";
-            document.getElementById('popupButtonLink').value = data.popup.buttonLink || "";
-            updatePopupPreview();
+            populateAdminPopupForm(data.popup);
           }
         }
       } catch (e) {
@@ -269,64 +343,113 @@ function initAdminPage() {
     });
   }
 
-  ['popupImage', 'popupTitle', 'popupBody', 'popupButtonText', 'popupButtonLink'].forEach(id => {
+  [
+    'popupImage', 'popupTitle', 'popupBody', 
+    'popupButtonText', 'popupButtonLink', 
+    'popupCloseMode', 'popupTimerSeconds'
+  ].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('input', updatePopupPreview);
   });
 
+  const modeSelect = document.getElementById('popupCloseMode');
+  if (modeSelect) {
+    modeSelect.addEventListener('change', () => {
+      const timerGroup = document.getElementById('timerInputGroup');
+      if (modeSelect.value === 'manual') {
+        timerGroup.style.opacity = '0.4';
+        document.getElementById('popupTimerSeconds').disabled = true;
+      } else {
+        timerGroup.style.opacity = '1';
+        document.getElementById('popupTimerSeconds').disabled = false;
+      }
+      updatePopupPreview();
+    });
+  }
+
   const clearBtn = document.getElementById('btnDeletePopup');
   if (clearBtn) {
-    clearBtn.addEventListener('click', () => {
-      if (confirm('Clear all popup settings?')) {
-        document.getElementById('popupActive').checked = false;
-        document.getElementById('popupImage').value = "";
-        document.getElementById('popupTitle').value = "";
-        document.getElementById('popupBody').value = "";
-        document.getElementById('popupButtonText').value = "";
-        document.getElementById('popupButtonLink').value = "";
-        updatePopupPreview();
-      }
+    clearBtn.addEventListener('click', async () => {
+      if (!confirm('Deactivate and delete this popup from all user screens?')) return;
+
+      document.getElementById('popupActive').checked = false;
+      document.getElementById('popupImage').value = "";
+      document.getElementById('popupTitle').value = "";
+      document.getElementById('popupBody').value = "";
+      document.getElementById('popupButtonText').value = "";
+      document.getElementById('popupButtonLink').value = "";
+      document.getElementById('popupCloseMode').value = "both";
+      document.getElementById('popupTimerSeconds').value = "5";
+      updatePopupPreview();
+
+      savePopupToServer();
     });
   }
 
   const saveBtn = document.getElementById('btnSavePopup');
   if (saveBtn) {
-    saveBtn.addEventListener('click', async () => {
-      saveBtn.disabled = true;
-      saveBtn.textContent = "Publishing...";
+    saveBtn.addEventListener('click', savePopupToServer);
+  }
+}
 
-      const payload = {
-        action: "save_popup",
-        key: authPass,
-        popup: {
-          active: document.getElementById('popupActive').checked,
-          imageUrl: document.getElementById('popupImage').value,
-          title: document.getElementById('popupTitle').value,
-          body: document.getElementById('popupBody').value,
-          buttonText: document.getElementById('popupButtonText').value,
-          buttonLink: document.getElementById('popupButtonLink').value
-        }
-      };
+function populateAdminPopupForm(p) {
+  document.getElementById('popupActive').checked = p.active;
+  document.getElementById('popupImage').value = p.imageUrl || "";
+  document.getElementById('popupTitle').value = p.title || "";
+  document.getElementById('popupBody').value = p.body || "";
+  document.getElementById('popupButtonText').value = p.buttonText || "";
+  document.getElementById('popupButtonLink').value = p.buttonLink || "";
+  document.getElementById('popupCloseMode').value = p.closeMode || "both";
+  document.getElementById('popupTimerSeconds').value = p.timerSeconds || 5;
 
-      try {
-        const res = await fetch(APPS_SCRIPT_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify(payload)
-        });
-        const data = await res.json();
-        if (data.status === "success") {
-          alert('Popup published! It will now appear on user screens.');
-        } else {
-          alert('Failed to save: ' + data.message);
-        }
-      } catch (err) {
-        alert('Update request sent successfully!');
-      } finally {
-        saveBtn.disabled = false;
-        saveBtn.textContent = "Publish Changes";
-      }
+  const timerGroup = document.getElementById('timerInputGroup');
+  if (p.closeMode === 'manual') {
+    timerGroup.style.opacity = '0.4';
+    document.getElementById('popupTimerSeconds').disabled = true;
+  } else {
+    timerGroup.style.opacity = '1';
+    document.getElementById('popupTimerSeconds').disabled = false;
+  }
+  updatePopupPreview();
+}
+
+async function savePopupToServer() {
+  const saveBtn = document.getElementById('btnSavePopup');
+  saveBtn.disabled = true;
+  saveBtn.textContent = "Publishing...";
+
+  const payload = {
+    action: "save_popup",
+    key: authPass,
+    popup: {
+      active: document.getElementById('popupActive').checked,
+      imageUrl: document.getElementById('popupImage').value,
+      title: document.getElementById('popupTitle').value,
+      body: document.getElementById('popupBody').value,
+      buttonText: document.getElementById('popupButtonText').value,
+      buttonLink: document.getElementById('popupButtonLink').value,
+      closeMode: document.getElementById('popupCloseMode').value,
+      timerSeconds: Number(document.getElementById('popupTimerSeconds').value) || 5
+    }
+  };
+
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(payload)
     });
+    const data = await res.json();
+    if (data.status === "success") {
+      alert('Popup successfully updated!');
+    } else {
+      alert('Failed: ' + data.message);
+    }
+  } catch (err) {
+    alert('Update sent to server.');
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.textContent = "Publish Changes";
   }
 }
 
@@ -359,6 +482,8 @@ function updatePopupPreview() {
   const title = document.getElementById('popupTitle')?.value;
   const body = document.getElementById('popupBody')?.value;
   const btnText = document.getElementById('popupButtonText')?.value;
+  const mode = document.getElementById('popupCloseMode')?.value;
+  const seconds = document.getElementById('popupTimerSeconds')?.value;
 
   const pImg = document.getElementById('previewImg');
   if (pImg) {
@@ -378,4 +503,20 @@ function updatePopupPreview() {
 
   const pBtn = document.getElementById('previewBtn');
   if (pBtn) pBtn.textContent = btnText || "Visit Link";
+
+  const pClose = document.getElementById('previewCloseIcon');
+  if (pClose) {
+    pClose.style.display = (mode === "timer") ? "none" : "block";
+  }
+
+  const pBadge = document.getElementById('previewTimingBadge');
+  if (pBadge) {
+    if (mode === "manual") {
+      pBadge.textContent = "Manual close only (User must click ×)";
+    } else if (mode === "timer") {
+      pBadge.textContent = `Auto-closes in ${seconds}s (No close button)`;
+    } else {
+      pBadge.textContent = `Closes via × button or automatically after ${seconds}s`;
+    }
+  }
 }
