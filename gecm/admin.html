@@ -37,7 +37,7 @@
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
         <div>
           <h2 class="text-base sm:text-lg font-bold text-slate-800">User Download Telemetry</h2>
-          <p class="text-xs text-slate-500">Live records from your Google Spreadsheet database</p>
+          <p class="text-xs text-slate-500">Live download records streamed to your Google Sheet</p>
         </div>
         <div class="flex flex-col sm:flex-row sm:items-center gap-3">
           <div class="text-xs sm:text-sm font-semibold">Total Users: <span id="totalCount" class="text-blue-600 text-base sm:text-lg">0</span></div>
@@ -64,12 +64,12 @@
       </div>
     </section>
 
-    <!-- Dynamic Popup Manager Section -->
+    <!-- Dynamic Media Popup Manager Section -->
     <section class="bg-white rounded-xl border border-slate-200 p-4 sm:p-6 shadow-sm">
       <div class="pb-3 mb-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 class="text-base sm:text-lg font-bold text-slate-800">Announcement Banner & Popup Manager</h2>
-          <p class="text-xs text-slate-500">Upload banner directly, customize text, link button, and recurring intervals</p>
+          <h2 class="text-base sm:text-lg font-bold text-slate-800">Media Announcement Studio</h2>
+          <p class="text-xs text-slate-500">Broadcast photos, native videos, or YouTube clips with customized click behaviors</p>
         </div>
         <button id="btnSavePopup" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-2 rounded-lg text-xs transition-colors shadow self-start sm:self-auto">
           Publish Changes
@@ -77,42 +77,66 @@
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <!-- Configuration Form -->
+        <!-- Controls & Configuration Form -->
         <div class="space-y-4">
           <div class="flex items-center gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
             <input type="checkbox" id="popupActive" class="w-4 h-4 cursor-pointer">
             <label for="popupActive" class="text-xs font-bold text-slate-700 cursor-pointer">Enable & Broadcast Popup to Users</label>
           </div>
 
-          <!-- Direct Image File Uploader -->
+          <!-- Media Format Selector -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Media Type</label>
+              <select id="popupMediaType" class="w-full border border-slate-300 rounded-lg p-2 text-xs bg-white outline-none focus:border-blue-500">
+                <option value="image" selected>Photo Banner (Image)</option>
+                <option value="video">Video Player (MP4 / YouTube)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Clickable Area</label>
+              <select id="popupClickMode" class="w-full border border-slate-300 rounded-lg p-2 text-xs bg-white outline-none focus:border-blue-500">
+                <option value="button" selected>Button Only Clickable</option>
+                <option value="card">Entire Card Clickable</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Direct Device File Upload -->
           <div>
-            <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Upload Banner Image (Direct from Device)</label>
-            <input type="file" id="popupFileInput" accept="image/*" class="w-full border border-slate-300 rounded-lg p-2 text-xs outline-none bg-white file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
-            <span class="text-[11px] text-slate-400 mt-1 block">Image will automatically be uploaded and hosted on your Google Drive storage.</span>
+            <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Upload Media File (Image or Video)</label>
+            <input type="file" id="popupFileInput" accept="image/*,video/*" class="w-full border border-slate-300 rounded-lg p-2 text-xs outline-none bg-white file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
+            <span class="text-[11px] text-slate-400 mt-1 block">Streams to Google Drive and links directly to the student page.</span>
+          </div>
+
+          <!-- Manual / External Video Link Wrap -->
+          <div id="videoUrlInputWrap" style="display:none;">
+            <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Video Link or YouTube URL (Optional)</label>
+            <input type="url" id="popupMediaUrl" placeholder="https://www.youtube.com/watch?v=... or direct .mp4" class="w-full border border-slate-300 rounded-lg p-2 text-xs outline-none focus:border-blue-500">
           </div>
 
           <div>
             <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Heading / Title</label>
-            <input type="text" id="popupTitle" placeholder="e.g. Join Our WhatsApp Community!" class="w-full border border-slate-300 rounded-lg p-2 text-xs outline-none focus:border-blue-500">
+            <input type="text" id="popupTitle" placeholder="e.g. Important Semester Notice!" class="w-full border border-slate-300 rounded-lg p-2 text-xs outline-none focus:border-blue-500">
           </div>
 
           <div>
             <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Body Text Description</label>
-            <textarea id="popupBody" rows="3" placeholder="e.g. Get access to verified exam notes, pyqs, and faculty announcements." class="w-full border border-slate-300 rounded-lg p-2 text-xs outline-none focus:border-blue-500"></textarea>
+            <textarea id="popupBody" rows="3" placeholder="e.g. Check the revised internal examination schedule and project deadlines." class="w-full border border-slate-300 rounded-lg p-2 text-xs outline-none focus:border-blue-500"></textarea>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Button Label</label>
-              <input type="text" id="popupButtonText" placeholder="e.g. Join Group" class="w-full border border-slate-300 rounded-lg p-2 text-xs outline-none focus:border-blue-500">
+              <input type="text" id="popupButtonText" placeholder="e.g. View Full Notice" class="w-full border border-slate-300 rounded-lg p-2 text-xs outline-none focus:border-blue-500">
             </div>
             <div>
               <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Destination URL</label>
-              <input type="url" id="popupButtonLink" placeholder="https://chat.whatsapp.com/..." class="w-full border border-slate-300 rounded-lg p-2 text-xs outline-none focus:border-blue-500">
+              <input type="url" id="popupButtonLink" placeholder="https://drive.google.com/... or website link" class="w-full border border-slate-300 rounded-lg p-2 text-xs outline-none focus:border-blue-500">
             </div>
           </div>
 
-          <!-- Lifecycle, Timing & Recurrence Rules -->
+          <!-- Dismissal & Recurring Rules -->
           <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-3">
             <span class="block text-xs font-bold text-blue-900 uppercase tracking-wide">Dismissal & Interval Timing Rules</span>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -140,15 +164,17 @@
           </button>
         </div>
 
-        <!-- Live Visual Preview Area -->
+        <!-- Live Visual Preview -->
         <div>
           <span class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Live Visual Preview</span>
           <div class="bg-slate-200 p-4 sm:p-8 rounded-xl flex items-center justify-center min-h-[360px]">
-            <div class="bg-white rounded-xl shadow-lg max-w-sm w-full overflow-hidden relative">
-              <span id="previewCloseIcon" class="absolute top-2 right-3 text-slate-600 bg-white/70 w-6 h-6 rounded-full flex items-center justify-center font-bold text-sm cursor-default z-10">&times;</span>
+            <div class="bg-white rounded-xl shadow-lg max-w-sm w-full overflow-hidden relative" id="previewContainerCard">
+              <span id="previewCloseIcon" class="absolute top-2 right-3 text-slate-600 bg-white/70 w-6 h-6 rounded-full flex items-center justify-center font-bold text-sm cursor-default z-20">&times;</span>
               
-              <div class="h-36 bg-slate-100 flex items-center justify-center overflow-hidden">
+              <div class="h-44 bg-slate-900 flex items-center justify-center overflow-hidden relative">
                 <img id="previewImg" src="" alt="Banner Preview" class="w-full h-full object-cover hidden">
+                <video id="previewVideo" class="w-full h-full object-contain hidden" autoplay muted loop playsinline></video>
+                <iframe id="previewIframe" class="w-full h-full border-0 hidden" allow="autoplay; encrypted-media"></iframe>
               </div>
               
               <div class="p-5 text-center">
@@ -158,7 +184,7 @@
                   Visit Link
                 </a>
                 <div class="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-500 font-medium" id="previewTimingBadge">
-                  Closes via × or after 5s • Re-triggers every 1 min
+                  Button Only • Closes via × or after 5s • Re-triggers every 1 min
                 </div>
               </div>
             </div>
