@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Academic Portal & Cover Page Generator - GEC Munger</title>
+
+  <!-- Typography: Modern Inter, Serif classics for Academic A4 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=EB+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700;800&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300&family=Montserrat:wght@400;600;700&family=Playfair+Display:ital,wght@0,500;0,700;1,400&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <!-- Core HTML to PDF Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="user-body">
+
+  <!-- =========================================================
+       VIEW 1: CATALOG PORTAL (EXPLORER)
+  ========================================================= -->
+  <div id="view-catalog" class="portal-container">
+    
+    <header class="portal-header">
+      <div class="portal-badge">
+        <span class="badge-dot"></span>
+        Academic Resources & Studio
+      </div>
+      <h1 class="portal-title">Government Engineering College, Munger</h1>
+      <p class="portal-subtitle">Access standardized university cover pages, lecture modules, lab records, and Bihar Engineering University curriculum materials.</p>
+    </header>
+
+    <nav class="breadcrumb-bar" id="breadcrumbNav" style="display:none;">
+      <span class="breadcrumb-item" id="bcHome">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+        Home
+      </span>
+      <span class="breadcrumb-separator" id="bcSep1" style="display:none;">›</span>
+      <span class="breadcrumb-item" id="bcCat" style="display:none;"></span>
+      <span class="breadcrumb-separator" id="bcSep2" style="display:none;">›</span>
+      <span class="breadcrumb-item active" id="bcSub" style="display:none;"></span>
+    </nav>
+
+    <!-- Stage A: Categories Grid -->
+    <div id="stageCategories">
+      <div class="catalog-grid" id="categoryGrid">
+        <div class="empty-state-card">
+          <div class="spinner"></div>
+          <span>Loading academic repositories...</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stage B: Subcategories Grid -->
+    <div id="stageSubcategories" style="display:none;">
+      <div class="catalog-grid" id="subcategoryGrid"></div>
+    </div>
+
+    <!-- Stage C: Cards Grid -->
+    <div id="stageCards" style="display:none;">
+      <div class="cards-grid" id="cardGrid"></div>
+    </div>
+
+  </div>
+
+  <!-- =========================================================
+       VIEW 2: GENERATOR WORKSPACE (PDF COVER PAGE CANVAS)
+  ========================================================= -->
+  <div id="view-generator">
+    
+    <div class="generator-topbar">
+      <button class="btn-back-to-catalog" id="btnBackToPortal">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+        Back to Catalog
+      </button>
+      <div class="active-card-indicator" id="activeCardLabel">
+        Custom Assignment Cover Page
+      </div>
+    </div>
+
+    <div class="mobile-toggle-bar">
+      <span class="mobile-bar-title">Document Properties</span>
+      <button id="btnToggleMobileSidebar" class="btn-mobile-sidebar">⚙ Open Controls</button>
+    </div>
+
+    <div class="user-body-layout">
+      
+      <!-- Controls Sidebar -->
+      <aside class="editor-sidebar">
+
+        <button class="download-btn" id="btnDirectDownload">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          Download PDF Document
+        </button>
+        <p class="download-subtext">Generates standard single-page A4 document</p>
+
+        <!-- Academic Selection -->
+        <section class="sidebar-section">
+          <h3>Academic Selection</h3>
+          <div class="form-group">
+            <label for="inSemester">Select Semester</label>
+            <select id="inSemester">
+              <option value="1st">1st Semester</option>
+              <option value="2nd">2nd Semester</option>
+              <option value="3rd">3rd Semester</option>
+              <option value="4th">4th Semester</option>
+              <option value="5th">5th Semester</option>
+              <option value="6th">6th Semester</option>
+              <option value="7th">7th Semester</option>
+              <option value="8th">8th Semester</option>
+            </select>
+          </div>
+
+          <div class="checkbox-group" id="regToggleWrapper">
+            <input type="checkbox" id="includeRegCheckbox" checked>
+            <label for="includeRegCheckbox">Include Registration No.</label>
+          </div>
+
+          <div class="form-group" id="regInputFieldGroup" style="margin-top: 10px;">
+            <label for="inRegNo">Registration Number</label>
+            <input type="text" id="inRegNo" value="25103144005">
+          </div>
+        </section>
+
+        <!-- Border Settings -->
+        <section class="sidebar-section">
+          <h3>Border Configuration</h3>
+          <div class="form-group">
+            <label for="borderStyleSelect">Border Pattern</label>
+            <select id="borderStyleSelect">
+              <option value="double" selected>Classic Academic Double Border</option>
+              <option value="single">Single Solid Border</option>
+              <option value="thick-thin">Thick & Thin Architectural</option>
+              <option value="none">No Border</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="borderColorPicker">Border Color Tint</label>
+            <div class="color-picker-wrapper">
+              <input type="color" id="borderColorPicker" value="#002060">
+              <span class="color-preview-label">Preset: Classic Navy</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Typography Controls -->
+        <section class="sidebar-section">
+          <h3>Typography & Scaling</h3>
+          <div class="form-group">
+            <label for="fontSelect">Typeface</label>
+            <select id="fontSelect">
+              <option value="'Merriweather', serif" selected>Merriweather (Academic Standard)</option>
+              <option value="'Times New Roman', Times, serif">Times New Roman</option>
+              <option value="'EB Garamond', serif">EB Garamond</option>
+              <option value="'Playfair Display', serif">Playfair Display</option>
+              <option value="'Cinzel', serif">Cinzel Classic</option>
+              <option value="'Montserrat', sans-serif">Montserrat Modern</option>
+              <option value="'Roboto', sans-serif">Roboto</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <div class="range-label-row">
+              <label for="sizeRange">Canvas Scale</label>
+              <span id="zoomVal" class="range-value-pill">100%</span>
+            </div>
+            <input type="range" id="sizeRange" min="80" max="120" value="100" step="1">
+          </div>
+        </section>
+
+        <!-- Universal Editable Fields Section -->
+        <section class="sidebar-section" id="templateEditorSection">
+          <h3>Edit Document Details</h3>
+          <p style="font-size: 11px; color: #64748b; margin-bottom: 12px;">Modify any text element below to customize your cover page in real time.</p>
+
+          <!-- Standard Pre-Mapped Inputs -->
+          <div id="standardInputsWrap">
+            <div class="form-group">
+              <label for="inCollege1">College Line 1</label>
+              <input type="text" id="inCollege1" value="GOVERNMENT ENGINEERING COLLAGE,">
+            </div>
+            <div class="form-group">
+              <label for="inCollege2">College Line 2</label>
+              <input type="text" id="inCollege2" value="MUNGER">
+            </div>
+            <div class="form-group">
+              <label for="inAffiliation">Affiliation Line</label>
+              <input type="text" id="inAffiliation" value="(Affiliated to Bihar Engineering University, Patna, Bihar)">
+            </div>
+            <div class="form-group">
+              <label for="inDocTitle">Document Heading</label>
+              <input type="text" id="inDocTitle" value="ASSIGNMENT WORK">
+            </div>
+            <div class="form-group">
+              <label for="inCourseName">Course / Subject Name</label>
+              <input type="text" id="inCourseName" value="Engineering chemistry">
+            </div>
+            <div class="form-group">
+              <label for="inCourseCode">Course / Subject Code</label>
+              <input type="text" id="inCourseCode" value="(100103)">
+            </div>
+            <div class="form-group">
+              <label for="inStudentName">Student Full Name</label>
+              <input type="text" id="inStudentName" value="Aastha kumari">
+            </div>
+            <div class="form-group">
+              <label for="inRollNo">University Roll Number</label>
+              <input type="text" id="inRollNo" value="25103042">
+            </div>
+            <div class="form-group">
+              <label for="inFacultyName">Faculty Guide</label>
+              <input type="text" id="inFacultyName" value="Dr. Gautam Kumar">
+            </div>
+            <div class="form-group">
+              <label for="inFacultyRole">Designation</label>
+              <input type="text" id="inFacultyRole" value="Assistant Professor">
+            </div>
+            <div class="form-group">
+              <label for="inFacultyDept">Department</label>
+              <input type="text" id="inFacultyDept" value="(Applied Science and Humanities)">
+            </div>
+            <div class="form-group">
+              <label for="inDegree">Degree Program</label>
+              <input type="text" id="inDegree" value="Bachelor of Technology">
+            </div>
+            <div class="form-group">
+              <label for="inBranch">Branch / Discipline</label>
+              <input type="text" id="inBranch" value="Civil Engineering">
+            </div>
+            <div class="form-group">
+              <label for="inSession">Academic Session</label>
+              <input type="text" id="inSession" value="(2026-2030)">
+            </div>
+            <div class="form-group">
+              <label for="inFooterCollege">Footer Institute Name</label>
+              <input type="text" id="inFooterCollege" value="Government Engineering College, Munger">
+            </div>
+            <div class="form-group">
+              <label for="inFooterDept">Footer Authority Line</label>
+              <input type="text" id="inFooterDept" value="(Department of Science, Technology and Technical Education, Government of Bihar)">
+            </div>
+          </div>
+
+          <!-- Dynamic Container: Automatically populates inputs for extra placeholders in custom templates -->
+          <div id="dynamicCustomFieldsWrap"></div>
+        </section>
+
+      </aside>
+
+      <!-- A4 Output Preview Canvas (Strictly Preserved) -->
+      <main class="preview-wrapper">
+        <div class="page" id="pageDocument">
+          <div class="page-border-outer" id="outerBorder">
+            <div class="page-border-inner" id="innerBorder">
+
+              <div id="dynamicPageContent" style="display:flex; flex-direction:column; justify-content:space-between; height:100%;">
+                
+                <div>
+                  <div class="college-title">
+                    <span id="outCollege1">GOVERNMENT ENGINEERING COLLAGE,</span><br>
+                    <span id="outCollege2">MUNGER</span>
+                  </div>
+                  <div class="college-subtitle" id="outAffiliation">(Affiliated to Bihar Engineering University, Patna, Bihar)</div>
+
+                  <div class="top-logo-container">
+                    <img id="topLogoImg" crossorigin="anonymous" alt="GEC Munger Logo">
+                  </div>
+
+                  <div class="doc-title" id="outDocTitle">ASSIGNMENT WORK</div>
+
+                  <div class="course-label">Submitted for the Course</div>
+                  <div class="course-name" id="outCourseName">Engineering chemistry</div>
+                  <div class="course-code" id="outCourseCode">(100103)</div>
+
+                  <div class="connector-label">by</div>
+                  <div class="student-name" id="outStudentName">Aastha kumari</div>
+                  <div class="meta-data">Roll no: <span id="outRollNo">25103042</span></div>
+                  <div class="meta-data" id="outRegNoLine">Registration no: <span id="outRegNo">25103144005</span></div>
+                  <div class="meta-data">Semester: <span id="outSemester">1st</span></div>
+
+                  <div class="faculty-box">
+                    <div class="connector-label">Under the Guidance of</div>
+                    <div class="faculty-name" id="outFacultyName">Dr. Gautam Kumar</div>
+                    <div class="faculty-role" id="outFacultyRole">Assistant Professor</div>
+                    <div class="faculty-role" id="outFacultyDept">(Applied Science and Humanities)</div>
+                  </div>
+
+                  <div class="degree-block">
+                    <div class="degree-lead">In partial fulfillment of the requirements for the award of</div>
+                    <div class="degree-name" id="outDegree">Bachelor of Technology</div>
+                    <div class="connector-label" style="margin: 1px 0;">in</div>
+                    <div class="branch-name" id="outBranch">Civil Engineering</div>
+                    <div class="session-text" id="outSession">(2026-2030)</div>
+                  </div>
+                </div>
+
+                <div class="page-footer">
+                  <div class="signature-row">
+                    <span>Prof. Signature:- _____________</span>
+                  </div>
+
+                  <div class="bottom-logo-container">
+                    <img id="bottomLogoImg" crossorigin="anonymous" alt="GEC Munger Emblem">
+                  </div>
+
+                  <div class="footer-college" id="outFooterCollege">Government Engineering College, Munger</div>
+                  <div class="footer-dept" id="outFooterDept">(Department of Science, Technology and Technical Education, Government of Bihar)</div>
+                </div>
+
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </main>
+
+    </div>
+  </div>
+
+  <!-- =========================================================
+       VIEW 3: EMBEDDED DOCUMENT / PDF VIEWER MODAL
+  ========================================================= -->
+  <div class="doc-viewer-overlay" id="docViewerModal" style="display:none;">
+    <div class="doc-viewer-header">
+      <div class="doc-viewer-title-group">
+        <span class="doc-viewer-badge">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+          Doc Viewer
+        </span>
+        <span id="docViewerHeading" class="doc-viewer-title">Academic Document</span>
+      </div>
+      <div class="doc-viewer-actions">
+        <a id="docViewerDownloadBtn" href="#" target="_blank" download class="btn-doc-download">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          Download Original
+        </a>
+        <button id="docViewerCloseBtn" class="btn-doc-close" aria-label="Close document viewer">
+          ✕ Close
+        </button>
+      </div>
+    </div>
+    <div class="doc-viewer-frame-wrap">
+      <iframe id="docViewerIframe" src="" allowfullscreen></iframe>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       DYNAMIC ADMIN MEDIA POPUP MODAL (NO TIMESTAMPS)
+  ========================================================= -->
+  <div class="modal-overlay" id="adminBroadcastModal">
+    <div class="modal-box" id="adminModalBox">
+      <button class="modal-close-btn" id="adPopupCloseBtn" aria-label="Dismiss alert">&times;</button>
+      
+      <div class="modal-hero-media-wrap" id="adPopupHeroWrap">
+        <img id="adPopupImg" class="modal-hero-img" src="" alt="Announcement Banner" style="display:none;">
+        <video id="adPopupVideo" class="modal-hero-video" autoplay muted loop playsinline style="display:none;"></video>
+        <iframe id="adPopupIframe" class="modal-hero-iframe" src="" allow="autoplay; encrypted-media" allowfullscreen style="display:none;"></iframe>
+        
+        <button id="adPopupUnmuteBtn" type="button" class="ad-unmute-btn" style="display:none;">
+          🔊 Tap to Unmute
+        </button>
+      </div>
+
+      <div class="modal-content-area">
+        <h3 id="adPopupTitle" class="modal-title">Special Announcement</h3>
+        <p id="adPopupBody" class="modal-desc"></p>
+        <a id="adPopupBtn" class="modal-action-btn" href="#" target="_blank">Visit Link</a>
+        
+        <div class="popup-timer-bar-wrap" id="popupTimerWrap">
+          <div class="popup-timer-bar" id="popupTimerBar"></div>
+        </div>
+        <span class="timer-badge" id="popupTimerBadge"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       ANIMATED CELEBRATION DOWNLOAD TOAST
+  ========================================================= -->
+  <div class="celebration-toast" id="celebrationToast">
+    <div class="celebration-toast-body">
+      <div class="toast-icon-circle">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      </div>
+      <div class="toast-text-group">
+        <h4 class="toast-heading">Document Downloaded!</h4>
+        <p class="toast-desc">Thanks for using Engineering Munger Portal. Best wishes for your academic semester!</p>
+      </div>
+      <button class="toast-close-btn" id="celebrationToastCloseBtn" aria-label="Close notification">✕</button>
+    </div>
+    <div class="toast-progress-bar-wrap">
+      <div class="toast-progress-bar" id="toastProgressBar"></div>
+    </div>
+  </div>
+
+  <script src="js/script.js"></script>
+</body>
+</html>
