@@ -28,7 +28,7 @@
   <header class="bg-slate-950 border-b border-slate-800 px-6 py-4 flex flex-wrap justify-between items-center gap-4 sticky top-0 z-50">
     <div class="flex items-center gap-3">
       <span class="text-xl font-extrabold text-blue-400 tracking-tight">GECM Studio</span>
-      <span class="text-xs px-2.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 font-mono">v4.2 Full Telemetry</span>
+      <span class="text-xs px-2.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 font-mono">v4.3 Telemetry Stream</span>
     </div>
     <div id="authStatusBadge" class="text-xs text-amber-400 font-semibold flex items-center gap-2">
       <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> Authentication Required
@@ -59,7 +59,6 @@
     <!-- TAB 1: CATEGORIES, SUBCATEGORIES & CARDS -->
     <section id="tab-taxonomy" class="tab-pane space-y-8">
       
-      <!-- Top Row: Category & Subcategory Creators -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         
         <!-- Add Category Form -->
@@ -366,17 +365,17 @@
 
     </section>
 
-    <!-- TAB 3: STUDENT TELEMETRY & DRIVE ARCHIVE (COMPLETE DATA VIEW) -->
+    <!-- TAB 3: STUDENT TELEMETRY & DRIVE ARCHIVE (SUBJECT & CODE CONSOLIDATED) -->
     <section id="tab-telemetry" class="tab-pane hidden space-y-6">
       <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-6">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-700/60">
           <div>
             <h3 class="text-lg font-bold text-white">Student Download Telemetry & Drive Archive</h3>
-            <p class="text-xs text-slate-400">All user-submitted metadata along with auto-generated Google Drive PDF links</p>
+            <p class="text-xs text-slate-400">All student download telemetry logs and generated Google Drive PDF archives</p>
           </div>
           <div class="flex items-center gap-3">
             <span class="text-xs font-bold text-slate-300">Total Downloads: <span id="telemetryCount" class="text-blue-400 font-mono text-sm">0</span></span>
-            <input type="text" id="telemetrySearch" placeholder="Search by roll, name, order, subject, college..." class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-blue-500 w-72">
+            <input type="text" id="telemetrySearch" placeholder="Search roll, name, order, subject, college..." class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-blue-500 w-72">
           </div>
         </div>
 
@@ -390,8 +389,8 @@
                 <th class="p-3 whitespace-nowrap">Student Name</th>
                 <th class="p-3 whitespace-nowrap">Roll No</th>
                 <th class="p-3 whitespace-nowrap">Reg No</th>
-                <th class="p-3 whitespace-nowrap">Subject</th>
-                <th class="p-3 whitespace-nowrap">Subject Code</th>
+                <!-- Combined Subject & Subject Code Column -->
+                <th class="p-3 whitespace-nowrap">Subject & Code</th>
                 <th class="p-3 whitespace-nowrap">Semester</th>
                 <th class="p-3 whitespace-nowrap">Branch</th>
                 <th class="p-3 whitespace-nowrap">College</th>
@@ -400,7 +399,7 @@
               </tr>
             </thead>
             <tbody id="telemetryTableBody" class="divide-y divide-slate-800 text-slate-300">
-              <tr><td colspan="13" class="p-6 text-center text-slate-500">No downloads logged yet.</td></tr>
+              <tr><td colspan="12" class="p-6 text-center text-slate-500">No downloads logged yet.</td></tr>
             </tbody>
           </table>
         </div>
@@ -1021,13 +1020,21 @@
       tbody.innerHTML = "";
 
       if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="13" class="p-6 text-center text-slate-500">No downloads logged yet.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="12" class="p-6 text-center text-slate-500">No downloads logged yet.</td></tr>`;
         return;
       }
 
       list.forEach(u => {
         const tr = document.createElement('tr');
         const hasDriveLink = u.pdfLink && typeof u.pdfLink === 'string' && u.pdfLink.startsWith("http");
+        
+        // Format combined Subject and Code
+        let subjectDisplay = u.course || 'N/A';
+        if (u.courseCode && u.courseCode !== 'N/A' && u.courseCode.trim().length > 0) {
+          const formattedCode = u.courseCode.startsWith('(') ? u.courseCode : `(${u.courseCode})`;
+          subjectDisplay = `${u.course} <span class="text-blue-400 font-mono text-[11px]">${formattedCode}</span>`;
+        }
+
         tr.innerHTML = `
           <td class="p-3 font-mono text-slate-400 whitespace-nowrap">${u.timestamp || 'N/A'}</td>
           <td class="p-3 font-mono font-bold text-amber-400 whitespace-nowrap">${u.orderId || 'ORD-N/A'}</td>
@@ -1035,8 +1042,7 @@
           <td class="p-3 font-bold text-white whitespace-nowrap">${u.name || 'N/A'}</td>
           <td class="p-3 font-mono whitespace-nowrap">${u.roll || 'N/A'}</td>
           <td class="p-3 font-mono text-slate-400 whitespace-nowrap">${u.reg || 'N/A'}</td>
-          <td class="p-3 text-slate-200 whitespace-nowrap">${u.course || 'N/A'}</td>
-          <td class="p-3 font-mono text-slate-400 whitespace-nowrap">${u.courseCode || 'N/A'}</td>
+          <td class="p-3 text-slate-200 whitespace-nowrap">${subjectDisplay}</td>
           <td class="p-3 whitespace-nowrap"><span class="bg-slate-800 text-blue-300 border border-slate-700 px-2 py-0.5 rounded text-[11px] font-semibold">${u.semester || 'N/A'}</span></td>
           <td class="p-3 text-slate-300 whitespace-nowrap">${u.branch || 'N/A'}</td>
           <td class="p-3 text-slate-400 whitespace-nowrap max-w-xs truncate" title="${u.college || ''}">${u.college || 'N/A'}</td>
