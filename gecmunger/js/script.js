@@ -27,11 +27,12 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 /* =========================================================
-   1. USER PORTAL ROUTING & CATALOG (WHOLESALE/RETAIL UI)
+   1. USER PORTAL ROUTING & CATALOG
 ========================================================= */
 function initUserPortal() {
   initPdfGeneratorEngine();
   setupBreadcrumbs();
+  setupDocViewerControls();
   fetchPortalCatalog();
 }
 
@@ -166,7 +167,7 @@ function openCategory(catId) {
   });
 }
 
-// Stage C: Open Resource/Template Cards (Strict Document Link Isolation)
+// Stage C: Open Resource Cards
 function openSubcategory(subId) {
   currentSubcategoryId = subId;
   const filteredCards = portalData.cards.filter(c => c.subcategoryId === subId);
@@ -197,10 +198,9 @@ function openSubcategory(subId) {
       ? `<img src="${cardData.thumbnailUrl}" class="card-thumbnail" alt="${cardData.title}">`
       : `<div class="card-thumbnail-placeholder">📄</div>`;
 
-    // Strictly detect whether this card points to a direct document/file
     const hasTarget = Boolean(cardData.targetUrl && String(cardData.targetUrl).trim().length > 5);
     const isDoc = (cardData.actionType === "link" || hasTarget);
-    const defaultLabel = isDoc ? "View / Download Document" : "Customize Cover Page";
+    const defaultLabel = isDoc ? "View / Read Document" : "Customize Cover Page";
     const btnLabel = (cardData.buttonText && cardData.buttonText.trim().length > 0) ? cardData.buttonText : defaultLabel;
 
     cardEl.innerHTML = `
@@ -225,16 +225,14 @@ function openSubcategory(subId) {
   });
 }
 
-// Action Launcher: Completely isolates documents from the canvas editor
+// Action Launcher: Opens Embedded Document Viewer for Files, or Canvas for Cover Pages
 function launchCardAction(cardData) {
   const hasTarget = Boolean(cardData.targetUrl && String(cardData.targetUrl).trim().length > 5);
   const isDocumentLink = (cardData.actionType === "link" || hasTarget);
 
-  // If this is a document/file card, open it in a new tab immediately
   if (isDocumentLink && hasTarget) {
-    const finalUrl = String(cardData.targetUrl).trim();
-    window.open(finalUrl, '_blank', 'noopener,noreferrer');
-    return; // HARD STOP: Never open the canvas workspace
+    openDocumentViewer(cardData);
+    return;
   }
 
   // Pure Canvas Cover Page Flow
@@ -252,6 +250,49 @@ function launchCardAction(cardData) {
 
   rebindEditorFields();
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* =========================================================
+   2. EMBEDDED DOCUMENT / PDF VIEWER CONTROLS
+========================================================= */
+function setupDocViewerControls() {
+  const closeBtn = document.getElementById('docViewerCloseBtn');
+  const modal = document.getElementById('docViewerModal');
+  const iframe = document.getElementById('docViewerIframe');
+
+  if (closeBtn && modal) {
+    closeBtn.addEventListener('click', () => {
+      modal.style.display = 'none';
+      if (iframe) iframe.src = "";
+    });
+  }
+}
+
+function openDocumentViewer(cardData) {
+  const modal = document.getElementById('docViewerModal');
+  const iframe = document.getElementById('docViewerIframe');
+  const title = document.getElementById('docViewerHeading');
+  const downloadBtn = document.getElementById('docViewerDownloadBtn');
+
+  title.textContent = cardData.title || "Academic Document";
+
+  let rawUrl = cardData.targetUrl.trim();
+  let embedUrl = rawUrl;
+  let downloadUrl = rawUrl;
+
+  // Transform Google Drive URL into high-performance embed preview & direct download
+  if (rawUrl.includes("drive.google.com")) {
+    const fileIdMatch = rawUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    if (fileIdMatch && fileIdMatch[1]) {
+      const id = fileIdMatch[1];
+      embedUrl = `https://drive.google.com/file/d/${id}/preview`;
+      downloadUrl = `https://drive.google.com/uc?export=download&id=${id}`;
+    }
+  }
+
+  iframe.src = embedUrl;
+  downloadBtn.href = downloadUrl;
+  modal.style.display = 'flex';
 }
 
 // Breadcrumbs Handling
@@ -296,7 +337,7 @@ function updateBreadcrumbs() {
 }
 
 /* =========================================================
-   2. GENERATOR ENGINE (STRICT 1-PAGE ONLY & ZERO-OFFSET LOCK)
+   3. GENERATOR ENGINE (SINGLE-PAGE ENGINE)
 ========================================================= */
 const bindings = [
   { input: 'inCollege1', output: 'outCollege1' },
@@ -455,7 +496,6 @@ function initPdfGeneratorEngine() {
     return filename;
   }
 
-  // Direct Single-Page PDF Download
   const downloadBtn = document.getElementById('btnDirectDownload');
   if (downloadBtn) {
     downloadBtn.addEventListener('click', function() {
@@ -511,9 +551,7 @@ function initPdfGeneratorEngine() {
         page.style.boxShadow = originalBoxShadow;
 
         pdfObj.save(filename);
-
-        const pdfBase64 = pdfObj.output('datauristring');
-        transmitTelemetryAndArchive(pdfBase64);
+        logTelemetryDownload();
 
         downloadBtn.disabled = false;
         downloadBtn.textContent = "Download PDF Document";
@@ -535,51 +573,34 @@ function initPdfGeneratorEngine() {
   applyBorderSettings();
 }
 
-function transmitTelemetryAndArchive(pdfBase64Data) {
-  if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes("YOUR_APPS_SCRIPT")) {
-    document.getElementById('modalOrderIdDisplay').textContent = "Tracking ID: ORD-LOCAL-DEMO";
-    document.getElementById('thankYouModal').style.display = 'flex';
-    return;
-  }
+function logTelemetryDownload() {
+  if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes("YOUR_APPS_SCRIPT")) return;
 
   const regCheckbox = document.getElementById('includeRegCheckbox');
   const semSelect = document.getElementById('inSemester');
 
-  const payload = {
-    action: "log_download",
-    cardId: activeCard ? activeCard.id : "DEFAULT",
-    name: document.getElementById('inStudentName')?.value || 'N/A',
-    roll: document.getElementById('inRollNo')?.value || 'N/A',
-    reg: (regCheckbox && (regCheckbox.checked || !['1st', '3rd'].includes(semSelect.value))) 
-         ? (document.getElementById('inRegNo')?.value || 'N/A') : 'N/A',
-    subject: document.getElementById('inCourseName')?.value || 'N/A',
-    subjectCode: document.getElementById('inCourseCode')?.value || 'N/A',
-    faculty: document.getElementById('inFacultyName')?.value || 'N/A',
-    semester: document.getElementById('inSemester')?.value || 'N/A',
-    branch: document.getElementById('inBranch')?.value || 'N/A',
-    college: (document.getElementById('inCollege1')?.value || '') + ' ' + (document.getElementById('inCollege2')?.value || ''),
-    pdfBase64: pdfBase64Data
-  };
-
   fetch(APPS_SCRIPT_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify(payload)
-  })
-  .then(res => res.json())
-  .then(data => {
-    const orderId = data.orderId || "ORD-SAVED";
-    document.getElementById('modalOrderIdDisplay').textContent = `Tracking ID: ${orderId}`;
-    document.getElementById('thankYouModal').style.display = 'flex';
-  })
-  .catch(() => {
-    document.getElementById('modalOrderIdDisplay').textContent = "Tracking ID: ORD-SAVED-OFFLINE";
-    document.getElementById('thankYouModal').style.display = 'flex';
-  });
+    body: JSON.stringify({
+      action: "log_download",
+      cardId: activeCard ? activeCard.id : "DEFAULT",
+      name: document.getElementById('inStudentName')?.value || 'N/A',
+      roll: document.getElementById('inRollNo')?.value || 'N/A',
+      reg: (regCheckbox && (regCheckbox.checked || !['1st', '3rd'].includes(semSelect.value))) 
+           ? (document.getElementById('inRegNo')?.value || 'N/A') : 'N/A',
+      subject: document.getElementById('inCourseName')?.value || 'N/A',
+      subjectCode: document.getElementById('inCourseCode')?.value || 'N/A',
+      faculty: document.getElementById('inFacultyName')?.value || 'N/A',
+      semester: document.getElementById('inSemester')?.value || 'N/A',
+      branch: document.getElementById('inBranch')?.value || 'N/A',
+      college: (document.getElementById('inCollege1')?.value || '') + ' ' + (document.getElementById('inCollege2')?.value || '')
+    })
+  }).catch(() => {});
 }
 
 /* =========================================================
-   3. MODAL POPUP ENGINE (GUARANTEED AUTOPLAY & NATURAL ASPECT)
+   4. MODAL POPUP ENGINE
 ========================================================= */
 function formatVideoEmbedUrl(url) {
   if (!url) return "";
@@ -629,7 +650,6 @@ function showUserPopup(p) {
   const mediaType = p.mediaType || "image";
   const mediaUrl = p.mediaUrl || "";
 
-  // Reset elements
   imgEl.style.display = "none";
   videoEl.style.display = "none";
   iframeEl.style.display = "none";
@@ -705,7 +725,6 @@ function showUserPopup(p) {
         iframeEl.style.display = "block";
         iframeEl.onload = () => startCloseTimer();
       } else {
-        // Direct MP4 / WebM: Hardware muted autoplay injection
         videoEl.muted = true;
         videoEl.defaultMuted = true;
         videoEl.loop = true;
@@ -734,7 +753,6 @@ function showUserPopup(p) {
 
         videoEl.onplaying = () => startCloseTimer();
 
-        // Enforce immediate play cycle
         const attemptPlay = () => {
           videoEl.muted = true;
           const playPromise = videoEl.play();
