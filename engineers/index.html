@@ -93,7 +93,7 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
           Download PDF Document
         </button>
-        <p class="download-subtext">Generates standard high-definition A4 document</p>
+        <p class="download-subtext">Generates standard single-page A4 document</p>
 
         <!-- Academic Selection -->
         <section class="sidebar-section">
@@ -168,78 +168,86 @@
           </div>
         </section>
 
-        <!-- Content Details Form -->
-        <section class="sidebar-section">
-          <h3>Content Metadata</h3>
-          <div class="form-group">
-            <label for="inCollege1">College Line 1</label>
-            <input type="text" id="inCollege1" value="GOVERNMENT ENGINEERING COLLAGE,">
+        <!-- Universal Editable Fields Section -->
+        <section class="sidebar-section" id="templateEditorSection">
+          <h3>Edit Document Details</h3>
+          <p style="font-size: 11px; color: #64748b; margin-bottom: 12px;">Modify any text element below to customize your cover page in real time.</p>
+
+          <!-- Standard Pre-Mapped Inputs -->
+          <div id="standardInputsWrap">
+            <div class="form-group">
+              <label for="inCollege1">College Line 1</label>
+              <input type="text" id="inCollege1" value="GOVERNMENT ENGINEERING COLLAGE,">
+            </div>
+            <div class="form-group">
+              <label for="inCollege2">College Line 2</label>
+              <input type="text" id="inCollege2" value="MUNGER">
+            </div>
+            <div class="form-group">
+              <label for="inAffiliation">Affiliation Line</label>
+              <input type="text" id="inAffiliation" value="(Affiliated to Bihar Engineering University, Patna, Bihar)">
+            </div>
+            <div class="form-group">
+              <label for="inDocTitle">Document Heading</label>
+              <input type="text" id="inDocTitle" value="ASSIGNMENT WORK">
+            </div>
+            <div class="form-group">
+              <label for="inCourseName">Course / Subject Name</label>
+              <input type="text" id="inCourseName" value="Engineering chemistry">
+            </div>
+            <div class="form-group">
+              <label for="inCourseCode">Course / Subject Code</label>
+              <input type="text" id="inCourseCode" value="(100103)">
+            </div>
+            <div class="form-group">
+              <label for="inStudentName">Student Full Name</label>
+              <input type="text" id="inStudentName" value="Aastha kumari">
+            </div>
+            <div class="form-group">
+              <label for="inRollNo">University Roll Number</label>
+              <input type="text" id="inRollNo" value="25103042">
+            </div>
+            <div class="form-group">
+              <label for="inFacultyName">Faculty Guide</label>
+              <input type="text" id="inFacultyName" value="Dr. Gautam Kumar">
+            </div>
+            <div class="form-group">
+              <label for="inFacultyRole">Designation</label>
+              <input type="text" id="inFacultyRole" value="Assistant Professor">
+            </div>
+            <div class="form-group">
+              <label for="inFacultyDept">Department</label>
+              <input type="text" id="inFacultyDept" value="(Applied Science and Humanities)">
+            </div>
+            <div class="form-group">
+              <label for="inDegree">Degree Program</label>
+              <input type="text" id="inDegree" value="Bachelor of Technology">
+            </div>
+            <div class="form-group">
+              <label for="inBranch">Branch / Discipline</label>
+              <input type="text" id="inBranch" value="Civil Engineering">
+            </div>
+            <div class="form-group">
+              <label for="inSession">Academic Session</label>
+              <input type="text" id="inSession" value="(2026-2030)">
+            </div>
+            <div class="form-group">
+              <label for="inFooterCollege">Footer Institute Name</label>
+              <input type="text" id="inFooterCollege" value="Government Engineering College, Munger">
+            </div>
+            <div class="form-group">
+              <label for="inFooterDept">Footer Authority Line</label>
+              <input type="text" id="inFooterDept" value="(Department of Science, Technology and Technical Education, Government of Bihar)">
+            </div>
           </div>
-          <div class="form-group">
-            <label for="inCollege2">College Line 2</label>
-            <input type="text" id="inCollege2" value="MUNGER">
-          </div>
-          <div class="form-group">
-            <label for="inAffiliation">Affiliation Line</label>
-            <input type="text" id="inAffiliation" value="(Affiliated to Bihar Engineering University, Patna, Bihar)">
-          </div>
-          <div class="form-group">
-            <label for="inDocTitle">Document Heading</label>
-            <input type="text" id="inDocTitle" value="ASSIGNMENT WORK">
-          </div>
-          <div class="form-group">
-            <label for="inCourseName">Subject Name</label>
-            <input type="text" id="inCourseName" value="Engineering chemistry">
-          </div>
-          <div class="form-group">
-            <label for="inCourseCode">Subject Code</label>
-            <input type="text" id="inCourseCode" value="(100103)">
-          </div>
-          <div class="form-group">
-            <label for="inStudentName">Student Full Name</label>
-            <input type="text" id="inStudentName" value="Aastha kumari">
-          </div>
-          <div class="form-group">
-            <label for="inRollNo">University Roll Number</label>
-            <input type="text" id="inRollNo" value="25103042">
-          </div>
-          <div class="form-group">
-            <label for="inFacultyName">Faculty Guide</label>
-            <input type="text" id="inFacultyName" value="Dr. Gautam Kumar">
-          </div>
-          <div class="form-group">
-            <label for="inFacultyRole">Designation</label>
-            <input type="text" id="inFacultyRole" value="Assistant Professor">
-          </div>
-          <div class="form-group">
-            <label for="inFacultyDept">Department</label>
-            <input type="text" id="inFacultyDept" value="(Applied Science and Humanities)">
-          </div>
-          <div class="form-group">
-            <label for="inDegree">Degree Program</label>
-            <input type="text" id="inDegree" value="Bachelor of Technology">
-          </div>
-          <div class="form-group">
-            <label for="inBranch">Branch / Discipline</label>
-            <input type="text" id="inBranch" value="Civil Engineering">
-          </div>
-          <div class="form-group">
-            <label for="inSession">Academic Session</label>
-            <input type="text" id="inSession" value="(2026-2030)">
-          </div>
-          <div class="form-group">
-            <label for="inFooterCollege">Footer Institute Name</label>
-            <input type="text" id="inFooterCollege" value="Government Engineering College, Munger">
-          </div>
-          <div class="form-group">
-            <label for="inFooterDept">Footer Authority Line</label>
-            <input type="text" id="inFooterDept" value="(Department of Science, Technology and Technical Education, Government of Bihar)">
-          </div>
+
+          <!-- Dynamic Container: Automatically populates inputs for extra placeholders in custom templates -->
+          <div id="dynamicCustomFieldsWrap"></div>
         </section>
 
       </aside>
 
-      <!-- A4 Output Preview Canvas -->
+      <!-- A4 Output Preview Canvas (Strictly Preserved) -->
       <main class="preview-wrapper">
         <div class="page" id="pageDocument">
           <div class="page-border-outer" id="outerBorder">
@@ -337,7 +345,7 @@
   </div>
 
   <!-- =========================================================
-       DYNAMIC ADMIN MEDIA POPUP MODAL
+       DYNAMIC ADMIN MEDIA POPUP MODAL (NO TIMESTAMPS)
   ========================================================= -->
   <div class="modal-overlay" id="adminBroadcastModal">
     <div class="modal-box" id="adminModalBox">
@@ -363,6 +371,27 @@
         </div>
         <span class="timer-badge" id="popupTimerBadge"></span>
       </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       ANIMATED CELEBRATION DOWNLOAD TOAST
+  ========================================================= -->
+  <div class="celebration-toast" id="celebrationToast">
+    <div class="celebration-toast-body">
+      <div class="toast-icon-circle">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      </div>
+      <div class="toast-text-group">
+        <h4 class="toast-heading">Document Downloaded!</h4>
+        <p class="toast-desc">Thanks for using Engineering Munger Portal. Best wishes for your academic semester!</p>
+      </div>
+      <button class="toast-close-btn" id="celebrationToastCloseBtn" aria-label="Close notification">✕</button>
+    </div>
+    <div class="toast-progress-bar-wrap">
+      <div class="toast-progress-bar" id="toastProgressBar"></div>
     </div>
   </div>
 
