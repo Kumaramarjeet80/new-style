@@ -1,1 +1,833 @@
 
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  -webkit-text-size-adjust: 100%;
+  background-color: #0f172a;
+  color: #f8fafc;
+}
+
+/* =========================================================
+   1. PORTAL CATALOG & CHOICE WORKSPACE (WHOLESALE / RETAIL UI)
+========================================================= */
+.portal-container {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 32px 20px 80px 20px;
+  min-height: 100vh;
+}
+
+/* Header & Banner Area */
+.portal-header {
+  text-align: center;
+  margin-bottom: 36px;
+}
+.portal-badge {
+  display: inline-block;
+  background: rgba(37, 99, 235, 0.15);
+  color: #60a5fa;
+  border: 1px solid rgba(96, 165, 250, 0.3);
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.portal-title {
+  font-size: 32px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 10px 0;
+  letter-spacing: -0.5px;
+}
+.portal-subtitle {
+  font-size: 15px;
+  color: #94a3b8;
+  max-width: 620px;
+  margin: 0 auto;
+  line-height: 1.5;
+}
+
+/* Breadcrumbs Navigation Bar */
+.breadcrumb-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #1e293b;
+  padding: 12px 20px;
+  border-radius: 10px;
+  margin-bottom: 28px;
+  font-size: 13.5px;
+  border: 1px solid #334155;
+}
+.breadcrumb-item {
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.2s;
+}
+.breadcrumb-item:hover {
+  color: #38bdf8;
+}
+.breadcrumb-item.active {
+  color: #f8fafc;
+  font-weight: 700;
+  cursor: default;
+}
+.breadcrumb-separator {
+  color: #64748b;
+}
+
+/* High-Contrast Category / Subcategory Grid (Retail-style Selection) */
+.catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 22px;
+}
+
+/* Category & Subcategory Card */
+.category-card {
+  background: #1e293b;
+  border: 2px solid #334155;
+  border-radius: 14px;
+  padding: 24px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+}
+.category-card:hover {
+  transform: translateY(-4px);
+  border-color: #38bdf8;
+  box-shadow: 0 16px 32px -8px rgba(0, 0, 0, 0.5), 0 0 20px rgba(56, 189, 248, 0.15);
+}
+.cat-icon-wrap {
+  width: 54px;
+  height: 54px;
+  background: #0f172a;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  margin-bottom: 18px;
+  border: 1px solid #334155;
+}
+.cat-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 8px 0;
+}
+.cat-desc {
+  font-size: 13.5px;
+  color: #94a3b8;
+  line-height: 1.45;
+  margin: 0 0 18px 0;
+}
+.cat-action-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #38bdf8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Resource & Template Cards Grid */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+}
+
+/* Individual Template / Resource Card */
+.resource-card {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+}
+.resource-card:hover {
+  transform: translateY(-4px);
+  border-color: #60a5fa;
+  box-shadow: 0 16px 32px rgba(0,0,0,0.4);
+}
+.card-thumbnail-wrap {
+  width: 100%;
+  height: 200px;
+  background: #0f172a;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.card-thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.card-thumbnail-placeholder {
+  font-size: 40px;
+  color: #475569;
+}
+.card-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.card-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 8px 0;
+  line-height: 1.35;
+}
+.card-desc {
+  font-size: 13px;
+  color: #94a3b8;
+  line-height: 1.5;
+  margin: 0 0 18px 0;
+  flex: 1;
+}
+.card-cta-btn {
+  width: 100%;
+  padding: 12px 16px;
+  background: #2563eb;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+  display: block;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  transition: all 0.2s ease;
+}
+.card-cta-btn:hover {
+  background: #1d4ed8;
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.45);
+}
+
+/* =========================================================
+   2. GENERATOR WORKSPACE (PDF VIEW)
+========================================================= */
+#view-generator {
+  background-color: #4a4d50;
+  min-height: 100vh;
+  display: none;
+}
+
+.generator-topbar {
+  width: 100%;
+  background: #0f172a;
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #334155;
+  position: sticky;
+  top: 0;
+  z-index: 150;
+}
+.btn-back-to-catalog {
+  background: #1e293b;
+  border: 1px solid #475569;
+  color: #f8fafc;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.2s;
+}
+.btn-back-to-catalog:hover {
+  background: #334155;
+}
+
+.user-body-layout {
+  display: flex;
+  width: 100%;
+  min-height: calc(100vh - 57px);
+}
+
+/* Sidebar Controls */
+.editor-sidebar {
+  width: 380px;
+  min-width: 380px;
+  background: #ffffff;
+  color: #0f172a;
+  padding: 20px;
+  border-right: 2px solid #333;
+  overflow-y: auto;
+  height: calc(100vh - 57px);
+  position: sticky;
+  top: 57px;
+  box-shadow: 3px 0 12px rgba(0,0,0,0.3);
+  z-index: 100;
+}
+.sidebar-section {
+  background: #f8f9fa;
+  border: 1px solid #dcdcdc;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 14px;
+}
+.sidebar-section h3 {
+  margin: 0 0 10px 0;
+  font-size: 13.5px;
+  color: #0b2545;
+  text-transform: uppercase;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 4px;
+}
+.form-group {
+  margin-bottom: 9px;
+}
+.form-group label {
+  display: block;
+  font-size: 11px;
+  font-weight: bold;
+  margin-bottom: 3px;
+  color: #444;
+  text-transform: uppercase;
+}
+.form-group input, .form-group select {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 13px;
+  border: 1px solid #aaa;
+  border-radius: 4px;
+  font-family: inherit;
+  background: #fff;
+  color: #0f172a;
+}
+.checkbox-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  background: #eef2f7;
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: 1px solid #ccd5e0;
+}
+.checkbox-group input {
+  width: auto;
+  margin: 0;
+  cursor: pointer;
+}
+.checkbox-group label {
+  margin: 0;
+  text-transform: none;
+  font-size: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #0b2545;
+}
+.download-btn {
+  width: 100%;
+  padding: 14px;
+  background-color: #002b66;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 5px;
+  letter-spacing: 0.5px;
+  transition: background 0.2s;
+}
+.download-btn:hover {
+  background-color: #001b44;
+}
+
+/* Canvas Wrapper */
+.preview-wrapper {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 30px;
+  overflow-y: auto;
+}
+
+/* Mobile Toggle Bar */
+.mobile-toggle-bar {
+  display: none;
+  width: 100%;
+  background: #0f172a;
+  color: white;
+  padding: 12px 16px;
+  position: sticky;
+  top: 57px;
+  z-index: 120;
+  justify-content: space-between;
+  align-items: center;
+}
+.mobile-toggle-bar button {
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+/* =========================================================
+   3. EXACT A4 SPECIFICATION (ZERO MODIFICATION)
+========================================================= */
+.page {
+  width: 210mm;
+  height: 297mm;
+  background: #ffffff;
+  padding: 8mm;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  color: #000000;
+  font-family: 'Merriweather', serif;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.page-border-outer {
+  width: 100%;
+  height: 100%;
+  border: 3.5px solid #002060;
+  padding: 3.5px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+.page-border-inner {
+  width: 100%;
+  height: 100%;
+  border: 1.2px solid #002060;
+  padding: 10mm 14mm 8mm 14mm;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  text-align: center;
+}
+
+/* Header Section */
+.college-title {
+  font-size: 20pt;
+  font-weight: bold;
+  text-transform: uppercase;
+  color: #002060;
+  line-height: 1.24;
+  margin: 0;
+  letter-spacing: 0.5px;
+}
+.college-subtitle {
+  font-size: 11.5pt;
+  font-weight: normal;
+  color: #000000;
+  margin-top: 4px;
+}
+
+/* Logos */
+.top-logo-container {
+  margin: 3mm auto 1mm auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.top-logo-container img {
+  height: 125px;
+  max-width: 145px;
+  object-fit: contain;
+  mix-blend-mode: multiply;
+}
+
+/* Document Section */
+.doc-title {
+  font-size: 20pt;
+  font-weight: bold;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin: 2.5mm 0 2mm 0;
+}
+.course-label {
+  font-size: 12.5pt;
+  margin: 2px 0;
+}
+.course-name {
+  font-size: 17pt;
+  font-weight: bold;
+  margin: 2px 0;
+}
+.course-code {
+  font-size: 13.5pt;
+  margin: 2px 0;
+}
+
+/* Connectors */
+.connector-label {
+  font-size: 12.5pt;
+  font-style: italic;
+  margin: 2mm 0 1mm 0;
+}
+
+/* Student Info */
+.student-name {
+  font-size: 17pt;
+  font-weight: bold;
+  margin-bottom: 2mm;
+}
+.meta-data {
+  font-size: 13.5pt;
+  line-height: 1.45;
+}
+
+/* Faculty Section */
+.faculty-box {
+  margin-top: 2mm;
+}
+.faculty-name {
+  font-size: 16.5pt;
+  font-weight: bold;
+  margin: 2px 0;
+}
+.faculty-role {
+  font-size: 13pt;
+  line-height: 1.35;
+}
+
+/* Degree Block */
+.degree-block {
+  margin-top: 2.5mm;
+}
+.degree-lead {
+  font-size: 11.5pt;
+  margin-bottom: 2px;
+}
+.degree-name {
+  font-size: 16.5pt;
+  font-weight: bold;
+  margin: 2px 0;
+}
+.branch-name {
+  font-size: 15.5pt;
+  font-weight: bold;
+  margin: 2px 0;
+}
+.session-text {
+  font-size: 13pt;
+  margin-top: 2px;
+}
+
+/* Footer Section */
+.page-footer {
+  margin-top: auto;
+  padding-top: 2mm;
+}
+.signature-row {
+  display: flex;
+  justify-content: flex-end;
+  font-size: 13pt;
+  font-weight: bold;
+  margin-bottom: 1.5mm;
+  padding-right: 15px;
+}
+.bottom-logo-container {
+  margin: 1.5mm auto 2.5mm auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.bottom-logo-container img {
+  height: 48px;
+  max-width: 120px;
+  object-fit: contain;
+  mix-blend-mode: multiply;
+}
+.footer-college {
+  font-size: 13pt;
+  font-weight: bold;
+  margin: 0;
+}
+.footer-dept {
+  font-size: 10.5pt;
+  color: #111111;
+  margin-top: 2px;
+}
+
+/* =========================================================
+   4. POPUP MODAL & MEDIA
+========================================================= */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(2px);
+  z-index: 1000;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+}
+.modal-box {
+  background: #ffffff;
+  color: #0f172a;
+  width: 100%;
+  max-width: 620px;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.45);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-box.clickable-card {
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.modal-box.clickable-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 24px 48px rgba(0,0,0,0.5);
+}
+
+.modal-hero-media-wrap {
+  width: 100%;
+  background: #000000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  max-height: 320px;
+  position: relative;
+}
+.modal-hero-img {
+  width: 100%;
+  height: 100%;
+  max-height: 320px;
+  object-fit: cover;
+  display: block;
+}
+.modal-hero-video {
+  width: 100%;
+  max-height: 320px;
+  background: #000;
+  display: block;
+}
+.modal-hero-iframe {
+  width: 100%;
+  height: 300px;
+  border: none;
+  display: block;
+}
+
+.modal-content-area {
+  padding: 24px;
+  text-align: center;
+}
+.modal-close-btn {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  background: rgba(0, 0, 0, 0.6);
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: #ffffff;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 50;
+  transition: background 0.2s;
+}
+.modal-close-btn:hover {
+  background: rgba(0, 0, 0, 0.9);
+}
+.modal-title {
+  font-size: 20px;
+  font-weight: bold;
+  color: #0f172a;
+  margin: 0 0 8px 0;
+}
+.modal-desc {
+  font-size: 14px;
+  color: #475569;
+  margin: 0 0 18px 0;
+  line-height: 1.5;
+}
+.modal-action-btn {
+  display: inline-block;
+  width: 100%;
+  padding: 13px;
+  background: #2563eb;
+  color: white;
+  text-decoration: none;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 14.5px;
+  transition: background 0.2s;
+}
+.modal-action-btn:hover {
+  background: #1d4ed8;
+}
+
+.popup-timer-bar-wrap {
+  width: 100%;
+  background: #e2e8f0;
+  height: 5px;
+  border-radius: 9999px;
+  overflow: hidden;
+  margin-top: 16px;
+}
+.popup-timer-bar {
+  height: 100%;
+  background: #2563eb;
+  width: 100%;
+  transform-origin: left;
+}
+.timer-badge {
+  display: inline-block;
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 8px;
+  font-weight: 600;
+}
+
+/* =========================================================
+   5. GECM TELEMETRY, ORDER BADGES & STATUS INDICATORS
+========================================================= */
+.sync-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(37, 99, 235, 0.15);
+  color: #60a5fa;
+  border: 1px solid rgba(96, 165, 250, 0.3);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-top: 6px;
+}
+
+.order-id-box {
+  background: #f1f5f9;
+  border: 1px dashed #cbd5e1;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-family: monospace;
+  font-size: 12px;
+  color: #0f172a;
+  margin: 10px 0;
+  word-break: break-all;
+}
+
+.badge-active {
+  background-color: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.badge-inactive {
+  background-color: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* =========================================================
+   6. RESPONSIVE BREAKPOINTS
+========================================================= */
+@media (max-width: 960px) {
+  .user-body-layout {
+    flex-direction: column;
+  }
+  .mobile-toggle-bar {
+    display: flex;
+  }
+  .editor-sidebar {
+    width: 100%;
+    min-width: 100%;
+    height: auto;
+    max-height: 50vh;
+    position: relative;
+    top: 0;
+    border-right: none;
+    border-bottom: 2px solid #333;
+    display: none;
+  }
+  .editor-sidebar.open {
+    display: block;
+  }
+  .preview-wrapper {
+    padding: 16px 8px;
+    overflow-x: auto;
+    justify-content: flex-start;
+  }
+  .page {
+    transform-origin: top left;
+    transform: scale(0.48);
+    margin-bottom: -150mm;
+  }
+  .modal-hero-iframe {
+    height: 220px;
+  }
+  .portal-title {
+    font-size: 26px;
+  }
+}
+
+@media (min-width: 961px) and (max-width: 1300px) {
+  .editor-sidebar {
+    width: 320px;
+    min-width: 320px;
+  }
+  .page {
+    transform-origin: top center;
+    transform: scale(0.85);
+    margin-bottom: -40mm;
+  }
+}
