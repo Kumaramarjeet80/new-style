@@ -283,7 +283,7 @@ function updateBreadcrumbs() {
 }
 
 /* =========================================================
-   2. GENERATOR ENGINE (ISOLATED ZERO-OFFSET IFRAME ENGINE)
+   2. GENERATOR ENGINE (STRICT 1-PAGE ONLY & ZERO-OFFSET LOCK)
 ========================================================= */
 const bindings = [
   { input: 'inCollege1', output: 'outCollege1' },
@@ -455,107 +455,87 @@ function initPdfGeneratorEngine() {
     return filename;
   }
 
-  // Direct PDF Download & Isolated Zero-Offset Iframe Sandbox
+  // Direct PDF Download (Strict 1-Page Enforcement with Full Borders & Logos)
   const downloadBtn = document.getElementById('btnDirectDownload');
   if (downloadBtn) {
     downloadBtn.addEventListener('click', function() {
-      const originalElement = document.getElementById('pageDocument');
+      const page = document.getElementById('pageDocument');
       const filename = getIncrementalFilename();
 
       downloadBtn.disabled = true;
       downloadBtn.textContent = "Rendering PDF...";
 
-      // Create a clean offscreen iframe sandbox to fully isolate rendering from parent transforms
-      const iframe = document.createElement('iframe');
-      iframe.style.position = 'fixed';
-      iframe.style.left = '0';
-      iframe.style.top = '0';
-      iframe.style.width = '794px';
-      iframe.style.height = '1123px';
-      iframe.style.border = 'none';
-      iframe.style.zIndex = '-99999';
-      iframe.style.visibility = 'hidden';
-      document.body.appendChild(iframe);
+      // 1. Preserve responsive screen styling
+      const originalTransform = page.style.transform;
+      const originalTransformOrigin = page.style.transformOrigin;
+      const originalMargin = page.style.margin;
+      const originalPosition = page.style.position;
+      const originalBoxShadow = page.style.boxShadow;
 
-      const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-      iframeDoc.open();
-      iframeDoc.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <link rel="preconnect" href="https://fonts.googleapis.com">
-          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-          <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=EB+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300&family=Montserrat:wght@400;600;700&family=Playfair+Display:ital,wght@0,500;0,700;1,400&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-          <link rel="stylesheet" href="css/style.css">
-          <style>
-            html, body {
-              margin: 0 !important;
-              padding: 0 !important;
-              background: #ffffff !important;
-              width: 794px !important;
-              height: 1123px !important;
-              overflow: hidden !important;
-            }
-            .page {
-              margin: 0 !important;
-              transform: none !important;
-              box-shadow: none !important;
-              width: 794px !important;
-              height: 1123px !important;
-              box-sizing: border-box !important;
-              position: absolute !important;
-              top: 0 !important;
-              left: 0 !important;
-            }
-          </style>
-        </head>
-        <body>
-          ${originalElement.outerHTML}
-        </body>
-        </html>
-      `);
-      iframeDoc.close();
+      // 2. Temporarily lock to true 1:1 A4 scale without offset
+      page.style.transform = 'none';
+      page.style.transformOrigin = 'top left';
+      page.style.margin = '0';
+      page.style.boxShadow = 'none';
+      page.style.position = 'relative';
 
-      setTimeout(() => {
-        const renderElement = iframeDoc.getElementById('pageDocument');
+      // 3. Re-assert border styles inline so html2canvas renders them
+      applyBorderSettings();
 
-        const opt = {
-          margin: 0,
-          filename: filename,
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: {
-            scale: 2,
-            useCORS: true,
-            logging: false,
-            width: 794,
-            height: 1123,
-            x: 0,
-            y: 0,
-            scrollX: 0,
-            scrollY: 0,
-            windowWidth: 794,
-            windowHeight: 1123
-          },
-          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        };
+      window.scrollTo(0, 0);
 
-        html2pdf().set(opt).from(renderElement).toPdf().get('pdf').then(function(pdfObj) {
-          pdfObj.save(filename);
+      const opt = {
+        margin: 0,
+        filename: filename,
+        image: { type: 'jpeg', quality: 1.0 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
+          scrollX: 0,
+          scrollY: 0
+        },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: 'avoid-all' }
+      };
 
-          const pdfBase64 = pdfObj.output('datauristring');
-          transmitTelemetryAndArchive(pdfBase64);
+      html2pdf().set(opt).from(page).toPdf().get('pdf').then(function(pdfObj) {
+        // STRICT 1-PAGE LOCK: Delete any spillover page
+        const totalPages = pdfObj.internal.getNumberOfPages();
+        if (totalPages > 1) {
+          for (let p = totalPages; p > 1; p--) {
+            pdfObj.deletePage(p);
+          }
+        }
 
-          if (iframe.parentNode) document.body.removeChild(iframe);
+        // Restore visual state
+        page.style.transform = originalTransform;
+        page.style.transformOrigin = originalTransformOrigin;
+        page.style.margin = originalMargin;
+        page.style.position = originalPosition;
+        page.style.boxShadow = originalBoxShadow;
 
-          downloadBtn.disabled = false;
-          downloadBtn.textContent = "Download PDF Document";
-        }).catch(err => {
-          if (iframe.parentNode) document.body.removeChild(iframe);
-          console.error("PDF Engine Error:", err);
-          downloadBtn.disabled = false;
-          downloadBtn.textContent = "Download PDF Document";
-        });
-      }, 350);
+        // Save local single-page copy
+        pdfObj.save(filename);
+
+        // Send to Drive archive
+        const pdfBase64 = pdfObj.output('datauristring');
+        transmitTelemetryAndArchive(pdfBase64);
+
+        downloadBtn.disabled = false;
+        downloadBtn.textContent = "Download PDF Document";
+      }).catch(err => {
+        page.style.transform = originalTransform;
+        page.style.transformOrigin = originalTransformOrigin;
+        page.style.margin = originalMargin;
+        page.style.position = originalPosition;
+        page.style.boxShadow = originalBoxShadow;
+
+        console.error("PDF Engine Error:", err);
+        downloadBtn.disabled = false;
+        downloadBtn.textContent = "Download PDF Document";
+      });
     });
   }
 
@@ -662,7 +642,7 @@ function showUserPopup(p) {
   videoEl.pause();
   iframeEl.src = "";
 
-  // Strip all standard media controls & force unmuted browser compliance
+  // Strip all player controls & set muted autoplay
   videoEl.removeAttribute('controls');
   videoEl.muted = true;
   videoEl.defaultMuted = true;
