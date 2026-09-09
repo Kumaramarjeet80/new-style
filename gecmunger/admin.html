@@ -379,9 +379,17 @@
       popups: [],
       telemetry: []
     };
-    let pendingThumbnailFile = null;
-    let pendingDocumentFile = null;
-    let pendingPopupFile = null;
+
+    // Helper: Convert File to Base64 via Promise (Guarantees File Is Fully Read Before Upload)
+    function readFileAsBase64(file) {
+      return new Promise((resolve, reject) => {
+        if (!file) return resolve(null);
+        const reader = new FileReader();
+        reader.onload = () => resolve({ base64: reader.result, name: file.name });
+        reader.onerror = (error) => reject(error);
+        reader.readAsDataURL(file);
+      });
+    }
 
     // Tab Switching
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -531,63 +539,54 @@
       }
     });
 
-    // Thumbnail Reader
-    document.getElementById('cardThumbnailFile').addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-          pendingThumbnailFile = { base64: evt.target.result, name: file.name };
-        };
-        reader.readAsDataURL(file);
-      }
-    });
-
-    // Direct Document File Reader (PDF/Docx/Zip)
-    document.getElementById('cardDocFile').addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-          pendingDocumentFile = { base64: evt.target.result, name: file.name };
-        };
-        reader.readAsDataURL(file);
-      }
-    });
-
     // Toggle Action Type Target Wrap
     document.getElementById('cardActionType').addEventListener('change', (e) => {
       document.getElementById('cardTargetUrlWrap').style.display = (e.target.value === 'link') ? 'block' : 'none';
     });
 
-    // Save Card (STRICT ROUTING ENFORCEMENT)
+    // Save Card (Guaranteed File Awaiting & Strict Link Action Enforcement)
     document.getElementById('btnSaveCard').addEventListener('click', async () => {
       const subcategoryId = document.getElementById('cardSubcategorySelect').value;
       const title = document.getElementById('cardTitle').value.trim();
       const desc = document.getElementById('cardDescription').value.trim();
       const manualThumb = document.getElementById('cardThumbnailUrl').value.trim();
       let actionType = document.getElementById('cardActionType').value;
-      const targetUrl = document.getElementById('cardTargetUrl').value.trim();
+      let targetUrl = document.getElementById('cardTargetUrl').value.trim();
       const templateHtml = document.getElementById('cardTemplateHtml').value.trim();
 
-      // Rule: If a document file is attached or target link is filled, strictly lock actionType to 'link'
-      if (pendingDocumentFile !== null || targetUrl.length > 0) {
+      const thumbFileInput = document.getElementById('cardThumbnailFile');
+      const docFileInput = document.getElementById('cardDocFile');
+
+      const hasDocFile = docFileInput.files && docFileInput.files[0];
+      const hasThumbFile = thumbFileInput.files && thumbFileInput.files[0];
+
+      if (!title || !subcategoryId) {
+        return alert("Subcategory and Card Title are required!");
+      }
+
+      // If document attached or link provided, enforce actionType to 'link'
+      if (hasDocFile || targetUrl.length > 0) {
         actionType = "link";
       }
 
-      const defaultBtnLabel = (actionType === "link") ? "View / Download Document" : "Customize Cover Page";
-      const buttonText = document.getElementById('cardButtonText').value.trim() || defaultBtnLabel;
-
-      if (!title || !subcategoryId) return alert("Subcategory and Card Title are required!");
-      if (actionType === 'link' && !targetUrl && !pendingDocumentFile) {
+      if (actionType === 'link' && !targetUrl && !hasDocFile) {
         return alert("Please provide either a Document Link or upload a Document File for this resource card!");
       }
 
       const btn = document.getElementById('btnSaveCard');
       btn.disabled = true;
-      btn.textContent = "Uploading & Publishing Card...";
+      btn.textContent = "Processing File & Uploading to Drive...";
 
       try {
+        // Read file buffers asynchronously into Base64 before sending
+        const [thumbPayload, docPayload] = await Promise.all([
+          hasThumbFile ? readFileAsBase64(thumbFileInput.files[0]) : Promise.resolve(null),
+          hasDocFile ? readFileAsBase64(docFileInput.files[0]) : Promise.resolve(null)
+        ]);
+
+        const defaultBtnLabel = (actionType === "link") ? "View / Download Document" : "Customize Cover Page";
+        const buttonText = document.getElementById('cardButtonText').value.trim() || defaultBtnLabel;
+
         const res = await fetch(APPS_SCRIPT_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain' },
@@ -600,31 +599,34 @@
               description: desc,
               buttonText,
               thumbnailUrl: manualThumb,
-              thumbnailFile: pendingThumbnailFile,
-              documentFile: pendingDocumentFile,
+              thumbnailFile: thumbPayload,
+              documentFile: docPayload,
               actionType: actionType,
               targetUrl: targetUrl,
               templateHtml: (actionType === "link") ? "" : templateHtml
             }
           })
         });
+
         const d = await res.json();
         if (d.status === "success") {
-          alert(`Card published successfully! ID: ${d.id}`);
+          alert(`Card published successfully!\nID: ${d.id}\nAttached Link: ${d.targetUrl || 'None'}`);
           document.getElementById('cardTitle').value = "";
           document.getElementById('cardDescription').value = "";
           document.getElementById('cardThumbnailUrl').value = "";
-          document.getElementById('cardThumbnailFile').value = "";
-          document.getElementById('cardDocFile').value = "";
+          thumbFileInput.value = "";
+          docFileInput.value = "";
           document.getElementById('cardTargetUrl').value = "";
           document.getElementById('cardTemplateHtml').value = "";
           document.getElementById('cardButtonText').value = "";
           document.getElementById('cardActionType').value = "generator";
           document.getElementById('cardTargetUrlWrap').style.display = "none";
-          pendingThumbnailFile = null;
-          pendingDocumentFile = null;
           await fetchTaxonomyData();
+        } else {
+          alert("Upload failed: " + (d.message || "Unknown error"));
         }
+      } catch (err) {
+        alert("Upload error: " + err.toString());
       } finally {
         btn.disabled = false;
         btn.textContent = "Publish New Card";
@@ -665,6 +667,7 @@
     }
 
     // MULTI-POPUP STUDIO
+    let pendingPopupFile = null;
     document.getElementById('popupFileInput').addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (file) {
