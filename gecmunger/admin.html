@@ -13,7 +13,7 @@
   <header class="bg-slate-950 border-b border-slate-800 px-6 py-4 flex flex-wrap justify-between items-center gap-4 sticky top-0 z-50">
     <div class="flex items-center gap-3">
       <span class="text-xl font-extrabold text-blue-400 tracking-tight">GECM Studio</span>
-      <span class="text-xs px-2.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 font-mono">v3.4 Production</span>
+      <span class="text-xs px-2.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 font-mono">v3.5 Two-Step Uploader</span>
     </div>
     <div id="authStatusBadge" class="text-xs text-amber-400 font-semibold flex items-center gap-2">
       <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> Authentication Required
@@ -56,15 +56,15 @@
           <div class="space-y-3">
             <div>
               <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Category Name</label>
-              <input type="text" id="catName" placeholder="e.g. Assignment Cover Pages" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+              <input type="text" id="catName" placeholder="e.g. Academic Handbooks & Syllabus" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Description</label>
-              <input type="text" id="catDesc" placeholder="Official academic front sheets" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+              <input type="text" id="catDesc" placeholder="Official institutional curriculum resources" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Icon / Emoji</label>
-              <input type="text" id="catIcon" placeholder="📁 or 📄" class="w-24 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+              <input type="text" id="catIcon" placeholder="📁 or 📚" class="w-24 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
             </div>
             <button id="btnSaveCategory" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded-lg text-xs transition">
               Save Category
@@ -76,7 +76,7 @@
         <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-5 space-y-4">
           <div class="border-b border-slate-700/60 pb-3">
             <h3 class="text-base font-bold text-white">Create / Update Subcategory</h3>
-            <p class="text-xs text-slate-400">Nested branches (e.g. Assignment Work, Lab Manuals)</p>
+            <p class="text-xs text-slate-400">Nested branches (e.g. 1st Year Syllabus, Lab Manuals)</p>
           </div>
           <div class="space-y-3">
             <div>
@@ -85,11 +85,11 @@
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Subcategory Name</label>
-              <input type="text" id="subName" placeholder="e.g. Lab Report Front Page" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+              <input type="text" id="subName" placeholder="e.g. Civil Engineering Notes" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Description</label>
-              <input type="text" id="subDesc" placeholder="Laboratory experimental cover sheet" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+              <input type="text" id="subDesc" placeholder="Official modules and reading materials" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
             </div>
             <button id="btnSaveSubcategory" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded-lg text-xs transition">
               Save Subcategory
@@ -99,7 +99,7 @@
 
       </div>
 
-      <!-- Card Creator & Custom HTML Template Studio -->
+      <!-- Card Creator & Document Publishing Studio -->
       <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-6 space-y-5">
         <div class="border-b border-slate-700/60 pb-3 flex flex-wrap justify-between items-center gap-2">
           <div>
@@ -121,7 +121,7 @@
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Card Title</label>
-              <input type="text" id="cardTitle" placeholder="e.g. Civil Engineering Seminar Report" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+              <input type="text" id="cardTitle" placeholder="e.g. B.Tech Chemistry Complete Syllabus" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Description</label>
@@ -129,11 +129,11 @@
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Button Text</label>
-              <input type="text" id="cardButtonText" placeholder="Customize Cover Page or View Document" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+              <input type="text" id="cardButtonText" placeholder="View / Read Document or Customize Cover" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
             </div>
           </div>
 
-          <!-- Column 2: Media, Document Upload & Routing -->
+          <!-- Column 2: Media, Standalone Uploader & Routing -->
           <div class="space-y-4">
             <div>
               <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Card Thumbnail Image</label>
@@ -145,19 +145,31 @@
               <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Card Action Type</label>
               <select id="cardActionType" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
                 <option value="generator" selected>Open Custom PDF Generator Canvas</option>
-                <option value="link">Direct Document / Drive Link</option>
+                <option value="link">Direct Document / Drive Link (Embedded PDF Viewer)</option>
               </select>
             </div>
 
-            <div id="cardTargetUrlWrap" style="display:none;" class="space-y-2 bg-slate-900/80 p-3 rounded-lg border border-slate-700">
-              <label class="block text-xs font-bold text-blue-400 uppercase">Document Attachment</label>
-              <div>
-                <label class="block text-[11px] text-slate-400 mb-1">Upload Document to Drive (PDF, DOCX, ZIP, etc.)</label>
-                <input type="file" id="cardDocFile" accept=".pdf,.doc,.docx,.zip,.ppt,.pptx" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-xs text-slate-400 file:mr-2 file:py-0.5 file:px-2 file:rounded file:border-0 file:text-xs file:bg-blue-600 file:text-white cursor-pointer">
+            <div id="cardTargetUrlWrap" style="display:none;" class="space-y-3 bg-slate-900/90 p-3 rounded-lg border border-slate-700">
+              <div class="flex items-center justify-between">
+                <label class="block text-xs font-bold text-blue-400 uppercase">Document Attachment</label>
+                <span id="uploadBadge" class="text-[10px] text-slate-400">Step 1: Select & Upload</span>
               </div>
+              
+              <!-- Direct Document File Select -->
               <div>
-                <label class="block text-[11px] text-slate-400 mb-1">Or Direct Drive / Web Link</label>
-                <input type="url" id="cardTargetUrl" placeholder="https://drive.google.com/file/d/..." class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+                <label class="block text-[11px] text-slate-400 mb-1">Select File (PDF, DOCX, ZIP)</label>
+                <input type="file" id="cardDocFile" accept=".pdf,.doc,.docx,.zip,.ppt,.pptx" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-xs text-slate-400 file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:bg-slate-800 file:text-white cursor-pointer">
+              </div>
+
+              <!-- Dedicated Upload Action Button -->
+              <button type="button" id="btnUploadDocToDrive" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded-lg text-xs transition flex items-center justify-center gap-2">
+                <span>☁ Upload Document to Google Drive</span>
+              </button>
+
+              <!-- Drive URL Output Box -->
+              <div>
+                <label class="block text-[11px] text-slate-400 mb-1">Google Drive View Link (Auto-Filled On Upload)</label>
+                <input type="url" id="cardTargetUrl" placeholder="https://drive.google.com/file/d/..." class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-emerald-400 font-mono outline-none focus:border-blue-500">
               </div>
             </div>
           </div>
@@ -169,7 +181,7 @@
               <span class="text-[10px] text-blue-400 font-mono">Injected into Canvas</span>
             </div>
             <textarea id="cardTemplateHtml" placeholder="<!-- Paste custom cover page inner HTML here -->&#10;<!-- Leave completely empty to use the classic GEC Munger Assignment Cover Page -->&#10;<div class='college-title'><span id='outCollege1'></span></div>..." class="flex-1 w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs font-mono text-emerald-400 outline-none focus:border-blue-500 resize-none min-h-[220px]"></textarea>
-            <span class="text-[11px] text-slate-500">For Canvas cards only. Ignored if a Document attachment/link is provided.</span>
+            <span class="text-[11px] text-slate-500">Active for Canvas Cover Cards only. Disabled if a Document link is active.</span>
           </div>
 
         </div>
@@ -357,7 +369,7 @@
                 <th class="p-3">Reg No</th>
                 <th class="p-3">Subject & Code</th>
                 <th class="p-3">Faculty Guide</th>
-                <th class="p-3">Archived Drive PDF</th>
+                <th class="p-3">Status</th>
               </tr>
             </thead>
             <tbody id="telemetryTableBody" class="divide-y divide-slate-800 text-slate-300"></tbody>
@@ -380,7 +392,6 @@
       telemetry: []
     };
 
-    // Robust Base64 File Reader (Guarantees File Buffer Is Fully Read Before Upload)
     function readFileAsBase64(file) {
       return new Promise((resolve) => {
         if (!file) return resolve(null);
@@ -393,10 +404,7 @@
             resolve(null);
           }
         };
-        reader.onerror = (err) => {
-          console.error("File reading error:", err);
-          resolve(null);
-        };
+        reader.onerror = () => resolve(null);
         reader.readAsDataURL(file);
       });
     }
@@ -549,12 +557,64 @@
       }
     });
 
-    // Toggle Action Type Target Wrap
+    // Toggle Action Type UI
     document.getElementById('cardActionType').addEventListener('change', (e) => {
       document.getElementById('cardTargetUrlWrap').style.display = (e.target.value === 'link') ? 'block' : 'none';
     });
 
-    // Save Card (Guaranteed File Awaiting & Strict Link Action Enforcement)
+    // STANDALONE DRIVE DOCUMENT UPLOADER STEP
+    document.getElementById('btnUploadDocToDrive').addEventListener('click', async () => {
+      const docInput = document.getElementById('cardDocFile');
+      if (!docInput.files || docInput.files.length === 0) {
+        return alert("Please select a document file first (PDF, DOCX, etc.)!");
+      }
+
+      const file = docInput.files[0];
+      const btn = document.getElementById('btnUploadDocToDrive');
+      const badge = document.getElementById('uploadBadge');
+
+      btn.disabled = true;
+      btn.innerHTML = `<span class="animate-spin">⏳</span> Uploading ${file.name} to Google Drive...`;
+      badge.textContent = "Uploading to Drive...";
+      badge.className = "text-[10px] text-amber-400 font-bold";
+
+      try {
+        const filePayload = await readFileAsBase64(file);
+        if (!filePayload) throw new Error("Could not read local file buffer.");
+
+        const res = await fetch(APPS_SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            action: "admin_upload_standalone_doc",
+            key: authPass,
+            file: filePayload
+          })
+        });
+
+        const d = await res.json();
+        if (d && d.status === "success" && d.fileUrl) {
+          // Fill targetUrl input with the generated Drive link
+          document.getElementById('cardTargetUrl').value = d.fileUrl;
+          document.getElementById('cardActionType').value = 'link';
+          
+          badge.textContent = "✓ Uploaded Successfully";
+          badge.className = "text-[10px] text-emerald-400 font-bold";
+          alert("Document uploaded successfully to Google Drive!\nThe Drive view link has been auto-filled. You can now publish this card.");
+        } else {
+          throw new Error(d ? d.message : "Unknown backend response");
+        }
+      } catch (err) {
+        badge.textContent = "✕ Upload Failed";
+        badge.className = "text-[10px] text-rose-400 font-bold";
+        alert("Document upload failed: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<span>☁ Upload Document to Google Drive</span>`;
+      }
+    });
+
+    // Save Card
     document.getElementById('btnSaveCard').addEventListener('click', async () => {
       const subcategoryId = document.getElementById('cardSubcategorySelect').value;
       const title = document.getElementById('cardTitle').value.trim();
@@ -563,55 +623,43 @@
       let actionType = document.getElementById('cardActionType').value;
       let targetUrl = document.getElementById('cardTargetUrl').value.trim();
       const templateHtml = document.getElementById('cardTemplateHtml').value.trim();
-
       const thumbInput = document.getElementById('cardThumbnailFile');
-      const docInput = document.getElementById('cardDocFile');
-
-      const docFile = (docInput.files && docInput.files.length > 0) ? docInput.files[0] : null;
-      const thumbFile = (thumbInput.files && thumbInput.files.length > 0) ? thumbInput.files[0] : null;
 
       if (!title || !subcategoryId) {
         return alert("Subcategory and Card Title are required!");
       }
 
-      // If document file was chosen or URL typed, strictly lock actionType to 'link'
-      if (docFile || targetUrl.length > 0) {
+      if (targetUrl.length > 0) {
         actionType = "link";
       }
 
-      if (actionType === 'link' && !targetUrl && !docFile) {
-        return alert("Please select a document file to upload OR enter a document URL!");
+      if (actionType === 'link' && !targetUrl) {
+        return alert("For document link cards, please upload the document to Drive first using the 'Upload Document to Google Drive' button, or paste a link!");
       }
 
       const btn = document.getElementById('btnSaveCard');
       btn.disabled = true;
-      btn.textContent = docFile ? "Uploading Document to Drive..." : "Publishing Card...";
+      btn.textContent = "Publishing Card...";
 
       try {
-        // Read file buffers asynchronously into Base64 before sending
-        const [thumbPayload, docPayload] = await Promise.all([
-          thumbFile ? readFileAsBase64(thumbFile) : Promise.resolve(null),
-          docFile ? readFileAsBase64(docFile) : Promise.resolve(null)
-        ]);
-
-        if (docFile && !docPayload) {
-          throw new Error("Could not read the selected document file. Please re-select the file.");
+        let thumbPayload = null;
+        if (thumbInput.files && thumbInput.files.length > 0) {
+          thumbPayload = await readFileAsBase64(thumbInput.files[0]);
         }
 
-        const defaultBtnLabel = (actionType === "link") ? "View / Download Document" : "Customize Cover Page";
+        const defaultBtnLabel = (actionType === "link") ? "View / Read Document" : "Customize Cover Page";
         const buttonText = document.getElementById('cardButtonText').value.trim() || defaultBtnLabel;
 
         const payload = {
           action: "admin_save_card",
           key: authPass,
           card: {
-            subcategoryId,
-            title,
+            subcategoryId: subcategoryId,
+            title: title,
             description: desc,
-            buttonText,
+            buttonText: buttonText,
             thumbnailUrl: manualThumb,
             thumbnailFile: thumbPayload,
-            documentFile: docPayload,
             actionType: actionType,
             targetUrl: targetUrl,
             templateHtml: (actionType === "link") ? "" : templateHtml
@@ -625,24 +673,25 @@
         });
 
         const d = await res.json();
-        if (d.status === "success") {
-          const finalLink = d.targetUrl || "None";
-          alert(`Card published successfully!\nID: ${d.id}\nAction: ${d.actionType}\nAttached Link: ${finalLink}`);
+        if (d && d.status === "success") {
+          alert(`Card published successfully!\nID: ${d.id}\nAction: ${d.actionType}\nDocument Link: ${d.targetUrl || 'Canvas'}`);
           
           document.getElementById('cardTitle').value = "";
           document.getElementById('cardDescription').value = "";
           document.getElementById('cardThumbnailUrl').value = "";
           thumbInput.value = "";
-          docInput.value = "";
+          document.getElementById('cardDocFile').value = "";
           document.getElementById('cardTargetUrl').value = "";
           document.getElementById('cardTemplateHtml').value = "";
           document.getElementById('cardButtonText').value = "";
           document.getElementById('cardActionType').value = "generator";
           document.getElementById('cardTargetUrlWrap').style.display = "none";
+          document.getElementById('uploadBadge').textContent = "Step 1: Select & Upload";
+          document.getElementById('uploadBadge').className = "text-[10px] text-slate-400";
           
           await fetchTaxonomyData();
         } else {
-          alert("Error from server: " + (d.message || "Failed to save card"));
+          alert("Card save failed: " + (d ? d.message : "Error"));
         }
       } catch (err) {
         alert("Upload error: " + err.message);
@@ -671,11 +720,11 @@
           <td class="p-3 font-mono text-slate-400">${c.subcategoryId}</td>
           <td class="p-3">
             <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${c.actionType === 'link' || hasDocLink ? 'bg-amber-950 text-amber-300 border border-amber-800' : 'bg-blue-950 text-blue-300 border border-blue-800'}">
-              ${c.actionType === 'link' || hasDocLink ? 'document link' : 'canvas'}
+              ${c.actionType === 'link' || hasDocLink ? 'Document Link' : 'Canvas Cover'}
             </span>
           </td>
           <td class="p-3 text-slate-400 max-w-xs truncate">
-            ${hasDocLink ? `<a href="${c.targetUrl}" target="_blank" class="text-blue-400 hover:underline">Attached File</a>` : 'Canvas Cover'}
+            ${hasDocLink ? `<a href="${c.targetUrl}" target="_blank" class="text-blue-400 hover:underline font-mono text-[11px]">${c.targetUrl}</a>` : '<span class="text-slate-500">Canvas Cover</span>'}
           </td>
           <td class="p-3 text-right">
             <button class="text-rose-400 hover:text-rose-300 font-bold" onclick="deleteItem('Cards', '${c.id}')">Delete</button>
@@ -846,7 +895,6 @@
       }
     }
 
-    // Telemetry Rendering
     function renderTelemetry(list) {
       document.getElementById('telemetryCount').textContent = list.length;
       const tbody = document.getElementById('telemetryTableBody');
@@ -869,9 +917,7 @@
           <td class="p-3 whitespace-nowrap">${u.course} (${u.courseCode || 'N/A'})</td>
           <td class="p-3 whitespace-nowrap text-slate-400">${u.faculty}</td>
           <td class="p-3 whitespace-nowrap">
-            ${u.pdfLink && u.pdfLink.startsWith('http') 
-              ? `<a href="${u.pdfLink}" target="_blank" class="bg-blue-600/20 text-blue-400 border border-blue-600/40 px-2 py-1 rounded hover:bg-blue-600 hover:text-white transition">View PDF in Drive</a>`
-              : '<span class="text-slate-600">Local Only</span>'}
+            <span class="text-emerald-400 font-semibold">✓ Generated</span>
           </td>
         `;
         tbody.appendChild(tr);
