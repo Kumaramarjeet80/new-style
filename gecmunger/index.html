@@ -37,7 +37,7 @@
       <span class="breadcrumb-item active" id="bcSub" style="display:none;"></span>
     </nav>
 
-    <!-- Stage A: Categories Grid (Cover Pages, Syllabus, PYQs, etc.) -->
+    <!-- Stage A: Categories Grid -->
     <div id="stageCategories">
       <div class="catalog-grid" id="categoryGrid">
         <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #94a3b8;">
@@ -46,12 +46,12 @@
       </div>
     </div>
 
-    <!-- Stage B: Subcategories Grid (Assignment, Lab, Seminar, etc.) -->
+    <!-- Stage B: Subcategories Grid -->
     <div id="stageSubcategories" style="display:none;">
       <div class="catalog-grid" id="subcategoryGrid"></div>
     </div>
 
-    <!-- Stage C: Cards Grid (Customizable Cover Pages & Resource Cards) -->
+    <!-- Stage C: Cards Grid -->
     <div id="stageCards" style="display:none;">
       <div class="cards-grid" id="cardGrid"></div>
     </div>
@@ -59,7 +59,7 @@
   </div>
 
   <!-- =========================================================
-       VIEW 2: GENERATOR WORKSPACE (PDF VIEW - 100% UNTOUCHED ENGINE)
+       VIEW 2: GENERATOR WORKSPACE (PDF VIEW)
   ========================================================= -->
   <div id="view-generator">
     
@@ -88,7 +88,7 @@
         <button class="download-btn" id="btnDirectDownload">Download PDF Document</button>
         <div style="font-size: 11px; color: #666; text-align: center; margin: 6px 0 14px 0;">Saves locally and archives to Drive automatically</div>
 
-        <!-- Academic Selection (Semester & Reg No Condition) -->
+        <!-- Academic Selection -->
         <div class="sidebar-section">
           <h3>Academic Selection</h3>
           <div class="form-group">
@@ -227,13 +227,13 @@
 
       </div>
 
-      <!-- A4 Output Preview Canvas (Exact Dimensions & Layout Preserved) -->
+      <!-- A4 Output Preview Canvas -->
       <div class="preview-wrapper">
         <div class="page" id="pageDocument">
           <div class="page-border-outer" id="outerBorder">
             <div class="page-border-inner" id="innerBorder">
 
-              <!-- Dynamic Template Container (Admin Card Template is Injected Here or Defaults to Classic) -->
+              <!-- Dynamic Template Container -->
               <div id="dynamicPageContent" style="display:flex; flex-direction:column; justify-content:space-between; height:100%;">
                 
                 <div>
@@ -301,17 +301,22 @@
   </div>
 
   <!-- =========================================================
-       DYNAMIC ADMIN MEDIA POPUP MODAL (PHOTO / VIDEO / CLICKABLE)
+       DYNAMIC ADMIN MEDIA POPUP MODAL (WITH UNMUTE PILL)
   ========================================================= -->
   <div class="modal-overlay" id="adminBroadcastModal">
     <div class="modal-box" id="adminModalBox">
       <button class="modal-close-btn" id="adPopupCloseBtn">&times;</button>
       
-      <!-- Media Wrap (Image, HTML5 Video, or Embedded Drive/YouTube Player) -->
+      <!-- Media Wrap -->
       <div class="modal-hero-media-wrap" id="adPopupHeroWrap">
         <img id="adPopupImg" class="modal-hero-img" src="" alt="Announcement Banner" style="display:none;">
-        <video id="adPopupVideo" class="modal-hero-video" controls autoplay muted loop playsinline style="display:none;"></video>
+        <video id="adPopupVideo" class="modal-hero-video" autoplay muted loop playsinline style="display:none;"></video>
         <iframe id="adPopupIframe" class="modal-hero-iframe" src="" allow="autoplay; encrypted-media" allowfullscreen style="display:none;"></iframe>
+        
+        <!-- Floating Tap to Unmute Pill -->
+        <button id="adPopupUnmuteBtn" type="button" style="display:none; position:absolute; bottom:12px; right:12px; background:rgba(0,0,0,0.75); color:#ffffff; border:1px solid rgba(255,255,255,0.3); border-radius:20px; padding:5px 12px; font-size:11px; font-weight:700; cursor:pointer; z-index:40; pointer-events:auto;">
+          🔊 Tap to Unmute
+        </button>
       </div>
 
       <!-- Content Area -->
@@ -330,7 +335,7 @@
   </div>
 
   <!-- =========================================================
-       DOWNLOAD COMPLETE MODAL WITH ORDER ID & DRIVE ARCHIVE STATUS
+       DOWNLOAD COMPLETE MODAL
   ========================================================= -->
   <div class="modal-overlay" id="thankYouModal">
     <div class="modal-box" style="max-width: 440px;">
