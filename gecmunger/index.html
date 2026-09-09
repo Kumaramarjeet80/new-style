@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Academic Portal & Cover Page Generator</title>
+
+<!-- Google Fonts: Merriweather default -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=EB+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300&family=Montserrat:wght@400;600;700&family=Playfair+Display:ital,wght@0,500;0,700;1,400&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+
+<!-- html2pdf.js Bundle for direct downloads -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="user-body">
+
+  <!-- =========================================================
+       VIEW 1: CATALOG PORTAL (WHOLESALE / RETAIL EXPLORER)
+  ========================================================= -->
+  <div id="view-catalog" class="portal-container">
+    
+    <!-- Portal Header -->
+    <header class="portal-header">
+      <div class="portal-badge">Academic Resources & Studio</div>
+      <h1 class="portal-title">Government Engineering College, Munger</h1>
+      <p class="portal-subtitle">Select a category below to explore official course templates, syllabus modules, PYQs, and assignment front pages.</p>
+    </header>
+
+    <!-- Dynamic Breadcrumbs Bar -->
+    <nav class="breadcrumb-bar" id="breadcrumbNav" style="display:none;">
+      <span class="breadcrumb-item" id="bcHome">🏛 Home</span>
+      <span class="breadcrumb-separator" id="bcSep1" style="display:none;">›</span>
+      <span class="breadcrumb-item" id="bcCat" style="display:none;"></span>
+      <span class="breadcrumb-separator" id="bcSep2" style="display:none;">›</span>
+      <span class="breadcrumb-item active" id="bcSub" style="display:none;"></span>
+    </nav>
+
+    <!-- Stage A: Categories Grid (Cover Pages, Syllabus, PYQs, etc.) -->
+    <div id="stageCategories">
+      <div class="catalog-grid" id="categoryGrid">
+        <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #94a3b8;">
+          Loading academic categories...
+        </div>
+      </div>
+    </div>
+
+    <!-- Stage B: Subcategories Grid (Assignment, Lab, Seminar, etc.) -->
+    <div id="stageSubcategories" style="display:none;">
+      <div class="catalog-grid" id="subcategoryGrid"></div>
+    </div>
+
+    <!-- Stage C: Cards Grid (Customizable Cover Pages & Resource Cards) -->
+    <div id="stageCards" style="display:none;">
+      <div class="cards-grid" id="cardGrid"></div>
+    </div>
+
+  </div>
+
+  <!-- =========================================================
+       VIEW 2: GENERATOR WORKSPACE (PDF VIEW - 100% UNTOUCHED ENGINE)
+  ========================================================= -->
+  <div id="view-generator">
+    
+    <!-- Generator Top Utility Bar -->
+    <div class="generator-topbar">
+      <button class="btn-back-to-catalog" id="btnBackToPortal">
+        ← Back to Catalog
+      </button>
+      <div style="font-size: 13px; font-weight: 700; color: #60a5fa;" id="activeCardLabel">
+        Custom Assignment Cover Page
+      </div>
+    </div>
+
+    <!-- Mobile Sidebar Drawer Toggle -->
+    <div class="mobile-toggle-bar">
+      <span style="font-weight: bold; font-size: 14px;">Editor Controls</span>
+      <button id="btnToggleMobileSidebar">⚙ Open Controls</button>
+    </div>
+
+    <div class="user-body-layout">
+      
+      <!-- Controls Sidebar -->
+      <div class="editor-sidebar">
+
+        <!-- Direct Download Button -->
+        <button class="download-btn" id="btnDirectDownload">Download PDF Document</button>
+        <div style="font-size: 11px; color: #666; text-align: center; margin: 6px 0 14px 0;">Saves locally and archives to Drive automatically</div>
+
+        <!-- Academic Selection (Semester & Reg No Condition) -->
+        <div class="sidebar-section">
+          <h3>Academic Selection</h3>
+          <div class="form-group">
+            <label>Select Semester</label>
+            <select id="inSemester">
+              <option value="1st">1st Semester</option>
+              <option value="2nd">2nd Semester</option>
+              <option value="3rd">3rd Semester</option>
+              <option value="4th">4th Semester</option>
+              <option value="5th">5th Semester</option>
+              <option value="6th">6th Semester</option>
+              <option value="7th">7th Semester</option>
+              <option value="8th">8th Semester</option>
+            </select>
+          </div>
+
+          <!-- Conditional Checkbox for 1st & 3rd Semesters -->
+          <div class="checkbox-group" id="regToggleWrapper">
+            <input type="checkbox" id="includeRegCheckbox" checked>
+            <label for="includeRegCheckbox">Include Registration No.</label>
+          </div>
+
+          <div class="form-group" id="regInputFieldGroup" style="margin-top: 9px;">
+            <label>Registration Number</label>
+            <input type="text" id="inRegNo" value="25103144005">
+          </div>
+        </div>
+
+        <!-- Border Settings -->
+        <div class="sidebar-section">
+          <h3>Border Settings</h3>
+          <div class="form-group">
+            <label>Border Style</label>
+            <select id="borderStyleSelect">
+              <option value="double" selected>Classic Academic Double Border</option>
+              <option value="single">Single Solid Border</option>
+              <option value="thick-thin">Thick & Thin Architectural</option>
+              <option value="none">No Border</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Border Color</label>
+            <input type="color" id="borderColorPicker" value="#002060">
+          </div>
+        </div>
+
+        <!-- Typography Controls -->
+        <div class="sidebar-section">
+          <h3>Font & Size Controls</h3>
+          <div class="form-group">
+            <label>Font Family</label>
+            <select id="fontSelect">
+              <option value="'Merriweather', serif" selected>Merriweather (Default)</option>
+              <option value="'Times New Roman', Times, serif">Times New Roman</option>
+              <option value="'EB Garamond', serif">EB Garamond</option>
+              <option value="'Playfair Display', serif">Playfair Display</option>
+              <option value="'Cinzel', serif">Cinzel</option>
+              <option value="'Montserrat', sans-serif">Montserrat</option>
+              <option value="'Roboto', sans-serif">Roboto</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Overall Font Scaling (<span id="zoomVal">100%</span>)</label>
+            <input type="range" id="sizeRange" min="80" max="120" value="100" step="1">
+          </div>
+        </div>
+
+        <!-- Content Details Form -->
+        <div class="sidebar-section">
+          <h3>Content Details</h3>
+          <div class="form-group">
+            <label>College Line 1</label>
+            <input type="text" id="inCollege1" value="GOVERNMENT ENGINEERING COLLAGE,">
+          </div>
+          <div class="form-group">
+            <label>College Line 2</label>
+            <input type="text" id="inCollege2" value="MUNGER">
+          </div>
+          <div class="form-group">
+            <label>Affiliation</label>
+            <input type="text" id="inAffiliation" value="(Affiliated to Bihar Engineering University, Patna, Bihar)">
+          </div>
+          <div class="form-group">
+            <label>Document Heading</label>
+            <input type="text" id="inDocTitle" value="ASSIGNMENT WORK">
+          </div>
+          <div class="form-group">
+            <label>Subject Name</label>
+            <input type="text" id="inCourseName" value="Engineering chemistry">
+          </div>
+          <div class="form-group">
+            <label>Subject Code</label>
+            <input type="text" id="inCourseCode" value="(100103)">
+          </div>
+          <div class="form-group">
+            <label>Student Name</label>
+            <input type="text" id="inStudentName" value="Aastha kumari">
+          </div>
+          <div class="form-group">
+            <label>Roll Number</label>
+            <input type="text" id="inRollNo" value="25103042">
+          </div>
+          <div class="form-group">
+            <label>Faculty Guide</label>
+            <input type="text" id="inFacultyName" value="Dr. Gautam Kumar">
+          </div>
+          <div class="form-group">
+            <label>Designation</label>
+            <input type="text" id="inFacultyRole" value="Assistant Professor">
+          </div>
+          <div class="form-group">
+            <label>Department</label>
+            <input type="text" id="inFacultyDept" value="(Applied Science and Humanities)">
+          </div>
+          <div class="form-group">
+            <label>Degree</label>
+            <input type="text" id="inDegree" value="Bachelor of Technology">
+          </div>
+          <div class="form-group">
+            <label>Branch</label>
+            <input type="text" id="inBranch" value="Civil Engineering">
+          </div>
+          <div class="form-group">
+            <label>Session</label>
+            <input type="text" id="inSession" value="(2026-2030)">
+          </div>
+          <div class="form-group">
+            <label>Footer College Line</label>
+            <input type="text" id="inFooterCollege" value="Government Engineering College, Munger">
+          </div>
+          <div class="form-group">
+            <label>Footer Department Subtext</label>
+            <input type="text" id="inFooterDept" value="(Department of Science, Technology and Technical Education, Government of Bihar)">
+          </div>
+        </div>
+
+      </div>
+
+      <!-- A4 Output Preview Canvas (Exact Dimensions & Layout Preserved) -->
+      <div class="preview-wrapper">
+        <div class="page" id="pageDocument">
+          <div class="page-border-outer" id="outerBorder">
+            <div class="page-border-inner" id="innerBorder">
+
+              <!-- Dynamic Template Container (Admin Card Template is Injected Here or Defaults to Classic) -->
+              <div id="dynamicPageContent" style="display:flex; flex-direction:column; justify-content:space-between; height:100%;">
+                
+                <div>
+                  <div class="college-title">
+                    <span id="outCollege1">GOVERNMENT ENGINEERING COLLAGE,</span><br>
+                    <span id="outCollege2">MUNGER</span>
+                  </div>
+                  <div class="college-subtitle" id="outAffiliation">(Affiliated to Bihar Engineering University, Patna, Bihar)</div>
+
+                  <!-- Top Logo Position -->
+                  <div class="top-logo-container">
+                    <img id="topLogoImg" crossorigin="anonymous" alt="GEC Munger Logo">
+                  </div>
+
+                  <div class="doc-title" id="outDocTitle">ASSIGNMENT WORK</div>
+
+                  <div class="course-label">Submitted for the Course</div>
+                  <div class="course-name" id="outCourseName">Engineering chemistry</div>
+                  <div class="course-code" id="outCourseCode">(100103)</div>
+
+                  <div class="connector-label">by</div>
+                  <div class="student-name" id="outStudentName">Aastha kumari</div>
+                  <div class="meta-data">Roll no: <span id="outRollNo">25103042</span></div>
+                  <div class="meta-data" id="outRegNoLine">Registration no: <span id="outRegNo">25103144005</span></div>
+                  <div class="meta-data">Semester: <span id="outSemester">1st</span></div>
+
+                  <div class="faculty-box">
+                    <div class="connector-label">Under the Guidance of</div>
+                    <div class="faculty-name" id="outFacultyName">Dr. Gautam Kumar</div>
+                    <div class="faculty-role" id="outFacultyRole">Assistant Professor</div>
+                    <div class="faculty-role" id="outFacultyDept">(Applied Science and Humanities)</div>
+                  </div>
+
+                  <div class="degree-block">
+                    <div class="degree-lead">In partial fulfillment of the requirements for the award of</div>
+                    <div class="degree-name" id="outDegree">Bachelor of Technology</div>
+                    <div class="connector-label" style="margin: 1px 0;">in</div>
+                    <div class="branch-name" id="outBranch">Civil Engineering</div>
+                    <div class="session-text" id="outSession">(2026-2030)</div>
+                  </div>
+                </div>
+
+                <!-- Bottom Signature & Footer Section -->
+                <div class="page-footer">
+                  <div class="signature-row">
+                    <span>Prof. Signature:- _____________</span>
+                  </div>
+
+                  <div class="bottom-logo-container">
+                    <img id="bottomLogoImg" crossorigin="anonymous" alt="GEC Munger Emblem">
+                  </div>
+
+                  <div class="footer-college" id="outFooterCollege">Government Engineering College, Munger</div>
+                  <div class="footer-dept" id="outFooterDept">(Department of Science, Technology and Technical Education, Government of Bihar)</div>
+                </div>
+
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- =========================================================
+       DYNAMIC ADMIN MEDIA POPUP MODAL (PHOTO / VIDEO / CLICKABLE)
+  ========================================================= -->
+  <div class="modal-overlay" id="adminBroadcastModal">
+    <div class="modal-box" id="adminModalBox">
+      <button class="modal-close-btn" id="adPopupCloseBtn">&times;</button>
+      
+      <!-- Media Wrap (Image, HTML5 Video, or Embedded Drive/YouTube Player) -->
+      <div class="modal-hero-media-wrap" id="adPopupHeroWrap">
+        <img id="adPopupImg" class="modal-hero-img" src="" alt="Announcement Banner" style="display:none;">
+        <video id="adPopupVideo" class="modal-hero-video" controls autoplay muted loop playsinline style="display:none;"></video>
+        <iframe id="adPopupIframe" class="modal-hero-iframe" src="" allow="autoplay; encrypted-media" allowfullscreen style="display:none;"></iframe>
+      </div>
+
+      <!-- Content Area -->
+      <div class="modal-content-area">
+        <h3 id="adPopupTitle" class="modal-title">Special Announcement</h3>
+        <p id="adPopupBody" class="modal-desc"></p>
+        <a id="adPopupBtn" class="modal-action-btn" href="#" target="_blank">Visit Link</a>
+        
+        <!-- Timer Progress Bar -->
+        <div class="popup-timer-bar-wrap" id="popupTimerWrap">
+          <div class="popup-timer-bar" id="popupTimerBar"></div>
+        </div>
+        <span class="timer-badge" id="popupTimerBadge"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       DOWNLOAD COMPLETE MODAL WITH ORDER ID & DRIVE ARCHIVE STATUS
+  ========================================================= -->
+  <div class="modal-overlay" id="thankYouModal">
+    <div class="modal-box" style="max-width: 440px;">
+      <div class="modal-content-area">
+        <div style="font-size: 42px; margin-bottom: 8px;">🎉</div>
+        <h3 class="modal-title">PDF Generated Successfully!</h3>
+        <p class="modal-desc">Your customized cover page has downloaded to your device and has been archived to the GECM cloud repository.</p>
+        
+        <div class="order-id-box" id="modalOrderIdDisplay">
+          Tracking ID: ORD-LOADING...
+        </div>
+
+        <button class="modal-action-btn" style="background:#059669; border:none; cursor:pointer;" onclick="document.getElementById('thankYouModal').style.display='none'">
+          Done
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/script.js"></script>
+</body>
+</html>
