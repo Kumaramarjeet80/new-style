@@ -828,3 +828,92 @@ body {
     margin-bottom: -40mm;
   }
 }
+
+
+/* =========================================================
+   EMBEDDED DOCUMENT / PDF VIEWER MODAL
+========================================================= */
+.doc-viewer-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(4px);
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+}
+.doc-viewer-header {
+  background: #0f172a;
+  border-bottom: 1px solid #334155;
+  padding: 14px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+.doc-viewer-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.doc-viewer-badge {
+  background: rgba(37, 99, 235, 0.2);
+  color: #60a5fa;
+  border: 1px solid rgba(96, 165, 250, 0.3);
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.doc-viewer-title {
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+}
+.doc-viewer-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.btn-doc-download {
+  background: #2563eb;
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+.btn-doc-download:hover {
+  background: #1d4ed8;
+}
+.btn-doc-close {
+  background: #1e293b;
+  border: 1px solid #475569;
+  color: #f8fafc;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-doc-close:hover {
+  background: #334155;
+}
+.doc-viewer-frame-wrap {
+  flex: 1;
+  width: 100%;
+  background: #000;
+  position: relative;
+}
+.doc-viewer-frame-wrap iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
