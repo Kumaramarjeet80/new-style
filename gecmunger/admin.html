@@ -13,7 +13,7 @@
   <header class="bg-slate-950 border-b border-slate-800 px-6 py-4 flex flex-wrap justify-between items-center gap-4 sticky top-0 z-50">
     <div class="flex items-center gap-3">
       <span class="text-xl font-extrabold text-blue-400 tracking-tight">GECM Studio</span>
-      <span class="text-xs px-2.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 font-mono">v3.0 Multi-Tier</span>
+      <span class="text-xs px-2.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 font-mono">v3.1 Multi-Tier</span>
     </div>
     <div id="authStatusBadge" class="text-xs text-amber-400 font-semibold flex items-center gap-2">
       <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> Authentication Required
@@ -41,10 +41,10 @@
       <button class="pb-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 tab-btn" data-tab="tab-telemetry">Student Telemetry & Drive Archive</button>
     </div>
 
-    <!-- TAB 1: CATEGORIES, SUBCATEGORIES & CARDS (WITH TEMPLATE HTML EDITOR) -->
+    <!-- TAB 1: CATEGORIES, SUBCATEGORIES & CARDS -->
     <section id="tab-taxonomy" class="tab-pane space-y-8">
       
-      <!-- Top Row: Add Category & Add Subcategory -->
+      <!-- Top Row: Category & Subcategory Creators -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         
         <!-- Add Category Form -->
@@ -99,12 +99,12 @@
 
       </div>
 
-      <!-- Add Unlimited Card & Custom Cover Page HTML Code Editor -->
+      <!-- Card Creator & Custom HTML Template Studio -->
       <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-6 space-y-5">
         <div class="border-b border-slate-700/60 pb-3 flex flex-wrap justify-between items-center gap-2">
           <div>
             <h3 class="text-lg font-bold text-white">Card Creator & Template HTML Studio</h3>
-            <p class="text-xs text-slate-400">Attach custom front-page HTML code to any specific card</p>
+            <p class="text-xs text-slate-400">Attach documents, custom drive links, or live custom cover page templates</p>
           </div>
           <button id="btnSaveCard" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-2 rounded-lg text-xs transition shadow-lg shadow-emerald-600/20">
             Publish New Card
@@ -133,27 +133,32 @@
             </div>
           </div>
 
-          <!-- Column 2: Media & Action Routing -->
+          <!-- Column 2: Media, Document Upload & Routing -->
           <div class="space-y-4">
             <div>
-              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Upload Card Thumbnail Image</label>
+              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Card Thumbnail Image</label>
               <input type="file" id="cardThumbnailFile" accept="image/*" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-slate-400 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-blue-600 file:text-white cursor-pointer">
-              <span class="text-[11px] text-slate-500 mt-1 block">Uploaded directly to the root Google Drive storage.</span>
+              <input type="url" id="cardThumbnailUrl" placeholder="Or paste thumbnail image URL" class="w-full mt-2 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
             </div>
+
             <div>
-              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Or Thumbnail Image URL</label>
-              <input type="url" id="cardThumbnailUrl" placeholder="https://lh3.googleusercontent.com/..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Card Click Action</label>
+              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Card Action Type</label>
               <select id="cardActionType" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
                 <option value="generator" selected>Open Custom PDF Generator Canvas</option>
-                <option value="link">Direct External Link / Drive Document</option>
+                <option value="link">Direct Document / Drive Link</option>
               </select>
             </div>
-            <div id="cardTargetUrlWrap" style="display:none;">
-              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Target Link URL</label>
-              <input type="url" id="cardTargetUrl" placeholder="https://drive.google.com/file/d/..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+
+            <div id="cardTargetUrlWrap" style="display:none;" class="space-y-2 bg-slate-900/80 p-3 rounded-lg border border-slate-700">
+              <label class="block text-xs font-bold text-blue-400 uppercase">Document Attachment</label>
+              <div>
+                <label class="block text-[11px] text-slate-400 mb-1">Upload Document to Drive (PDF, DOCX, etc.)</label>
+                <input type="file" id="cardDocFile" accept=".pdf,.doc,.docx,.zip,.ppt,.pptx" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-xs text-slate-400 file:mr-2 file:py-0.5 file:px-2 file:rounded file:border-0 file:text-xs file:bg-blue-600 file:text-white cursor-pointer">
+              </div>
+              <div>
+                <label class="block text-[11px] text-slate-400 mb-1">Or Direct Drive / Web Link</label>
+                <input type="url" id="cardTargetUrl" placeholder="https://drive.google.com/file/d/..." class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+              </div>
             </div>
           </div>
 
@@ -164,7 +169,7 @@
               <span class="text-[10px] text-blue-400 font-mono">Injected into Canvas</span>
             </div>
             <textarea id="cardTemplateHtml" placeholder="<!-- Paste custom cover page inner HTML here -->&#10;<!-- Leave empty to use the classic GEC Munger Assignment Cover Page -->&#10;<div class='college-title'><span id='outCollege1'></span></div>..." class="flex-1 w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs font-mono text-emerald-400 outline-none focus:border-blue-500 resize-none min-h-[220px]"></textarea>
-            <span class="text-[11px] text-slate-500">Uses standard IDs like <code>outStudentName</code>, <code>outRollNo</code>, <code>outCourseName</code> for live-binding.</span>
+            <span class="text-[11px] text-slate-500">Uses standard IDs like <code>outStudentName</code>, <code>outRollNo</code>, <code>outCourseName</code> for instant live-binding.</span>
           </div>
 
         </div>
@@ -196,7 +201,7 @@
     <!-- TAB 2: MULTI-POPUP MANAGEMENT STUDIO -->
     <section id="tab-popups" class="tab-pane hidden space-y-8">
       
-      <!-- Multi-Popup Creator / Editor Form -->
+      <!-- Multi-Popup Form -->
       <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-6 space-y-6">
         <div class="border-b border-slate-700/60 pb-3 flex justify-between items-center">
           <div>
@@ -301,7 +306,7 @@
         </div>
       </div>
 
-      <!-- Popups Permanent Record Table -->
+      <!-- Permanent Popups Inventory Table -->
       <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-5">
         <div class="border-b border-slate-700/60 pb-3 mb-4 flex justify-between items-center">
           <h4 class="text-sm font-bold text-white">Permanent Popups Repository</h4>
@@ -376,6 +381,7 @@
       telemetry: []
     };
     let pendingThumbnailFile = null;
+    let pendingDocumentFile = null;
     let pendingPopupFile = null;
 
     // Tab Switching
@@ -433,7 +439,7 @@
       }
     });
 
-    // Fetch Taxonomy Data
+    // Fetch Categories, Subcategories, Cards
     async function fetchTaxonomyData() {
       try {
         const res = await fetch(`${APPS_SCRIPT_URL}?action=get_portal_data`);
@@ -526,7 +532,7 @@
       }
     });
 
-    // Thumbnail File Reader
+    // Card Thumbnail Reader
     document.getElementById('cardThumbnailFile').addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (file) {
@@ -538,12 +544,24 @@
       }
     });
 
-    // Toggle Action Type link wrap
-    document.getElementById('cardActionType').addEventListener('change', (e) => {
-      document.getElementById('cardTargetUrlWrap').style.display = e.target.value === 'link' ? 'block' : 'none';
+    // Direct Document File Reader (PDF/Docx/Zip)
+    document.getElementById('cardDocFile').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          pendingDocumentFile = { base64: evt.target.result, name: file.name };
+        };
+        reader.readAsDataURL(file);
+      }
     });
 
-    // Save Card (With Custom Template HTML)
+    // Toggle Action Type Target Wrap
+    document.getElementById('cardActionType').addEventListener('change', (e) => {
+      document.getElementById('cardTargetUrlWrap').style.display = (e.target.value === 'link') ? 'block' : 'none';
+    });
+
+    // Save Card (Supports Direct Document Upload, Links, and Custom HTML Templates)
     document.getElementById('btnSaveCard').addEventListener('click', async () => {
       const subcategoryId = document.getElementById('cardSubcategorySelect').value;
       const title = document.getElementById('cardTitle').value.trim();
@@ -552,9 +570,12 @@
       const manualThumb = document.getElementById('cardThumbnailUrl').value.trim();
       const actionType = document.getElementById('cardActionType').value;
       const targetUrl = document.getElementById('cardTargetUrl').value.trim();
-      const templateHtml = document.getElementById('cardTemplateHtml').value;
+      const templateHtml = document.getElementById('cardTemplateHtml').value.trim();
 
       if (!title || !subcategoryId) return alert("Subcategory and Card Title are required!");
+      if (actionType === 'link' && !targetUrl && !pendingDocumentFile) {
+        return alert("Please provide either a Document Link or upload a Document File for this resource card!");
+      }
 
       const btn = document.getElementById('btnSaveCard');
       btn.disabled = true;
@@ -574,6 +595,7 @@
               buttonText,
               thumbnailUrl: manualThumb,
               thumbnailFile: pendingThumbnailFile,
+              documentFile: pendingDocumentFile,
               actionType,
               targetUrl,
               templateHtml
@@ -587,9 +609,11 @@
           document.getElementById('cardDescription').value = "";
           document.getElementById('cardThumbnailUrl').value = "";
           document.getElementById('cardThumbnailFile').value = "";
+          document.getElementById('cardDocFile').value = "";
           document.getElementById('cardTargetUrl').value = "";
           document.getElementById('cardTemplateHtml').value = "";
           pendingThumbnailFile = null;
+          pendingDocumentFile = null;
           await fetchTaxonomyData();
         }
       } finally {
@@ -624,7 +648,7 @@
       });
     }
 
-    // MULTI-POPUP STUDIO LOGIC
+    // MULTI-POPUP STUDIO
     document.getElementById('popupFileInput').addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (file) {
@@ -636,7 +660,6 @@
       }
     });
 
-    // Live Preview Listeners
     ['popupTitle', 'popupBody', 'popupButtonText'].forEach(id => {
       document.getElementById(id).addEventListener('input', () => {
         document.getElementById('previewTitleDisplay').textContent = document.getElementById('popupTitle').value || "Title";
@@ -645,7 +668,6 @@
       });
     });
 
-    // Save Multi-Popup
     document.getElementById('btnSavePopup').addEventListener('click', async () => {
       const id = document.getElementById('editingPopupId').value;
       const active = document.getElementById('popupActive').checked;
@@ -786,7 +808,7 @@
       }
     }
 
-    // TELEMETRY RENDERING
+    // Telemetry Rendering
     function renderTelemetry(list) {
       document.getElementById('telemetryCount').textContent = list.length;
       const tbody = document.getElementById('telemetryTableBody');
@@ -818,7 +840,6 @@
       });
     }
 
-    // Telemetry Search Filter
     document.getElementById('telemetrySearch').addEventListener('input', (e) => {
       const q = e.target.value.toLowerCase();
       renderTelemetry(studioData.telemetry.filter(u => 
