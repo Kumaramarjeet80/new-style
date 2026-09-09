@@ -283,7 +283,7 @@ function updateBreadcrumbs() {
 }
 
 /* =========================================================
-   2. GENERATOR ENGINE (FIXED OFFSET & ZERO-SHIFT CAPTURE)
+   2. GENERATOR ENGINE (ISOLATED SANDBOX - ZERO CLIPPING)
 ========================================================= */
 const bindings = [
   { input: 'inCollege1', output: 'outCollege1' },
@@ -439,7 +439,7 @@ function initPdfGeneratorEngine() {
     });
   }
 
-  // Incremental local filename (Untouched)
+  // Incremental local filename
   function getIncrementalFilename() {
     const baseName = "Kumaramarjeet80 Assignment cover page";
     let count = parseInt(localStorage.getItem("download_file_counter") || "0", 10);
@@ -455,19 +455,39 @@ function initPdfGeneratorEngine() {
     return filename;
   }
 
-  // Direct PDF Download & Drive Auto-Upload Trigger
+  // Direct PDF Download & Isolated Offscreen Rendering Sandbox
   const downloadBtn = document.getElementById('btnDirectDownload');
   if (downloadBtn) {
     downloadBtn.addEventListener('click', function() {
-      const element = document.getElementById('pageDocument');
+      const originalElement = document.getElementById('pageDocument');
       const filename = getIncrementalFilename();
 
       downloadBtn.disabled = true;
       downloadBtn.textContent = "Rendering PDF...";
 
-      // Save responsive scale transform and reset for crisp 1:1 A4 canvas capture
-      const originalTransform = element.style.transform;
-      element.style.transform = 'none';
+      // 1. Create isolated offscreen sandbox container
+      const sandbox = document.createElement('div');
+      sandbox.style.position = 'fixed';
+      sandbox.style.left = '-9999px';
+      sandbox.style.top = '0';
+      sandbox.style.width = '210mm';
+      sandbox.style.minHeight = '297mm';
+      sandbox.style.margin = '0';
+      sandbox.style.padding = '0';
+      sandbox.style.zIndex = '-9999';
+      sandbox.style.background = '#ffffff';
+
+      // 2. Clone the element cleanly
+      const clone = originalElement.cloneNode(true);
+      clone.style.transform = 'none';
+      clone.style.margin = '0';
+      clone.style.boxShadow = 'none';
+      clone.style.width = '210mm';
+      clone.style.height = '297mm';
+      clone.style.boxSizing = 'border-box';
+
+      sandbox.appendChild(clone);
+      document.body.appendChild(sandbox);
 
       const opt = {
         margin: 0,
@@ -479,29 +499,27 @@ function initPdfGeneratorEngine() {
           logging: false,
           scrollX: 0,
           scrollY: 0,
-          windowWidth: 794 // 210mm in pixels at 96 DPI
+          windowWidth: 794
         },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
 
-      // Ensure window is aligned at top to prevent y-axis canvas drift
-      window.scrollTo(0, 0);
-
-      html2pdf().set(opt).from(element).toPdf().get('pdf').then(function(pdfObj) {
-        // Restore screen responsive transform
-        element.style.transform = originalTransform;
-
+      html2pdf().set(opt).from(clone).toPdf().get('pdf').then(function(pdfObj) {
         // Direct local save
         pdfObj.save(filename);
 
-        // Convert to base64 and transmit silently to Drive
+        // Upload to Drive
         const pdfBase64 = pdfObj.output('datauristring');
         transmitTelemetryAndArchive(pdfBase64);
 
+        // Remove sandbox from DOM
+        document.body.removeChild(sandbox);
         downloadBtn.disabled = false;
         downloadBtn.textContent = "Download PDF Document";
       }).catch(err => {
-        element.style.transform = originalTransform;
+        if (sandbox && sandbox.parentNode) {
+          document.body.removeChild(sandbox);
+        }
         console.error("PDF Engine Error:", err);
         downloadBtn.disabled = false;
         downloadBtn.textContent = "Download PDF Document";
@@ -557,19 +575,23 @@ function transmitTelemetryAndArchive(pdfBase64Data) {
 }
 
 /* =========================================================
-   3. MODAL POPUP ENGINE (SYNCHRONIZED PLAYBACK & RECURRENCE)
+   3. POPUP ENGINE (CHROMELESS AUTOPLAY & SYNCED TIMING)
 ========================================================= */
 function formatVideoEmbedUrl(url) {
   if (!url) return "";
+  
+  // Google Drive: Append chromeless parameters
   if (url.includes("drive.google.com") || url.includes("googleusercontent.com")) {
     const driveMatch = url.match(/(?:\/d\/|id=)([a-zA-Z0-9_-]+)/);
     if (driveMatch && driveMatch[1]) {
       return `https://drive.google.com/file/d/${driveMatch[1]}/preview`;
     }
   }
+  
+  // YouTube: Strip branding, controls, suggestions, enable muted autoplay
   const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
   if (ytMatch && ytMatch[1]) {
-    return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&mute=1&playsinline=1`;
+    return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&mute=1&controls=0&modestbranding=1&rel=0&loop=1&playlist=${ytMatch[1]}&playsinline=1`;
   }
   return url;
 }
@@ -610,7 +632,13 @@ function showUserPopup(p) {
   videoEl.pause();
   iframeEl.src = "";
 
-  // Reset timer indicators until media actually begins playback
+  // Strip all video controls and force muted loop for automatic unblocked playback
+  videoEl.removeAttribute('controls');
+  videoEl.muted = true;
+  videoEl.defaultMuted = true;
+  videoEl.loop = true;
+  videoEl.playsInline = true;
+
   timerWrap.style.display = "none";
   timerBadge.style.display = "none";
   timerBar.style.transition = "none";
@@ -625,9 +653,9 @@ function showUserPopup(p) {
     if (countdownInterval) clearInterval(countdownInterval);
   }
 
-  // Timer initiates ONLY when media is confirmed actively playing/loaded
+  // Timer initiates ONLY when media begins playback
   function startCloseTimer() {
-    if (countdownInterval) return; // Guard against multiple triggers
+    if (countdownInterval) return;
 
     const mode = p.closeMode || "both";
     if (mode !== "timer" && mode !== "both") return;
@@ -655,7 +683,6 @@ function showUserPopup(p) {
     }, 1000);
   }
 
-  // Bind close buttons
   const mode = p.closeMode || "both";
   closeBtn.style.display = (mode === "timer") ? "none" : "flex";
   closeBtn.onclick = (e) => {
@@ -663,7 +690,6 @@ function showUserPopup(p) {
     hideModal();
   };
 
-  // Pre-load media & attach playback event listeners
   if (mediaUrl) {
     heroWrap.style.display = "flex";
 
@@ -695,7 +721,6 @@ function showUserPopup(p) {
     startCloseTimer();
   }
 
-  // Populate text
   document.getElementById('adPopupTitle').textContent = p.title || "Announcement";
   document.getElementById('adPopupBody').textContent = p.body || "";
   
