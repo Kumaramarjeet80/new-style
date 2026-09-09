@@ -13,7 +13,7 @@
   <header class="bg-slate-950 border-b border-slate-800 px-6 py-4 flex flex-wrap justify-between items-center gap-4 sticky top-0 z-50">
     <div class="flex items-center gap-3">
       <span class="text-xl font-extrabold text-blue-400 tracking-tight">GECM Studio</span>
-      <span class="text-xs px-2.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 font-mono">v3.5 Two-Step Uploader</span>
+      <span class="text-xs px-2.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 font-mono">v3.8 Multi-Queue & IST</span>
     </div>
     <div id="authStatusBadge" class="text-xs text-amber-400 font-semibold flex items-center gap-2">
       <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> Authentication Required
@@ -49,9 +49,12 @@
         
         <!-- Add Category Form -->
         <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-5 space-y-4">
-          <div class="border-b border-slate-700/60 pb-3">
-            <h3 class="text-base font-bold text-white">Create / Update Category</h3>
-            <p class="text-xs text-slate-400">Pillar groupings (e.g. Cover Pages, Syllabus, PYQs)</p>
+          <div class="border-b border-slate-700/60 pb-3 flex justify-between items-center">
+            <div>
+              <h3 class="text-base font-bold text-white">Create / Update Category</h3>
+              <p class="text-xs text-slate-400">Pillar groupings (e.g. Cover Pages, Syllabus, PYQs)</p>
+            </div>
+            <span class="text-[10px] text-blue-400 font-mono">IST Timestamped</span>
           </div>
           <div class="space-y-3">
             <div>
@@ -74,9 +77,12 @@
 
         <!-- Add Subcategory Form -->
         <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-5 space-y-4">
-          <div class="border-b border-slate-700/60 pb-3">
-            <h3 class="text-base font-bold text-white">Create / Update Subcategory</h3>
-            <p class="text-xs text-slate-400">Nested branches (e.g. 1st Year Syllabus, Lab Manuals)</p>
+          <div class="border-b border-slate-700/60 pb-3 flex justify-between items-center">
+            <div>
+              <h3 class="text-base font-bold text-white">Create / Update Subcategory</h3>
+              <p class="text-xs text-slate-400">Nested branches (e.g. 1st Year Syllabus, Lab Manuals)</p>
+            </div>
+            <span class="text-[10px] text-blue-400 font-mono">IST Timestamped</span>
           </div>
           <div class="space-y-3">
             <div>
@@ -178,16 +184,16 @@
           <div class="space-y-2 flex flex-col">
             <div class="flex justify-between items-center">
               <label class="block text-xs font-bold text-slate-300 uppercase">Cover Page Template HTML Code</label>
-              <span class="text-[10px] text-blue-400 font-mono">Injected into Canvas</span>
+              <span class="text-[10px] text-blue-400 font-mono">User Editable Placeholders</span>
             </div>
             <textarea id="cardTemplateHtml" placeholder="<!-- Paste custom cover page inner HTML here -->&#10;<!-- Leave completely empty to use the classic GEC Munger Assignment Cover Page -->&#10;<div class='college-title'><span id='outCollege1'></span></div>..." class="flex-1 w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs font-mono text-emerald-400 outline-none focus:border-blue-500 resize-none min-h-[220px]"></textarea>
-            <span class="text-[11px] text-slate-500">Active for Canvas Cover Cards only. Disabled if a Document link is active.</span>
+            <span class="text-[11px] text-slate-500">Any ID starting with 'out' or custom ID will automatically become an editable input field for students.</span>
           </div>
 
         </div>
       </div>
 
-      <!-- Published Inventory Table -->
+      <!-- Published Inventory Table with IST Timestamps -->
       <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-5">
         <h4 class="text-sm font-bold text-white mb-4">Published Cards Inventory</h4>
         <div class="overflow-x-auto">
@@ -195,11 +201,12 @@
             <thead class="bg-slate-900/80 text-slate-400 border-b border-slate-700">
               <tr>
                 <th class="p-3">Card ID</th>
+                <th class="p-3">Published (IST)</th>
                 <th class="p-3">Thumbnail</th>
                 <th class="p-3">Title</th>
                 <th class="p-3">Subcategory ID</th>
                 <th class="p-3">Action Type</th>
-                <th class="p-3">Attached Document / Link</th>
+                <th class="p-3">Attached Link</th>
                 <th class="p-3 text-right">Actions</th>
               </tr>
             </thead>
@@ -217,7 +224,7 @@
         <div class="border-b border-slate-700/60 pb-3 flex justify-between items-center">
           <div>
             <h3 class="text-lg font-bold text-white" id="popupFormHeading">Create Broadcast Popup</h3>
-            <p class="text-xs text-slate-400">All popups are permanently stored in Google Sheets and can be activated or paused at will</p>
+            <p class="text-xs text-slate-400">When multiple popups are active, users will see them cyclically in order, starting with the latest added popup</p>
           </div>
           <button id="btnSavePopup" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-2 rounded-lg text-xs transition shadow-lg">
             Save & Publish Popup
@@ -230,7 +237,7 @@
           <div class="space-y-4">
             <div class="flex items-center gap-3 bg-slate-900/60 p-3 rounded-lg border border-slate-700">
               <input type="checkbox" id="popupActive" checked class="w-4 h-4 cursor-pointer">
-              <label for="popupActive" class="text-xs font-bold text-white cursor-pointer">Active (Immediately Visible to Portal Users)</label>
+              <label for="popupActive" class="text-xs font-bold text-white cursor-pointer">Active (Rotates dynamically in user queue)</label>
             </div>
             <div class="grid grid-cols-2 gap-4">
               <div>
@@ -349,7 +356,7 @@
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-700/60">
           <div>
             <h3 class="text-lg font-bold text-white">Student Download Telemetry & PDF Archive</h3>
-            <p class="text-xs text-slate-400">All downloads automatically archive to the Google Drive <code>Generated_Cover_Pages</code> folder</p>
+            <p class="text-xs text-slate-400">All generated PDFs auto-archive directly to Google Drive folder <code>Generated_Cover_Pages</code></p>
           </div>
           <div class="flex items-center gap-3">
             <span class="text-xs font-bold text-slate-300">Total Downloads: <span id="telemetryCount" class="text-blue-400 font-mono text-sm">0</span></span>
@@ -361,7 +368,7 @@
           <table class="w-full text-left text-xs border-collapse">
             <thead class="bg-slate-900/90 text-slate-400 sticky top-0 border-b border-slate-700">
               <tr>
-                <th class="p-3">Timestamp</th>
+                <th class="p-3">Timestamp (IST)</th>
                 <th class="p-3">Order ID</th>
                 <th class="p-3">Card ID</th>
                 <th class="p-3">Student Name</th>
@@ -369,7 +376,7 @@
                 <th class="p-3">Reg No</th>
                 <th class="p-3">Subject & Code</th>
                 <th class="p-3">Faculty Guide</th>
-                <th class="p-3">Status</th>
+                <th class="p-3">Drive Archive File</th>
               </tr>
             </thead>
             <tbody id="telemetryTableBody" class="divide-y divide-slate-800 text-slate-300"></tbody>
@@ -382,30 +389,37 @@
 
   <script>
     // Configuration
-    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwVug8xgOBwxK3C2U39z5iHAgXsm0N9AfrBfEOmbneRPtGMmX-__yPk5TnHODEdQ4s7iQ/exec";
-    let authPass = "";
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwqimz0gi8E6LFEG7VhUjnVr0qZ2QUlIpTUQmMwOQxDmVAiW59eyVBsQOQRnnANRBiX/exec";[cite: 1, 4]
+    const USER_CACHE_KEY = "gecm_portal_catalog_cache";
+    let authPass = "";[cite: 4]
     let studioData = {
       categories: [],
       subcategories: [],
       cards: [],
       popups: [],
       telemetry: []
-    };
+    };[cite: 4]
+
+    function clearUserLocalCache() {
+      try {
+        localStorage.removeItem(USER_CACHE_KEY);
+      } catch (e) {}
+    }
 
     function readFileAsBase64(file) {
       return new Promise((resolve) => {
-        if (!file) return resolve(null);
-        const reader = new FileReader();
+        if (!file) return resolve(null);[cite: 4]
+        const reader = new FileReader();[cite: 4]
         reader.onload = (e) => {
-          const res = e.target.result;
-          if (typeof res === 'string' && res.startsWith('data:')) {
-            resolve({ base64: res, name: file.name });
+          const res = e.target.result;[cite: 4]
+          if (typeof res === 'string' && res.startsWith('data:')) {[cite: 4]
+            resolve({ base64: res, name: file.name });[cite: 4]
           } else {
-            resolve(null);
+            resolve(null);[cite: 4]
           }
         };
-        reader.onerror = () => resolve(null);
-        reader.readAsDataURL(file);
+        reader.onerror = () => resolve(null);[cite: 4]
+        reader.readAsDataURL(file);[cite: 4]
       });
     }
 
@@ -413,305 +427,305 @@
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.tab-btn').forEach(b => {
-          b.classList.remove('border-blue-500', 'text-blue-400');
-          b.classList.add('border-transparent', 'text-slate-400');
+          b.classList.remove('border-blue-500', 'text-blue-400');[cite: 4]
+          b.classList.add('border-transparent', 'text-slate-400');[cite: 4]
         });
-        document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));[cite: 4]
 
-        btn.classList.add('border-blue-500', 'text-blue-400');
-        btn.classList.remove('border-transparent', 'text-slate-400');
-        document.getElementById(btn.dataset.tab).classList.remove('hidden');
+        btn.classList.add('border-blue-500', 'text-blue-400');[cite: 4]
+        btn.classList.remove('border-transparent', 'text-slate-400');[cite: 4]
+        document.getElementById(btn.dataset.tab).classList.remove('hidden');[cite: 4]
       });
     });
 
     // Login Handler
     document.getElementById('btnLogin').addEventListener('click', async () => {
-      const pass = document.getElementById('adminPassword').value;
-      const err = document.getElementById('loginError');
-      const btn = document.getElementById('btnLogin');
+      const pass = document.getElementById('adminPassword').value;[cite: 4]
+      const err = document.getElementById('loginError');[cite: 4]
+      const btn = document.getElementById('btnLogin');[cite: 4]
 
-      btn.disabled = true;
-      btn.textContent = "Verifying Studio Keys...";
-      err.classList.add('hidden');
+      btn.disabled = true;[cite: 4]
+      btn.textContent = "Verifying Studio Keys...";[cite: 4]
+      err.classList.add('hidden');[cite: 4]
 
       try {
-        const res = await fetch(`${APPS_SCRIPT_URL}?key=${encodeURIComponent(pass)}`);
-        const data = await res.json();
+        const res = await fetch(`${APPS_SCRIPT_URL}?key=${encodeURIComponent(pass)}`);[cite: 4]
+        const data = await res.json();[cite: 4]
 
-        if (data.status === "unauthorized") {
-          err.textContent = "Invalid master administrative password.";
-          err.classList.remove('hidden');
-        } else if (data.status === "success") {
-          authPass = pass;
-          document.getElementById('loginView').classList.add('hidden');
-          document.getElementById('dashboardView').classList.remove('hidden');
-          document.getElementById('authStatusBadge').innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span> Authenticated`;
-          document.getElementById('authStatusBadge').className = "text-xs text-emerald-400 font-semibold flex items-center gap-2";
+        if (data.status === "unauthorized") {[cite: 4]
+          err.textContent = "Invalid master administrative password.";[cite: 4]
+          err.classList.remove('hidden');[cite: 4]
+        } else if (data.status === "success") {[cite: 4]
+          authPass = pass;[cite: 4]
+          document.getElementById('loginView').classList.add('hidden');[cite: 4]
+          document.getElementById('dashboardView').classList.remove('hidden');[cite: 4]
+          document.getElementById('authStatusBadge').innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span> Authenticated`;[cite: 4]
+          document.getElementById('authStatusBadge').className = "text-xs text-emerald-400 font-semibold flex items-center gap-2";[cite: 4]
 
-          studioData.telemetry = data.users || [];
-          studioData.popups = data.popups || [];
-          renderTelemetry(studioData.telemetry);
-          renderPopupsList(studioData.popups);
+          studioData.telemetry = data.users || [];[cite: 4]
+          studioData.popups = data.popups || [];[cite: 4]
+          renderTelemetry(studioData.telemetry);[cite: 4]
+          renderPopupsList(studioData.popups);[cite: 4]
 
-          await fetchTaxonomyData();
+          await fetchTaxonomyData();[cite: 4]
         }
       } catch (e) {
-        err.textContent = "Failed to connect to backend: " + e.toString();
-        err.classList.remove('hidden');
+        err.textContent = "Failed to connect to backend: " + e.toString();[cite: 4]
+        err.classList.remove('hidden');[cite: 4]
       } finally {
-        btn.disabled = false;
-        btn.textContent = "Unlock Master Studio";
+        btn.disabled = false;[cite: 4]
+        btn.textContent = "Unlock Master Studio";[cite: 4]
       }
     });
 
     // Fetch Categories, Subcategories, Cards
     async function fetchTaxonomyData() {
       try {
-        const res = await fetch(`${APPS_SCRIPT_URL}?action=get_portal_data`);
-        const data = await res.json();
-        if (data.status === "success") {
-          studioData.categories = data.categories || [];
-          studioData.subcategories = data.subcategories || [];
-          studioData.cards = data.cards || [];
-          populateDropdowns();
-          renderCardsInventory();
+        const res = await fetch(`${APPS_SCRIPT_URL}?action=get_portal_data`);[cite: 4]
+        const data = await res.json();[cite: 4]
+        if (data.status === "success") {[cite: 4]
+          studioData.categories = data.categories || [];[cite: 4]
+          studioData.subcategories = data.subcategories || [];[cite: 4]
+          studioData.cards = data.cards || [];[cite: 4]
+          populateDropdowns();[cite: 4]
+          renderCardsInventory();[cite: 4]
         }
       } catch (e) {
-        console.error("Taxonomy fetch error:", e);
+        console.error("Taxonomy fetch error:", e);[cite: 4]
       }
     }
 
     function populateDropdowns() {
-      const subParent = document.getElementById('subParentCat');
-      subParent.innerHTML = studioData.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+      const subParent = document.getElementById('subParentCat');[cite: 4]
+      subParent.innerHTML = studioData.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');[cite: 4]
 
-      const cardSub = document.getElementById('cardSubcategorySelect');
-      cardSub.innerHTML = studioData.subcategories.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+      const cardSub = document.getElementById('cardSubcategorySelect');[cite: 4]
+      cardSub.innerHTML = studioData.subcategories.map(s => `<option value="${s.id}">${s.name}</option>`).join('');[cite: 4]
     }
 
     // Save Category
     document.getElementById('btnSaveCategory').addEventListener('click', async () => {
-      const name = document.getElementById('catName').value.trim();
-      const desc = document.getElementById('catDesc').value.trim();
-      const icon = document.getElementById('catIcon').value.trim() || "📁";
-      if (!name) return alert("Category Name is required!");
+      const name = document.getElementById('catName').value.trim();[cite: 4]
+      const desc = document.getElementById('catDesc').value.trim();[cite: 4]
+      const icon = document.getElementById('catIcon').value.trim() || "📁";[cite: 4]
+      if (!name) return alert("Category Name is required!");[cite: 4]
 
-      const btn = document.getElementById('btnSaveCategory');
-      btn.disabled = true;
-      btn.textContent = "Saving...";
+      const btn = document.getElementById('btnSaveCategory');[cite: 4]
+      btn.disabled = true;[cite: 4]
+      btn.textContent = "Saving...";[cite: 4]
 
       try {
-        const res = await fetch(APPS_SCRIPT_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain' },
+        const res = await fetch(APPS_SCRIPT_URL, {[cite: 4]
+          method: 'POST',[cite: 4]
+          headers: { 'Content-Type': 'text/plain' },[cite: 4]
           body: JSON.stringify({
-            action: "admin_save_category",
-            key: authPass,
-            category: { name, description: desc, icon }
+            action: "admin_save_category",[cite: 4]
+            key: authPass,[cite: 4]
+            category: { name, description: desc, icon }[cite: 4]
           })
         });
-        const d = await res.json();
-        if (d.status === "success") {
-          alert("Category published successfully!");
-          document.getElementById('catName').value = "";
-          document.getElementById('catDesc').value = "";
-          await fetchTaxonomyData();
+        const d = await res.json();[cite: 4]
+        if (d.status === "success") {[cite: 4]
+          clearUserLocalCache();
+          alert("Category published successfully with IST timestamp!");
+          document.getElementById('catName').value = "";[cite: 4]
+          document.getElementById('catDesc').value = "";[cite: 4]
+          await fetchTaxonomyData();[cite: 4]
         }
       } finally {
-        btn.disabled = false;
-        btn.textContent = "Save Category";
+        btn.disabled = false;[cite: 4]
+        btn.textContent = "Save Category";[cite: 4]
       }
     });
 
     // Save Subcategory
     document.getElementById('btnSaveSubcategory').addEventListener('click', async () => {
-      const categoryId = document.getElementById('subParentCat').value;
-      const name = document.getElementById('subName').value.trim();
-      const desc = document.getElementById('subDesc').value.trim();
-      if (!name || !categoryId) return alert("Parent Category and Subcategory Name required!");
+      const categoryId = document.getElementById('subParentCat').value;[cite: 4]
+      const name = document.getElementById('subName').value.trim();[cite: 4]
+      const desc = document.getElementById('subDesc').value.trim();[cite: 4]
+      if (!name || !categoryId) return alert("Parent Category and Subcategory Name required!");[cite: 4]
 
-      const btn = document.getElementById('btnSaveSubcategory');
-      btn.disabled = true;
-      btn.textContent = "Saving...";
+      const btn = document.getElementById('btnSaveSubcategory');[cite: 4]
+      btn.disabled = true;[cite: 4]
+      btn.textContent = "Saving...";[cite: 4]
 
       try {
-        const res = await fetch(APPS_SCRIPT_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain' },
+        const res = await fetch(APPS_SCRIPT_URL, {[cite: 4]
+          method: 'POST',[cite: 4]
+          headers: { 'Content-Type': 'text/plain' },[cite: 4]
           body: JSON.stringify({
-            action: "admin_save_subcategory",
-            key: authPass,
-            subcategory: { categoryId, name, description: desc }
+            action: "admin_save_subcategory",[cite: 4]
+            key: authPass,[cite: 4]
+            subcategory: { categoryId, name, description: desc }[cite: 4]
           })
         });
-        const d = await res.json();
-        if (d.status === "success") {
-          alert("Subcategory published successfully!");
-          document.getElementById('subName').value = "";
-          document.getElementById('subDesc').value = "";
-          await fetchTaxonomyData();
+        const d = await res.json();[cite: 4]
+        if (d.status === "success") {[cite: 4]
+          clearUserLocalCache();
+          alert("Subcategory published successfully with IST timestamp!");
+          document.getElementById('subName').value = "";[cite: 4]
+          document.getElementById('subDesc').value = "";[cite: 4]
+          await fetchTaxonomyData();[cite: 4]
         }
       } finally {
-        btn.disabled = false;
-        btn.textContent = "Save Subcategory";
+        btn.disabled = false;[cite: 4]
+        btn.textContent = "Save Subcategory";[cite: 4]
       }
     });
 
     // Toggle Action Type UI
     document.getElementById('cardActionType').addEventListener('change', (e) => {
-      document.getElementById('cardTargetUrlWrap').style.display = (e.target.value === 'link') ? 'block' : 'none';
+      document.getElementById('cardTargetUrlWrap').style.display = (e.target.value === 'link') ? 'block' : 'none';[cite: 4]
     });
 
-    // STANDALONE DRIVE DOCUMENT UPLOADER STEP
+    // Standalone Document Upload to Drive
     document.getElementById('btnUploadDocToDrive').addEventListener('click', async () => {
-      const docInput = document.getElementById('cardDocFile');
-      if (!docInput.files || docInput.files.length === 0) {
-        return alert("Please select a document file first (PDF, DOCX, etc.)!");
+      const docInput = document.getElementById('cardDocFile');[cite: 4]
+      if (!docInput.files || docInput.files.length === 0) {[cite: 4]
+        return alert("Please select a document file first (PDF, DOCX, etc.)!");[cite: 4]
       }
 
-      const file = docInput.files[0];
-      const btn = document.getElementById('btnUploadDocToDrive');
-      const badge = document.getElementById('uploadBadge');
+      const file = docInput.files[0];[cite: 4]
+      const btn = document.getElementById('btnUploadDocToDrive');[cite: 4]
+      const badge = document.getElementById('uploadBadge');[cite: 4]
 
-      btn.disabled = true;
-      btn.innerHTML = `<span class="animate-spin">⏳</span> Uploading ${file.name} to Google Drive...`;
-      badge.textContent = "Uploading to Drive...";
-      badge.className = "text-[10px] text-amber-400 font-bold";
+      btn.disabled = true;[cite: 4]
+      btn.innerHTML = `<span class="animate-spin">⏳</span> Uploading ${file.name} to Google Drive...`;[cite: 4]
+      badge.textContent = "Uploading to Drive...";[cite: 4]
+      badge.className = "text-[10px] text-amber-400 font-bold";[cite: 4]
 
       try {
-        const filePayload = await readFileAsBase64(file);
-        if (!filePayload) throw new Error("Could not read local file buffer.");
+        const filePayload = await readFileAsBase64(file);[cite: 4]
+        if (!filePayload) throw new Error("Could not read local file buffer.");[cite: 4]
 
-        const res = await fetch(APPS_SCRIPT_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        const res = await fetch(APPS_SCRIPT_URL, {[cite: 4]
+          method: 'POST',[cite: 4]
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },[cite: 4]
           body: JSON.stringify({
-            action: "admin_upload_standalone_doc",
-            key: authPass,
-            file: filePayload
+            action: "admin_upload_standalone_doc",[cite: 4]
+            key: authPass,[cite: 4]
+            file: filePayload[cite: 4]
           })
         });
 
-        const d = await res.json();
-        if (d && d.status === "success" && d.fileUrl) {
-          document.getElementById('cardTargetUrl').value = d.fileUrl;
-          document.getElementById('cardActionType').value = 'link';
+        const d = await res.json();[cite: 4]
+        if (d && d.status === "success" && d.fileUrl) {[cite: 4]
+          document.getElementById('cardTargetUrl').value = d.fileUrl;[cite: 4]
+          document.getElementById('cardActionType').value = 'link';[cite: 4]
           
-          badge.textContent = "✓ Uploaded Successfully";
-          badge.className = "text-[10px] text-emerald-400 font-bold";
-          alert("Document uploaded successfully to Google Drive!\nThe Drive view link has been auto-filled. You can now publish this card.");
+          badge.textContent = "✓ Uploaded Successfully";[cite: 4]
+          badge.className = "text-[10px] text-emerald-400 font-bold";[cite: 4]
+          alert("Document uploaded successfully to Google Drive!\nThe Drive link has been filled.");
         } else {
-          throw new Error(d ? d.message : "Unknown backend response");
+          throw new Error(d ? d.message : "Unknown backend response");[cite: 4]
         }
       } catch (err) {
-        badge.textContent = "✕ Upload Failed";
-        badge.className = "text-[10px] text-rose-400 font-bold";
-        alert("Document upload failed: " + err.message);
+        badge.textContent = "✕ Upload Failed";[cite: 4]
+        badge.className = "text-[10px] text-rose-400 font-bold";[cite: 4]
+        alert("Document upload failed: " + err.message);[cite: 4]
       } finally {
-        btn.disabled = false;
-        btn.innerHTML = `<span>☁ Upload Document to Google Drive</span>`;
+        btn.disabled = false;[cite: 4]
+        btn.innerHTML = `<span>☁ Upload Document to Google Drive</span>`;[cite: 4]
       }
     });
 
     // Save Card
     document.getElementById('btnSaveCard').addEventListener('click', async () => {
-      const subcategoryId = document.getElementById('cardSubcategorySelect').value;
-      const title = document.getElementById('cardTitle').value.trim();
-      const desc = document.getElementById('cardDescription').value.trim();
-      const manualThumb = document.getElementById('cardThumbnailUrl').value.trim();
-      let actionType = document.getElementById('cardActionType').value;
-      let targetUrl = document.getElementById('cardTargetUrl').value.trim();
-      const templateHtml = document.getElementById('cardTemplateHtml').value.trim();
-      const thumbInput = document.getElementById('cardThumbnailFile');
+      const subcategoryId = document.getElementById('cardSubcategorySelect').value;[cite: 4]
+      const title = document.getElementById('cardTitle').value.trim();[cite: 4]
+      const desc = document.getElementById('cardDescription').value.trim();[cite: 4]
+      const manualThumb = document.getElementById('cardThumbnailUrl').value.trim();[cite: 4]
+      let actionType = document.getElementById('cardActionType').value;[cite: 4]
+      let targetUrl = document.getElementById('cardTargetUrl').value.trim();[cite: 4]
+      const templateHtml = document.getElementById('cardTemplateHtml').value.trim();[cite: 4]
+      const thumbInput = document.getElementById('cardThumbnailFile');[cite: 4]
 
-      if (!title || !subcategoryId) {
-        return alert("Subcategory and Card Title are required!");
+      if (!title || !subcategoryId) {[cite: 4]
+        return alert("Subcategory and Card Title are required!");[cite: 4]
       }
 
-      if (targetUrl.length > 0) {
-        actionType = "link";
+      if (targetUrl.length > 0) {[cite: 4]
+        actionType = "link";[cite: 4]
       }
 
-      if (actionType === 'link' && !targetUrl) {
-        return alert("For document link cards, please upload the document to Drive first using the 'Upload Document to Google Drive' button, or paste a link!");
-      }
-
-      const btn = document.getElementById('btnSaveCard');
-      btn.disabled = true;
-      btn.textContent = "Publishing Card...";
+      const btn = document.getElementById('btnSaveCard');[cite: 4]
+      btn.disabled = true;[cite: 4]
+      btn.textContent = "Publishing Card...";[cite: 4]
 
       try {
-        let thumbPayload = null;
-        if (thumbInput.files && thumbInput.files.length > 0) {
-          thumbPayload = await readFileAsBase64(thumbInput.files[0]);
+        let thumbPayload = null;[cite: 4]
+        if (thumbInput.files && thumbInput.files.length > 0) {[cite: 4]
+          thumbPayload = await readFileAsBase64(thumbInput.files[0]);[cite: 4]
         }
 
-        const defaultBtnLabel = (actionType === "link") ? "View / Read Document" : "Customize Cover Page";
-        const buttonText = document.getElementById('cardButtonText').value.trim() || defaultBtnLabel;
+        const defaultBtnLabel = (actionType === "link") ? "View / Read Document" : "Customize Cover Page";[cite: 4]
+        const buttonText = document.getElementById('cardButtonText').value.trim() || defaultBtnLabel;[cite: 4]
 
         const payload = {
-          action: "admin_save_card",
-          key: authPass,
+          action: "admin_save_card",[cite: 4]
+          key: authPass,[cite: 4]
           card: {
-            subcategoryId: subcategoryId,
-            title: title,
-            description: desc,
-            buttonText: buttonText,
-            thumbnailUrl: manualThumb,
-            thumbnailFile: thumbPayload,
-            actionType: actionType,
-            targetUrl: targetUrl,
-            templateHtml: (actionType === "link") ? "" : templateHtml
+            subcategoryId: subcategoryId,[cite: 4]
+            title: title,[cite: 4]
+            description: desc,[cite: 4]
+            buttonText: buttonText,[cite: 4]
+            thumbnailUrl: manualThumb,[cite: 4]
+            thumbnailFile: thumbPayload,[cite: 4]
+            actionType: actionType,[cite: 4]
+            targetUrl: targetUrl,[cite: 4]
+            templateHtml: (actionType === "link") ? "" : templateHtml[cite: 4]
           }
         };
 
-        const res = await fetch(APPS_SCRIPT_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify(payload)
+        const res = await fetch(APPS_SCRIPT_URL, {[cite: 4]
+          method: 'POST',[cite: 4]
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },[cite: 4]
+          body: JSON.stringify(payload)[cite: 4]
         });
 
-        const d = await res.json();
-        if (d && d.status === "success") {
-          alert(`Card published successfully!\nID: ${d.id}\nAction: ${d.actionType}\nDocument Link: ${d.targetUrl || 'Canvas'}`);
+        const d = await res.json();[cite: 4]
+        if (d && d.status === "success") {[cite: 4]
+          clearUserLocalCache();
+          alert(`Card published successfully with IST timestamp!\nID: ${d.id}\nAction: ${d.actionType}`);
           
-          document.getElementById('cardTitle').value = "";
-          document.getElementById('cardDescription').value = "";
-          document.getElementById('cardThumbnailUrl').value = "";
-          thumbInput.value = "";
-          document.getElementById('cardDocFile').value = "";
-          document.getElementById('cardTargetUrl').value = "";
-          document.getElementById('cardTemplateHtml').value = "";
-          document.getElementById('cardButtonText').value = "";
-          document.getElementById('cardActionType').value = "generator";
-          document.getElementById('cardTargetUrlWrap').style.display = "none";
-          document.getElementById('uploadBadge').textContent = "Step 1: Select & Upload";
-          document.getElementById('uploadBadge').className = "text-[10px] text-slate-400";
+          document.getElementById('cardTitle').value = "";[cite: 4]
+          document.getElementById('cardDescription').value = "";[cite: 4]
+          document.getElementById('cardThumbnailUrl').value = "";[cite: 4]
+          thumbInput.value = "";[cite: 4]
+          document.getElementById('cardDocFile').value = "";[cite: 4]
+          document.getElementById('cardTargetUrl').value = "";[cite: 4]
+          document.getElementById('cardTemplateHtml').value = "";[cite: 4]
+          document.getElementById('cardButtonText').value = "";[cite: 4]
+          document.getElementById('cardActionType').value = "generator";[cite: 4]
+          document.getElementById('cardTargetUrlWrap').style.display = "none";[cite: 4]
+          document.getElementById('uploadBadge').textContent = "Step 1: Select & Upload";[cite: 4]
+          document.getElementById('uploadBadge').className = "text-[10px] text-slate-400";[cite: 4]
           
-          await fetchTaxonomyData();
+          await fetchTaxonomyData();[cite: 4]
         } else {
-          alert("Card save failed: " + (d ? d.message : "Error"));
+          alert("Card save failed: " + (d ? d.message : "Error"));[cite: 4]
         }
       } catch (err) {
-        alert("Upload error: " + err.message);
+        alert("Upload error: " + err.message);[cite: 4]
       } finally {
-        btn.disabled = false;
-        btn.textContent = "Publish New Card";
+        btn.disabled = false;[cite: 4]
+        btn.textContent = "Publish New Card";[cite: 4]
       }
     });
 
     function renderCardsInventory() {
-      const tbody = document.getElementById('inventoryTableBody');
-      tbody.innerHTML = "";
-      if (studioData.cards.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-500">No cards registered yet.</td></tr>`;
-        return;
+      const tbody = document.getElementById('inventoryTableBody');[cite: 4]
+      tbody.innerHTML = "";[cite: 4]
+      if (studioData.cards.length === 0) {[cite: 4]
+        tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-slate-500">No cards registered yet.</td></tr>`;
+        return;[cite: 4]
       }
       studioData.cards.forEach(c => {
-        const hasDocLink = Boolean(c.targetUrl && c.targetUrl.trim().length > 0);
-        const tr = document.createElement('tr');
+        const hasDocLink = Boolean(c.targetUrl && c.targetUrl.trim().length > 0);[cite: 4]
+        const tr = document.createElement('tr');[cite: 4]
         tr.innerHTML = `
           <td class="p-3 font-mono text-blue-400">${c.id}</td>
+          <td class="p-3 font-mono text-[11px] text-slate-400">${c.createdAt || 'N/A'}</td>
           <td class="p-3">
             ${c.thumbnailUrl ? `<img src="${c.thumbnailUrl}" class="w-10 h-10 object-cover rounded border border-slate-700">` : 'N/A'}
           </td>
@@ -728,92 +742,93 @@
           <td class="p-3 text-right">
             <button class="text-rose-400 hover:text-rose-300 font-bold" onclick="deleteItem('Cards', '${c.id}')">Delete</button>
           </td>
-        `;
-        tbody.appendChild(tr);
+        `;[cite: 4]
+        tbody.appendChild(tr);[cite: 4]
       });
     }
 
     // MULTI-POPUP STUDIO
-    let pendingPopupFile = null;
+    let pendingPopupFile = null;[cite: 4]
     document.getElementById('popupFileInput').addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-          pendingPopupFile = { base64: evt.target.result, name: file.name };
+      const file = e.target.files[0];[cite: 4]
+      if (file) {[cite: 4]
+        const reader = new FileReader();[cite: 4]
+        reader.onload = (evt) => {[cite: 4]
+          pendingPopupFile = { base64: evt.target.result, name: file.name };[cite: 4]
         };
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(file);[cite: 4]
       }
     });
 
     ['popupTitle', 'popupBody', 'popupButtonText'].forEach(id => {
       document.getElementById(id).addEventListener('input', () => {
-        document.getElementById('previewTitleDisplay').textContent = document.getElementById('popupTitle').value || "Title";
-        document.getElementById('previewBodyDisplay').textContent = document.getElementById('popupBody').value || "Body";
-        document.getElementById('previewBtnDisplay').textContent = document.getElementById('popupButtonText').value || "Button";
+        document.getElementById('previewTitleDisplay').textContent = document.getElementById('popupTitle').value || "Title";[cite: 4]
+        document.getElementById('previewBodyDisplay').textContent = document.getElementById('popupBody').value || "Body";[cite: 4]
+        document.getElementById('previewBtnDisplay').textContent = document.getElementById('popupButtonText').value || "Button";[cite: 4]
       });
     });
 
     document.getElementById('btnSavePopup').addEventListener('click', async () => {
-      const id = document.getElementById('editingPopupId').value;
-      const active = document.getElementById('popupActive').checked;
-      const mediaType = document.getElementById('popupMediaType').value;
-      const mediaUrl = document.getElementById('popupMediaUrl').value.trim();
-      const title = document.getElementById('popupTitle').value.trim();
-      const body = document.getElementById('popupBody').value.trim();
-      const buttonText = document.getElementById('popupButtonText').value.trim() || "Visit";
-      const buttonLink = document.getElementById('popupButtonLink').value.trim();
-      const clickMode = document.getElementById('popupClickMode').value;
-      const closeMode = document.getElementById('popupCloseMode').value;
-      const timerSeconds = Number(document.getElementById('popupTimerSeconds').value) || 5;
-      const intervalMinutes = Number(document.getElementById('popupIntervalMinutes').value) || 1;
+      const id = document.getElementById('editingPopupId').value;[cite: 4]
+      const active = document.getElementById('popupActive').checked;[cite: 4]
+      const mediaType = document.getElementById('popupMediaType').value;[cite: 4]
+      const mediaUrl = document.getElementById('popupMediaUrl').value.trim();[cite: 4]
+      const title = document.getElementById('popupTitle').value.trim();[cite: 4]
+      const body = document.getElementById('popupBody').value.trim();[cite: 4]
+      const buttonText = document.getElementById('popupButtonText').value.trim() || "Visit";[cite: 4]
+      const buttonLink = document.getElementById('popupButtonLink').value.trim();[cite: 4]
+      const clickMode = document.getElementById('popupClickMode').value;[cite: 4]
+      const closeMode = document.getElementById('popupCloseMode').value;[cite: 4]
+      const timerSeconds = Number(document.getElementById('popupTimerSeconds').value) || 5;[cite: 4]
+      const intervalMinutes = Number(document.getElementById('popupIntervalMinutes').value) || 1;[cite: 4]
 
-      const btn = document.getElementById('btnSavePopup');
-      btn.disabled = true;
-      btn.textContent = "Publishing to Drive & Sheets...";
+      const btn = document.getElementById('btnSavePopup');[cite: 4]
+      btn.disabled = true;[cite: 4]
+      btn.textContent = "Publishing to Drive & Sheets...";[cite: 4]
 
       try {
-        const res = await fetch(APPS_SCRIPT_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain' },
+        const res = await fetch(APPS_SCRIPT_URL, {[cite: 4]
+          method: 'POST',[cite: 4]
+          headers: { 'Content-Type': 'text/plain' },[cite: 4]
           body: JSON.stringify({
-            action: "admin_save_popup",
-            key: authPass,
+            action: "admin_save_popup",[cite: 4]
+            key: authPass,[cite: 4]
             popup: {
-              id, active, mediaType, mediaUrl,
-              mediaFile: pendingPopupFile,
-              title, body, buttonText, buttonLink,
-              clickMode, closeMode, timerSeconds, intervalMinutes
+              id, active, mediaType, mediaUrl,[cite: 4]
+              mediaFile: pendingPopupFile,[cite: 4]
+              title, body, buttonText, buttonLink,[cite: 4]
+              clickMode, closeMode, timerSeconds, intervalMinutes[cite: 4]
             }
           })
         });
-        const d = await res.json();
-        if (d.status === "success") {
-          alert("Popup saved successfully to permanent storage!");
-          document.getElementById('editingPopupId').value = "";
-          document.getElementById('popupFormHeading').textContent = "Create Broadcast Popup";
-          document.getElementById('popupFileInput').value = "";
-          pendingPopupFile = null;
-          reloadStudioData();
+        const d = await res.json();[cite: 4]
+        if (d.status === "success") {[cite: 4]
+          clearUserLocalCache();
+          alert("Popup saved successfully! It will automatically rotate in the user queue.");
+          document.getElementById('editingPopupId').value = "";[cite: 4]
+          document.getElementById('popupFormHeading').textContent = "Create Broadcast Popup";[cite: 4]
+          document.getElementById('popupFileInput').value = "";[cite: 4]
+          pendingPopupFile = null;[cite: 4]
+          reloadStudioData();[cite: 4]
         }
       } finally {
-        btn.disabled = false;
-        btn.textContent = "Save & Publish Popup";
+        btn.disabled = false;[cite: 4]
+        btn.textContent = "Save & Publish Popup";[cite: 4]
       }
     });
 
     function renderPopupsList(list) {
-      document.getElementById('popupCountBadge').textContent = `${list.length} Total Popups`;
-      const tbody = document.getElementById('popupListTableBody');
-      tbody.innerHTML = "";
+      document.getElementById('popupCountBadge').textContent = `${list.length} Total Popups`;[cite: 4]
+      const tbody = document.getElementById('popupListTableBody');[cite: 4]
+      tbody.innerHTML = "";[cite: 4]
 
-      if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-500">No popups stored yet.</td></tr>`;
-        return;
+      if (list.length === 0) {[cite: 4]
+        tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-500">No popups stored yet.</td></tr>`;[cite: 4]
+        return;[cite: 4]
       }
 
       list.forEach(p => {
-        const tr = document.createElement('tr');
+        const tr = document.createElement('tr');[cite: 4]
         tr.innerHTML = `
           <td class="p-3 font-mono text-blue-400">${p.id}</td>
           <td class="p-3">
@@ -830,84 +845,87 @@
             </button>
             <button class="text-rose-400 hover:text-rose-300 font-bold" onclick="deleteItem('Popups', '${p.id}')">Delete</button>
           </td>
-        `;
-        tbody.appendChild(tr);
+        `;[cite: 4]
+        tbody.appendChild(tr);[cite: 4]
       });
     }
 
     window.editPopup = function(p) {
-      document.getElementById('editingPopupId').value = p.id;
-      document.getElementById('popupFormHeading').textContent = `Edit Popup: ${p.id}`;
-      document.getElementById('popupActive').checked = p.active;
-      document.getElementById('popupMediaType').value = p.mediaType || "image";
-      document.getElementById('popupMediaUrl').value = p.mediaUrl || "";
-      document.getElementById('popupTitle').value = p.title || "";
-      document.getElementById('popupBody').value = p.body || "";
-      document.getElementById('popupButtonText').value = p.buttonText || "";
-      document.getElementById('popupButtonLink').value = p.buttonLink || "";
-      document.getElementById('popupClickMode').value = p.clickMode || "button";
-      document.getElementById('popupCloseMode').value = p.closeMode || "both";
-      document.getElementById('popupTimerSeconds').value = p.timerSeconds || 5;
-      document.getElementById('popupIntervalMinutes').value = p.intervalMinutes || 1;
+      document.getElementById('editingPopupId').value = p.id;[cite: 4]
+      document.getElementById('popupFormHeading').textContent = `Edit Popup: ${p.id}`;[cite: 4]
+      document.getElementById('popupActive').checked = p.active;[cite: 4]
+      document.getElementById('popupMediaType').value = p.mediaType || "image";[cite: 4]
+      document.getElementById('popupMediaUrl').value = p.mediaUrl || "";[cite: 4]
+      document.getElementById('popupTitle').value = p.title || "";[cite: 4]
+      document.getElementById('popupBody').value = p.body || "";[cite: 4]
+      document.getElementById('popupButtonText').value = p.buttonText || "";[cite: 4]
+      document.getElementById('popupButtonLink').value = p.buttonLink || "";[cite: 4]
+      document.getElementById('popupClickMode').value = p.clickMode || "button";[cite: 4]
+      document.getElementById('popupCloseMode').value = p.closeMode || "both";[cite: 4]
+      document.getElementById('popupTimerSeconds').value = p.timerSeconds || 5;[cite: 4]
+      document.getElementById('popupIntervalMinutes').value = p.intervalMinutes || 1;[cite: 4]
 
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: 'smooth' });[cite: 4]
     };
 
     window.togglePopupStatus = async function(id, newStatus) {
-      await fetch(APPS_SCRIPT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
+      await fetch(APPS_SCRIPT_URL, {[cite: 4]
+        method: 'POST',[cite: 4]
+        headers: { 'Content-Type': 'text/plain' },[cite: 4]
         body: JSON.stringify({
-          action: "admin_toggle_popup",
-          key: authPass,
-          id: id,
-          active: newStatus
+          action: "admin_toggle_popup",[cite: 4]
+          key: authPass,[cite: 4]
+          id: id,[cite: 4]
+          active: newStatus[cite: 4]
         })
       });
-      reloadStudioData();
+      clearUserLocalCache();
+      reloadStudioData();[cite: 4]
     };
 
     window.deleteItem = async function(sheet, id) {
-      if (!confirm(`Permanently delete record ${id} from ${sheet}?`)) return;
-      await fetch(APPS_SCRIPT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
+      if (!confirm(`Permanently delete record ${id} from ${sheet}?`)) return;[cite: 4]
+      await fetch(APPS_SCRIPT_URL, {[cite: 4]
+        method: 'POST',[cite: 4]
+        headers: { 'Content-Type': 'text/plain' },[cite: 4]
         body: JSON.stringify({
-          action: "admin_delete_item",
-          key: authPass,
-          targetSheet: sheet,
-          id: id
+          action: "admin_delete_item",[cite: 4]
+          key: authPass,[cite: 4]
+          targetSheet: sheet,[cite: 4]
+          id: id[cite: 4]
         })
       });
-      if (sheet === 'Cards') fetchTaxonomyData();
-      else reloadStudioData();
+      clearUserLocalCache();
+      if (sheet === 'Cards') fetchTaxonomyData();[cite: 4]
+      else reloadStudioData();[cite: 4]
     };
 
     async function reloadStudioData() {
-      const res = await fetch(`${APPS_SCRIPT_URL}?key=${encodeURIComponent(authPass)}`);
-      const data = await res.json();
-      if (data.status === "success") {
-        studioData.popups = data.popups || [];
-        renderPopupsList(studioData.popups);
-        studioData.telemetry = data.users || [];
-        renderTelemetry(studioData.telemetry);
+      const res = await fetch(`${APPS_SCRIPT_URL}?key=${encodeURIComponent(authPass)}`);[cite: 4]
+      const data = await res.json();[cite: 4]
+      if (data.status === "success") {[cite: 4]
+        studioData.popups = data.popups || [];[cite: 4]
+        renderPopupsList(studioData.popups);[cite: 4]
+        studioData.telemetry = data.users || [];[cite: 4]
+        renderTelemetry(studioData.telemetry);[cite: 4]
       }
     }
 
     function renderTelemetry(list) {
-      document.getElementById('telemetryCount').textContent = list.length;
-      const tbody = document.getElementById('telemetryTableBody');
-      tbody.innerHTML = "";
+      document.getElementById('telemetryCount').textContent = list.length;[cite: 4]
+      const tbody = document.getElementById('telemetryTableBody');[cite: 4]
+      tbody.innerHTML = "";[cite: 4]
 
-      if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" class="p-6 text-center text-slate-500">No downloads logged yet.</td></tr>`;
-        return;
+      if (list.length === 0) {[cite: 4]
+        tbody.innerHTML = `<tr><td colspan="9" class="p-6 text-center text-slate-500">No downloads logged yet.</td></tr>`;[cite: 4]
+        return;[cite: 4]
       }
 
       list.forEach(u => {
-        const tr = document.createElement('tr');
+        const tr = document.createElement('tr');[cite: 4]
+        const hasDriveLink = u.pdfLink && u.pdfLink.startsWith("http");
         tr.innerHTML = `
-          <td class="p-3 text-slate-400 whitespace-nowrap">${u.timestamp}</td>
+          <td class="p-3 font-mono text-slate-400 whitespace-nowrap">${u.timestamp}</td>
           <td class="p-3 font-mono font-bold text-amber-400 whitespace-nowrap">${u.orderId || 'ORD-N/A'}</td>
           <td class="p-3 font-mono text-blue-400 whitespace-nowrap">${u.cardId || 'DEFAULT'}</td>
           <td class="p-3 font-bold text-white whitespace-nowrap">${u.name}</td>
@@ -916,20 +934,22 @@
           <td class="p-3 whitespace-nowrap">${u.course} (${u.courseCode || 'N/A'})</td>
           <td class="p-3 whitespace-nowrap text-slate-400">${u.faculty}</td>
           <td class="p-3 whitespace-nowrap">
-            <span class="text-emerald-400 font-semibold">✓ Generated</span>
+            ${hasDriveLink 
+              ? `<a href="${u.pdfLink}" target="_blank" class="text-blue-400 hover:underline font-mono font-semibold flex items-center gap-1">📁 Open in Drive</a>`
+              : `<span class="text-slate-500">Local Download</span>`}
           </td>
-        `;
-        tbody.appendChild(tr);
+        `;[cite: 4]
+        tbody.appendChild(tr);[cite: 4]
       });
     }
 
     document.getElementById('telemetrySearch').addEventListener('input', (e) => {
-      const q = e.target.value.toLowerCase();
+      const q = e.target.value.toLowerCase();[cite: 4]
       renderTelemetry(studioData.telemetry.filter(u => 
-        (u.name && u.name.toLowerCase().includes(q)) ||
-        (u.roll && u.roll.toLowerCase().includes(q)) ||
-        (u.orderId && u.orderId.toLowerCase().includes(q)) ||
-        (u.cardId && u.cardId.toLowerCase().includes(q))
+        (u.name && u.name.toLowerCase().includes(q)) ||[cite: 4]
+        (u.roll && u.roll.toLowerCase().includes(q)) ||[cite: 4]
+        (u.orderId && u.orderId.toLowerCase().includes(q)) ||[cite: 4]
+        (u.cardId && u.cardId.toLowerCase().includes(q))[cite: 4]
       ));
     });
   </script>
