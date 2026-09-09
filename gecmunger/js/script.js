@@ -283,7 +283,7 @@ function updateBreadcrumbs() {
 }
 
 /* =========================================================
-   2. GENERATOR ENGINE (ISOLATED SANDBOX - ZERO CLIPPING)
+   2. GENERATOR ENGINE (ISOLATED ZERO-OFFSET IFRAME ENGINE)
 ========================================================= */
 const bindings = [
   { input: 'inCollege1', output: 'outCollege1' },
@@ -455,7 +455,7 @@ function initPdfGeneratorEngine() {
     return filename;
   }
 
-  // Direct PDF Download & Isolated Offscreen Rendering Sandbox
+  // Direct PDF Download & Isolated Zero-Offset Iframe Sandbox
   const downloadBtn = document.getElementById('btnDirectDownload');
   if (downloadBtn) {
     downloadBtn.addEventListener('click', function() {
@@ -465,65 +465,97 @@ function initPdfGeneratorEngine() {
       downloadBtn.disabled = true;
       downloadBtn.textContent = "Rendering PDF...";
 
-      // 1. Create isolated offscreen sandbox container
-      const sandbox = document.createElement('div');
-      sandbox.style.position = 'fixed';
-      sandbox.style.left = '-9999px';
-      sandbox.style.top = '0';
-      sandbox.style.width = '210mm';
-      sandbox.style.minHeight = '297mm';
-      sandbox.style.margin = '0';
-      sandbox.style.padding = '0';
-      sandbox.style.zIndex = '-9999';
-      sandbox.style.background = '#ffffff';
+      // Create a clean offscreen iframe sandbox to fully isolate rendering from parent transforms
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.left = '0';
+      iframe.style.top = '0';
+      iframe.style.width = '794px';
+      iframe.style.height = '1123px';
+      iframe.style.border = 'none';
+      iframe.style.zIndex = '-99999';
+      iframe.style.visibility = 'hidden';
+      document.body.appendChild(iframe);
 
-      // 2. Clone the element cleanly
-      const clone = originalElement.cloneNode(true);
-      clone.style.transform = 'none';
-      clone.style.margin = '0';
-      clone.style.boxShadow = 'none';
-      clone.style.width = '210mm';
-      clone.style.height = '297mm';
-      clone.style.boxSizing = 'border-box';
+      const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+      iframeDoc.open();
+      iframeDoc.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <link rel="preconnect" href="https://fonts.googleapis.com">
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+          <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=EB+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300&family=Montserrat:wght@400;600;700&family=Playfair+Display:ital,wght@0,500;0,700;1,400&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+          <link rel="stylesheet" href="css/style.css">
+          <style>
+            html, body {
+              margin: 0 !important;
+              padding: 0 !important;
+              background: #ffffff !important;
+              width: 794px !important;
+              height: 1123px !important;
+              overflow: hidden !important;
+            }
+            .page {
+              margin: 0 !important;
+              transform: none !important;
+              box-shadow: none !important;
+              width: 794px !important;
+              height: 1123px !important;
+              box-sizing: border-box !important;
+              position: absolute !important;
+              top: 0 !important;
+              left: 0 !important;
+            }
+          </style>
+        </head>
+        <body>
+          ${originalElement.outerHTML}
+        </body>
+        </html>
+      `);
+      iframeDoc.close();
 
-      sandbox.appendChild(clone);
-      document.body.appendChild(sandbox);
+      setTimeout(() => {
+        const renderElement = iframeDoc.getElementById('pageDocument');
 
-      const opt = {
-        margin: 0,
-        filename: filename,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { 
-          scale: 2, 
-          useCORS: true, 
-          logging: false,
-          scrollX: 0,
-          scrollY: 0,
-          windowWidth: 794
-        },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      };
+        const opt = {
+          margin: 0,
+          filename: filename,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            width: 794,
+            height: 1123,
+            x: 0,
+            y: 0,
+            scrollX: 0,
+            scrollY: 0,
+            windowWidth: 794,
+            windowHeight: 1123
+          },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
 
-      html2pdf().set(opt).from(clone).toPdf().get('pdf').then(function(pdfObj) {
-        // Direct local save
-        pdfObj.save(filename);
+        html2pdf().set(opt).from(renderElement).toPdf().get('pdf').then(function(pdfObj) {
+          pdfObj.save(filename);
 
-        // Upload to Drive
-        const pdfBase64 = pdfObj.output('datauristring');
-        transmitTelemetryAndArchive(pdfBase64);
+          const pdfBase64 = pdfObj.output('datauristring');
+          transmitTelemetryAndArchive(pdfBase64);
 
-        // Remove sandbox from DOM
-        document.body.removeChild(sandbox);
-        downloadBtn.disabled = false;
-        downloadBtn.textContent = "Download PDF Document";
-      }).catch(err => {
-        if (sandbox && sandbox.parentNode) {
-          document.body.removeChild(sandbox);
-        }
-        console.error("PDF Engine Error:", err);
-        downloadBtn.disabled = false;
-        downloadBtn.textContent = "Download PDF Document";
-      });
+          if (iframe.parentNode) document.body.removeChild(iframe);
+
+          downloadBtn.disabled = false;
+          downloadBtn.textContent = "Download PDF Document";
+        }).catch(err => {
+          if (iframe.parentNode) document.body.removeChild(iframe);
+          console.error("PDF Engine Error:", err);
+          downloadBtn.disabled = false;
+          downloadBtn.textContent = "Download PDF Document";
+        });
+      }, 350);
     });
   }
 
@@ -575,12 +607,11 @@ function transmitTelemetryAndArchive(pdfBase64Data) {
 }
 
 /* =========================================================
-   3. POPUP ENGINE (CHROMELESS AUTOPLAY & SYNCED TIMING)
+   3. MODAL POPUP ENGINE (CHROMELESS AUTOPLAY & SYNCED TIMING)
 ========================================================= */
 function formatVideoEmbedUrl(url) {
   if (!url) return "";
   
-  // Google Drive: Append chromeless parameters
   if (url.includes("drive.google.com") || url.includes("googleusercontent.com")) {
     const driveMatch = url.match(/(?:\/d\/|id=)([a-zA-Z0-9_-]+)/);
     if (driveMatch && driveMatch[1]) {
@@ -588,7 +619,6 @@ function formatVideoEmbedUrl(url) {
     }
   }
   
-  // YouTube: Strip branding, controls, suggestions, enable muted autoplay
   const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
   if (ytMatch && ytMatch[1]) {
     return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&mute=1&controls=0&modestbranding=1&rel=0&loop=1&playlist=${ytMatch[1]}&playsinline=1`;
@@ -632,7 +662,7 @@ function showUserPopup(p) {
   videoEl.pause();
   iframeEl.src = "";
 
-  // Strip all video controls and force muted loop for automatic unblocked playback
+  // Strip all standard media controls & force unmuted browser compliance
   videoEl.removeAttribute('controls');
   videoEl.muted = true;
   videoEl.defaultMuted = true;
@@ -653,7 +683,6 @@ function showUserPopup(p) {
     if (countdownInterval) clearInterval(countdownInterval);
   }
 
-  // Timer initiates ONLY when media begins playback
   function startCloseTimer() {
     if (countdownInterval) return;
 
