@@ -13,7 +13,7 @@
   <header class="bg-slate-950 border-b border-slate-800 px-6 py-4 flex flex-wrap justify-between items-center gap-4 sticky top-0 z-50">
     <div class="flex items-center gap-3">
       <span class="text-xl font-extrabold text-blue-400 tracking-tight">GECM Studio</span>
-      <span class="text-xs px-2.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 font-mono">v3.1 Multi-Tier</span>
+      <span class="text-xs px-2.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 font-mono">v3.2 Production</span>
     </div>
     <div id="authStatusBadge" class="text-xs text-amber-400 font-semibold flex items-center gap-2">
       <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> Authentication Required
@@ -64,7 +64,7 @@
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Icon / Emoji</label>
-              <input type="text" id="catIcon" placeholder="📄 or 🏛" class="w-24 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+              <input type="text" id="catIcon" placeholder="📁 or 📄" class="w-24 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
             </div>
             <button id="btnSaveCategory" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded-lg text-xs transition">
               Save Category
@@ -103,8 +103,8 @@
       <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-6 space-y-5">
         <div class="border-b border-slate-700/60 pb-3 flex flex-wrap justify-between items-center gap-2">
           <div>
-            <h3 class="text-lg font-bold text-white">Card Creator & Template HTML Studio</h3>
-            <p class="text-xs text-slate-400">Attach documents, custom drive links, or live custom cover page templates</p>
+            <h3 class="text-lg font-bold text-white">Card Creator & Document Publishing Studio</h3>
+            <p class="text-xs text-slate-400">Upload standalone academic documents, add Drive links, or customize HTML cover templates</p>
           </div>
           <button id="btnSaveCard" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-2 rounded-lg text-xs transition shadow-lg shadow-emerald-600/20">
             Publish New Card
@@ -168,8 +168,8 @@
               <label class="block text-xs font-bold text-slate-300 uppercase">Cover Page Template HTML Code</label>
               <span class="text-[10px] text-blue-400 font-mono">Injected into Canvas</span>
             </div>
-            <textarea id="cardTemplateHtml" placeholder="<!-- Paste custom cover page inner HTML here -->&#10;<!-- Leave empty to use the classic GEC Munger Assignment Cover Page -->&#10;<div class='college-title'><span id='outCollege1'></span></div>..." class="flex-1 w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs font-mono text-emerald-400 outline-none focus:border-blue-500 resize-none min-h-[220px]"></textarea>
-            <span class="text-[11px] text-slate-500">Uses standard IDs like <code>outStudentName</code>, <code>outRollNo</code>, <code>outCourseName</code> for instant live-binding.</span>
+            <textarea id="cardTemplateHtml" placeholder="<!-- Paste custom cover page inner HTML here -->&#10;<!-- Leave completely empty to use the classic GEC Munger Assignment Cover Page -->&#10;<div class='college-title'><span id='outCollege1'></span></div>..." class="flex-1 w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs font-mono text-emerald-400 outline-none focus:border-blue-500 resize-none min-h-[220px]"></textarea>
+            <span class="text-[11px] text-slate-500">Uses standard IDs like <code>outStudentName</code>, <code>outRollNo</code>, <code>outCourseName</code> for live-binding.</span>
           </div>
 
         </div>
@@ -201,7 +201,6 @@
     <!-- TAB 2: MULTI-POPUP MANAGEMENT STUDIO -->
     <section id="tab-popups" class="tab-pane hidden space-y-8">
       
-      <!-- Multi-Popup Form -->
       <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-6 space-y-6">
         <div class="border-b border-slate-700/60 pb-3 flex justify-between items-center">
           <div>
@@ -532,7 +531,7 @@
       }
     });
 
-    // Card Thumbnail Reader
+    // Thumbnail Reader
     document.getElementById('cardThumbnailFile').addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (file) {
@@ -561,16 +560,23 @@
       document.getElementById('cardTargetUrlWrap').style.display = (e.target.value === 'link') ? 'block' : 'none';
     });
 
-    // Save Card (Supports Direct Document Upload, Links, and Custom HTML Templates)
+    // Save Card (Hardened Routing Logic: Automatically Enforces 'link' When Document Is Attached)
     document.getElementById('btnSaveCard').addEventListener('click', async () => {
       const subcategoryId = document.getElementById('cardSubcategorySelect').value;
       const title = document.getElementById('cardTitle').value.trim();
       const desc = document.getElementById('cardDescription').value.trim();
-      const buttonText = document.getElementById('cardButtonText').value.trim() || "Customize Cover Page";
       const manualThumb = document.getElementById('cardThumbnailUrl').value.trim();
-      const actionType = document.getElementById('cardActionType').value;
+      let actionType = document.getElementById('cardActionType').value;
       const targetUrl = document.getElementById('cardTargetUrl').value.trim();
       const templateHtml = document.getElementById('cardTemplateHtml').value.trim();
+
+      // If document attached or link provided, lock actionType to 'link'
+      if (pendingDocumentFile || targetUrl.length > 0) {
+        actionType = "link";
+      }
+
+      const defaultBtnLabel = (actionType === "link") ? "View / Download Document" : "Customize Cover Page";
+      const buttonText = document.getElementById('cardButtonText').value.trim() || defaultBtnLabel;
 
       if (!title || !subcategoryId) return alert("Subcategory and Card Title are required!");
       if (actionType === 'link' && !targetUrl && !pendingDocumentFile) {
@@ -612,6 +618,9 @@
           document.getElementById('cardDocFile').value = "";
           document.getElementById('cardTargetUrl').value = "";
           document.getElementById('cardTemplateHtml').value = "";
+          document.getElementById('cardButtonText').value = "Customize Cover Page";
+          document.getElementById('cardActionType').value = "generator";
+          document.getElementById('cardTargetUrlWrap').style.display = "none";
           pendingThumbnailFile = null;
           pendingDocumentFile = null;
           await fetchTaxonomyData();
@@ -638,7 +647,11 @@
           </td>
           <td class="p-3 font-semibold text-white">${c.title}</td>
           <td class="p-3 font-mono text-slate-400">${c.subcategoryId}</td>
-          <td class="p-3">${c.actionType}</td>
+          <td class="p-3">
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${c.actionType === 'link' ? 'bg-amber-950 text-amber-300 border border-amber-800' : 'bg-blue-950 text-blue-300 border border-blue-800'}">
+              ${c.actionType}
+            </span>
+          </td>
           <td class="p-3">${c.templateHtml && c.templateHtml.trim().length > 0 ? '<span class="text-emerald-400 font-bold">Custom Code</span>' : '<span class="text-slate-500">Classic Default</span>'}</td>
           <td class="p-3 text-right">
             <button class="text-rose-400 hover:text-rose-300 font-bold" onclick="deleteItem('Cards', '${c.id}')">Delete</button>
