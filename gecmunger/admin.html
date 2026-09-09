@@ -164,7 +164,7 @@
               <span class="text-[10px] text-blue-400 font-mono">Injected into Canvas</span>
             </div>
             <textarea id="cardTemplateHtml" placeholder="<!-- Paste custom cover page inner HTML here -->&#10;<!-- Leave empty to use the classic GEC Munger Assignment Cover Page -->&#10;<div class='college-title'><span id='outCollege1'></span></div>..." class="flex-1 w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs font-mono text-emerald-400 outline-none focus:border-blue-500 resize-none min-h-[220px]"></textarea>
-            <span class="text-[11px] text-slate-500">Uses standard IDs like <code>outStudentName</code>, <code>outRollNo</code>, <code>outCourseName</code> for instant live-binding.</span>
+            <span class="text-[11px] text-slate-500">Uses standard IDs like <code>outStudentName</code>, <code>outRollNo</code>, <code>outCourseName</code> for live-binding.</span>
           </div>
 
         </div>
@@ -261,7 +261,7 @@
                 <input type="url" id="popupButtonLink" placeholder="https://..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
               </div>
             </div>
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-3 gap-3">
               <div>
                 <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Closing Mode</label>
                 <select id="popupCloseMode" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white">
@@ -271,8 +271,12 @@
                 </select>
               </div>
               <div>
-                <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Auto-Close Timer (Seconds)</label>
+                <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Timer (Sec)</label>
                 <input type="number" id="popupTimerSeconds" value="5" min="1" max="60" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+              </div>
+              <div>
+                <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Interval (Min)</label>
+                <input type="number" id="popupIntervalMinutes" value="1" min="0.2" step="0.1" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
               </div>
             </div>
 
@@ -418,7 +422,6 @@
           renderTelemetry(studioData.telemetry);
           renderPopupsList(studioData.popups);
 
-          // Fetch taxonomy data (Categories, Subcategories, Cards)
           await fetchTaxonomyData();
         }
       } catch (e) {
@@ -430,7 +433,7 @@
       }
     });
 
-    // Fetch Taxonomy Data (Categories, Subcategories, Cards)
+    // Fetch Taxonomy Data
     async function fetchTaxonomyData() {
       try {
         const res = await fetch(`${APPS_SCRIPT_URL}?action=get_portal_data`);
@@ -448,11 +451,9 @@
     }
 
     function populateDropdowns() {
-      // Subcategory Parent Dropdown
       const subParent = document.getElementById('subParentCat');
       subParent.innerHTML = studioData.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
 
-      // Card Subcategory Dropdown
       const cardSub = document.getElementById('cardSubcategorySelect');
       cardSub.innerHTML = studioData.subcategories.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
     }
@@ -657,6 +658,7 @@
       const clickMode = document.getElementById('popupClickMode').value;
       const closeMode = document.getElementById('popupCloseMode').value;
       const timerSeconds = Number(document.getElementById('popupTimerSeconds').value) || 5;
+      const intervalMinutes = Number(document.getElementById('popupIntervalMinutes').value) || 1;
 
       const btn = document.getElementById('btnSavePopup');
       btn.disabled = true;
@@ -673,7 +675,7 @@
               id, active, mediaType, mediaUrl,
               mediaFile: pendingPopupFile,
               title, body, buttonText, buttonLink,
-              clickMode, closeMode, timerSeconds
+              clickMode, closeMode, timerSeconds, intervalMinutes
             }
           })
         });
@@ -684,7 +686,6 @@
           document.getElementById('popupFormHeading').textContent = "Create Broadcast Popup";
           document.getElementById('popupFileInput').value = "";
           pendingPopupFile = null;
-          // Refresh Popups List
           reloadStudioData();
         }
       } finally {
@@ -713,7 +714,7 @@
           <td class="p-3 uppercase font-bold text-[11px] text-slate-400">${p.mediaType}</td>
           <td class="p-3 font-semibold text-white">${p.title || 'Untitled'}</td>
           <td class="p-3 text-slate-400 max-w-xs truncate">${p.buttonLink ? `<a href="${p.buttonLink}" target="_blank" class="text-blue-400 hover:underline">${p.buttonLink}</a>` : 'N/A'}</td>
-          <td class="p-3 text-slate-400">${p.closeMode} (${p.timerSeconds}s)</td>
+          <td class="p-3 text-slate-400">${p.closeMode} (${p.timerSeconds}s / ${p.intervalMinutes || 1}m)</td>
           <td class="p-3 text-right space-x-3">
             <button class="text-blue-400 hover:text-blue-300 font-bold" onclick='editPopup(${JSON.stringify(p)})'>Edit</button>
             <button class="${p.active ? 'text-amber-400' : 'text-emerald-400'} font-bold" onclick="togglePopupStatus('${p.id}', ${!p.active})">
@@ -739,6 +740,7 @@
       document.getElementById('popupClickMode').value = p.clickMode || "button";
       document.getElementById('popupCloseMode').value = p.closeMode || "both";
       document.getElementById('popupTimerSeconds').value = p.timerSeconds || 5;
+      document.getElementById('popupIntervalMinutes').value = p.intervalMinutes || 1;
 
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
