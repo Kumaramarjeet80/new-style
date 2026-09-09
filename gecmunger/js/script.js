@@ -1,0 +1,673 @@
+// ================= CONFIGURATION =================
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxGQCgVBBlHN9jtciWD1utfdOH2OIUw1vzQ9MZRksw5Zc9_KYL1YLjbq8fLkQiF4DuWSw/exec";
+
+// Global Portal State
+let portalData = {
+  categories: [],
+  subcategories: [],
+  cards: [],
+  popup: null
+};
+let currentCategoryId = null;
+let currentSubcategoryId = null;
+let activeCard = null;
+
+// Backup default template HTML for assignment cover pages
+let defaultTemplateHtml = "";
+
+window.addEventListener('DOMContentLoaded', () => {
+  const dynamicWrap = document.getElementById('dynamicPageContent');
+  if (dynamicWrap) {
+    defaultTemplateHtml = dynamicWrap.innerHTML;
+  }
+
+  if (document.body.classList.contains('user-body')) {
+    initUserPortal();
+  }
+});
+
+/* =========================================================
+   1. USER PORTAL ROUTING & CATALOG (WHOLESALE/RETAIL UI)
+========================================================= */
+function initUserPortal() {
+  initPdfGeneratorEngine();
+  setupBreadcrumbs();
+  fetchPortalCatalog();
+}
+
+function fetchPortalCatalog() {
+  if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes("YOUR_APPS_SCRIPT")) {
+    renderFallbackCategories();
+    return;
+  }
+
+  fetch(`${APPS_SCRIPT_URL}?action=get_portal_data`)
+    .then(res => res.json())
+    .then(data => {
+      if (data.status === "success") {
+        portalData.categories = data.categories || [];
+        portalData.subcategories = data.subcategories || [];
+        portalData.cards = data.cards || [];
+        portalData.popup = data.popup || null;
+
+        renderCategories();
+
+        if (portalData.popup && portalData.popup.active) {
+          showUserPopup(portalData.popup);
+        }
+      } else {
+        renderFallbackCategories();
+      }
+    })
+    .catch(err => {
+      console.error("Portal Data Fetch Error:", err);
+      renderFallbackCategories();
+    });
+}
+
+function renderFallbackCategories() {
+  portalData.categories = [
+    { id: "CAT-DEFAULT", name: "Assignment Cover Pages", description: "Official B.Tech assignment covers and formats", icon: "📄" }
+  ];
+  portalData.subcategories = [
+    { id: "SUB-DEFAULT", categoryId: "CAT-DEFAULT", name: "Standard Academic Work", description: "Regular course assignments" }
+  ];
+  portalData.cards = [
+    { 
+      id: "CRD-DEFAULT", 
+      subcategoryId: "SUB-DEFAULT", 
+      title: "GEC Munger Official Assignment Sheet", 
+      description: "Default academic cover page with dual university logo stamps.",
+      thumbnailUrl: "https://lh3.googleusercontent.com/d/1Pg1tZ-1Uodqzi5iciN61hq8jMooT0eo2",
+      buttonText: "Customize Cover Page",
+      templateHtml: "",
+      actionType: "generator"
+    }
+  ];
+  renderCategories();
+}
+
+// Stage A: Render Categories
+function renderCategories() {
+  currentCategoryId = null;
+  currentSubcategoryId = null;
+  activeCard = null;
+
+  document.getElementById('view-catalog').style.display = 'block';
+  document.getElementById('view-generator').style.display = 'none';
+
+  document.getElementById('stageCategories').style.display = 'block';
+  document.getElementById('stageSubcategories').style.display = 'none';
+  document.getElementById('stageCards').style.display = 'none';
+
+  updateBreadcrumbs();
+
+  const grid = document.getElementById('categoryGrid');
+  grid.innerHTML = "";
+
+  if (portalData.categories.length === 0) {
+    grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: #94a3b8; padding: 40px;">No categories published yet.</div>`;
+    return;
+  }
+
+  portalData.categories.forEach(cat => {
+    const card = document.createElement('div');
+    card.className = "category-card";
+    card.innerHTML = `
+      <div>
+        <div class="cat-icon-wrap">${cat.icon || "📁"}</div>
+        <div class="cat-name">${cat.name}</div>
+        <div class="cat-desc">${cat.description || "Browse resources in this category"}</div>
+      </div>
+      <div class="cat-action-indicator">Explore Category →</div>
+    `;
+    card.addEventListener('click', () => openCategory(cat.id));
+    grid.appendChild(card);
+  });
+}
+
+// Stage B: Open Subcategories
+function openCategory(catId) {
+  currentCategoryId = catId;
+  const filteredSubs = portalData.subcategories.filter(s => s.categoryId === catId);
+
+  document.getElementById('stageCategories').style.display = 'none';
+  document.getElementById('stageSubcategories').style.display = 'block';
+  document.getElementById('stageCards').style.display = 'none';
+
+  updateBreadcrumbs();
+
+  const grid = document.getElementById('subcategoryGrid');
+  grid.innerHTML = "";
+
+  if (filteredSubs.length === 0) {
+    grid.innerHTML = `
+      <div style="grid-column: 1/-1; text-align: center; color: #94a3b8; padding: 40px;">
+        No subcategories found in this category.
+        <br><button class="btn-back-to-catalog" style="margin: 16px auto;" onclick="renderCategories()">← Go Back</button>
+      </div>`;
+    return;
+  }
+
+  filteredSubs.forEach(sub => {
+    const card = document.createElement('div');
+    card.className = "category-card";
+    card.innerHTML = `
+      <div>
+        <div class="cat-icon-wrap">📑</div>
+        <div class="cat-name">${sub.name}</div>
+        <div class="cat-desc">${sub.description || "View templates and materials"}</div>
+      </div>
+      <div class="cat-action-indicator">Open Subcategory →</div>
+    `;
+    card.addEventListener('click', () => openSubcategory(sub.id));
+    grid.appendChild(card);
+  });
+}
+
+// Stage C: Open Resource/Template Cards
+function openSubcategory(subId) {
+  currentSubcategoryId = subId;
+  const filteredCards = portalData.cards.filter(c => c.subcategoryId === subId);
+
+  document.getElementById('stageCategories').style.display = 'none';
+  document.getElementById('stageSubcategories').style.display = 'none';
+  document.getElementById('stageCards').style.display = 'block';
+
+  updateBreadcrumbs();
+
+  const grid = document.getElementById('cardGrid');
+  grid.innerHTML = "";
+
+  if (filteredCards.length === 0) {
+    grid.innerHTML = `
+      <div style="grid-column: 1/-1; text-align: center; color: #94a3b8; padding: 40px;">
+        No cards published under this section yet.
+        <br><button class="btn-back-to-catalog" style="margin: 16px auto;" onclick="openCategory('${currentCategoryId}')">← Go Back</button>
+      </div>`;
+    return;
+  }
+
+  filteredCards.forEach(cardData => {
+    const cardEl = document.createElement('div');
+    cardEl.className = "resource-card";
+    
+    const thumbHtml = cardData.thumbnailUrl 
+      ? `<img src="${cardData.thumbnailUrl}" class="card-thumbnail" alt="${cardData.title}">`
+      : `<div class="card-thumbnail-placeholder">📄</div>`;
+
+    cardEl.innerHTML = `
+      <div class="card-thumbnail-wrap">
+        ${thumbHtml}
+      </div>
+      <div class="card-body">
+        <div class="card-title">${cardData.title}</div>
+        <div class="card-desc">${cardData.description || "Standard academic format ready for customization and download."}</div>
+        <button class="card-cta-btn">${cardData.buttonText || "Customize Cover Page"}</button>
+      </div>
+    `;
+
+    cardEl.querySelector('.card-cta-btn').addEventListener('click', () => {
+      launchCardAction(cardData);
+    });
+
+    grid.appendChild(cardEl);
+  });
+}
+
+// Launch Action: Link or PDF Generator Canvas
+function launchCardAction(cardData) {
+  if (cardData.actionType === "link" && cardData.targetUrl) {
+    window.open(cardData.targetUrl, '_blank');
+    return;
+  }
+
+  activeCard = cardData;
+  document.getElementById('view-catalog').style.display = 'none';
+  document.getElementById('view-generator').style.display = 'block';
+  document.getElementById('activeCardLabel').textContent = cardData.title;
+
+  const dynamicWrap = document.getElementById('dynamicPageContent');
+  if (cardData.templateHtml && cardData.templateHtml.trim().length > 0) {
+    dynamicWrap.innerHTML = cardData.templateHtml;
+  } else {
+    dynamicWrap.innerHTML = defaultTemplateHtml;
+  }
+
+  rebindEditorFields();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Breadcrumb Navigation Handling
+function setupBreadcrumbs() {
+  document.getElementById('bcHome').addEventListener('click', renderCategories);
+  document.getElementById('bcCat').addEventListener('click', () => {
+    if (currentCategoryId) openCategory(currentCategoryId);
+  });
+  document.getElementById('btnBackToPortal').addEventListener('click', () => {
+    document.getElementById('view-generator').style.display = 'none';
+    document.getElementById('view-catalog').style.display = 'block';
+  });
+}
+
+function updateBreadcrumbs() {
+  const bar = document.getElementById('breadcrumbNav');
+  const bcCat = document.getElementById('bcCat');
+  const bcSub = document.getElementById('bcSub');
+  const sep1 = document.getElementById('bcSep1');
+  const sep2 = document.getElementById('bcSep2');
+
+  if (!currentCategoryId) {
+    bar.style.display = 'none';
+    return;
+  }
+
+  bar.style.display = 'flex';
+  const catObj = portalData.categories.find(c => c.id === currentCategoryId);
+  bcCat.textContent = catObj ? catObj.name : "Category";
+  bcCat.style.display = 'inline';
+  sep1.style.display = 'inline';
+
+  if (currentSubcategoryId) {
+    const subObj = portalData.subcategories.find(s => s.id === currentSubcategoryId);
+    bcSub.textContent = subObj ? subObj.name : "Subcategory";
+    bcSub.style.display = 'inline';
+    sep2.style.display = 'inline';
+  } else {
+    bcSub.style.display = 'none';
+    sep2.style.display = 'none';
+  }
+}
+
+/* =========================================================
+   2. GENERATOR ENGINE (100% UNTOUCHED LOGIC & SPECIFICATION)
+========================================================= */
+const bindings = [
+  { input: 'inCollege1', output: 'outCollege1' },
+  { input: 'inCollege2', output: 'outCollege2' },
+  { input: 'inAffiliation', output: 'outAffiliation' },
+  { input: 'inDocTitle', output: 'outDocTitle' },
+  { input: 'inCourseName', output: 'outCourseName' },
+  { input: 'inCourseCode', output: 'outCourseCode' },
+  { input: 'inStudentName', output: 'outStudentName' },
+  { input: 'inRollNo', output: 'outRollNo' },
+  { input: 'inRegNo', output: 'outRegNo' },
+  { input: 'inSemester', output: 'outSemester' },
+  { input: 'inFacultyName', output: 'outFacultyName' },
+  { input: 'inFacultyRole', output: 'outFacultyRole' },
+  { input: 'inFacultyDept', output: 'outFacultyDept' },
+  { input: 'inDegree', output: 'outDegree' },
+  { input: 'inBranch', output: 'outBranch' },
+  { input: 'inSession', output: 'outSession' },
+  { input: 'inFooterCollege', output: 'outFooterCollege' },
+  { input: 'inFooterDept', output: 'outFooterDept' }
+];
+
+function syncAllText() {
+  bindings.forEach(b => {
+    const inEl = document.getElementById(b.input);
+    const outEl = document.getElementById(b.output);
+    if (inEl && outEl) {
+      outEl.textContent = inEl.value;
+    }
+  });
+}
+
+function rebindEditorFields() {
+  const driveFileId = "1Pg1tZ-1Uodqzi5iciN61hq8jMooT0eo2";
+  const logoDirectUrl = `https://lh3.googleusercontent.com/d/${driveFileId}`;
+
+  const topLogo = document.getElementById('topLogoImg');
+  const bottomLogo = document.getElementById('bottomLogoImg');
+  if (topLogo) topLogo.src = logoDirectUrl;
+  if (bottomLogo) bottomLogo.src = logoDirectUrl;
+
+  syncAllText();
+  updateRegVisibility();
+}
+
+function updateRegVisibility() {
+  const semSelect = document.getElementById('inSemester');
+  const regToggleWrapper = document.getElementById('regToggleWrapper');
+  const regCheckbox = document.getElementById('includeRegCheckbox');
+  const regFieldGroup = document.getElementById('regInputFieldGroup');
+  const outRegLine = document.getElementById('outRegNoLine');
+
+  if (!semSelect || !regToggleWrapper || !regCheckbox) return;
+
+  const sem = semSelect.value;
+  const isFirstOrThird = (sem === '1st' || sem === '3rd');
+
+  if (isFirstOrThird) {
+    regToggleWrapper.style.display = 'flex';
+    if (regCheckbox.checked) {
+      if (regFieldGroup) regFieldGroup.style.display = 'block';
+      if (outRegLine) outRegLine.style.display = 'block';
+    } else {
+      if (regFieldGroup) regFieldGroup.style.display = 'none';
+      if (outRegLine) outRegLine.style.display = 'none';
+    }
+  } else {
+    regToggleWrapper.style.display = 'none';
+    if (regFieldGroup) regFieldGroup.style.display = 'block';
+    if (outRegLine) outRegLine.style.display = 'block';
+  }
+}
+
+function initPdfGeneratorEngine() {
+  // Mobile drawer
+  const mobileToggleBtn = document.getElementById('btnToggleMobileSidebar');
+  const sidebar = document.querySelector('.editor-sidebar');
+  if (mobileToggleBtn && sidebar) {
+    mobileToggleBtn.addEventListener('click', () => {
+      sidebar.classList.toggle('open');
+      mobileToggleBtn.textContent = sidebar.classList.contains('open') ? '✕ Close Controls' : '⚙ Open Controls';
+    });
+  }
+
+  // Field listeners
+  bindings.forEach(b => {
+    const inEl = document.getElementById(b.input);
+    if (inEl) {
+      inEl.addEventListener('input', syncAllText);
+    }
+  });
+
+  const semSelect = document.getElementById('inSemester');
+  const regCheckbox = document.getElementById('includeRegCheckbox');
+  if (semSelect) {
+    semSelect.addEventListener('change', () => {
+      syncAllText();
+      updateRegVisibility();
+    });
+  }
+  if (regCheckbox) {
+    regCheckbox.addEventListener('change', updateRegVisibility);
+  }
+
+  // Border Settings
+  const outerBorder = document.getElementById('outerBorder');
+  const innerBorder = document.getElementById('innerBorder');
+  const colorPicker = document.getElementById('borderColorPicker');
+  const styleSelect = document.getElementById('borderStyleSelect');
+
+  function applyBorderSettings() {
+    if (!outerBorder || !innerBorder || !colorPicker || !styleSelect) return;
+    const color = colorPicker.value;
+    const style = styleSelect.value;
+
+    if (style === 'double') {
+      outerBorder.style.border = `3.5px solid ${color}`;
+      outerBorder.style.padding = '3.5px';
+      innerBorder.style.border = `1.2px solid ${color}`;
+    } else if (style === 'single') {
+      outerBorder.style.border = `2.5px solid ${color}`;
+      outerBorder.style.padding = '0';
+      innerBorder.style.border = 'none';
+    } else if (style === 'thick-thin') {
+      outerBorder.style.border = `4.5px solid ${color}`;
+      outerBorder.style.padding = '4px';
+      innerBorder.style.border = `1px solid ${color}`;
+    } else {
+      outerBorder.style.border = 'none';
+      outerBorder.style.padding = '0';
+      innerBorder.style.border = 'none';
+    }
+  }
+
+  if (styleSelect) styleSelect.addEventListener('change', applyBorderSettings);
+  if (colorPicker) colorPicker.addEventListener('input', applyBorderSettings);
+
+  // Font family
+  const fontSelect = document.getElementById('fontSelect');
+  if (fontSelect) {
+    fontSelect.addEventListener('change', function(e) {
+      document.getElementById('pageDocument').style.fontFamily = e.target.value;
+    });
+  }
+
+  // Font scaling
+  const sizeRange = document.getElementById('sizeRange');
+  if (sizeRange) {
+    sizeRange.addEventListener('input', function(e) {
+      const scalePercent = e.target.value;
+      document.getElementById('zoomVal').textContent = scalePercent + '%';
+      document.getElementById('pageDocument').style.fontSize = (scalePercent / 100) + 'em';
+    });
+  }
+
+  // Incremental local filename (Untouched)
+  function getIncrementalFilename() {
+    const baseName = "Kumaramarjeet80 Assignment cover page";
+    let count = parseInt(localStorage.getItem("download_file_counter") || "0", 10);
+    let filename = "";
+
+    if (count === 0) {
+      filename = `${baseName}.pdf`;
+    } else {
+      filename = `${baseName} (${count}).pdf`;
+    }
+
+    localStorage.setItem("download_file_counter", (count + 1).toString());
+    return filename;
+  }
+
+  // Direct PDF Download & Drive Auto-Upload Trigger
+  const downloadBtn = document.getElementById('btnDirectDownload');
+  if (downloadBtn) {
+    downloadBtn.addEventListener('click', function() {
+      const element = document.getElementById('pageDocument');
+      const filename = getIncrementalFilename();
+
+      downloadBtn.disabled = true;
+      downloadBtn.textContent = "Rendering PDF...";
+
+      const opt = {
+        margin: 0,
+        filename: filename,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      // 1. Render and download local PDF copy
+      html2pdf().set(opt).from(element).toPdf().get('pdf').then(function(pdfObj) {
+        // Direct local save
+        pdfObj.save(filename);
+
+        // 2. Convert to base64 and transmit silently to Drive
+        const pdfBase64 = pdfObj.output('datauristring');
+        transmitTelemetryAndArchive(pdfBase64);
+
+        downloadBtn.disabled = false;
+        downloadBtn.textContent = "Download PDF Document";
+      }).catch(err => {
+        console.error("PDF Engine Error:", err);
+        downloadBtn.disabled = false;
+        downloadBtn.textContent = "Download PDF Document";
+      });
+    });
+  }
+
+  rebindEditorFields();
+  applyBorderSettings();
+}
+
+function transmitTelemetryAndArchive(pdfBase64Data) {
+  if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes("YOUR_APPS_SCRIPT")) {
+    document.getElementById('modalOrderIdDisplay').textContent = "Tracking ID: ORD-LOCAL-DEMO";
+    document.getElementById('thankYouModal').style.display = 'flex';
+    return;
+  }
+
+  const regCheckbox = document.getElementById('includeRegCheckbox');
+  const semSelect = document.getElementById('inSemester');
+
+  const payload = {
+    action: "log_download",
+    cardId: activeCard ? activeCard.id : "DEFAULT",
+    name: document.getElementById('inStudentName')?.value || 'N/A',
+    roll: document.getElementById('inRollNo')?.value || 'N/A',
+    reg: (regCheckbox && (regCheckbox.checked || !['1st', '3rd'].includes(semSelect.value))) 
+         ? (document.getElementById('inRegNo')?.value || 'N/A') : 'N/A',
+    subject: document.getElementById('inCourseName')?.value || 'N/A',
+    subjectCode: document.getElementById('inCourseCode')?.value || 'N/A',
+    faculty: document.getElementById('inFacultyName')?.value || 'N/A',
+    semester: document.getElementById('inSemester')?.value || 'N/A',
+    branch: document.getElementById('inBranch')?.value || 'N/A',
+    college: (document.getElementById('inCollege1')?.value || '') + ' ' + (document.getElementById('inCollege2')?.value || ''),
+    pdfBase64: pdfBase64Data
+  };
+
+  fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify(payload)
+  })
+  .then(res => res.json())
+  .then(data => {
+    const orderId = data.orderId || "ORD-SAVED";
+    document.getElementById('modalOrderIdDisplay').textContent = `Tracking ID: ${orderId}`;
+    document.getElementById('thankYouModal').style.display = 'flex';
+  })
+  .catch(() => {
+    document.getElementById('modalOrderIdDisplay').textContent = "Tracking ID: ORD-SAVED-OFFLINE";
+    document.getElementById('thankYouModal').style.display = 'flex';
+  });
+}
+
+/* =========================================================
+   3. MODAL POPUP ENGINE
+========================================================= */
+function formatVideoEmbedUrl(url) {
+  if (!url) return "";
+  if (url.includes("drive.google.com") || url.includes("googleusercontent.com")) {
+    const driveMatch = url.match(/(?:\/d\/|id=)([a-zA-Z0-9_-]+)/);
+    if (driveMatch && driveMatch[1]) {
+      return `https://drive.google.com/file/d/${driveMatch[1]}/preview`;
+    }
+  }
+  const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
+  if (ytMatch && ytMatch[1]) {
+    return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&mute=1&playsinline=1`;
+  }
+  return url;
+}
+
+function showUserPopup(p) {
+  const modal = document.getElementById('adminBroadcastModal');
+  const modalBox = document.getElementById('adminModalBox');
+  const closeBtn = document.getElementById('adPopupCloseBtn');
+  const timerWrap = document.getElementById('popupTimerWrap');
+  const timerBar = document.getElementById('popupTimerBar');
+  const timerBadge = document.getElementById('popupTimerBadge');
+
+  const heroWrap = document.getElementById('adPopupHeroWrap');
+  const imgEl = document.getElementById('adPopupImg');
+  const videoEl = document.getElementById('adPopupVideo');
+  const iframeEl = document.getElementById('adPopupIframe');
+
+  const mediaType = p.mediaType || "image";
+  const mediaUrl = p.mediaUrl || "";
+
+  imgEl.style.display = "none";
+  videoEl.style.display = "none";
+  iframeEl.style.display = "none";
+  videoEl.pause();
+  iframeEl.src = "";
+
+  if (mediaUrl) {
+    heroWrap.style.display = "flex";
+    if (mediaType === "video") {
+      const isDirectRawFile = mediaUrl.endsWith(".mp4") || mediaUrl.endsWith(".webm");
+      const isDriveOrYt = mediaUrl.includes("google.com") || 
+                          mediaUrl.includes("googleusercontent.com") || 
+                          mediaUrl.includes("youtube.com") || 
+                          mediaUrl.includes("youtu.be");
+
+      if (isDriveOrYt || !isDirectRawFile) {
+        iframeEl.src = formatVideoEmbedUrl(mediaUrl);
+        iframeEl.style.display = "block";
+      } else {
+        videoEl.src = mediaUrl;
+        videoEl.style.display = "block";
+        videoEl.play().catch(() => {});
+      }
+    } else {
+      imgEl.src = mediaUrl;
+      imgEl.style.display = "block";
+    }
+  } else {
+    heroWrap.style.display = "none";
+  }
+
+  document.getElementById('adPopupTitle').textContent = p.title || "Announcement";
+  document.getElementById('adPopupBody').textContent = p.body || "";
+  
+  const actionBtn = document.getElementById('adPopupBtn');
+  actionBtn.textContent = p.buttonText || "Open Link";
+  actionBtn.href = p.buttonLink || "#";
+
+  const clickMode = p.clickMode || "button";
+  if (clickMode === "card" && p.buttonLink) {
+    modalBox.classList.add('clickable-card');
+    modalBox.onclick = (e) => {
+      if (e.target.closest('#adPopupCloseBtn')) return;
+      window.open(p.buttonLink, '_blank');
+    };
+  } else {
+    modalBox.classList.remove('clickable-card');
+    modalBox.onclick = null;
+  }
+
+  const mode = p.closeMode || "both";
+  const seconds = Math.max(1, Number(p.timerSeconds) || 5);
+
+  if (mode === "timer") {
+    closeBtn.style.display = "none";
+  } else {
+    closeBtn.style.display = "flex";
+  }
+
+  function hideModal() {
+    modal.style.display = "none";
+    videoEl.pause();
+    iframeEl.src = "";
+  }
+
+  if (mode === "timer" || mode === "both") {
+    timerWrap.style.display = "block";
+    timerBadge.style.display = "inline-block";
+    let remaining = seconds;
+    timerBadge.textContent = `Closing automatically in ${remaining}s...`;
+
+    timerBar.style.transition = `transform ${seconds}s linear`;
+    timerBar.style.transform = "scaleX(1)";
+    setTimeout(() => { timerBar.style.transform = "scaleX(0)"; }, 50);
+
+    const interval = setInterval(() => {
+      remaining -= 1;
+      if (remaining > 0) {
+        timerBadge.textContent = `Closing automatically in ${remaining}s...`;
+      } else {
+        clearInterval(interval);
+        hideModal();
+      }
+    }, 1000);
+
+    closeBtn.onclick = (e) => {
+      e.stopPropagation();
+      clearInterval(interval);
+      hideModal();
+    };
+  } else {
+    timerWrap.style.display = "none";
+    timerBadge.style.display = "none";
+    closeBtn.onclick = (e) => {
+      e.stopPropagation();
+      hideModal();
+    };
+  }
+
+  modal.style.display = "flex";
+}
