@@ -15,6 +15,9 @@ let activeCard = null;
 // Backup default template HTML for assignment cover pages
 let defaultTemplateHtml = "";
 
+// Popup recurrence timer handle
+let popupRecurrenceTimer = null;
+
 window.addEventListener('DOMContentLoaded', () => {
   const dynamicWrap = document.getElementById('dynamicPageContent');
   if (dynamicWrap) {
@@ -53,7 +56,7 @@ function fetchPortalCatalog() {
         renderCategories();
 
         if (portalData.popup && portalData.popup.active) {
-          showUserPopup(portalData.popup);
+          setupPopupRecurrence(portalData.popup);
         }
       } else {
         renderFallbackCategories();
@@ -280,7 +283,7 @@ function updateBreadcrumbs() {
 }
 
 /* =========================================================
-   2. GENERATOR ENGINE (100% UNTOUCHED LOGIC & SPECIFICATION)
+   2. GENERATOR ENGINE (FIXED OFFSET & ZERO-SHIFT CAPTURE)
 ========================================================= */
 const bindings = [
   { input: 'inCollege1', output: 'outCollege1' },
@@ -462,26 +465,43 @@ function initPdfGeneratorEngine() {
       downloadBtn.disabled = true;
       downloadBtn.textContent = "Rendering PDF...";
 
+      // Save responsive scale transform and reset for crisp 1:1 A4 canvas capture
+      const originalTransform = element.style.transform;
+      element.style.transform = 'none';
+
       const opt = {
         margin: 0,
         filename: filename,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
+        html2canvas: { 
+          scale: 2, 
+          useCORS: true, 
+          logging: false,
+          scrollX: 0,
+          scrollY: 0,
+          windowWidth: 794 // 210mm in pixels at 96 DPI
+        },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
 
-      // 1. Render and download local PDF copy
+      // Ensure window is aligned at top to prevent y-axis canvas drift
+      window.scrollTo(0, 0);
+
       html2pdf().set(opt).from(element).toPdf().get('pdf').then(function(pdfObj) {
+        // Restore screen responsive transform
+        element.style.transform = originalTransform;
+
         // Direct local save
         pdfObj.save(filename);
 
-        // 2. Convert to base64 and transmit silently to Drive
+        // Convert to base64 and transmit silently to Drive
         const pdfBase64 = pdfObj.output('datauristring');
         transmitTelemetryAndArchive(pdfBase64);
 
         downloadBtn.disabled = false;
         downloadBtn.textContent = "Download PDF Document";
       }).catch(err => {
+        element.style.transform = originalTransform;
         console.error("PDF Engine Error:", err);
         downloadBtn.disabled = false;
         downloadBtn.textContent = "Download PDF Document";
@@ -537,7 +557,7 @@ function transmitTelemetryAndArchive(pdfBase64Data) {
 }
 
 /* =========================================================
-   3. MODAL POPUP ENGINE
+   3. MODAL POPUP ENGINE (SYNCHRONIZED PLAYBACK & RECURRENCE)
 ========================================================= */
 function formatVideoEmbedUrl(url) {
   if (!url) return "";
@@ -552,6 +572,20 @@ function formatVideoEmbedUrl(url) {
     return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&mute=1&playsinline=1`;
   }
   return url;
+}
+
+function setupPopupRecurrence(p) {
+  if (popupRecurrenceTimer) clearInterval(popupRecurrenceTimer);
+
+  showUserPopup(p);
+
+  const minutes = Math.max(0.2, Number(p.intervalMinutes) || 1);
+  popupRecurrenceTimer = setInterval(() => {
+    const modal = document.getElementById('adminBroadcastModal');
+    if (modal && modal.style.display !== 'flex') {
+      showUserPopup(p);
+    }
+  }, minutes * 60 * 1000);
 }
 
 function showUserPopup(p) {
@@ -576,8 +610,63 @@ function showUserPopup(p) {
   videoEl.pause();
   iframeEl.src = "";
 
+  // Reset timer indicators until media actually begins playback
+  timerWrap.style.display = "none";
+  timerBadge.style.display = "none";
+  timerBar.style.transition = "none";
+  timerBar.style.transform = "scaleX(1)";
+
+  let countdownInterval = null;
+
+  function hideModal() {
+    modal.style.display = "none";
+    videoEl.pause();
+    iframeEl.src = "";
+    if (countdownInterval) clearInterval(countdownInterval);
+  }
+
+  // Timer initiates ONLY when media is confirmed actively playing/loaded
+  function startCloseTimer() {
+    if (countdownInterval) return; // Guard against multiple triggers
+
+    const mode = p.closeMode || "both";
+    if (mode !== "timer" && mode !== "both") return;
+
+    const seconds = Math.max(1, Number(p.timerSeconds) || 5);
+    timerWrap.style.display = "block";
+    timerBadge.style.display = "inline-block";
+
+    let remaining = seconds;
+    timerBadge.textContent = `Auto-closing in ${remaining}s...`;
+
+    setTimeout(() => {
+      timerBar.style.transition = `transform ${seconds}s linear`;
+      timerBar.style.transform = "scaleX(0)";
+    }, 50);
+
+    countdownInterval = setInterval(() => {
+      remaining -= 1;
+      if (remaining > 0) {
+        timerBadge.textContent = `Auto-closing in ${remaining}s...`;
+      } else {
+        clearInterval(countdownInterval);
+        hideModal();
+      }
+    }, 1000);
+  }
+
+  // Bind close buttons
+  const mode = p.closeMode || "both";
+  closeBtn.style.display = (mode === "timer") ? "none" : "flex";
+  closeBtn.onclick = (e) => {
+    e.stopPropagation();
+    hideModal();
+  };
+
+  // Pre-load media & attach playback event listeners
   if (mediaUrl) {
     heroWrap.style.display = "flex";
+
     if (mediaType === "video") {
       const isDirectRawFile = mediaUrl.endsWith(".mp4") || mediaUrl.endsWith(".webm");
       const isDriveOrYt = mediaUrl.includes("google.com") || 
@@ -588,19 +677,25 @@ function showUserPopup(p) {
       if (isDriveOrYt || !isDirectRawFile) {
         iframeEl.src = formatVideoEmbedUrl(mediaUrl);
         iframeEl.style.display = "block";
+        iframeEl.onload = () => startCloseTimer();
       } else {
         videoEl.src = mediaUrl;
         videoEl.style.display = "block";
-        videoEl.play().catch(() => {});
+        videoEl.onplaying = () => startCloseTimer();
+        videoEl.play().catch(() => startCloseTimer());
       }
     } else {
       imgEl.src = mediaUrl;
       imgEl.style.display = "block";
+      imgEl.onload = () => startCloseTimer();
+      if (imgEl.complete) startCloseTimer();
     }
   } else {
     heroWrap.style.display = "none";
+    startCloseTimer();
   }
 
+  // Populate text
   document.getElementById('adPopupTitle').textContent = p.title || "Announcement";
   document.getElementById('adPopupBody').textContent = p.body || "";
   
@@ -608,8 +703,7 @@ function showUserPopup(p) {
   actionBtn.textContent = p.buttonText || "Open Link";
   actionBtn.href = p.buttonLink || "#";
 
-  const clickMode = p.clickMode || "button";
-  if (clickMode === "card" && p.buttonLink) {
+  if (p.clickMode === "card" && p.buttonLink) {
     modalBox.classList.add('clickable-card');
     modalBox.onclick = (e) => {
       if (e.target.closest('#adPopupCloseBtn')) return;
@@ -618,55 +712,6 @@ function showUserPopup(p) {
   } else {
     modalBox.classList.remove('clickable-card');
     modalBox.onclick = null;
-  }
-
-  const mode = p.closeMode || "both";
-  const seconds = Math.max(1, Number(p.timerSeconds) || 5);
-
-  if (mode === "timer") {
-    closeBtn.style.display = "none";
-  } else {
-    closeBtn.style.display = "flex";
-  }
-
-  function hideModal() {
-    modal.style.display = "none";
-    videoEl.pause();
-    iframeEl.src = "";
-  }
-
-  if (mode === "timer" || mode === "both") {
-    timerWrap.style.display = "block";
-    timerBadge.style.display = "inline-block";
-    let remaining = seconds;
-    timerBadge.textContent = `Closing automatically in ${remaining}s...`;
-
-    timerBar.style.transition = `transform ${seconds}s linear`;
-    timerBar.style.transform = "scaleX(1)";
-    setTimeout(() => { timerBar.style.transform = "scaleX(0)"; }, 50);
-
-    const interval = setInterval(() => {
-      remaining -= 1;
-      if (remaining > 0) {
-        timerBadge.textContent = `Closing automatically in ${remaining}s...`;
-      } else {
-        clearInterval(interval);
-        hideModal();
-      }
-    }, 1000);
-
-    closeBtn.onclick = (e) => {
-      e.stopPropagation();
-      clearInterval(interval);
-      hideModal();
-    };
-  } else {
-    timerWrap.style.display = "none";
-    timerBadge.style.display = "none";
-    closeBtn.onclick = (e) => {
-      e.stopPropagation();
-      hideModal();
-    };
   }
 
   modal.style.display = "flex";
