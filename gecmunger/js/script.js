@@ -169,7 +169,7 @@ function openCategory(catId) {
   });
 }
 
-// Stage C: Open Resource/Template Cards
+// Stage C: Open Resource/Template Cards (Hardened Link/Document Inspection)
 function openSubcategory(subId) {
   currentSubcategoryId = subId;
   const filteredCards = portalData.cards.filter(c => c.subcategoryId === subId);
@@ -200,18 +200,24 @@ function openSubcategory(subId) {
       ? `<img src="${cardData.thumbnailUrl}" class="card-thumbnail" alt="${cardData.title}">`
       : `<div class="card-thumbnail-placeholder">📄</div>`;
 
+    const isDocument = (cardData.actionType === "link" || (cardData.targetUrl && cardData.targetUrl.trim().length > 0));
+    const buttonLabel = cardData.buttonText || (isDocument ? "View / Download Document" : "Customize Cover Page");
+
     cardEl.innerHTML = `
       <div class="card-thumbnail-wrap">
         ${thumbHtml}
       </div>
       <div class="card-body">
         <div class="card-title">${cardData.title}</div>
-        <div class="card-desc">${cardData.description || "Standard academic format ready for customization and download."}</div>
-        <button class="card-cta-btn">${cardData.buttonText || (cardData.actionType === 'link' ? 'Open Document' : 'Customize Cover Page')}</button>
+        <div class="card-desc">${cardData.description || "Academic resource ready for immediate use."}</div>
+        <button class="card-cta-btn">${buttonLabel}</button>
       </div>
     `;
 
-    cardEl.querySelector('.card-cta-btn').addEventListener('click', () => {
+    const actionBtn = cardEl.querySelector('.card-cta-btn');
+    actionBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       launchCardAction(cardData);
     });
 
@@ -219,14 +225,17 @@ function openSubcategory(subId) {
   });
 }
 
-// Launch Action: Handles Direct Drive Link Routing & Dynamic Template Injection
+// Action Launcher: Prevents Document Cards From Falling Back to Generator Canvas
 function launchCardAction(cardData) {
-  // If card is an external resource or drive document, launch directly in a new tab
-  if (cardData.actionType === "link" && cardData.targetUrl) {
-    window.open(cardData.targetUrl, '_blank');
-    return;
+  const isDocumentLink = (cardData.actionType === "link" || (cardData.targetUrl && cardData.targetUrl.trim().length > 0));
+
+  if (isDocumentLink && cardData.targetUrl) {
+    const finalUrl = cardData.targetUrl.trim();
+    window.open(finalUrl, '_blank');
+    return; // Hard stop: Do NOT switch to generator view
   }
 
+  // Pure Canvas Cards Continue Below
   activeCard = cardData;
   document.getElementById('view-catalog').style.display = 'none';
   document.getElementById('view-generator').style.display = 'block';
@@ -234,7 +243,6 @@ function launchCardAction(cardData) {
 
   const dynamicWrap = document.getElementById('dynamicPageContent');
   
-  // Custom Template HTML evaluation
   if (cardData.templateHtml && typeof cardData.templateHtml === 'string' && cardData.templateHtml.trim().length > 20) {
     dynamicWrap.innerHTML = cardData.templateHtml.trim();
   } else {
@@ -390,7 +398,7 @@ function initPdfGeneratorEngine() {
     regCheckbox.addEventListener('change', updateRegVisibility);
   }
 
-  // Border Controls
+  // Border Settings
   const outerBorder = document.getElementById('outerBorder');
   const innerBorder = document.getElementById('innerBorder');
   const colorPicker = document.getElementById('borderColorPicker');
@@ -478,7 +486,7 @@ function initPdfGeneratorEngine() {
       page.style.boxShadow = 'none';
       page.style.position = 'relative';
 
-      // 3. Re-assert borders inline so html2canvas renders them with full fidelity
+      // 3. Re-assert borders inline so html2canvas renders them
       applyBorderSettings();
 
       window.scrollTo(0, 0);
@@ -518,7 +526,7 @@ function initPdfGeneratorEngine() {
         // Save local single-page copy
         pdfObj.save(filename);
 
-        // Transmit to Google Drive archive
+        // Transmit to Drive archive
         const pdfBase64 = pdfObj.output('datauristring');
         transmitTelemetryAndArchive(pdfBase64);
 
@@ -586,7 +594,7 @@ function transmitTelemetryAndArchive(pdfBase64Data) {
 }
 
 /* =========================================================
-   3. MODAL POPUP ENGINE (CHROMELESS AUTOPLAY & UNMUTE BUTTON)
+   3. MODAL POPUP ENGINE (CHROMELESS AUTOPLAY & UNMUTE PILL)
 ========================================================= */
 function formatVideoEmbedUrl(url) {
   if (!url) return "";
@@ -636,23 +644,15 @@ function showUserPopup(p) {
   const mediaType = p.mediaType || "image";
   const mediaUrl = p.mediaUrl || "";
 
+  // Reset elements
   imgEl.style.display = "none";
   videoEl.style.display = "none";
   iframeEl.style.display = "none";
   if (unmuteBtn) unmuteBtn.style.display = "none";
 
   videoEl.pause();
+  videoEl.currentTime = 0;
   iframeEl.src = "";
-
-  // Strict inline attributes to ensure unblocked browser autoplay
-  videoEl.removeAttribute('controls');
-  videoEl.setAttribute('muted', '');
-  videoEl.setAttribute('autoplay', '');
-  videoEl.setAttribute('playsinline', '');
-  videoEl.setAttribute('loop', '');
-  videoEl.muted = true;
-  videoEl.defaultMuted = true;
-  videoEl.playsInline = true;
 
   timerWrap.style.display = "none";
   timerBadge.style.display = "none";
@@ -708,21 +708,29 @@ function showUserPopup(p) {
     heroWrap.style.display = "flex";
 
     if (mediaType === "video") {
-      const isDirectRawFile = mediaUrl.endsWith(".mp4") || mediaUrl.endsWith(".webm");
       const isDriveOrYt = mediaUrl.includes("google.com") || 
                           mediaUrl.includes("googleusercontent.com") || 
                           mediaUrl.includes("youtube.com") || 
                           mediaUrl.includes("youtu.be");
 
-      if (isDriveOrYt || !isDirectRawFile) {
+      if (isDriveOrYt) {
+        iframeEl.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture');
         iframeEl.src = formatVideoEmbedUrl(mediaUrl);
         iframeEl.style.display = "block";
         iframeEl.onload = () => startCloseTimer();
       } else {
+        // Direct MP4 / WebM: Set inline muted autoplay properties before source assignment
+        videoEl.removeAttribute('controls');
+        videoEl.muted = true;
+        videoEl.defaultMuted = true;
+        videoEl.playsInline = true;
+        videoEl.setAttribute('muted', '');
+        videoEl.setAttribute('autoplay', '');
+        videoEl.setAttribute('playsinline', '');
+        videoEl.setAttribute('loop', '');
         videoEl.src = mediaUrl;
         videoEl.style.display = "block";
 
-        // Enable floating unmute button for HTML5 video
         if (unmuteBtn) {
           unmuteBtn.style.display = "block";
           unmuteBtn.textContent = "🔊 Tap to Unmute";
@@ -739,13 +747,21 @@ function showUserPopup(p) {
         }
 
         videoEl.onplaying = () => startCloseTimer();
-        
-        const playPromise = videoEl.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(() => {
-            videoEl.muted = true;
-            videoEl.play().catch(() => startCloseTimer());
-          });
+
+        const startPlay = () => {
+          const promise = videoEl.play();
+          if (promise !== undefined) {
+            promise.catch(() => {
+              videoEl.muted = true;
+              videoEl.play().catch(() => startCloseTimer());
+            });
+          }
+        };
+
+        if (videoEl.readyState >= 2) {
+          startPlay();
+        } else {
+          videoEl.oncanplay = () => startPlay();
         }
       }
     } else {
