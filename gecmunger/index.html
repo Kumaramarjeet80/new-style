@@ -5,30 +5,27 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Academic Portal & Cover Page Generator</title>
 
-<!-- Google Fonts: Merriweather default -->
+<!-- Google Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=EB+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300&family=Montserrat:wght@400;600;700&family=Playfair+Display:ital,wght@0,500;0,700;1,400&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 
-<!-- html2pdf.js Bundle for direct downloads -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="user-body">
 
   <!-- =========================================================
-       VIEW 1: CATALOG PORTAL (WHOLESALE / RETAIL EXPLORER)
+       VIEW 1: CATALOG PORTAL (EXPLORER)
   ========================================================= -->
   <div id="view-catalog" class="portal-container">
     
-    <!-- Portal Header -->
     <header class="portal-header">
       <div class="portal-badge">Academic Resources & Studio</div>
       <h1 class="portal-title">Government Engineering College, Munger</h1>
       <p class="portal-subtitle">Select a category below to explore official course templates, syllabus modules, PYQs, and assignment front pages.</p>
     </header>
 
-    <!-- Dynamic Breadcrumbs Bar -->
     <nav class="breadcrumb-bar" id="breadcrumbNav" style="display:none;">
       <span class="breadcrumb-item" id="bcHome">🏛 Home</span>
       <span class="breadcrumb-separator" id="bcSep1" style="display:none;">›</span>
@@ -59,11 +56,10 @@
   </div>
 
   <!-- =========================================================
-       VIEW 2: GENERATOR WORKSPACE (PDF VIEW)
+       VIEW 2: GENERATOR WORKSPACE (PDF COVER PAGE CANVAS)
   ========================================================= -->
   <div id="view-generator">
     
-    <!-- Generator Top Utility Bar -->
     <div class="generator-topbar">
       <button class="btn-back-to-catalog" id="btnBackToPortal">
         ← Back to Catalog
@@ -73,7 +69,6 @@
       </div>
     </div>
 
-    <!-- Mobile Sidebar Drawer Toggle -->
     <div class="mobile-toggle-bar">
       <span style="font-weight: bold; font-size: 14px;">Editor Controls</span>
       <button id="btnToggleMobileSidebar">⚙ Open Controls</button>
@@ -84,9 +79,8 @@
       <!-- Controls Sidebar -->
       <div class="editor-sidebar">
 
-        <!-- Direct Download Button -->
         <button class="download-btn" id="btnDirectDownload">Download PDF Document</button>
-        <div style="font-size: 11px; color: #666; text-align: center; margin: 6px 0 14px 0;">Saves locally and archives to Drive automatically</div>
+        <div style="font-size: 11px; color: #666; text-align: center; margin: 6px 0 14px 0;">Saves single-page print file directly to your device</div>
 
         <!-- Academic Selection -->
         <div class="sidebar-section">
@@ -105,7 +99,6 @@
             </select>
           </div>
 
-          <!-- Conditional Checkbox for 1st & 3rd Semesters -->
           <div class="checkbox-group" id="regToggleWrapper">
             <input type="checkbox" id="includeRegCheckbox" checked>
             <label for="includeRegCheckbox">Include Registration No.</label>
@@ -233,7 +226,6 @@
           <div class="page-border-outer" id="outerBorder">
             <div class="page-border-inner" id="innerBorder">
 
-              <!-- Dynamic Template Container -->
               <div id="dynamicPageContent" style="display:flex; flex-direction:column; justify-content:space-between; height:100%;">
                 
                 <div>
@@ -243,7 +235,6 @@
                   </div>
                   <div class="college-subtitle" id="outAffiliation">(Affiliated to Bihar Engineering University, Patna, Bihar)</div>
 
-                  <!-- Top Logo Position -->
                   <div class="top-logo-container">
                     <img id="topLogoImg" crossorigin="anonymous" alt="GEC Munger Logo">
                   </div>
@@ -276,7 +267,6 @@
                   </div>
                 </div>
 
-                <!-- Bottom Signature & Footer Section -->
                 <div class="page-footer">
                   <div class="signature-row">
                     <span>Prof. Signature:- _____________</span>
@@ -301,56 +291,54 @@
   </div>
 
   <!-- =========================================================
-       DYNAMIC ADMIN MEDIA POPUP MODAL (WITH UNMUTE PILL)
+       VIEW 3: EMBEDDED DOCUMENT / PDF VIEWER MODAL
+  ========================================================= -->
+  <div class="doc-viewer-overlay" id="docViewerModal" style="display:none;">
+    <div class="doc-viewer-header">
+      <div class="doc-viewer-title-group">
+        <span class="doc-viewer-badge">📄 Document Viewer</span>
+        <span id="docViewerHeading" class="doc-viewer-title">Academic Document</span>
+      </div>
+      <div class="doc-viewer-actions">
+        <a id="docViewerDownloadBtn" href="#" target="_blank" download class="btn-doc-download">
+          ⬇ Download Original
+        </a>
+        <button id="docViewerCloseBtn" class="btn-doc-close">
+          ✕ Close Viewer
+        </button>
+      </div>
+    </div>
+    <div class="doc-viewer-frame-wrap">
+      <iframe id="docViewerIframe" src="" allowfullscreen></iframe>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       DYNAMIC ADMIN MEDIA POPUP MODAL
   ========================================================= -->
   <div class="modal-overlay" id="adminBroadcastModal">
     <div class="modal-box" id="adminModalBox">
       <button class="modal-close-btn" id="adPopupCloseBtn">&times;</button>
       
-      <!-- Media Wrap -->
       <div class="modal-hero-media-wrap" id="adPopupHeroWrap">
         <img id="adPopupImg" class="modal-hero-img" src="" alt="Announcement Banner" style="display:none;">
         <video id="adPopupVideo" class="modal-hero-video" autoplay muted loop playsinline style="display:none;"></video>
         <iframe id="adPopupIframe" class="modal-hero-iframe" src="" allow="autoplay; encrypted-media" allowfullscreen style="display:none;"></iframe>
         
-        <!-- Floating Tap to Unmute Pill -->
         <button id="adPopupUnmuteBtn" type="button" style="display:none; position:absolute; bottom:12px; right:12px; background:rgba(0,0,0,0.75); color:#ffffff; border:1px solid rgba(255,255,255,0.3); border-radius:20px; padding:5px 12px; font-size:11px; font-weight:700; cursor:pointer; z-index:40; pointer-events:auto;">
           🔊 Tap to Unmute
         </button>
       </div>
 
-      <!-- Content Area -->
       <div class="modal-content-area">
         <h3 id="adPopupTitle" class="modal-title">Special Announcement</h3>
         <p id="adPopupBody" class="modal-desc"></p>
         <a id="adPopupBtn" class="modal-action-btn" href="#" target="_blank">Visit Link</a>
         
-        <!-- Timer Progress Bar -->
         <div class="popup-timer-bar-wrap" id="popupTimerWrap">
           <div class="popup-timer-bar" id="popupTimerBar"></div>
         </div>
         <span class="timer-badge" id="popupTimerBadge"></span>
-      </div>
-    </div>
-  </div>
-
-  <!-- =========================================================
-       DOWNLOAD COMPLETE MODAL
-  ========================================================= -->
-  <div class="modal-overlay" id="thankYouModal">
-    <div class="modal-box" style="max-width: 440px;">
-      <div class="modal-content-area">
-        <div style="font-size: 42px; margin-bottom: 8px;">🎉</div>
-        <h3 class="modal-title">PDF Generated Successfully!</h3>
-        <p class="modal-desc">Your customized cover page has downloaded to your device and has been archived to the GECM cloud repository.</p>
-        
-        <div class="order-id-box" id="modalOrderIdDisplay">
-          Tracking ID: ORD-LOADING...
-        </div>
-
-        <button class="modal-action-btn" style="background:#059669; border:none; cursor:pointer;" onclick="document.getElementById('thankYouModal').style.display='none'">
-          Done
-        </button>
       </div>
     </div>
   </div>
