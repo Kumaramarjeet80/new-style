@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GECM Portal - Unified Admin Studio</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="admin-body bg-slate-900 text-slate-100 min-h-screen">
+
+  <!-- Top Header Navigation -->
+  <header class="bg-slate-950 border-b border-slate-800 px-6 py-4 flex flex-wrap justify-between items-center gap-4 sticky top-0 z-50">
+    <div class="flex items-center gap-3">
+      <span class="text-xl font-extrabold text-blue-400 tracking-tight">GECM Studio</span>
+      <span class="text-xs px-2.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 font-mono">v3.8 Multi-Queue & IST</span>
+    </div>
+    <div id="authStatusBadge" class="text-xs text-amber-400 font-semibold flex items-center gap-2">
+      <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> Authentication Required
+    </div>
+  </header>
+
+  <!-- Login Overlay -->
+  <div id="loginView" class="max-w-md mx-auto mt-20 p-6 bg-slate-800/80 backdrop-blur rounded-xl shadow-2xl border border-slate-700">
+    <h2 class="text-xl font-bold text-center text-white mb-2">Studio Authentication</h2>
+    <p class="text-xs text-slate-400 text-center mb-6">Enter the master administrative key to manage academic categories, cards, popups, and telemetry.</p>
+    <input type="password" id="adminPassword" placeholder="Enter admin passkey" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm mb-4 outline-none focus:border-blue-500 text-white placeholder-slate-500">
+    <button id="btnLogin" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg text-sm transition-all shadow-lg shadow-blue-600/30">
+      Unlock Master Studio
+    </button>
+    <p id="loginError" class="text-xs text-rose-400 text-center mt-3 hidden font-semibold"></p>
+  </div>
+
+  <!-- Master Dashboard Workspace -->
+  <main id="dashboardView" class="hidden max-w-7xl mx-auto p-4 sm:p-6 space-y-8">
+
+    <!-- Section Tabs -->
+    <div class="flex border-b border-slate-800 gap-6 text-sm font-bold">
+      <button class="pb-3 border-b-2 border-blue-500 text-blue-400 tab-btn" data-tab="tab-taxonomy">Categories & Cards</button>
+      <button class="pb-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 tab-btn" data-tab="tab-popups">Multi-Popup Studio</button>
+      <button class="pb-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 tab-btn" data-tab="tab-telemetry">Student Telemetry & Drive Archive</button>
+    </div>
+
+    <!-- TAB 1: CATEGORIES, SUBCATEGORIES & CARDS -->
+    <section id="tab-taxonomy" class="tab-pane space-y-8">
+      
+      <!-- Top Row: Category & Subcategory Creators -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <!-- Add Category Form -->
+        <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-5 space-y-4">
+          <div class="border-b border-slate-700/60 pb-3 flex justify-between items-center">
+            <div>
+              <h3 class="text-base font-bold text-white">Create / Update Category</h3>
+              <p class="text-xs text-slate-400">Pillar groupings (e.g. Cover Pages, Syllabus, PYQs)</p>
+            </div>
+            <span class="text-[10px] text-blue-400 font-mono">IST Timestamped</span>
+          </div>
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Category Name</label>
+              <input type="text" id="catName" placeholder="e.g. Academic Handbooks & Syllabus" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Description</label>
+              <input type="text" id="catDesc" placeholder="Official institutional curriculum resources" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Icon / Emoji</label>
+              <input type="text" id="catIcon" placeholder="📁 or 📚" class="w-24 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+            </div>
+            <button id="btnSaveCategory" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded-lg text-xs transition">
+              Save Category
+            </button>
+          </div>
+        </div>
+
+        <!-- Add Subcategory Form -->
+        <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-5 space-y-4">
+          <div class="border-b border-slate-700/60 pb-3 flex justify-between items-center">
+            <div>
+              <h3 class="text-base font-bold text-white">Create / Update Subcategory</h3>
+              <p class="text-xs text-slate-400">Nested branches (e.g. 1st Year Syllabus, Lab Manuals)</p>
+            </div>
+            <span class="text-[10px] text-blue-400 font-mono">IST Timestamped</span>
+          </div>
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Parent Category</label>
+              <select id="subParentCat" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500"></select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Subcategory Name</label>
+              <input type="text" id="subName" placeholder="e.g. Civil Engineering Notes" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Description</label>
+              <input type="text" id="subDesc" placeholder="Official modules and reading materials" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+            </div>
+            <button id="btnSaveSubcategory" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded-lg text-xs transition">
+              Save Subcategory
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Card Creator & Document Publishing Studio -->
+      <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-6 space-y-5">
+        <div class="border-b border-slate-700/60 pb-3 flex flex-wrap justify-between items-center gap-2">
+          <div>
+            <h3 class="text-lg font-bold text-white">Card Creator & Document Publishing Studio</h3>
+            <p class="text-xs text-slate-400">Upload standalone academic documents, add Drive links, or customize HTML cover templates</p>
+          </div>
+          <button id="btnSaveCard" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-2 rounded-lg text-xs transition shadow-lg shadow-emerald-600/20">
+            Publish New Card
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          
+          <!-- Column 1: Card Metadata -->
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Subcategory Placement</label>
+              <select id="cardSubcategorySelect" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500"></select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Card Title</label>
+              <input type="text" id="cardTitle" placeholder="e.g. B.Tech Chemistry Complete Syllabus" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Description</label>
+              <textarea id="cardDescription" rows="2" placeholder="Brief summary displayed on the card..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500"></textarea>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Button Text</label>
+              <input type="text" id="cardButtonText" placeholder="View / Read Document or Customize Cover" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+            </div>
+          </div>
+
+          <!-- Column 2: Media, Standalone Uploader & Routing -->
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Card Thumbnail Image</label>
+              <input type="file" id="cardThumbnailFile" accept="image/*" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-slate-400 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-blue-600 file:text-white cursor-pointer">
+              <input type="url" id="cardThumbnailUrl" placeholder="Or paste thumbnail image URL" class="w-full mt-2 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Card Action Type</label>
+              <select id="cardActionType" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+                <option value="generator" selected>Open Custom PDF Generator Canvas</option>
+                <option value="link">Direct Document / Drive Link (Embedded PDF Viewer)</option>
+              </select>
+            </div>
+
+            <div id="cardTargetUrlWrap" style="display:none;" class="space-y-3 bg-slate-900/90 p-3 rounded-lg border border-slate-700">
+              <div class="flex items-center justify-between">
+                <label class="block text-xs font-bold text-blue-400 uppercase">Document Attachment</label>
+                <span id="uploadBadge" class="text-[10px] text-slate-400">Step 1: Select & Upload</span>
+              </div>
+              
+              <!-- Direct Document File Select -->
+              <div>
+                <label class="block text-[11px] text-slate-400 mb-1">Select File (PDF, DOCX, ZIP)</label>
+                <input type="file" id="cardDocFile" accept=".pdf,.doc,.docx,.zip,.ppt,.pptx" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-xs text-slate-400 file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:bg-slate-800 file:text-white cursor-pointer">
+              </div>
+
+              <!-- Dedicated Upload Action Button -->
+              <button type="button" id="btnUploadDocToDrive" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded-lg text-xs transition flex items-center justify-center gap-2">
+                <span>☁ Upload Document to Google Drive</span>
+              </button>
+
+              <!-- Drive URL Output Box -->
+              <div>
+                <label class="block text-[11px] text-slate-400 mb-1">Google Drive View Link (Auto-Filled On Upload)</label>
+                <input type="url" id="cardTargetUrl" placeholder="https://drive.google.com/file/d/..." class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-emerald-400 font-mono outline-none focus:border-blue-500">
+              </div>
+            </div>
+          </div>
+
+          <!-- Column 3: Live Custom Template HTML Code Editor -->
+          <div class="space-y-2 flex flex-col">
+            <div class="flex justify-between items-center">
+              <label class="block text-xs font-bold text-slate-300 uppercase">Cover Page Template HTML Code</label>
+              <span class="text-[10px] text-blue-400 font-mono">User Editable Placeholders</span>
+            </div>
+            <textarea id="cardTemplateHtml" placeholder="<!-- Paste custom cover page inner HTML here -->&#10;<!-- Leave completely empty to use the classic GEC Munger Assignment Cover Page -->&#10;<div class='college-title'><span id='outCollege1'></span></div>..." class="flex-1 w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs font-mono text-emerald-400 outline-none focus:border-blue-500 resize-none min-h-[220px]"></textarea>
+            <span class="text-[11px] text-slate-500">Any ID starting with 'out' or custom ID will automatically become an editable input field for students.</span>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Published Inventory Table with IST Timestamps -->
+      <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-5">
+        <h4 class="text-sm font-bold text-white mb-4">Published Cards Inventory</h4>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead class="bg-slate-900/80 text-slate-400 border-b border-slate-700">
+              <tr>
+                <th class="p-3">Card ID</th>
+                <th class="p-3">Published (IST)</th>
+                <th class="p-3">Thumbnail</th>
+                <th class="p-3">Title</th>
+                <th class="p-3">Subcategory ID</th>
+                <th class="p-3">Action Type</th>
+                <th class="p-3">Attached Link</th>
+                <th class="p-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="inventoryTableBody" class="divide-y divide-slate-800 text-slate-300"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- TAB 2: MULTI-POPUP MANAGEMENT STUDIO -->
+    <section id="tab-popups" class="tab-pane hidden space-y-8">
+      
+      <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-6 space-y-6">
+        <div class="border-b border-slate-700/60 pb-3 flex justify-between items-center">
+          <div>
+            <h3 class="text-lg font-bold text-white" id="popupFormHeading">Create Broadcast Popup</h3>
+            <p class="text-xs text-slate-400">When multiple popups are active, users will see them cyclically in order, starting with the latest added popup</p>
+          </div>
+          <button id="btnSavePopup" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-2 rounded-lg text-xs transition shadow-lg">
+            Save & Publish Popup
+          </button>
+        </div>
+
+        <input type="hidden" id="editingPopupId" value="">
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="space-y-4">
+            <div class="flex items-center gap-3 bg-slate-900/60 p-3 rounded-lg border border-slate-700">
+              <input type="checkbox" id="popupActive" checked class="w-4 h-4 cursor-pointer">
+              <label for="popupActive" class="text-xs font-bold text-white cursor-pointer">Active (Rotates dynamically in user queue)</label>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Media Format</label>
+                <select id="popupMediaType" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white">
+                  <option value="image" selected>Photo Banner</option>
+                  <option value="video">Video (Drive / YouTube / MP4)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Click Behavior</label>
+                <select id="popupClickMode" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white">
+                  <option value="button" selected>Button Only</option>
+                  <option value="card">Entire Card Clickable</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Upload Media File to Drive</label>
+              <input type="file" id="popupFileInput" accept="image/*,video/*" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-slate-400 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-blue-600 file:text-white cursor-pointer">
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Or Direct Media / YouTube Link</label>
+              <input type="url" id="popupMediaUrl" placeholder="https://www.youtube.com/watch?v=... or direct URL" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Popup Title</label>
+              <input type="text" id="popupTitle" placeholder="e.g. End-Semester Examination Schedule" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Popup Body Text</label>
+              <textarea id="popupBody" rows="3" placeholder="Notice details..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500"></textarea>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Action Button Text</label>
+                <input type="text" id="popupButtonText" value="View Notice" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+              </div>
+              <div>
+                <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Destination URL</label>
+                <input type="url" id="popupButtonLink" placeholder="https://..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+              </div>
+            </div>
+            <div class="grid grid-cols-3 gap-3">
+              <div>
+                <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Closing Mode</label>
+                <select id="popupCloseMode" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white">
+                  <option value="both" selected>Both (Timer + Button)</option>
+                  <option value="timer">Timer Only</option>
+                  <option value="manual">Manual Close Only</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Timer (Sec)</label>
+                <input type="number" id="popupTimerSeconds" value="5" min="1" max="60" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+              </div>
+              <div>
+                <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Interval (Min)</label>
+                <input type="number" id="popupIntervalMinutes" value="1" min="0.2" step="0.1" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+              </div>
+            </div>
+
+            <!-- Preview Card Box -->
+            <div class="pt-2">
+              <span class="block text-[11px] font-bold uppercase text-slate-400 mb-2">Live Visual Card Preview</span>
+              <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-col items-center">
+                <div class="w-full max-w-xs bg-white text-slate-900 rounded-lg overflow-hidden shadow-xl text-center">
+                  <div class="h-28 bg-slate-900 flex items-center justify-center overflow-hidden">
+                    <span class="text-xs text-slate-400" id="previewMediaPlaceholder">Media Display</span>
+                  </div>
+                  <div class="p-4">
+                    <div class="font-bold text-sm" id="previewTitleDisplay">Announcement Title</div>
+                    <div class="text-xs text-slate-500 mt-1" id="previewBodyDisplay">Body description here...</div>
+                    <div class="mt-3 bg-blue-600 text-white text-xs font-bold py-1.5 rounded" id="previewBtnDisplay">Action Button</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- Permanent Popups Inventory Table -->
+      <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-5">
+        <div class="border-b border-slate-700/60 pb-3 mb-4 flex justify-between items-center">
+          <h4 class="text-sm font-bold text-white">Permanent Popups Repository</h4>
+          <span class="text-xs text-slate-400" id="popupCountBadge">0 Total Popups</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead class="bg-slate-900/80 text-slate-400 border-b border-slate-700">
+              <tr>
+                <th class="p-3">ID</th>
+                <th class="p-3">Status</th>
+                <th class="p-3">Format</th>
+                <th class="p-3">Title</th>
+                <th class="p-3">Destination</th>
+                <th class="p-3">Timing</th>
+                <th class="p-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="popupListTableBody" class="divide-y divide-slate-800 text-slate-300"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- TAB 3: STUDENT TELEMETRY & DRIVE ARCHIVE -->
+    <section id="tab-telemetry" class="tab-pane hidden space-y-6">
+      <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-700/60">
+          <div>
+            <h3 class="text-lg font-bold text-white">Student Download Telemetry & PDF Archive</h3>
+            <p class="text-xs text-slate-400">All generated PDFs auto-archive directly to Google Drive folder <code>Generated_Cover_Pages</code></p>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="text-xs font-bold text-slate-300">Total Downloads: <span id="telemetryCount" class="text-blue-400 font-mono text-sm">0</span></span>
+            <input type="text" id="telemetrySearch" placeholder="Search roll, order, name..." class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-blue-500 w-56">
+          </div>
+        </div>
+
+        <div class="overflow-x-auto mt-4 max-h-[500px]">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead class="bg-slate-900/90 text-slate-400 sticky top-0 border-b border-slate-700">
+              <tr>
+                <th class="p-3">Timestamp (IST)</th>
+                <th class="p-3">Order ID</th>
+                <th class="p-3">Card ID</th>
+                <th class="p-3">Student Name</th>
+                <th class="p-3">Roll No</th>
+                <th class="p-3">Reg No</th>
+                <th class="p-3">Subject & Code</th>
+                <th class="p-3">Faculty Guide</th>
+                <th class="p-3">Drive Archive File</th>
+              </tr>
+            </thead>
+            <tbody id="telemetryTableBody" class="divide-y divide-slate-800 text-slate-300"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // Configuration
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxNbXMEmz8PorS5-muBGmPP3XaZ7kizx08v2dZuhUqTyt69CW5727qxtSxQ6tQZ7v928Q/exec";[cite: 1, 4]
+    const USER_CACHE_KEY = "gecm_portal_catalog_cache";
+    let authPass = "";[cite: 4]
+    let studioData = {
+      categories: [],
+      subcategories: [],
+      cards: [],
+      popups: [],
+      telemetry: []
+    };[cite: 4]
+
+    function clearUserLocalCache() {
+      try {
+        localStorage.removeItem(USER_CACHE_KEY);
+      } catch (e) {}
+    }
+
+    function readFileAsBase64(file) {
+      return new Promise((resolve) => {
+        if (!file) return resolve(null);[cite: 4]
+        const reader = new FileReader();[cite: 4]
+        reader.onload = (e) => {
+          const res = e.target.result;[cite: 4]
+          if (typeof res === 'string' && res.startsWith('data:')) {[cite: 4]
+            resolve({ base64: res, name: file.name });[cite: 4]
+          } else {
+            resolve(null);[cite: 4]
+          }
+        };
+        reader.onerror = () => resolve(null);[cite: 4]
+        reader.readAsDataURL(file);[cite: 4]
+      });
+    }
+
+    // Tab Switching
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => {
+          b.classList.remove('border-blue-500', 'text-blue-400');[cite: 4]
+          b.classList.add('border-transparent', 'text-slate-400');[cite: 4]
+        });
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));[cite: 4]
+
+        btn.classList.add('border-blue-500', 'text-blue-400');[cite: 4]
+        btn.classList.remove('border-transparent', 'text-slate-400');[cite: 4]
+        document.getElementById(btn.dataset.tab).classList.remove('hidden');[cite: 4]
+      });
+    });
+
+    // Login Handler
+    document.getElementById('btnLogin').addEventListener('click', async () => {
+      const pass = document.getElementById('adminPassword').value;[cite: 4]
+      const err = document.getElementById('loginError');[cite: 4]
+      const btn = document.getElementById('btnLogin');[cite: 4]
+
+      btn.disabled = true;[cite: 4]
+      btn.textContent = "Verifying Studio Keys...";[cite: 4]
+      err.classList.add('hidden');[cite: 4]
+
+      try {
+        const res = await fetch(`${APPS_SCRIPT_URL}?key=${encodeURIComponent(pass)}`);[cite: 4]
+        const data = await res.json();[cite: 4]
+
+        if (data.status === "unauthorized") {[cite: 4]
+          err.textContent = "Invalid master administrative password.";[cite: 4]
+          err.classList.remove('hidden');[cite: 4]
+        } else if (data.status === "success") {[cite: 4]
+          authPass = pass;[cite: 4]
+          document.getElementById('loginView').classList.add('hidden');[cite: 4]
+          document.getElementById('dashboardView').classList.remove('hidden');[cite: 4]
+          document.getElementById('authStatusBadge').innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span> Authenticated`;[cite: 4]
+          document.getElementById('authStatusBadge').className = "text-xs text-emerald-400 font-semibold flex items-center gap-2";[cite: 4]
+
+          studioData.telemetry = data.users || [];[cite: 4]
+          studioData.popups = data.popups || [];[cite: 4]
+          renderTelemetry(studioData.telemetry);[cite: 4]
+          renderPopupsList(studioData.popups);[cite: 4]
+
+          await fetchTaxonomyData();[cite: 4]
+        }
+      } catch (e) {
+        err.textContent = "Failed to connect to backend: " + e.toString();[cite: 4]
+        err.classList.remove('hidden');[cite: 4]
+      } finally {
+        btn.disabled = false;[cite: 4]
+        btn.textContent = "Unlock Master Studio";[cite: 4]
+      }
+    });
+
+    // Fetch Categories, Subcategories, Cards
+    async function fetchTaxonomyData() {
+      try {
+        const res = await fetch(`${APPS_SCRIPT_URL}?action=get_portal_data`);[cite: 4]
+        const data = await res.json();[cite: 4]
+        if (data.status === "success") {[cite: 4]
+          studioData.categories = data.categories || [];[cite: 4]
+          studioData.subcategories = data.subcategories || [];[cite: 4]
+          studioData.cards = data.cards || [];[cite: 4]
+          populateDropdowns();[cite: 4]
+          renderCardsInventory();[cite: 4]
+        }
+      } catch (e) {
+        console.error("Taxonomy fetch error:", e);[cite: 4]
+      }
+    }
+
+    function populateDropdowns() {
+      const subParent = document.getElementById('subParentCat');[cite: 4]
+      subParent.innerHTML = studioData.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');[cite: 4]
+
+      const cardSub = document.getElementById('cardSubcategorySelect');[cite: 4]
+      cardSub.innerHTML = studioData.subcategories.map(s => `<option value="${s.id}">${s.name}</option>`).join('');[cite: 4]
+    }
+
+    // Save Category
+    document.getElementById('btnSaveCategory').addEventListener('click', async () => {
+      const name = document.getElementById('catName').value.trim();[cite: 4]
+      const desc = document.getElementById('catDesc').value.trim();[cite: 4]
+      const icon = document.getElementById('catIcon').value.trim() || "📁";[cite: 4]
+      if (!name) return alert("Category Name is required!");[cite: 4]
+
+      const btn = document.getElementById('btnSaveCategory');[cite: 4]
+      btn.disabled = true;[cite: 4]
+      btn.textContent = "Saving...";[cite: 4]
+
+      try {
+        const res = await fetch(APPS_SCRIPT_URL, {[cite: 4]
+          method: 'POST',[cite: 4]
+          headers: { 'Content-Type': 'text/plain' },[cite: 4]
+          body: JSON.stringify({
+            action: "admin_save_category",[cite: 4]
+            key: authPass,[cite: 4]
+            category: { name, description: desc, icon }[cite: 4]
+          })
+        });
+        const d = await res.json();[cite: 4]
+        if (d.status === "success") {[cite: 4]
+          clearUserLocalCache();
+          alert("Category published successfully with IST timestamp!");
+          document.getElementById('catName').value = "";[cite: 4]
+          document.getElementById('catDesc').value = "";[cite: 4]
+          await fetchTaxonomyData();[cite: 4]
+        }
+      } finally {
+        btn.disabled = false;[cite: 4]
+        btn.textContent = "Save Category";[cite: 4]
+      }
+    });
+
+    // Save Subcategory
+    document.getElementById('btnSaveSubcategory').addEventListener('click', async () => {
+      const categoryId = document.getElementById('subParentCat').value;[cite: 4]
+      const name = document.getElementById('subName').value.trim();[cite: 4]
+      const desc = document.getElementById('subDesc').value.trim();[cite: 4]
+      if (!name || !categoryId) return alert("Parent Category and Subcategory Name required!");[cite: 4]
+
+      const btn = document.getElementById('btnSaveSubcategory');[cite: 4]
+      btn.disabled = true;[cite: 4]
+      btn.textContent = "Saving...";[cite: 4]
+
+      try {
+        const res = await fetch(APPS_SCRIPT_URL, {[cite: 4]
+          method: 'POST',[cite: 4]
+          headers: { 'Content-Type': 'text/plain' },[cite: 4]
+          body: JSON.stringify({
+            action: "admin_save_subcategory",[cite: 4]
+            key: authPass,[cite: 4]
+            subcategory: { categoryId, name, description: desc }[cite: 4]
+          })
+        });
+        const d = await res.json();[cite: 4]
+        if (d.status === "success") {[cite: 4]
+          clearUserLocalCache();
+          alert("Subcategory published successfully with IST timestamp!");
+          document.getElementById('subName').value = "";[cite: 4]
+          document.getElementById('subDesc').value = "";[cite: 4]
+          await fetchTaxonomyData();[cite: 4]
+        }
+      } finally {
+        btn.disabled = false;[cite: 4]
+        btn.textContent = "Save Subcategory";[cite: 4]
+      }
+    });
+
+    // Toggle Action Type UI
+    document.getElementById('cardActionType').addEventListener('change', (e) => {
+      document.getElementById('cardTargetUrlWrap').style.display = (e.target.value === 'link') ? 'block' : 'none';[cite: 4]
+    });
+
+    // Standalone Document Upload to Drive
+    document.getElementById('btnUploadDocToDrive').addEventListener('click', async () => {
+      const docInput = document.getElementById('cardDocFile');[cite: 4]
+      if (!docInput.files || docInput.files.length === 0) {[cite: 4]
+        return alert("Please select a document file first (PDF, DOCX, etc.)!");[cite: 4]
+      }
+
+      const file = docInput.files[0];[cite: 4]
+      const btn = document.getElementById('btnUploadDocToDrive');[cite: 4]
+      const badge = document.getElementById('uploadBadge');[cite: 4]
+
+      btn.disabled = true;[cite: 4]
+      btn.innerHTML = `<span class="animate-spin">⏳</span> Uploading ${file.name} to Google Drive...`;[cite: 4]
+      badge.textContent = "Uploading to Drive...";[cite: 4]
+      badge.className = "text-[10px] text-amber-400 font-bold";[cite: 4]
+
+      try {
+        const filePayload = await readFileAsBase64(file);[cite: 4]
+        if (!filePayload) throw new Error("Could not read local file buffer.");[cite: 4]
+
+        const res = await fetch(APPS_SCRIPT_URL, {[cite: 4]
+          method: 'POST',[cite: 4]
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },[cite: 4]
+          body: JSON.stringify({
+            action: "admin_upload_standalone_doc",[cite: 4]
+            key: authPass,[cite: 4]
+            file: filePayload[cite: 4]
+          })
+        });
+
+        const d = await res.json();[cite: 4]
+        if (d && d.status === "success" && d.fileUrl) {[cite: 4]
+          document.getElementById('cardTargetUrl').value = d.fileUrl;[cite: 4]
+          document.getElementById('cardActionType').value = 'link';[cite: 4]
+          
+          badge.textContent = "✓ Uploaded Successfully";[cite: 4]
+          badge.className = "text-[10px] text-emerald-400 font-bold";[cite: 4]
+          alert("Document uploaded successfully to Google Drive!\nThe Drive link has been filled.");
+        } else {
+          throw new Error(d ? d.message : "Unknown backend response");[cite: 4]
+        }
+      } catch (err) {
+        badge.textContent = "✕ Upload Failed";[cite: 4]
+        badge.className = "text-[10px] text-rose-400 font-bold";[cite: 4]
+        alert("Document upload failed: " + err.message);[cite: 4]
+      } finally {
+        btn.disabled = false;[cite: 4]
+        btn.innerHTML = `<span>☁ Upload Document to Google Drive</span>`;[cite: 4]
+      }
+    });
+
+    // Save Card
+    document.getElementById('btnSaveCard').addEventListener('click', async () => {
+      const subcategoryId = document.getElementById('cardSubcategorySelect').value;[cite: 4]
+      const title = document.getElementById('cardTitle').value.trim();[cite: 4]
+      const desc = document.getElementById('cardDescription').value.trim();[cite: 4]
+      const manualThumb = document.getElementById('cardThumbnailUrl').value.trim();[cite: 4]
+      let actionType = document.getElementById('cardActionType').value;[cite: 4]
+      let targetUrl = document.getElementById('cardTargetUrl').value.trim();[cite: 4]
+      const templateHtml = document.getElementById('cardTemplateHtml').value.trim();[cite: 4]
+      const thumbInput = document.getElementById('cardThumbnailFile');[cite: 4]
+
+      if (!title || !subcategoryId) {[cite: 4]
+        return alert("Subcategory and Card Title are required!");[cite: 4]
+      }
+
+      if (targetUrl.length > 0) {[cite: 4]
+        actionType = "link";[cite: 4]
+      }
+
+      const btn = document.getElementById('btnSaveCard');[cite: 4]
+      btn.disabled = true;[cite: 4]
+      btn.textContent = "Publishing Card...";[cite: 4]
+
+      try {
+        let thumbPayload = null;[cite: 4]
+        if (thumbInput.files && thumbInput.files.length > 0) {[cite: 4]
+          thumbPayload = await readFileAsBase64(thumbInput.files[0]);[cite: 4]
+        }
+
+        const defaultBtnLabel = (actionType === "link") ? "View / Read Document" : "Customize Cover Page";[cite: 4]
+        const buttonText = document.getElementById('cardButtonText').value.trim() || defaultBtnLabel;[cite: 4]
+
+        const payload = {
+          action: "admin_save_card",[cite: 4]
+          key: authPass,[cite: 4]
+          card: {
+            subcategoryId: subcategoryId,[cite: 4]
+            title: title,[cite: 4]
+            description: desc,[cite: 4]
+            buttonText: buttonText,[cite: 4]
+            thumbnailUrl: manualThumb,[cite: 4]
+            thumbnailFile: thumbPayload,[cite: 4]
+            actionType: actionType,[cite: 4]
+            targetUrl: targetUrl,[cite: 4]
+            templateHtml: (actionType === "link") ? "" : templateHtml[cite: 4]
+          }
+        };
+
+        const res = await fetch(APPS_SCRIPT_URL, {[cite: 4]
+          method: 'POST',[cite: 4]
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },[cite: 4]
+          body: JSON.stringify(payload)[cite: 4]
+        });
+
+        const d = await res.json();[cite: 4]
+        if (d && d.status === "success") {[cite: 4]
+          clearUserLocalCache();
+          alert(`Card published successfully with IST timestamp!\nID: ${d.id}\nAction: ${d.actionType}`);
+          
+          document.getElementById('cardTitle').value = "";[cite: 4]
+          document.getElementById('cardDescription').value = "";[cite: 4]
+          document.getElementById('cardThumbnailUrl').value = "";[cite: 4]
+          thumbInput.value = "";[cite: 4]
+          document.getElementById('cardDocFile').value = "";[cite: 4]
+          document.getElementById('cardTargetUrl').value = "";[cite: 4]
+          document.getElementById('cardTemplateHtml').value = "";[cite: 4]
+          document.getElementById('cardButtonText').value = "";[cite: 4]
+          document.getElementById('cardActionType').value = "generator";[cite: 4]
+          document.getElementById('cardTargetUrlWrap').style.display = "none";[cite: 4]
+          document.getElementById('uploadBadge').textContent = "Step 1: Select & Upload";[cite: 4]
+          document.getElementById('uploadBadge').className = "text-[10px] text-slate-400";[cite: 4]
+          
+          await fetchTaxonomyData();[cite: 4]
+        } else {
+          alert("Card save failed: " + (d ? d.message : "Error"));[cite: 4]
+        }
+      } catch (err) {
+        alert("Upload error: " + err.message);[cite: 4]
+      } finally {
+        btn.disabled = false;[cite: 4]
+        btn.textContent = "Publish New Card";[cite: 4]
+      }
+    });
+
+    function renderCardsInventory() {
+      const tbody = document.getElementById('inventoryTableBody');[cite: 4]
+      tbody.innerHTML = "";[cite: 4]
+      if (studioData.cards.length === 0) {[cite: 4]
+        tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-slate-500">No cards registered yet.</td></tr>`;
+        return;[cite: 4]
+      }
+      studioData.cards.forEach(c => {
+        const hasDocLink = Boolean(c.targetUrl && c.targetUrl.trim().length > 0);[cite: 4]
+        const tr = document.createElement('tr');[cite: 4]
+        tr.innerHTML = `
+          <td class="p-3 font-mono text-blue-400">${c.id}</td>
+          <td class="p-3 font-mono text-[11px] text-slate-400">${c.createdAt || 'N/A'}</td>
+          <td class="p-3">
+            ${c.thumbnailUrl ? `<img src="${c.thumbnailUrl}" class="w-10 h-10 object-cover rounded border border-slate-700">` : 'N/A'}
+          </td>
+          <td class="p-3 font-semibold text-white">${c.title}</td>
+          <td class="p-3 font-mono text-slate-400">${c.subcategoryId}</td>
+          <td class="p-3">
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${c.actionType === 'link' || hasDocLink ? 'bg-amber-950 text-amber-300 border border-amber-800' : 'bg-blue-950 text-blue-300 border border-blue-800'}">
+              ${c.actionType === 'link' || hasDocLink ? 'Document Link' : 'Canvas Cover'}
+            </span>
+          </td>
+          <td class="p-3 text-slate-400 max-w-xs truncate">
+            ${hasDocLink ? `<a href="${c.targetUrl}" target="_blank" class="text-blue-400 hover:underline font-mono text-[11px]">${c.targetUrl}</a>` : '<span class="text-slate-500">Canvas Cover</span>'}
+          </td>
+          <td class="p-3 text-right">
+            <button class="text-rose-400 hover:text-rose-300 font-bold" onclick="deleteItem('Cards', '${c.id}')">Delete</button>
+          </td>
+        `;[cite: 4]
+        tbody.appendChild(tr);[cite: 4]
+      });
+    }
+
+    // MULTI-POPUP STUDIO
+    let pendingPopupFile = null;[cite: 4]
+    document.getElementById('popupFileInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];[cite: 4]
+      if (file) {[cite: 4]
+        const reader = new FileReader();[cite: 4]
+        reader.onload = (evt) => {[cite: 4]
+          pendingPopupFile = { base64: evt.target.result, name: file.name };[cite: 4]
+        };
+        reader.readAsDataURL(file);[cite: 4]
+      }
+    });
+
+    ['popupTitle', 'popupBody', 'popupButtonText'].forEach(id => {
+      document.getElementById(id).addEventListener('input', () => {
+        document.getElementById('previewTitleDisplay').textContent = document.getElementById('popupTitle').value || "Title";[cite: 4]
+        document.getElementById('previewBodyDisplay').textContent = document.getElementById('popupBody').value || "Body";[cite: 4]
+        document.getElementById('previewBtnDisplay').textContent = document.getElementById('popupButtonText').value || "Button";[cite: 4]
+      });
+    });
+
+    document.getElementById('btnSavePopup').addEventListener('click', async () => {
+      const id = document.getElementById('editingPopupId').value;[cite: 4]
+      const active = document.getElementById('popupActive').checked;[cite: 4]
+      const mediaType = document.getElementById('popupMediaType').value;[cite: 4]
+      const mediaUrl = document.getElementById('popupMediaUrl').value.trim();[cite: 4]
+      const title = document.getElementById('popupTitle').value.trim();[cite: 4]
+      const body = document.getElementById('popupBody').value.trim();[cite: 4]
+      const buttonText = document.getElementById('popupButtonText').value.trim() || "Visit";[cite: 4]
+      const buttonLink = document.getElementById('popupButtonLink').value.trim();[cite: 4]
+      const clickMode = document.getElementById('popupClickMode').value;[cite: 4]
+      const closeMode = document.getElementById('popupCloseMode').value;[cite: 4]
+      const timerSeconds = Number(document.getElementById('popupTimerSeconds').value) || 5;[cite: 4]
+      const intervalMinutes = Number(document.getElementById('popupIntervalMinutes').value) || 1;[cite: 4]
+
+      const btn = document.getElementById('btnSavePopup');[cite: 4]
+      btn.disabled = true;[cite: 4]
+      btn.textContent = "Publishing to Drive & Sheets...";[cite: 4]
+
+      try {
+        const res = await fetch(APPS_SCRIPT_URL, {[cite: 4]
+          method: 'POST',[cite: 4]
+          headers: { 'Content-Type': 'text/plain' },[cite: 4]
+          body: JSON.stringify({
+            action: "admin_save_popup",[cite: 4]
+            key: authPass,[cite: 4]
+            popup: {
+              id, active, mediaType, mediaUrl,[cite: 4]
+              mediaFile: pendingPopupFile,[cite: 4]
+              title, body, buttonText, buttonLink,[cite: 4]
+              clickMode, closeMode, timerSeconds, intervalMinutes[cite: 4]
+            }
+          })
+        });
+        const d = await res.json();[cite: 4]
+        if (d.status === "success") {[cite: 4]
+          clearUserLocalCache();
+          alert("Popup saved successfully! It will automatically rotate in the user queue.");
+          document.getElementById('editingPopupId').value = "";[cite: 4]
+          document.getElementById('popupFormHeading').textContent = "Create Broadcast Popup";[cite: 4]
+          document.getElementById('popupFileInput').value = "";[cite: 4]
+          pendingPopupFile = null;[cite: 4]
+          reloadStudioData();[cite: 4]
+        }
+      } finally {
+        btn.disabled = false;[cite: 4]
+        btn.textContent = "Save & Publish Popup";[cite: 4]
+      }
+    });
+
+    function renderPopupsList(list) {
+      document.getElementById('popupCountBadge').textContent = `${list.length} Total Popups`;[cite: 4]
+      const tbody = document.getElementById('popupListTableBody');[cite: 4]
+      tbody.innerHTML = "";[cite: 4]
+
+      if (list.length === 0) {[cite: 4]
+        tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-500">No popups stored yet.</td></tr>`;[cite: 4]
+        return;[cite: 4]
+      }
+
+      list.forEach(p => {
+        const tr = document.createElement('tr');[cite: 4]
+        tr.innerHTML = `
+          <td class="p-3 font-mono text-blue-400">${p.id}</td>
+          <td class="p-3">
+            <span class="${p.active ? 'badge-active' : 'badge-inactive'}">${p.active ? 'Active' : 'Deactivated'}</span>
+          </td>
+          <td class="p-3 uppercase font-bold text-[11px] text-slate-400">${p.mediaType}</td>
+          <td class="p-3 font-semibold text-white">${p.title || 'Untitled'}</td>
+          <td class="p-3 text-slate-400 max-w-xs truncate">${p.buttonLink ? `<a href="${p.buttonLink}" target="_blank" class="text-blue-400 hover:underline">${p.buttonLink}</a>` : 'N/A'}</td>
+          <td class="p-3 text-slate-400">${p.closeMode} (${p.timerSeconds}s / ${p.intervalMinutes || 1}m)</td>
+          <td class="p-3 text-right space-x-3">
+            <button class="text-blue-400 hover:text-blue-300 font-bold" onclick='editPopup(${JSON.stringify(p)})'>Edit</button>
+            <button class="${p.active ? 'text-amber-400' : 'text-emerald-400'} font-bold" onclick="togglePopupStatus('${p.id}', ${!p.active})">
+              ${p.active ? 'Deactivate' : 'Activate'}
+            </button>
+            <button class="text-rose-400 hover:text-rose-300 font-bold" onclick="deleteItem('Popups', '${p.id}')">Delete</button>
+          </td>
+        `;[cite: 4]
+        tbody.appendChild(tr);[cite: 4]
+      });
+    }
+
+    window.editPopup = function(p) {
+      document.getElementById('editingPopupId').value = p.id;[cite: 4]
+      document.getElementById('popupFormHeading').textContent = `Edit Popup: ${p.id}`;[cite: 4]
+      document.getElementById('popupActive').checked = p.active;[cite: 4]
+      document.getElementById('popupMediaType').value = p.mediaType || "image";[cite: 4]
+      document.getElementById('popupMediaUrl').value = p.mediaUrl || "";[cite: 4]
+      document.getElementById('popupTitle').value = p.title || "";[cite: 4]
+      document.getElementById('popupBody').value = p.body || "";[cite: 4]
+      document.getElementById('popupButtonText').value = p.buttonText || "";[cite: 4]
+      document.getElementById('popupButtonLink').value = p.buttonLink || "";[cite: 4]
+      document.getElementById('popupClickMode').value = p.clickMode || "button";[cite: 4]
+      document.getElementById('popupCloseMode').value = p.closeMode || "both";[cite: 4]
+      document.getElementById('popupTimerSeconds').value = p.timerSeconds || 5;[cite: 4]
+      document.getElementById('popupIntervalMinutes').value = p.intervalMinutes || 1;[cite: 4]
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });[cite: 4]
+    };
+
+    window.togglePopupStatus = async function(id, newStatus) {
+      await fetch(APPS_SCRIPT_URL, {[cite: 4]
+        method: 'POST',[cite: 4]
+        headers: { 'Content-Type': 'text/plain' },[cite: 4]
+        body: JSON.stringify({
+          action: "admin_toggle_popup",[cite: 4]
+          key: authPass,[cite: 4]
+          id: id,[cite: 4]
+          active: newStatus[cite: 4]
+        })
+      });
+      clearUserLocalCache();
+      reloadStudioData();[cite: 4]
+    };
+
+    window.deleteItem = async function(sheet, id) {
+      if (!confirm(`Permanently delete record ${id} from ${sheet}?`)) return;[cite: 4]
+      await fetch(APPS_SCRIPT_URL, {[cite: 4]
+        method: 'POST',[cite: 4]
+        headers: { 'Content-Type': 'text/plain' },[cite: 4]
+        body: JSON.stringify({
+          action: "admin_delete_item",[cite: 4]
+          key: authPass,[cite: 4]
+          targetSheet: sheet,[cite: 4]
+          id: id[cite: 4]
+        })
+      });
+      clearUserLocalCache();
+      if (sheet === 'Cards') fetchTaxonomyData();[cite: 4]
+      else reloadStudioData();[cite: 4]
+    };
+
+    async function reloadStudioData() {
+      const res = await fetch(`${APPS_SCRIPT_URL}?key=${encodeURIComponent(authPass)}`);[cite: 4]
+      const data = await res.json();[cite: 4]
+      if (data.status === "success") {[cite: 4]
+        studioData.popups = data.popups || [];[cite: 4]
+        renderPopupsList(studioData.popups);[cite: 4]
+        studioData.telemetry = data.users || [];[cite: 4]
+        renderTelemetry(studioData.telemetry);[cite: 4]
+      }
+    }
+
+    function renderTelemetry(list) {
+      document.getElementById('telemetryCount').textContent = list.length;[cite: 4]
+      const tbody = document.getElementById('telemetryTableBody');[cite: 4]
+      tbody.innerHTML = "";[cite: 4]
+
+      if (list.length === 0) {[cite: 4]
+        tbody.innerHTML = `<tr><td colspan="9" class="p-6 text-center text-slate-500">No downloads logged yet.</td></tr>`;[cite: 4]
+        return;[cite: 4]
+      }
+
+      list.forEach(u => {
+        const tr = document.createElement('tr');[cite: 4]
+        const hasDriveLink = u.pdfLink && u.pdfLink.startsWith("http");
+        tr.innerHTML = `
+          <td class="p-3 font-mono text-slate-400 whitespace-nowrap">${u.timestamp}</td>
+          <td class="p-3 font-mono font-bold text-amber-400 whitespace-nowrap">${u.orderId || 'ORD-N/A'}</td>
+          <td class="p-3 font-mono text-blue-400 whitespace-nowrap">${u.cardId || 'DEFAULT'}</td>
+          <td class="p-3 font-bold text-white whitespace-nowrap">${u.name}</td>
+          <td class="p-3 whitespace-nowrap">${u.roll}</td>
+          <td class="p-3 whitespace-nowrap">${u.reg}</td>
+          <td class="p-3 whitespace-nowrap">${u.course} (${u.courseCode || 'N/A'})</td>
+          <td class="p-3 whitespace-nowrap text-slate-400">${u.faculty}</td>
+          <td class="p-3 whitespace-nowrap">
+            ${hasDriveLink 
+              ? `<a href="${u.pdfLink}" target="_blank" class="text-blue-400 hover:underline font-mono font-semibold flex items-center gap-1">📁 Open in Drive</a>`
+              : `<span class="text-slate-500">Local Download</span>`}
+          </td>
+        `;[cite: 4]
+        tbody.appendChild(tr);[cite: 4]
+      });
+    }
+
+    document.getElementById('telemetrySearch').addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase();[cite: 4]
+      renderTelemetry(studioData.telemetry.filter(u => 
+        (u.name && u.name.toLowerCase().includes(q)) ||[cite: 4]
+        (u.roll && u.roll.toLowerCase().includes(q)) ||[cite: 4]
+        (u.orderId && u.orderId.toLowerCase().includes(q)) ||[cite: 4]
+        (u.cardId && u.cardId.toLowerCase().includes(q))[cite: 4]
+      ));
+    });
+  </script>
+</body>
+</html>
