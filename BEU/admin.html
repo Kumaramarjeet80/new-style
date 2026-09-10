@@ -654,15 +654,38 @@
       }
     }
 
-    async function initAdminScreenShare() {
+async function initAdminScreenShare() {
       try {
         if (localMediaStream) {
           localMediaStream.getTracks().forEach(track => track.stop());
         }
-        localMediaStream = await navigator.mediaDevices.getDisplayMedia({
+
+        // 1. Capture screen video and system audio
+        const displayStream = await navigator.mediaDevices.getDisplayMedia({
           video: { cursor: "always" },
           audio: true
         });
+
+        let finalStream = displayStream;
+
+        try {
+          // 2. Explicitly capture microphone audio to mix voice with screen share
+          const micStream = await navigator.mediaDevices.getUserMedia({
+            audio: { echoCancellation: true, noiseSuppression: true },
+            video: false
+          });
+
+          // 3. Bundle screen video, display audio, and mic audio into one stream
+          finalStream = new MediaStream([
+            ...displayStream.getVideoTracks(),
+            ...displayStream.getAudioTracks(),
+            ...micStream.getAudioTracks()
+          ]);
+        } catch (micErr) {
+          console.warn("Microphone access during screen share restricted:", micErr);
+        }
+
+        localMediaStream = finalStream;
         const preview = document.getElementById('adminLocalPreview');
         preview.srcObject = localMediaStream;
         document.getElementById('previewPlaceholder').style.display = 'none';
