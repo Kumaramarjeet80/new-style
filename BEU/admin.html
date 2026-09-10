@@ -21,10 +21,11 @@
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen">
 
+  <!-- Top Header Navigation -->
   <header class="bg-slate-950 border-b border-slate-800 px-6 py-4 flex flex-wrap justify-between items-center gap-4 sticky top-0 z-50">
     <div class="flex items-center gap-3">
       <span class="text-xl font-extrabold text-blue-400 tracking-tight">GECM Studio</span>
-      <span class="text-xs px-2.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 font-mono">v5.2 Master Stream Studio</span>
+      <span class="text-xs px-2.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 font-mono">v5.3 Master Studio</span>
     </div>
     <div id="authStatusBadge" class="text-xs text-amber-400 font-semibold flex items-center gap-2">
       <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> Authentication Required
@@ -35,7 +36,7 @@
   <div id="loginView" class="max-w-md mx-auto mt-20 p-6 bg-slate-800/90 backdrop-blur rounded-xl shadow-2xl border border-slate-700">
     <div class="flex justify-between items-center mb-2">
       <h2 class="text-xl font-bold text-white">Studio Authentication</h2>
-      <span class="text-[10px] px-2 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 font-mono">v5.2</span>
+      <span class="text-[10px] px-2 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 font-mono">v5.3</span>
     </div>
     <p class="text-xs text-slate-400 text-center mb-6">Enter master administrative passkey to manage studio modules.</p>
     <input type="password" id="adminPassword" placeholder="Enter admin passkey" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm mb-4 outline-none focus:border-blue-500 text-white placeholder-slate-500">
@@ -118,7 +119,7 @@
               </tr>
             </thead>
             <tbody id="inventoryTableBody" class="divide-y divide-slate-800 text-slate-300">
-              <tr><td colspan="5" class="p-4 text-center text-slate-500">Loading...</td></tr>
+              <tr><td colspan="5" class="p-4 text-center text-slate-500">Loading cards...</td></tr>
             </tbody>
           </table>
         </div>
@@ -141,7 +142,6 @@
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <!-- Left Column: Video Preview & Controls -->
           <div class="lg:col-span-7 space-y-4">
             <div class="relative bg-black rounded-xl overflow-hidden aspect-video border border-slate-700 flex items-center justify-center">
               <video id="adminLocalPreview" autoplay muted playsinline class="w-full h-full object-contain"></video>
@@ -160,7 +160,6 @@
             <button type="button" id="stopBtn" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-2.5 rounded-lg text-xs shadow-lg transition" style="display: none;" onclick="stopBroadcast()">⏹️ Stop & Save Recording to Drive</button>
           </div>
 
-          <!-- Right Column: Settings & Live Metadata -->
           <div class="lg:col-span-5 space-y-4">
             <div class="space-y-3 bg-slate-900 p-4 rounded-xl border border-slate-700">
               <h4 class="text-xs font-bold uppercase text-slate-300 border-b border-slate-800 pb-2">Broadcast Settings</h4>
@@ -192,12 +191,16 @@
     <section id="tab-popups" class="tab-pane hidden space-y-8">
       <div class="bg-slate-800/60 border border-slate-700 rounded-xl p-6 space-y-6">
         <div class="flex justify-between items-center border-b border-slate-700 pb-3">
-          <h3 class="text-lg font-bold text-white">Create Broadcast Popup</h3>
+          <h3 class="text-lg font-bold text-white" id="popupFormHeading">Create Broadcast Popup</h3>
           <button type="button" id="btnSavePopup" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-2 rounded-lg text-xs">Save & Publish Popup</button>
         </div>
         <input type="hidden" id="editingPopupId" value="">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div class="space-y-4">
+            <div class="flex items-center gap-3 bg-slate-900 p-3 rounded-lg border border-slate-700">
+              <input type="checkbox" id="popupActive" checked class="w-4 h-4">
+              <label for="popupActive" class="text-xs font-bold text-white">Active (Rotates dynamically)</label>
+            </div>
             <input type="text" id="popupTitle" placeholder="Popup Title" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white">
             <textarea id="popupBody" rows="3" placeholder="Popup Body..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white"></textarea>
           </div>
@@ -275,7 +278,7 @@
       });
     });
 
-    // Authenticate
+    // Authenticate & Hydrate Data
     document.getElementById('btnLogin').addEventListener('click', async () => {
       const pass = document.getElementById('adminPassword').value.trim();
       const res = await fetch(APPS_SCRIPT_URL, {
@@ -294,8 +297,11 @@
         studioData.subcategories = data.subcategories || [];
         studioData.cards = data.cards || [];
         studioData.pastLiveArchive = Array.isArray(data.pastLiveArchive) ? data.pastLiveArchive : [];
+        
         populateDropdowns();
         renderTelemetry(studioData.telemetry);
+        renderCardsInventory();
+        renderPopupsInventory();
         renderPastLiveArchive(studioData.pastLiveArchive);
       } else {
         document.getElementById('loginError').textContent = "Invalid password.";
@@ -310,7 +316,6 @@
 
         logMsg(`Initializing high-FPS media source: ${sourceType}...`);
 
-        // High-FPS and High-Stability Constraints
         if (sourceType === 'screen') {
           localStream = await navigator.mediaDevices.getDisplayMedia({ 
             video: { cursor: "always", frameRate: { ideal: 30, max: 60 } }, 
@@ -331,7 +336,6 @@
 
         logMsg("High-FPS media capture active.");
 
-        // Start local recording buffer to upload directly to Drive on stop
         recordedChunks = [];
         try {
           mediaRecorder = new MediaRecorder(localStream, { mimeType: 'video/webm' });
@@ -341,7 +345,6 @@
         mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) recordedChunks.push(e.data); };
         mediaRecorder.start(1000);
 
-        // Register on PeerJS signaling server with robust STUN list
         peer = new Peer(FRESH_STREAM_KEY, {
           config: {
             iceServers: [
@@ -500,6 +503,7 @@
       `).join('');
     }
 
+    /* TAXONOMY, CARDS & POPUPS MANAGEMENT HELPERS */
     function populateDropdowns() {
       const subParent = document.getElementById('subParentCat');
       if (subParent && studioData.categories.length) {
@@ -510,6 +514,134 @@
         cardSub.innerHTML = studioData.subcategories.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
       }
     }
+
+    document.getElementById('btnSaveCategory').addEventListener('click', async () => {
+      const name = document.getElementById('catName').value.trim();
+      const desc = document.getElementById('catDesc').value.trim();
+      const icon = document.getElementById('catIcon').value.trim() || "📁";
+      if (!name) return alert("Category name required!");
+
+      await fetch(APPS_SCRIPT_URL, {
+        method: 'POST', headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ action: "admin_save_category", key: authPass, category: { name, description: desc, icon } })
+      });
+      clearUserLocalCache(); alert("Category saved!"); window.location.reload();
+    });
+
+    document.getElementById('btnSaveSubcategory').addEventListener('click', async () => {
+      const categoryId = document.getElementById('subParentCat').value;
+      const name = document.getElementById('subName').value.trim();
+      const desc = document.getElementById('subDesc').value.trim();
+      if (!name) return alert("Subcategory name required!");
+
+      await fetch(APPS_SCRIPT_URL, {
+        method: 'POST', headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ action: "admin_save_subcategory", key: authPass, subcategory: { categoryId, name, description: desc } })
+      });
+      clearUserLocalCache(); alert("Subcategory saved!"); window.location.reload();
+    });
+
+    document.getElementById('cardActionType').addEventListener('change', (e) => {
+      document.getElementById('cardTargetUrlWrap').style.display = (e.target.value === 'link') ? 'block' : 'none';
+    });
+
+    document.getElementById('btnUploadDocToDrive').addEventListener('click', async () => {
+      const docInput = document.getElementById('cardDocFile');
+      if (!docInput.files || !docInput.files[0]) return alert("Please select a file!");
+      const filePayload = await readFileAsBase64(docInput.files[0]);
+      const res = await fetch(APPS_SCRIPT_URL, {
+        method: 'POST', headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ action: "admin_upload_standalone_doc", key: authPass, file: { base64: filePayload, name: docInput.files[0].name } })
+      });
+      const d = await res.json();
+      if (d && d.fileUrl) {
+        document.getElementById('cardTargetUrl').value = d.fileUrl;
+        document.getElementById('cardActionType').value = 'link';
+        alert("Uploaded to Drive successfully!");
+      }
+    });
+
+    document.getElementById('btnSaveCard').addEventListener('click', async () => {
+      const subcategoryId = document.getElementById('cardSubcategorySelect').value;
+      const title = document.getElementById('cardTitle').value.trim();
+      const desc = document.getElementById('cardDescription').value.trim();
+      const manualThumb = document.getElementById('cardThumbnailUrl').value.trim();
+      const actionType = document.getElementById('cardActionType').value;
+      const targetUrl = document.getElementById('cardTargetUrl').value.trim();
+      const templateHtml = document.getElementById('cardTemplateHtml').value.trim();
+      const thumbInput = document.getElementById('cardThumbnailFile');
+
+      if (!title) return alert("Card title required!");
+      let thumbPayload = thumbInput.files[0] ? await readFileAsBase64(thumbInput.files[0]) : null;
+
+      await fetch(APPS_SCRIPT_URL, {
+        method: 'POST', headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({
+          action: "admin_save_card", key: authPass,
+          card: { subcategoryId, title, description: desc, buttonText: document.getElementById('cardButtonText').value.trim() || "View", thumbnailUrl: manualThumb, thumbnailFile: thumbPayload ? { base64: thumbPayload, name: thumbInput.files[0].name } : null, actionType, targetUrl, templateHtml }
+        })
+      });
+      clearUserLocalCache(); alert("Card published!"); window.location.reload();
+    });
+
+    document.getElementById('btnSavePopup').addEventListener('click', async () => {
+      const title = document.getElementById('popupTitle').value.trim();
+      const body = document.getElementById('popupBody').value.trim();
+      const buttonLink = document.getElementById('popupButtonLink').value.trim();
+      const active = document.getElementById('popupActive').checked;
+      const id = document.getElementById('editingPopupId').value;
+
+      await fetch(APPS_SCRIPT_URL, {
+        method: 'POST', headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({
+          action: "admin_save_popup", key: authPass,
+          popup: { id, title, body, buttonLink, active }
+        })
+      });
+      clearUserLocalCache(); alert("Popup saved!"); window.location.reload();
+    });
+
+    function renderCardsInventory() {
+      const tbody = document.getElementById('inventoryTableBody');
+      if (!tbody) return;
+      if (!studioData.cards.length) {
+        tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-500">No cards registered.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = studioData.cards.map(c => `
+        <tr>
+          <td class="p-3 font-mono text-blue-400">${c.id}</td>
+          <td class="p-3 font-mono text-[11px] text-slate-400">${c.createdAt || 'N/A'}</td>
+          <td class="p-3 font-semibold text-white">${c.title}</td>
+          <td class="p-3 uppercase text-[10px] font-bold text-slate-400">${c.actionType}</td>
+          <td class="p-3 text-right"><button type="button" class="text-rose-400 font-bold" onclick="deleteItem('Cards', '${c.id}')">Delete</button></td>
+        </tr>
+      `).join('');
+    }
+
+    function renderPopupsInventory() {
+      const container = document.getElementById('popupListTableBody');
+      if (!container) return;
+      if (!studioData.popups.length) {
+        container.innerHTML = `<div class="p-4 text-center text-slate-500 text-xs">No popups created yet.</div>`;
+        return;
+      }
+      container.innerHTML = studioData.popups.map(p => `
+        <div class="flex items-center justify-between p-3 bg-slate-900 border border-slate-800 rounded-lg mb-2 text-xs">
+          <div><strong class="text-white">${p.title || 'Untitled'}</strong> <span class="text-slate-400">(${p.active ? 'Active' : 'Inactive'})</span></div>
+          <button type="button" class="text-rose-400 font-bold" onclick="deleteItem('Popups', '${p.id}')">Delete</button>
+        </div>
+      `).join('');
+    }
+
+    window.deleteItem = async function(sheet, id) {
+      if (!confirm(`Delete item ${id}?`)) return;
+      await fetch(APPS_SCRIPT_URL, {
+        method: 'POST', headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ action: "admin_delete_item", key: authPass, targetSheet: sheet, id })
+      });
+      clearUserLocalCache(); window.location.reload();
+    };
 
     function renderTelemetry(list) {
       const tbody = document.getElementById('telemetryTableBody');
