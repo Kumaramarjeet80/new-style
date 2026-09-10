@@ -5,41 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GECM Portal - Unified Admin Studio</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- PeerJS Library for WebRTC Streaming -->
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <style>
-    * {
-      box-sizing: border-box;
-    }
-    button, input, select, textarea, a {
-      cursor: pointer;
-      position: relative;
-      z-index: 10;
-    }
-    .tab-pane {
-      display: block;
-    }
-    .tab-pane.hidden {
-      display: none !important;
-    }
+    * { box-sizing: border-box; }
+    button, input, select, textarea, a { cursor: pointer; position: relative; z-index: 10; }
+    .tab-pane { display: block; }
+    .tab-pane.hidden { display: none !important; }
     .live-dot {
-      width: 8px;
-      height: 8px;
-      background-color: #ef4444;
-      border-radius: 50%;
-      display: inline-block;
-      box-shadow: 0 0 8px #ef4444;
-      animation: pulseLive 1.2s infinite ease-in-out;
+      width: 8px; height: 8px; background-color: #ef4444; border-radius: 50%;
+      display: inline-block; box-shadow: 0 0 8px #ef4444; animation: pulseLive 1.2s infinite ease-in-out;
     }
-    @keyframes pulseLive {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(1.3); }
-    }
+    @keyframes pulseLive { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.3); } }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen">
 
-  <!-- Top Header Navigation -->
   <header class="bg-slate-950 border-b border-slate-800 px-6 py-4 flex flex-wrap justify-between items-center gap-4 sticky top-0 z-50">
     <div class="flex items-center gap-3">
       <span class="text-xl font-extrabold text-blue-400 tracking-tight">GECM Studio</span>
@@ -53,18 +33,16 @@
   <!-- Login Overlay -->
   <div id="loginView" class="max-w-md mx-auto mt-20 p-6 bg-slate-800/90 backdrop-blur rounded-xl shadow-2xl border border-slate-700">
     <h2 class="text-xl font-bold text-center text-white mb-2">Studio Authentication</h2>
-    <p class="text-xs text-slate-400 text-center mb-6">Enter the master administrative key to manage academic categories, cards, popups, and telemetry.</p>
+    <p class="text-xs text-slate-400 text-center mb-6">Enter master administrative passkey to manage studio modules.</p>
     <input type="password" id="adminPassword" placeholder="Enter admin passkey" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm mb-4 outline-none focus:border-blue-500 text-white placeholder-slate-500">
-    <button type="button" id="btnLogin" class="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold py-3 rounded-lg text-sm transition-all shadow-lg shadow-blue-600/30">
+    <button type="button" id="btnLogin" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg text-sm shadow-lg">
       Unlock Master Studio
     </button>
     <p id="loginError" class="text-xs text-rose-400 text-center mt-3 hidden font-semibold"></p>
   </div>
 
-  <!-- Master Dashboard Workspace -->
+  <!-- Dashboard Workspace -->
   <main id="dashboardView" class="hidden max-w-7xl mx-auto p-4 sm:p-6 space-y-8">
-
-    <!-- Section Tabs -->
     <div class="flex border-b border-slate-800 gap-6 text-sm font-bold overflow-x-auto pb-1">
       <button type="button" class="pb-3 border-b-2 border-blue-500 text-blue-400 tab-btn whitespace-nowrap" data-tab="tab-taxonomy">Categories & Cards</button>
       <button type="button" class="pb-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 tab-btn whitespace-nowrap" data-tab="tab-live">📡 Live Broadcast Studio</button>
@@ -72,173 +50,83 @@
       <button type="button" class="pb-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 tab-btn whitespace-nowrap" data-tab="tab-telemetry">Student Telemetry & Drive Archive</button>
     </div>
 
-    <!-- TAB 1: CATEGORIES, SUBCATEGORIES & CARDS -->
+    <!-- TAB 1: TAXONOMY & CARDS -->
     <section id="tab-taxonomy" class="tab-pane space-y-8">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        
-        <!-- Add Category Form -->
-        <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-5 space-y-4">
-          <div class="border-b border-slate-700/60 pb-3 flex justify-between items-center">
-            <div>
-              <h3 class="text-base font-bold text-white">Create / Update Category</h3>
-              <p class="text-xs text-slate-400">Pillar groupings (e.g. Cover Pages, Syllabus, PYQs)</p>
-            </div>
-            <span class="text-[10px] text-blue-400 font-mono">IST Timestamped</span>
-          </div>
+        <div class="bg-slate-800/60 border border-slate-700 rounded-xl p-5 space-y-4">
+          <h3 class="text-base font-bold text-white">Create / Update Category</h3>
           <div class="space-y-3">
-            <div>
-              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Category Name</label>
-              <input type="text" id="catName" placeholder="e.g. Academic Handbooks & Syllabus" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Description</label>
-              <input type="text" id="catDesc" placeholder="Official institutional curriculum resources" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Icon / Emoji</label>
-              <input type="text" id="catIcon" value="📁" class="w-24 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
-            </div>
-            <button type="button" id="btnSaveCategory" class="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold py-2 rounded-lg text-xs transition">
-              Save Category
-            </button>
+            <input type="text" id="catName" placeholder="Category Name" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white">
+            <input type="text" id="catDesc" placeholder="Description" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white">
+            <input type="text" id="catIcon" value="📁" class="w-24 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white">
+            <button type="button" id="btnSaveCategory" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded-lg text-xs">Save Category</button>
           </div>
         </div>
-
-        <!-- Add Subcategory Form -->
-        <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-5 space-y-4">
-          <div class="border-b border-slate-700/60 pb-3 flex justify-between items-center">
-            <div>
-              <h3 class="text-base font-bold text-white">Create / Update Subcategory</h3>
-              <p class="text-xs text-slate-400">Nested branches (e.g. 1st Year Syllabus, Lab Manuals)</p>
-            </div>
-            <span class="text-[10px] text-blue-400 font-mono">IST Timestamped</span>
-          </div>
+        <div class="bg-slate-800/60 border border-slate-700 rounded-xl p-5 space-y-4">
+          <h3 class="text-base font-bold text-white">Create / Update Subcategory</h3>
           <div class="space-y-3">
-            <div>
-              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Parent Category</label>
-              <select id="subParentCat" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500"></select>
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Subcategory Name</label>
-              <input type="text" id="subName" placeholder="e.g. Civil Engineering Notes" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Description</label>
-              <input type="text" id="subDesc" placeholder="Official modules and reading materials" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
-            </div>
-            <button type="button" id="btnSaveSubcategory" class="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold py-2 rounded-lg text-xs transition">
-              Save Subcategory
-            </button>
+            <select id="subParentCat" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white"></select>
+            <input type="text" id="subName" placeholder="Subcategory Name" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white">
+            <input type="text" id="subDesc" placeholder="Description" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white">
+            <button type="button" id="btnSaveSubcategory" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded-lg text-xs">Save Subcategory</button>
           </div>
         </div>
-
       </div>
 
-      <!-- Card Creator & Document Publishing Studio -->
-      <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-6 space-y-5">
-        <div class="border-b border-slate-700/60 pb-3 flex flex-wrap justify-between items-center gap-2">
-          <div>
-            <h3 class="text-lg font-bold text-white">Card Creator & Document Publishing Studio</h3>
-            <p class="text-xs text-slate-400">Upload standalone academic documents, add Drive links, or customize HTML cover templates</p>
-          </div>
-          <button type="button" id="btnSaveCard" class="bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold px-6 py-2 rounded-lg text-xs transition shadow-lg shadow-emerald-600/20">
-            Publish New Card
-          </button>
+      <!-- Card Creator -->
+      <div class="bg-slate-800/60 border border-slate-700 rounded-xl p-6 space-y-5">
+        <div class="flex justify-between items-center border-b border-slate-700 pb-3">
+          <h3 class="text-lg font-bold text-white">Card Creator & Document Publishing Studio</h3>
+          <button type="button" id="btnSaveCard" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-2 rounded-lg text-xs">Publish New Card</button>
         </div>
-
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div class="space-y-4">
-            <div>
-              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Subcategory Placement</label>
-              <select id="cardSubcategorySelect" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500"></select>
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Card Title</label>
-              <input type="text" id="cardTitle" placeholder="e.g. B.Tech Chemistry Complete Syllabus" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Description</label>
-              <textarea id="cardDescription" rows="2" placeholder="Brief summary displayed on the card..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500"></textarea>
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Button Text</label>
-              <input type="text" id="cardButtonText" placeholder="View / Read Document or Customize Cover" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
-            </div>
+            <select id="cardSubcategorySelect" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white"></select>
+            <input type="text" id="cardTitle" placeholder="Card Title" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white">
+            <textarea id="cardDescription" rows="2" placeholder="Description..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white"></textarea>
+            <input type="text" id="cardButtonText" placeholder="Button Text" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white">
           </div>
-
           <div class="space-y-4">
-            <div>
-              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Card Thumbnail Image</label>
-              <input type="file" id="cardThumbnailFile" accept="image/*" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-slate-400 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-blue-600 file:text-white">
-              <input type="url" id="cardThumbnailUrl" placeholder="Or paste thumbnail image URL" class="w-full mt-2 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
-            </div>
-
-            <div>
-              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Card Action Type</label>
-              <select id="cardActionType" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
-                <option value="generator" selected>Open Custom PDF Generator Canvas</option>
-                <option value="link">Direct Document / Drive Link (Embedded PDF Viewer)</option>
-              </select>
-            </div>
-
-            <div id="cardTargetUrlWrap" style="display:none;" class="space-y-3 bg-slate-900/90 p-3 rounded-lg border border-slate-700">
-              <div class="flex items-center justify-between">
-                <label class="block text-xs font-bold text-blue-400 uppercase">Document Attachment</label>
-                <span id="uploadBadge" class="text-[10px] text-slate-400">Step 1: Select & Upload</span>
-              </div>
-              <div>
-                <input type="file" id="cardDocFile" accept=".pdf,.doc,.docx,.zip,.ppt,.pptx" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-xs text-slate-400 file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:bg-slate-800 file:text-white">
-              </div>
-              <button type="button" id="btnUploadDocToDrive" class="w-full bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold py-2 rounded-lg text-xs transition flex items-center justify-center gap-2">
-                <span>☁ Upload Document to Google Drive</span>
-              </button>
-              <div>
-                <input type="url" id="cardTargetUrl" placeholder="https://drive.google.com/file/d/..." class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-emerald-400 font-mono outline-none focus:border-blue-500">
-              </div>
+            <input type="file" id="cardThumbnailFile" accept="image/*" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-slate-400">
+            <input type="url" id="cardThumbnailUrl" placeholder="Thumbnail URL" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white">
+            <select id="cardActionType" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white">
+              <option value="generator" selected>Custom PDF Generator Canvas</option>
+              <option value="link">Direct Document Link</option>
+            </select>
+            <div id="cardTargetUrlWrap" style="display:none;" class="space-y-2 bg-slate-900 p-3 rounded-lg border border-slate-700">
+              <input type="file" id="cardDocFile" accept=".pdf,.doc,.docx" class="w-full text-xs text-slate-400">
+              <button type="button" id="btnUploadDocToDrive" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-1.5 rounded text-xs">☁ Upload to Drive</button>
+              <input type="url" id="cardTargetUrl" placeholder="Drive URL" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-emerald-400">
             </div>
           </div>
-
           <div class="space-y-2 flex flex-col">
-            <div class="flex justify-between items-center">
-              <label class="block text-xs font-bold text-slate-300 uppercase">Cover Page Template HTML Code</label>
-              <span class="text-[10px] text-blue-400 font-mono">User Editable Placeholders</span>
-            </div>
-            <textarea id="cardTemplateHtml" placeholder="<!-- Paste custom cover page inner HTML here -->&#10;<div class='college-title'><span id='outCollege1'></span></div>..." class="flex-1 w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs font-mono text-emerald-400 outline-none focus:border-blue-500 resize-none min-h-[220px]"></textarea>
+            <textarea id="cardTemplateHtml" placeholder="HTML Template code..." class="flex-1 w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs font-mono text-emerald-400 resize-none min-h-[180px]"></textarea>
           </div>
         </div>
       </div>
 
-      <!-- Published Inventory Table -->
-      <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-5">
+      <!-- Inventory Table -->
+      <div class="bg-slate-800/60 border border-slate-700 rounded-xl p-5">
         <h4 class="text-sm font-bold text-white mb-4">Published Cards Inventory</h4>
         <div class="overflow-x-auto">
           <table class="w-full text-left text-xs border-collapse">
-            <thead class="bg-slate-900/80 text-slate-400 border-b border-slate-700">
+            <thead class="bg-slate-900 text-slate-400 border-b border-slate-700">
               <tr>
-                <th class="p-3">Card ID</th>
-                <th class="p-3">Published (IST)</th>
-                <th class="p-3">Thumbnail</th>
-                <th class="p-3">Title</th>
-                <th class="p-3">Subcategory ID</th>
-                <th class="p-3">Action Type</th>
-                <th class="p-3">Attached Link</th>
-                <th class="p-3 text-right">Actions</th>
+                <th class="p-3">ID</th><th class="p-3">Published (IST)</th><th class="p-3">Title</th><th class="p-3">Action</th><th class="p-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody id="inventoryTableBody" class="divide-y divide-slate-800 text-slate-300">
-              <tr><td colspan="8" class="p-4 text-center text-slate-500">Loading published cards...</td></tr>
+              <tr><td colspan="5" class="p-4 text-center text-slate-500">Loading...</td></tr>
             </tbody>
           </table>
         </div>
       </div>
     </section>
 
-    <!-- TAB 2: LIVE BROADCAST STUDIO (NEW FEATURE) -->
+    <!-- TAB 2: LIVE BROADCAST STUDIO (AUDIO-FIXED) -->
     <section id="tab-live" class="tab-pane hidden space-y-8">
-      <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-6 space-y-6">
-        
-        <!-- Live Header & Status Bar -->
-        <div class="border-b border-slate-700/60 pb-4 flex flex-wrap justify-between items-center gap-4">
+      <div class="bg-slate-800/60 border border-slate-700 rounded-xl p-6 space-y-6">
+        <div class="border-b border-slate-700 pb-4 flex flex-wrap justify-between items-center gap-4">
           <div>
             <div class="flex items-center gap-3">
               <h3 class="text-lg font-bold text-white">Live Video & Screen Broadcast Studio</h3>
@@ -246,249 +134,97 @@
                 <span class="w-2 h-2 rounded-full bg-slate-500"></span> Offline
               </span>
             </div>
-            <p class="text-xs text-slate-400 mt-1">Broadcast rear/front camera or screenshare directly to students in real-time</p>
+            <p class="text-xs text-slate-400 mt-1">Broadcast high-definition video and microphone audio directly to student viewers.</p>
           </div>
-
-          <!-- Real-Time Viewer Metrics -->
-          <div class="flex items-center gap-4 bg-slate-900/80 px-4 py-2 rounded-xl border border-slate-700">
+          <div class="flex items-center gap-4 bg-slate-900 px-4 py-2 rounded-xl border border-slate-700">
             <div class="text-center">
               <span class="text-[10px] uppercase font-bold text-slate-400 block">Live Viewers</span>
               <span id="adminLiveViewerCount" class="text-emerald-400 font-mono text-lg font-extrabold">0</span>
             </div>
             <div class="h-8 w-px bg-slate-700"></div>
             <div class="text-center">
-              <span class="text-[10px] uppercase font-bold text-slate-400 block">Stream Time (IST)</span>
+              <span class="text-[10px] uppercase font-bold text-slate-400 block">Stream Time</span>
               <span id="adminStreamTimeBadge" class="text-blue-400 font-mono text-xs font-semibold">--:--:--</span>
             </div>
           </div>
         </div>
 
-        <!-- Broadcast Controls Layout -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          
-          <!-- Column A: Video Monitor & Hardware Toggles (7 cols) -->
           <div class="lg:col-span-7 space-y-4">
             <div class="relative bg-black rounded-xl overflow-hidden aspect-video border border-slate-700 flex items-center justify-center">
               <video id="adminLocalPreview" autoplay muted playsinline class="w-full h-full object-contain"></video>
               <div id="previewPlaceholder" class="absolute flex flex-col items-center gap-2 text-slate-500 text-xs">
-                <span class="text-3xl">📹</span>
-                <span>Camera feed will appear here</span>
+                <span class="text-3xl">📹</span><span>Camera feed preview</span>
               </div>
-              <div id="liveStreamOverlayTag" class="absolute top-3 left-3 bg-red-600/90 text-white text-[11px] font-bold px-2.5 py-1 rounded flex items-center gap-1.5 shadow hidden">
-                <span class="w-2 h-2 rounded-full bg-white animate-pulse"></span> ON AIR
+              <div id="liveStreamOverlayTag" class="absolute top-3 left-3 bg-red-600 text-white text-[11px] font-bold px-2.5 py-1 rounded shadow hidden">
+                🔴 ON AIR (MIC ACTIVE)
               </div>
             </div>
-
-            <!-- Media Source Switchers -->
             <div class="grid grid-cols-3 gap-3">
-              <button type="button" id="btnSwitchBackCam" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold py-2.5 px-3 rounded-lg flex items-center justify-center gap-2 transition">
-                <span>🔄 Rear Camera</span>
-              </button>
-              <button type="button" id="btnSwitchFrontCam" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold py-2.5 px-3 rounded-lg flex items-center justify-center gap-2 transition">
-                <span>🤳 Front Camera</span>
-              </button>
-              <button type="button" id="btnSwitchScreen" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold py-2.5 px-3 rounded-lg flex items-center justify-center gap-2 transition">
-                <span>🖥 Share Screen</span>
-              </button>
+              <button type="button" id="btnSwitchBackCam" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold py-2.5 rounded-lg">🔄 Rear Cam</button>
+              <button type="button" id="btnSwitchFrontCam" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold py-2.5 rounded-lg">🤳 Front Cam</button>
+              <button type="button" id="btnSwitchScreen" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold py-2.5 rounded-lg">🖥 Share Screen</button>
             </div>
           </div>
 
-          <!-- Column B: Event Card Settings & Actions (5 cols) -->
           <div class="lg:col-span-5 space-y-4 flex flex-col justify-between">
-            <div class="space-y-3 bg-slate-900/60 p-4 rounded-xl border border-slate-700/80">
-              <div class="flex justify-between items-center border-b border-slate-700 pb-2">
-                <h4 class="text-xs font-bold uppercase text-slate-300">Live Event Card Details</h4>
-                <span class="text-[10px] text-blue-400 font-semibold">Real-Time Sync</span>
-              </div>
-              <div>
-                <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1">Event Title</label>
-                <input type="text" id="liveTitleInput" placeholder="e.g. End Semester Exam Guidelines" value="GECM Official Live Academic Briefing" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
-              </div>
-              <div>
-                <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1">Event Description</label>
-                <textarea id="liveDescInput" rows="2" placeholder="Details for students..." class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">Live session by administration regarding semester schedule and cover pages.</textarea>
-              </div>
-              <div>
-                <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1">Live Event Logo / Thumbnail URL</label>
-                <input type="url" id="liveLogoInput" placeholder="https://..." value="https://lh3.googleusercontent.com/d/1Pg1tZ-1Uodqzi5iciN61hq8jMooT0eo2" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
-              </div>
-              <div>
-                <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1">Attached Resource Link (Optional)</label>
-                <input type="url" id="liveLinkInput" placeholder="https://..." class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
-              </div>
+            <div class="space-y-3 bg-slate-900 p-4 rounded-xl border border-slate-700">
+              <h4 class="text-xs font-bold uppercase text-slate-300 border-b border-slate-800 pb-2">Broadcast Settings</h4>
+              <input type="text" id="liveTitleInput" value="GECM Official Live Academic Briefing" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white">
+              <textarea id="liveDescInput" rows="2" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white">Live session by administration regarding semester schedule.</textarea>
+              <input type="url" id="liveLogoInput" value="https://lh3.googleusercontent.com/d/1Pg1tZ-1Uodqzi5iciN61hq8jMooT0eo2" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white">
             </div>
-
-            <!-- Start / Update / End Action Buttons -->
-            <div class="space-y-3 pt-2">
-              <button type="button" id="btnGoLive" class="w-full bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold py-3 rounded-xl text-sm transition shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2">
-                <span>🔴 Start Live Broadcast</span>
+            <div class="space-y-3">
+              <button type="button" id="btnGoLive" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl text-sm shadow-lg shadow-emerald-600/30">
+                🔴 Start Live Broadcast (With Mic Audio)
               </button>
               <div class="grid grid-cols-2 gap-3">
-                <button type="button" id="btnUpdateLiveCard" disabled class="bg-blue-600/60 text-white font-bold py-2.5 rounded-lg text-xs transition disabled:opacity-40">
-                  Update Live Info
-                </button>
-                <button type="button" id="btnEndLive" disabled class="bg-rose-600/60 text-white font-bold py-2.5 rounded-lg text-xs transition disabled:opacity-40">
-                  End Live Stream
-                </button>
+                <button type="button" id="btnUpdateLiveCard" disabled class="bg-blue-600/60 text-white font-bold py-2.5 rounded-lg text-xs disabled:opacity-40">Update Info</button>
+                <button type="button" id="btnEndLive" disabled class="bg-rose-600/60 text-white font-bold py-2.5 rounded-lg text-xs disabled:opacity-40">End Stream</button>
               </div>
             </div>
-
           </div>
-
         </div>
-
       </div>
     </section>
 
-    <!-- TAB 3: MULTI-POPUP MANAGEMENT STUDIO -->
+    <!-- TAB 3: POPUPS -->
     <section id="tab-popups" class="tab-pane hidden space-y-8">
-      <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-6 space-y-6">
-        <div class="border-b border-slate-700/60 pb-3 flex justify-between items-center">
-          <div>
-            <h3 class="text-lg font-bold text-white" id="popupFormHeading">Create Broadcast Popup</h3>
-            <p class="text-xs text-slate-400">All popups are permanently stored in Google Sheets and rotate cyclically in user view</p>
-          </div>
-          <button type="button" id="btnSavePopup" class="bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold px-6 py-2 rounded-lg text-xs transition shadow-lg">
-            Save & Publish Popup
-          </button>
+      <div class="bg-slate-800/60 border border-slate-700 rounded-xl p-6 space-y-6">
+        <div class="flex justify-between items-center border-b border-slate-700 pb-3">
+          <h3 class="text-lg font-bold text-white">Create Broadcast Popup</h3>
+          <button type="button" id="btnSavePopup" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-2 rounded-lg text-xs">Save & Publish Popup</button>
         </div>
-
         <input type="hidden" id="editingPopupId" value="">
-
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div class="space-y-4">
-            <div class="flex items-center gap-3 bg-slate-900/60 p-3 rounded-lg border border-slate-700">
-              <input type="checkbox" id="popupActive" checked class="w-4 h-4">
-              <label for="popupActive" class="text-xs font-bold text-white">Active (Rotates dynamically in user queue)</label>
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Media Format</label>
-                <select id="popupMediaType" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white">
-                  <option value="image" selected>Photo Banner</option>
-                  <option value="video">Video (Drive / YouTube / MP4)</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Click Behavior</label>
-                <select id="popupClickMode" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white">
-                  <option value="button" selected>Button Only</option>
-                  <option value="card">Entire Card Clickable</option>
-                </select>
-              </div>
-            </div>
-            <div>
-              <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Upload Media File to Drive</label>
-              <input type="file" id="popupFileInput" accept="image/*,video/*" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-slate-400 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-blue-600 file:text-white">
-            </div>
-            <div>
-              <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Or Direct Media / YouTube Link</label>
-              <input type="url" id="popupMediaUrl" placeholder="https://www.youtube.com/watch?v=... or direct URL" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
-            </div>
-            <div>
-              <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Popup Title</label>
-              <input type="text" id="popupTitle" placeholder="e.g. End-Semester Examination Schedule" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
-            </div>
-            <div>
-              <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Popup Body Text</label>
-              <textarea id="popupBody" rows="3" placeholder="Notice details..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500"></textarea>
-            </div>
+            <input type="text" id="popupTitle" placeholder="Popup Title" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white">
+            <textarea id="popupBody" rows="3" placeholder="Popup Body..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white"></textarea>
           </div>
-
           <div class="space-y-4">
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Action Button Text</label>
-                <input type="text" id="popupButtonText" value="View Notice" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
-              </div>
-              <div>
-                <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Destination URL</label>
-                <input type="url" id="popupButtonLink" placeholder="https://..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
-              </div>
-            </div>
-            <div class="grid grid-cols-3 gap-3">
-              <div>
-                <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Closing Mode</label>
-                <select id="popupCloseMode" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white">
-                  <option value="both" selected>Both (Timer + Button)</option>
-                  <option value="timer">Timer Only</option>
-                  <option value="manual">Manual Close Only</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Timer (Sec)</label>
-                <input type="number" id="popupTimerSeconds" value="5" min="1" max="60" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
-              </div>
-              <div>
-                <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Interval (Min)</label>
-                <input type="number" id="popupIntervalMinutes" value="1" min="0.2" step="0.1" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
-              </div>
-            </div>
+            <input type="url" id="popupButtonLink" placeholder="Destination URL" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white">
           </div>
         </div>
       </div>
-
-      <!-- Permanent Popups Table -->
-      <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-5">
-        <div class="border-b border-slate-700/60 pb-3 mb-4 flex justify-between items-center">
-          <h4 class="text-sm font-bold text-white">Permanent Popups Repository</h4>
-          <span class="text-xs text-slate-400" id="popupCountBadge">0 Total Popups</span>
-        </div>
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs border-collapse">
-            <thead class="bg-slate-900/80 text-slate-400 border-b border-slate-700">
-              <tr>
-                <th class="p-3">ID</th>
-                <th class="p-3">Status</th>
-                <th class="p-3">Format</th>
-                <th class="p-3">Title</th>
-                <th class="p-3">Destination</th>
-                <th class="p-3">Timing</th>
-                <th class="p-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody id="popupListTableBody" class="divide-y divide-slate-800 text-slate-300">
-              <tr><td colspan="7" class="p-4 text-center text-slate-500">No popups stored yet.</td></tr>
-            </tbody>
-          </table>
-        </div>
+      <div class="bg-slate-800/60 border border-slate-700 rounded-xl p-5">
+        <h4 class="text-sm font-bold text-white mb-4">Popups Repository</h4>
+        <div id="popupListTableBody"></div>
       </div>
     </section>
 
-    <!-- TAB 4: STUDENT TELEMETRY & DRIVE ARCHIVE -->
+    <!-- TAB 4: TELEMETRY -->
     <section id="tab-telemetry" class="tab-pane hidden space-y-6">
-      <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-6">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-700/60">
-          <div>
-            <h3 class="text-lg font-bold text-white">Student Download Telemetry & Drive Archive</h3>
-            <p class="text-xs text-slate-400">All student download telemetry logs and generated Google Drive PDF archives</p>
-          </div>
-          <div class="flex items-center gap-3">
-            <span class="text-xs font-bold text-slate-300">Total Downloads: <span id="telemetryCount" class="text-blue-400 font-mono text-sm">0</span></span>
-            <input type="text" id="telemetrySearch" placeholder="Search roll, name, order, subject, college..." class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-blue-500 w-72">
-          </div>
-        </div>
-
-        <div class="overflow-x-auto mt-4 max-h-[550px]">
+      <div class="bg-slate-800/60 border border-slate-700 rounded-xl p-6">
+        <h3 class="text-lg font-bold text-white mb-4">Student Download Telemetry & Drive Archive</h3>
+        <div class="overflow-x-auto max-h-[500px]">
           <table class="w-full text-left text-xs border-collapse">
-            <thead class="bg-slate-900/95 text-slate-400 sticky top-0 border-b border-slate-700 z-20">
+            <thead class="bg-slate-900 text-slate-400 sticky top-0">
               <tr>
-                <th class="p-3 whitespace-nowrap">Timestamp (IST)</th>
-                <th class="p-3 whitespace-nowrap">Order ID</th>
-                <th class="p-3 whitespace-nowrap">Card ID</th>
-                <th class="p-3 whitespace-nowrap">Student Name</th>
-                <th class="p-3 whitespace-nowrap">Roll No</th>
-                <th class="p-3 whitespace-nowrap">Reg No</th>
-                <th class="p-3 whitespace-nowrap">Subject & Code</th>
-                <th class="p-3 whitespace-nowrap">Semester</th>
-                <th class="p-3 whitespace-nowrap">Branch</th>
-                <th class="p-3 whitespace-nowrap">College</th>
-                <th class="p-3 whitespace-nowrap">Faculty Guide</th>
-                <th class="p-3 whitespace-nowrap text-right">Drive PDF Archive</th>
+                <th class="p-3">Timestamp</th><th class="p-3">Student Name</th><th class="p-3">Roll No</th><th class="p-3">Subject</th><th class="p-3 text-right">Drive Archive</th>
               </tr>
             </thead>
             <tbody id="telemetryTableBody" class="divide-y divide-slate-800 text-slate-300">
-              <tr><td colspan="12" class="p-6 text-center text-slate-500">No downloads logged yet.</td></tr>
+              <tr><td colspan="5" class="p-4 text-center text-slate-500">No logs yet.</td></tr>
             </tbody>
           </table>
         </div>
@@ -502,200 +238,90 @@
     const USER_CACHE_KEY = "gecm_portal_catalog_cache";
 
     let authPass = "";
-    let studioData = {
-      categories: [],
-      subcategories: [],
-      cards: [],
-      popups: [],
-      telemetry: [],
-      liveEvent: null
-    };
-
-    // Live WebRTC Broadcasting State
+    let studioData = { categories: [], subcategories: [], cards: [], popups: [], telemetry: [], liveEvent: null };
     let adminPeer = null;
     let localMediaStream = null;
     let isBroadcasting = false;
     let viewerSyncTimer = null;
-    let currentCamFacing = "environment"; // default rear camera
 
-    function clearUserLocalCache() {
-      try {
-        localStorage.removeItem(USER_CACHE_KEY);
-      } catch (e) {}
-    }
+    function clearUserLocalCache() { try { localStorage.removeItem(USER_CACHE_KEY); } catch (e) {} }
 
-    function readFileAsBase64(file) {
-      return new Promise((resolve) => {
-        if (!file) return resolve(null);
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const res = e.target.result;
-          if (typeof res === 'string' && res.startsWith('data:')) {
-            resolve({ base64: res, name: file.name });
-          } else {
-            resolve(null);
-          }
-        };
-        reader.onerror = () => resolve(null);
-        reader.readAsDataURL(file);
-      });
-    }
-
-    // Tab Navigation
     document.querySelectorAll('.tab-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        document.querySelectorAll('.tab-btn').forEach(b => {
-          b.classList.remove('border-blue-500', 'text-blue-400');
-          b.classList.add('border-transparent', 'text-slate-400');
-        });
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => { b.classList.remove('border-blue-500', 'text-blue-400'); b.classList.add('border-transparent', 'text-slate-400'); });
         document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));
-
         btn.classList.add('border-blue-500', 'text-blue-400');
-        btn.classList.remove('border-transparent', 'text-slate-400');
-        const target = document.getElementById(btn.dataset.tab);
-        if (target) target.classList.remove('hidden');
+        document.getElementById(btn.dataset.tab).classList.remove('hidden');
       });
     });
 
-    // POST-based Authentication
-    document.getElementById('btnLogin').addEventListener('click', async (e) => {
-      e.preventDefault();
-      const passInput = document.getElementById('adminPassword');
-      const pass = passInput.value.trim();
-      const err = document.getElementById('loginError');
-      const btn = document.getElementById('btnLogin');
-
-      if (!pass) {
-        err.textContent = "Please enter the admin passkey.";
-        err.classList.remove('hidden');
-        return;
-      }
-
-      btn.disabled = true;
-      btn.textContent = "Connecting to Backend & Syncing Database...";
-      err.classList.add('hidden');
-
-      try {
-        const res = await fetch(APPS_SCRIPT_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify({
-            action: "admin_login",
-            key: pass
-          })
-        });
-
-        const rawText = await res.text();
-        let data;
-        try {
-          data = JSON.parse(rawText);
-        } catch (jsonErr) {
-          throw new Error("Server returned non-JSON: " + rawText.slice(0, 100));
-        }
-
-        if (data.status === "unauthorized") {
-          err.textContent = "Invalid master administrative password.";
-          err.classList.remove('hidden');
-        } else if (data.status === "success") {
-          authPass = pass;
-          document.getElementById('loginView').classList.add('hidden');
-          document.getElementById('dashboardView').classList.remove('hidden');
-          document.getElementById('authStatusBadge').innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span> Authenticated`;
-          document.getElementById('authStatusBadge').className = "text-xs text-emerald-400 font-semibold flex items-center gap-2";
-
-          // Hydrate All Data
-          studioData.telemetry = Array.isArray(data.users) ? data.users : [];
-          studioData.popups = Array.isArray(data.popups) ? data.popups : [];
-          studioData.categories = Array.isArray(data.categories) ? data.categories : [];
-          studioData.subcategories = Array.isArray(data.subcategories) ? data.subcategories : [];
-          studioData.cards = Array.isArray(data.cards) ? data.cards : [];
-          studioData.liveEvent = data.liveEvent || null;
-
-          renderTelemetry(studioData.telemetry);
-          renderPopupsList(studioData.popups);
-          populateDropdowns();
-          renderCardsInventory();
-
-          // Initialize camera preview
-          await initAdminCamera("environment");
-        } else {
-          err.textContent = data.message || "Authentication error.";
-          err.classList.remove('hidden');
-        }
-      } catch (error) {
-        console.error("Login Error:", error);
-        err.textContent = "Connection failed: " + error.message;
-        err.classList.remove('hidden');
-      } finally {
-        btn.disabled = false;
-        btn.textContent = "Unlock Master Studio";
+    // Authenticate
+    document.getElementById('btnLogin').addEventListener('click', async () => {
+      const pass = document.getElementById('adminPassword').value.trim();
+      const res = await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ action: "admin_login", key: pass })
+      });
+      const data = await res.json();
+      if (data.status === "success") {
+        authPass = pass;
+        document.getElementById('loginView').classList.add('hidden');
+        document.getElementById('dashboardView').classList.remove('hidden');
+        studioData.telemetry = data.users || [];
+        studioData.popups = data.popups || [];
+        studioData.categories = data.categories || [];
+        studioData.subcategories = data.subcategories || [];
+        studioData.cards = data.cards || [];
+        populateDropdowns();
+        renderTelemetry(studioData.telemetry);
+        await initAdminCamera("environment");
+      } else {
+        document.getElementById('loginError').textContent = "Invalid password.";
+        document.getElementById('loginError').classList.remove('hidden');
       }
     });
 
-    /* =========================================================
-       LIVE STREAM BROADCAST STUDIO ENGINE (WEBRTC PEERJS)
-    ========================================================= */
+    // ROBUST CAMERA & MIC STREAM INITIALIZER (FORCES AUDIO)
     async function initAdminCamera(facing) {
-      currentCamFacing = facing;
       try {
-        if (localMediaStream) {
-          localMediaStream.getTracks().forEach(track => track.stop());
-        }
+        if (localMediaStream) localMediaStream.getTracks().forEach(t => t.stop());
+        
+        // Explicitly request both video and audio tracks from microphone
         localMediaStream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } },
-          audio: true
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
         });
-        const preview = document.getElementById('adminLocalPreview');
-        preview.srcObject = localMediaStream;
+
+        document.getElementById('adminLocalPreview').srcObject = localMediaStream;
         document.getElementById('previewPlaceholder').style.display = 'none';
       } catch (err) {
-        console.warn("Could not access camera (" + facing + "):", err);
+        alert("Camera/Mic access error: " + err.message);
       }
     }
 
-async function initAdminScreenShare() {
+    async function initAdminScreenShare() {
       try {
-        if (localMediaStream) {
-          localMediaStream.getTracks().forEach(track => track.stop());
-        }
-
-        // 1. Capture screen video and system audio
-        const displayStream = await navigator.mediaDevices.getDisplayMedia({
-          video: { cursor: "always" },
-          audio: true
-        });
-
-        let finalStream = displayStream;
-
+        if (localMediaStream) localMediaStream.getTracks().forEach(t => t.stop());
+        
+        const displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+        
+        // Also capture microphone so voice works during screen share
+        let micStream = null;
         try {
-          // 2. Explicitly capture microphone audio to mix voice with screen share
-          const micStream = await navigator.mediaDevices.getUserMedia({
-            audio: { echoCancellation: true, noiseSuppression: true },
-            video: false
-          });
+          micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        } catch (e) {}
 
-          // 3. Bundle screen video, display audio, and mic audio into one stream
-          finalStream = new MediaStream([
-            ...displayStream.getVideoTracks(),
-            ...displayStream.getAudioTracks(),
-            ...micStream.getAudioTracks()
-          ]);
-        } catch (micErr) {
-          console.warn("Microphone access during screen share restricted:", micErr);
-        }
+        const tracks = [...displayStream.getVideoTracks(), ...displayStream.getAudioTracks()];
+        if (micStream) tracks.push(...micStream.getAudioTracks());
 
-        localMediaStream = finalStream;
-        const preview = document.getElementById('adminLocalPreview');
-        preview.srcObject = localMediaStream;
+        localMediaStream = new MediaStream(tracks);
+        document.getElementById('adminLocalPreview').srcObject = localMediaStream;
         document.getElementById('previewPlaceholder').style.display = 'none';
 
-        // If active stream, handle user clicking native "Stop sharing"
-        localMediaStream.getVideoTracks()[0].onended = () => {
-          initAdminCamera("environment");
-        };
+        localMediaStream.getVideoTracks()[0].onended = () => initAdminCamera("environment");
       } catch (err) {
-        console.warn("Screen share cancelled or failed:", err);
+        console.warn("Screen share error:", err);
       }
     }
 
@@ -703,639 +329,82 @@ async function initAdminScreenShare() {
     document.getElementById('btnSwitchFrontCam').addEventListener('click', () => initAdminCamera("user"));
     document.getElementById('btnSwitchScreen').addEventListener('click', () => initAdminScreenShare());
 
-    // START LIVE BROADCAST
+    // GO LIVE
     document.getElementById('btnGoLive').addEventListener('click', async () => {
-      const title = document.getElementById('liveTitleInput').value.trim() || "GECM Official Live Academic Briefing";
-      const desc = document.getElementById('liveDescInput').value.trim();
-      const logoUrl = document.getElementById('liveLogoInput').value.trim();
-      const liveLink = document.getElementById('liveLinkInput').value.trim();
-
-      const btnGo = document.getElementById('btnGoLive');
-      btnGo.disabled = true;
-      btnGo.textContent = "Initializing WebRTC Signal...";
-
-      try {
-        if (!localMediaStream) {
-          await initAdminCamera("environment");
-        }
-
-        // Initialize PeerJS Broadcast Node
-        const peerRoomId = "gecm_host_" + new Date().getTime().toString(36);
-        adminPeer = new Peer(peerRoomId, { debug: 1 });
-
-        adminPeer.on('open', async (id) => {
-          // Register live event in Google Sheets
-          const res = await fetch(APPS_SCRIPT_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain' },
-            body: JSON.stringify({
-              action: "admin_start_live",
-              key: authPass,
-              title: title,
-              description: desc,
-              logoUrl: logoUrl,
-              liveLink: liveLink,
-              peerId: id
-            })
-          });
-
-          const d = await res.json();
-          if (d.status === "success") {
-            isBroadcasting = true;
-            clearUserLocalCache();
-
-            // UI updates
-            document.getElementById('liveStatusBadge').innerHTML = `<span class="live-dot"></span> BROADCASTING LIVE`;
-            document.getElementById('liveStatusBadge').className = "bg-rose-950 text-rose-300 border border-rose-800 text-xs px-2.5 py-0.5 rounded font-bold flex items-center gap-1.5";
-            document.getElementById('liveStreamOverlayTag').classList.remove('hidden');
-            document.getElementById('adminStreamTimeBadge').textContent = d.startTime || "Just Now";
-
-            btnGo.classList.add('hidden');
-            document.getElementById('btnUpdateLiveCard').disabled = false;
-            document.getElementById('btnUpdateLiveCard').classList.remove('bg-blue-600/60');
-            document.getElementById('btnUpdateLiveCard').classList.add('bg-blue-600', 'hover:bg-blue-500');
-
-            document.getElementById('btnEndLive').disabled = false;
-            document.getElementById('btnEndLive').classList.remove('bg-rose-600/60');
-            document.getElementById('btnEndLive').classList.add('bg-rose-600', 'hover:bg-rose-500');
-
-            // Answer calls from student viewers automatically
-            adminPeer.on('call', (call) => {
-              call.answer(localMediaStream);
-            });
-
-            // Start polling viewer metrics
-            startLiveViewerSync();
-            alert("Live Stream is now LIVE! Event card is visible on portal catalog.");
-          }
-        });
-
-        adminPeer.on('error', (err) => {
-          console.error("PeerJS error:", err);
-          alert("Streaming Signal Error: " + err.message);
-          btnGo.disabled = false;
-          btnGo.textContent = "🔴 Start Live Broadcast";
-        });
-
-      } catch (err) {
-        alert("Broadcast Error: " + err.message);
-        btnGo.disabled = false;
-        btnGo.textContent = "🔴 Start Live Broadcast";
-      }
-    });
-
-    // UPDATE LIVE CARD DURING STREAM
-    document.getElementById('btnUpdateLiveCard').addEventListener('click', async () => {
       const title = document.getElementById('liveTitleInput').value.trim();
       const desc = document.getElementById('liveDescInput').value.trim();
       const logoUrl = document.getElementById('liveLogoInput').value.trim();
-      const liveLink = document.getElementById('liveLinkInput').value.trim();
 
-      const btn = document.getElementById('btnUpdateLiveCard');
-      btn.disabled = true;
-      btn.textContent = "Updating...";
+      const btnGo = document.getElementById('btnGoLive');
+      btnGo.disabled = true;
+      btnGo.textContent = "Connecting Broadcast...";
 
-      try {
-        const res = await fetch(APPS_SCRIPT_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify({
-            action: "admin_update_live",
-            key: authPass,
-            title: title,
-            description: desc,
-            logoUrl: logoUrl,
-            liveLink: liveLink
-          })
-        });
-        const d = await res.json();
-        if (d.status === "success") {
-          clearUserLocalCache();
-          alert("Live event details updated in real time!");
-        }
-      } finally {
-        btn.disabled = false;
-        btn.textContent = "Update Live Info";
-      }
-    });
+      if (!localMediaStream) await initAdminCamera("environment");
 
-    // END LIVE STREAM
-    document.getElementById('btnEndLive').addEventListener('click', async () => {
-      if (!confirm("Are you sure you want to terminate the live broadcast?")) return;
+      const peerRoomId = "gecm_host_" + Math.random().toString(36).substring(2, 8);
+      adminPeer = new Peer(peerRoomId, { debug: 1 });
 
-      try {
+      adminPeer.on('open', async (id) => {
         await fetch(APPS_SCRIPT_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain' },
           body: JSON.stringify({
-            action: "admin_end_live",
-            key: authPass
+            action: "admin_start_live", key: authPass,
+            title, description: desc, logoUrl, peerId: id
           })
         });
 
-        if (adminPeer) {
-          adminPeer.destroy();
-          adminPeer = null;
-        }
-        if (viewerSyncTimer) clearInterval(viewerSyncTimer);
-
-        isBroadcasting = false;
+        isBroadcasting = true;
         clearUserLocalCache();
 
-        document.getElementById('liveStatusBadge').innerHTML = `<span class="w-2 h-2 rounded-full bg-slate-500"></span> Offline`;
-        document.getElementById('liveStatusBadge').className = "bg-slate-800 text-slate-400 border border-slate-700 text-xs px-2.5 py-0.5 rounded font-semibold flex items-center gap-1.5";
-        document.getElementById('liveStreamOverlayTag').classList.add('hidden');
-        document.getElementById('adminLiveViewerCount').textContent = "0";
+        document.getElementById('liveStatusBadge').innerHTML = `<span class="live-dot"></span> BROADCASTING LIVE`;
+        document.getElementById('liveStreamOverlayTag').classList.remove('hidden');
+        btnGo.classList.add('hidden');
+        document.getElementById('btnUpdateLiveCard').disabled = false;
+        document.getElementById('btnEndLive').disabled = false;
 
-        document.getElementById('btnGoLive').classList.remove('hidden');
-        document.getElementById('btnGoLive').disabled = false;
-        document.getElementById('btnGoLive').textContent = "🔴 Start Live Broadcast";
+        // Answer incoming student WebRTC calls with our audio+video stream
+        adminPeer.on('call', (call) => {
+          call.answer(localMediaStream);
+        });
 
-        document.getElementById('btnUpdateLiveCard').disabled = true;
-        document.getElementById('btnEndLive').disabled = true;
-
-        alert("Broadcast ended successfully. Event card removed from student view.");
-      } catch (err) {
-        alert("Error ending stream: " + err.message);
-      }
+        alert("Live broadcast is active with audio!");
+      });
     });
 
-    function startLiveViewerSync() {
-      if (viewerSyncTimer) clearInterval(viewerSyncTimer);
-      viewerSyncTimer = setInterval(async () => {
-        if (!isBroadcasting) return;
-        try {
-          const res = await fetch(`${APPS_SCRIPT_URL}?action=get_portal_data`);
-          const data = await res.json();
-          if (data && data.liveEvent && data.liveEvent.active) {
-            document.getElementById('adminLiveViewerCount').textContent = data.liveEvent.viewerCount || 0;
-          }
-        } catch (e) {}
-      }, 5000);
-    }
+    document.getElementById('btnEndLive').addEventListener('click', async () => {
+      if (!confirm("End stream?")) return;
+      await fetch(APPS_SCRIPT_URL, {
+        method: 'POST', headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ action: "admin_end_live", key: authPass })
+      });
+      if (adminPeer) adminPeer.destroy();
+      window.location.reload();
+    });
 
-    /* =========================================================
-       EXISTING TAXONOMY & INVENTORY CONTROLS
-    ========================================================= */
     function populateDropdowns() {
       const subParent = document.getElementById('subParentCat');
-      if (subParent && studioData.categories.length > 0) {
+      if (subParent && studioData.categories.length) {
         subParent.innerHTML = studioData.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
       }
-
       const cardSub = document.getElementById('cardSubcategorySelect');
-      if (cardSub && studioData.subcategories.length > 0) {
+      if (cardSub && studioData.subcategories.length) {
         cardSub.innerHTML = studioData.subcategories.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
       }
     }
 
-    document.getElementById('btnSaveCategory').addEventListener('click', async (e) => {
-      e.preventDefault();
-      const name = document.getElementById('catName').value.trim();
-      const desc = document.getElementById('catDesc').value.trim();
-      const icon = document.getElementById('catIcon').value.trim() || "📁";
-      if (!name) return alert("Category Name is required!");
-
-      const btn = document.getElementById('btnSaveCategory');
-      btn.disabled = true;
-      btn.textContent = "Saving...";
-
-      try {
-        const res = await fetch(APPS_SCRIPT_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify({
-            action: "admin_save_category",
-            key: authPass,
-            category: { name, description: desc, icon }
-          })
-        });
-        const d = await res.json();
-        if (d.status === "success") {
-          clearUserLocalCache();
-          alert("Category published successfully with IST timestamp!");
-          document.getElementById('catName').value = "";
-          document.getElementById('catDesc').value = "";
-          await reloadStudioData();
-        }
-      } finally {
-        btn.disabled = false;
-        btn.textContent = "Save Category";
-      }
-    });
-
-    document.getElementById('btnSaveSubcategory').addEventListener('click', async (e) => {
-      e.preventDefault();
-      const categoryId = document.getElementById('subParentCat').value;
-      const name = document.getElementById('subName').value.trim();
-      const desc = document.getElementById('subDesc').value.trim();
-      if (!name || !categoryId) return alert("Parent Category and Subcategory Name required!");
-
-      const btn = document.getElementById('btnSaveSubcategory');
-      btn.disabled = true;
-      btn.textContent = "Saving...";
-
-      try {
-        const res = await fetch(APPS_SCRIPT_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify({
-            action: "admin_save_subcategory",
-            key: authPass,
-            subcategory: { categoryId, name, description: desc }
-          })
-        });
-        const d = await res.json();
-        if (d.status === "success") {
-          clearUserLocalCache();
-          alert("Subcategory published successfully with IST timestamp!");
-          document.getElementById('subName').value = "";
-          document.getElementById('subDesc').value = "";
-          await reloadStudioData();
-        }
-      } finally {
-        btn.disabled = false;
-        btn.textContent = "Save Subcategory";
-      }
-    });
-
-    const actionSelect = document.getElementById('cardActionType');
-    if (actionSelect) {
-      actionSelect.addEventListener('change', (e) => {
-        const wrap = document.getElementById('cardTargetUrlWrap');
-        if (wrap) wrap.style.display = (e.target.value === 'link') ? 'block' : 'none';
-      });
-    }
-
-    document.getElementById('btnUploadDocToDrive').addEventListener('click', async (e) => {
-      e.preventDefault();
-      const docInput = document.getElementById('cardDocFile');
-      if (!docInput.files || docInput.files.length === 0) return alert("Select a document file first!");
-
-      const file = docInput.files[0];
-      const btn = document.getElementById('btnUploadDocToDrive');
-      const badge = document.getElementById('uploadBadge');
-
-      btn.disabled = true;
-      btn.innerHTML = `<span>⏳ Uploading ${file.name}...</span>`;
-      badge.textContent = "Uploading to Drive...";
-      badge.className = "text-[10px] text-amber-400 font-bold";
-
-      try {
-        const filePayload = await readFileAsBase64(file);
-        const res = await fetch(APPS_SCRIPT_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify({
-            action: "admin_upload_standalone_doc",
-            key: authPass,
-            file: filePayload
-          })
-        });
-        const d = await res.json();
-        if (d && d.status === "success" && d.fileUrl) {
-          document.getElementById('cardTargetUrl').value = d.fileUrl;
-          document.getElementById('cardActionType').value = 'link';
-          badge.textContent = "✓ Uploaded Successfully";
-          badge.className = "text-[10px] text-emerald-400 font-bold";
-          alert("Document uploaded to Google Drive!");
-        }
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = `<span>☁ Upload Document to Google Drive</span>`;
-      }
-    });
-
-    document.getElementById('btnSaveCard').addEventListener('click', async (e) => {
-      e.preventDefault();
-      const subcategoryId = document.getElementById('cardSubcategorySelect').value;
-      const title = document.getElementById('cardTitle').value.trim();
-      const desc = document.getElementById('cardDescription').value.trim();
-      const manualThumb = document.getElementById('cardThumbnailUrl').value.trim();
-      let actionType = document.getElementById('cardActionType').value;
-      let targetUrl = document.getElementById('cardTargetUrl').value.trim();
-      const templateHtml = document.getElementById('cardTemplateHtml').value.trim();
-      const thumbInput = document.getElementById('cardThumbnailFile');
-
-      if (!title || !subcategoryId) return alert("Subcategory and Card Title are required!");
-      if (targetUrl.length > 0) actionType = "link";
-
-      const btn = document.getElementById('btnSaveCard');
-      btn.disabled = true;
-      btn.textContent = "Publishing Card...";
-
-      try {
-        let thumbPayload = null;
-        if (thumbInput.files && thumbInput.files.length > 0) {
-          thumbPayload = await readFileAsBase64(thumbInput.files[0]);
-        }
-
-        const buttonText = document.getElementById('cardButtonText').value.trim() || ((actionType === "link") ? "View / Read Document" : "Customize Cover Page");
-
-        const payload = {
-          action: "admin_save_card",
-          key: authPass,
-          card: {
-            subcategoryId,
-            title,
-            description: desc,
-            buttonText,
-            thumbnailUrl: manualThumb,
-            thumbnailFile: thumbPayload,
-            actionType,
-            targetUrl,
-            templateHtml: (actionType === "link") ? "" : templateHtml
-          }
-        };
-
-        const res = await fetch(APPS_SCRIPT_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify(payload)
-        });
-
-        const d = await res.json();
-        if (d && d.status === "success") {
-          clearUserLocalCache();
-          alert("Card published successfully!");
-          document.getElementById('cardTitle').value = "";
-          document.getElementById('cardDescription').value = "";
-          document.getElementById('cardThumbnailUrl').value = "";
-          thumbInput.value = "";
-          document.getElementById('cardDocFile').value = "";
-          document.getElementById('cardTargetUrl').value = "";
-          document.getElementById('cardTemplateHtml').value = "";
-          document.getElementById('cardButtonText').value = "";
-          document.getElementById('cardActionType').value = "generator";
-          document.getElementById('cardTargetUrlWrap').style.display = "none";
-          await reloadStudioData();
-        }
-      } finally {
-        btn.disabled = false;
-        btn.textContent = "Publish New Card";
-      }
-    });
-
-    function renderCardsInventory() {
-      const tbody = document.getElementById('inventoryTableBody');
-      if (!tbody) return;
-      tbody.innerHTML = "";
-      if (studioData.cards.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-slate-500">No cards registered yet.</td></tr>`;
-        return;
-      }
-      studioData.cards.forEach(c => {
-        const hasDocLink = Boolean(c.targetUrl && c.targetUrl.trim().length > 0);
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td class="p-3 font-mono text-blue-400">${c.id}</td>
-          <td class="p-3 font-mono text-[11px] text-slate-400">${c.createdAt || 'N/A'}</td>
-          <td class="p-3">
-            ${c.thumbnailUrl ? `<img src="${c.thumbnailUrl}" class="w-10 h-10 object-cover rounded border border-slate-700">` : 'N/A'}
-          </td>
-          <td class="p-3 font-semibold text-white">${c.title}</td>
-          <td class="p-3 font-mono text-slate-400">${c.subcategoryId}</td>
-          <td class="p-3">
-            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${c.actionType === 'link' || hasDocLink ? 'bg-amber-950 text-amber-300 border border-amber-800' : 'bg-blue-950 text-blue-300 border border-blue-800'}">
-              ${c.actionType === 'link' || hasDocLink ? 'Document Link' : 'Canvas Cover'}
-            </span>
-          </td>
-          <td class="p-3 text-slate-400 max-w-xs truncate">
-            ${hasDocLink ? `<a href="${c.targetUrl}" target="_blank" class="text-blue-400 hover:underline font-mono text-[11px]">${c.targetUrl}</a>` : '<span class="text-slate-500">Canvas Cover</span>'}
-          </td>
-          <td class="p-3 text-right">
-            <button type="button" class="text-rose-400 hover:text-rose-300 font-bold" onclick="deleteItem('Cards', '${c.id}')">Delete</button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    // Save Popup
-    let pendingPopupFile = null;
-    document.getElementById('popupFileInput').addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-          pendingPopupFile = { base64: evt.target.result, name: file.name };
-        };
-        reader.readAsDataURL(file);
-      }
-    });
-
-    document.getElementById('btnSavePopup').addEventListener('click', async (e) => {
-      e.preventDefault();
-      const id = document.getElementById('editingPopupId').value;
-      const active = document.getElementById('popupActive').checked;
-      const mediaType = document.getElementById('popupMediaType').value;
-      const mediaUrl = document.getElementById('popupMediaUrl').value.trim();
-      const title = document.getElementById('popupTitle').value.trim();
-      const body = document.getElementById('popupBody').value.trim();
-      const buttonText = document.getElementById('popupButtonText').value.trim() || "Visit";
-      const buttonLink = document.getElementById('popupButtonLink').value.trim();
-      const clickMode = document.getElementById('popupClickMode').value;
-      const closeMode = document.getElementById('popupCloseMode').value;
-      const timerSeconds = Number(document.getElementById('popupTimerSeconds').value) || 5;
-      const intervalMinutes = Number(document.getElementById('popupIntervalMinutes').value) || 1;
-
-      const btn = document.getElementById('btnSavePopup');
-      btn.disabled = true;
-      btn.textContent = "Publishing to Drive & Sheets...";
-
-      try {
-        const res = await fetch(APPS_SCRIPT_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify({
-            action: "admin_save_popup",
-            key: authPass,
-            popup: {
-              id, active, mediaType, mediaUrl,
-              mediaFile: pendingPopupFile,
-              title, body, buttonText, buttonLink,
-              clickMode, closeMode, timerSeconds, intervalMinutes
-            }
-          })
-        });
-        const d = await res.json();
-        if (d.status === "success") {
-          clearUserLocalCache();
-          alert("Popup saved successfully!");
-          document.getElementById('editingPopupId').value = "";
-          document.getElementById('popupFileInput').value = "";
-          pendingPopupFile = null;
-          await reloadStudioData();
-        }
-      } finally {
-        btn.disabled = false;
-        btn.textContent = "Save & Publish Popup";
-      }
-    });
-
-    function renderPopupsList(list) {
-      const badge = document.getElementById('popupCountBadge');
-      if (badge) badge.textContent = `${list.length} Total Popups`;
-      const tbody = document.getElementById('popupListTableBody');
-      if (!tbody) return;
-      tbody.innerHTML = "";
-
-      if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-500">No popups stored yet.</td></tr>`;
-        return;
-      }
-
-      list.forEach(p => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td class="p-3 font-mono text-blue-400">${p.id}</td>
-          <td class="p-3">
-            <span class="${p.active ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-slate-800 text-slate-400 border border-slate-700'} px-2 py-0.5 rounded text-[10px] font-bold uppercase">${p.active ? 'Active' : 'Deactivated'}</span>
-          </td>
-          <td class="p-3 uppercase font-bold text-[11px] text-slate-400">${p.mediaType}</td>
-          <td class="p-3 font-semibold text-white">${p.title || 'Untitled'}</td>
-          <td class="p-3 text-slate-400 max-w-xs truncate">${p.buttonLink ? `<a href="${p.buttonLink}" target="_blank" class="text-blue-400 hover:underline">${p.buttonLink}</a>` : 'N/A'}</td>
-          <td class="p-3 text-slate-400">${p.closeMode} (${p.timerSeconds}s / ${p.intervalMinutes || 1}m)</td>
-          <td class="p-3 text-right space-x-3">
-            <button type="button" class="${p.active ? 'text-amber-400' : 'text-emerald-400'} font-bold" onclick="togglePopupStatus('${p.id}', ${!p.active})">
-              ${p.active ? 'Deactivate' : 'Activate'}
-            </button>
-            <button type="button" class="text-rose-400 hover:text-rose-300 font-bold" onclick="deleteItem('Popups', '${p.id}')">Delete</button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    window.togglePopupStatus = async function(id, newStatus) {
-      await fetch(APPS_SCRIPT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({
-          action: "admin_toggle_popup",
-          key: authPass,
-          id: id,
-          active: newStatus
-        })
-      });
-      clearUserLocalCache();
-      await reloadStudioData();
-    };
-
-    window.deleteItem = async function(sheet, id) {
-      if (!confirm(`Permanently delete record ${id} from ${sheet}?`)) return;
-      await fetch(APPS_SCRIPT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({
-          action: "admin_delete_item",
-          key: authPass,
-          targetSheet: sheet,
-          id: id
-        })
-      });
-      clearUserLocalCache();
-      await reloadStudioData();
-    };
-
-    async function reloadStudioData() {
-      try {
-        const res = await fetch(APPS_SCRIPT_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify({
-            action: "admin_login",
-            key: authPass
-          })
-        });
-        const data = await res.json();
-        if (data.status === "success") {
-          studioData.telemetry = data.users || [];
-          renderTelemetry(studioData.telemetry);
-
-          studioData.popups = data.popups || [];
-          renderPopupsList(studioData.popups);
-
-          studioData.categories = data.categories || [];
-          studioData.subcategories = data.subcategories || [];
-          studioData.cards = data.cards || [];
-          populateDropdowns();
-          renderCardsInventory();
-        }
-      } catch (e) {
-        console.error("Reload error:", e);
-      }
-    }
-
-    // Consolidated Student Telemetry Renderer
     function renderTelemetry(list) {
-      const countEl = document.getElementById('telemetryCount');
-      if (countEl) countEl.textContent = list.length;
       const tbody = document.getElementById('telemetryTableBody');
-      if (!tbody) return;
-      tbody.innerHTML = "";
-
-      if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="12" class="p-6 text-center text-slate-500">No downloads logged yet.</td></tr>`;
-        return;
-      }
-
-      list.forEach(u => {
-        const tr = document.createElement('tr');
-        const hasDriveLink = u.pdfLink && typeof u.pdfLink === 'string' && u.pdfLink.startsWith("http");
-        
-        let subjectDisplay = u.course || 'N/A';
-        if (u.courseCode && u.courseCode !== 'N/A' && u.courseCode.trim().length > 0) {
-          const codeFormatted = u.courseCode.startsWith('(') ? u.courseCode : `(${u.courseCode})`;
-          subjectDisplay = `${u.course} <span class="text-blue-400 font-mono text-[11px]">${codeFormatted}</span>`;
-        }
-
-        tr.innerHTML = `
-          <td class="p-3 font-mono text-slate-400 whitespace-nowrap">${u.timestamp || 'N/A'}</td>
-          <td class="p-3 font-mono font-bold text-amber-400 whitespace-nowrap">${u.orderId || 'ORD-N/A'}</td>
-          <td class="p-3 font-mono text-blue-400 whitespace-nowrap">${u.cardId || 'DEFAULT'}</td>
-          <td class="p-3 font-bold text-white whitespace-nowrap">${u.name || 'N/A'}</td>
-          <td class="p-3 font-mono whitespace-nowrap">${u.roll || 'N/A'}</td>
-          <td class="p-3 font-mono text-slate-400 whitespace-nowrap">${u.reg || 'N/A'}</td>
-          <td class="p-3 text-slate-200 whitespace-nowrap">${subjectDisplay}</td>
-          <td class="p-3 whitespace-nowrap"><span class="bg-slate-800 text-blue-300 border border-slate-700 px-2 py-0.5 rounded text-[11px] font-semibold">${u.semester || 'N/A'}</span></td>
-          <td class="p-3 text-slate-300 whitespace-nowrap">${u.branch || 'N/A'}</td>
-          <td class="p-3 text-slate-400 whitespace-nowrap max-w-xs truncate" title="${u.college || ''}">${u.college || 'N/A'}</td>
-          <td class="p-3 text-slate-300 whitespace-nowrap">${u.faculty || 'N/A'}</td>
-          <td class="p-3 whitespace-nowrap text-right">
-            ${hasDriveLink 
-              ? `<a href="${u.pdfLink}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-blue-400 hover:text-blue-300 bg-blue-950/60 hover:bg-blue-900/80 border border-blue-800/80 px-2.5 py-1 rounded text-[11px] font-mono transition">
-                   📁 View in Drive
-                 </a>`
-              : `<span class="text-slate-500 font-mono text-[11px]">Local Only</span>`}
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    const searchInput = document.getElementById('telemetrySearch');
-    if (searchInput) {
-      searchInput.addEventListener('input', (e) => {
-        const q = e.target.value.toLowerCase().trim();
-        if (!q) {
-          renderTelemetry(studioData.telemetry);
-          return;
-        }
-        renderTelemetry(studioData.telemetry.filter(u => 
-          (u.name && u.name.toLowerCase().includes(q)) ||
-          (u.roll && u.roll.toLowerCase().includes(q)) ||
-          (u.reg && u.reg.toLowerCase().includes(q)) ||
-          (u.orderId && u.orderId.toLowerCase().includes(q)) ||
-          (u.cardId && u.cardId.toLowerCase().includes(q)) ||
-          (u.course && u.course.toLowerCase().includes(q)) ||
-          (u.courseCode && u.courseCode.toLowerCase().includes(q)) ||
-          (u.branch && u.branch.toLowerCase().includes(q)) ||
-          (u.college && u.college.toLowerCase().includes(q)) ||
-          (u.faculty && u.faculty.toLowerCase().includes(q)) ||
-          (u.semester && u.semester.toLowerCase().includes(q))
-        ));
-      });
+      if (!tbody || !list.length) return;
+      tbody.innerHTML = list.map(u => `
+        <tr>
+          <td class="p-3 font-mono text-slate-400">${u.timestamp || 'N/A'}</td>
+          <td class="p-3 font-bold text-white">${u.name || 'N/A'}</td>
+          <td class="p-3 font-mono">${u.roll || 'N/A'}</td>
+          <td class="p-3 text-slate-200">${u.course || 'N/A'}</td>
+          <td class="p-3 text-right"><a href="${u.pdfLink || '#'}" target="_blank" class="text-blue-400 font-mono">View PDF</a></td>
+        </tr>
+      `).join('');
     }
   </script>
 </body>
