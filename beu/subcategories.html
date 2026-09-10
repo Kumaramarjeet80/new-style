@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subcategories - GEC Munger Academic Portal</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/theme.css">
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header class="portal-navbar">
+    <a href="index.html" class="portal-brand">
+      <span>GECM</span> Portal
+    </a>
+    <a href="admin.html" style="font-size: 12px; font-weight: 700; color: #94a3b8; text-decoration: none; padding: 6px 12px; border-radius: 6px; border: 1px solid #374151;">
+      Admin Access
+    </a>
+  </header>
+
+  <main class="portal-container">
+
+    <!-- Breadcrumb Chain -->
+    <nav class="breadcrumb-bar" id="breadcrumbNav">
+      <a href="index.html" class="breadcrumb-item">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+        Home
+      </a>
+      <span class="breadcrumb-separator">›</span>
+      <span class="breadcrumb-item active" id="bcCategoryTitle">Loading...</span>
+    </nav>
+
+    <!-- Header Section -->
+    <section class="portal-header" style="text-align: left; margin-bottom: 28px;">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+        <span id="catHeaderIcon" style="font-size: 28px;">📁</span>
+        <h1 class="portal-title" id="catHeaderTitle" style="margin: 0; font-size: 26px;">Category Resources</h1>
+      </div>
+      <p class="portal-subtitle" id="catHeaderDesc" style="margin: 0; max-width: 100%;">Explore branches, departmental modules, and curriculum templates.</p>
+    </section>
+
+    <!-- Subcategories Grid -->
+    <section>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;">
+        <h2 style="font-size: 16px; font-weight: 700; color: #fff; margin: 0;">Available Subcategories</h2>
+        <span id="subCountBadge" style="font-size: 12px; color: #94a3b8; font-family: monospace;">Loading...</span>
+      </div>
+
+      <div class="catalog-grid" id="subcategoryGrid">
+        <div class="empty-state-card">
+          <div class="spinner"></div>
+          <span>Loading subcategories...</span>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="js/api.js"></script>
+  <script>
+    const targetCatId = PortalAPI.getQueryParam('cat');
+
+    window.addEventListener('DOMContentLoaded', () => {
+      if (!targetCatId) {
+        window.location.href = "index.html";
+        return;
+      }
+
+      renderSubcategories();
+
+      // Listen for background API refreshes
+      portalAPI.onUpdate(() => {
+        renderSubcategories();
+      });
+
+      portalAPI.syncCatalog();
+    });
+
+    function renderSubcategories() {
+      const category = portalAPI.getCategoryById(targetCatId);
+      const subcategories = portalAPI.getSubcategories(targetCatId);
+      const grid = document.getElementById('subcategoryGrid');
+      const countBadge = document.getElementById('subCountBadge');
+
+      if (category) {
+        document.getElementById('bcCategoryTitle').textContent = category.name;
+        document.getElementById('catHeaderTitle').textContent = category.name;
+        document.getElementById('catHeaderDesc').textContent = category.description || "Official institutional modules.";
+        document.getElementById('catHeaderIcon').textContent = category.icon || "📁";
+      }
+
+      if (!grid) return;
+      grid.innerHTML = "";
+      if (countBadge) countBadge.textContent = `${subcategories.length} Sections`;
+
+      if (subcategories.length === 0) {
+        grid.innerHTML = `
+          <div style="grid-column: 1/-1; text-align: center; color: #94a3b8; padding: 50px;">
+            <span style="font-size: 32px; display: block; margin-bottom: 12px;">📂</span>
+            No subcategories found under this section.
+            <br><a href="index.html" class="btn-back-to-catalog" style="display: inline-flex; margin-top: 18px;">← Return to Categories</a>
+          </div>`;
+        return;
+      }
+
+      subcategories.forEach(sub => {
+        const card = document.createElement('a');
+        card.className = "category-card";
+        card.href = `cards.html?sub=${encodeURIComponent(sub.id)}`;
+
+        const timeHtml = sub.createdAt 
+          ? `<div class="card-timestamp-badge">🕒 Added: ${sub.createdAt}</div>` 
+          : ``;
+
+        card.innerHTML = `
+          <div>
+            <div class="cat-icon-wrap">📑</div>
+            <div class="cat-name">${sub.name}</div>
+            <div class="cat-desc">${sub.description || "Browse materials and document sheets"}</div>
+            ${timeHtml}
+          </div>
+          <div class="cat-action-indicator">View Documents & Sheets →</div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+  </script>
+</body>
+</html>
