@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GEC Munger - Academic Portal & Resources</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="css/theme.css">
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header class="portal-navbar">
+    <a href="index.html" class="portal-brand">
+      <span>GECM</span> Portal
+    </a>
+    <a href="admin.html" style="font-size: 12px; font-weight: 700; color: #94a3b8; text-decoration: none; padding: 6px 12px; border-radius: 6px; border: 1px solid #374151;">
+      Admin Access
+    </a>
+  </header>
+
+  <main class="portal-container">
+    
+    <!-- Hero Header -->
+    <section class="portal-header">
+      <div class="portal-badge">
+        <span class="badge-dot"></span>
+        Official Academic Repository
+      </div>
+      <h1 class="portal-title">Government Engineering College, Munger</h1>
+      <p class="portal-subtitle">Access standardized BEU curriculum materials, department assignment cover pages, and live institutional broadcasts.</p>
+    </section>
+
+    <!-- Dynamic Live Broadcast Banner Card -->
+    <section id="liveEventBanner" class="live-event-banner">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px;">
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <div style="width: 56px; height: 56px; border-radius: 12px; background: #1e293b; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid #475569;">
+            <img id="liveEventLogo" src="" alt="Live Stream Logo" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+            <span id="liveEventLogoPlaceholder" style="font-size: 26px;">📡</span>
+          </div>
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+              <span class="live-pulse-dot"></span>
+              <span style="background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4); font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.5px;">Live Now</span>
+              <span id="liveEventStartTime" style="font-size: 11px; font-family: monospace; color: #94a3b8;">Started: Just now</span>
+            </div>
+            <h2 id="liveEventTitle" style="font-size: 17px; font-weight: 700; color: #ffffff; margin: 0 0 4px 0;">Live Academic Session</h2>
+            <p id="liveEventDesc" style="font-size: 12.5px; color: #94a3b8; margin: 0;">Interactive video broadcast from college administration.</p>
+          </div>
+        </div>
+
+        <a href="live.html" style="background: #ef4444; color: #fff; font-weight: 700; font-size: 13px; padding: 10px 20px; border-radius: 10px; text-decoration: none; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4); transition: transform 0.2s;">
+          <span>▶ Watch Live Stream</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- Categories Directory -->
+    <section>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="font-size: 18px; font-weight: 700; color: #fff; margin: 0;">Select Category</h2>
+        <span id="categoryCountBadge" style="font-size: 12px; color: #94a3b8; font-family: monospace;">Loading pillars...</span>
+      </div>
+      
+      <div class="catalog-grid" id="categoryGrid">
+        <div class="empty-state-card">
+          <div class="spinner"></div>
+          <span>Loading academic repositories...</span>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Broadcast Announcement Popup Modal -->
+  <div class="modal-overlay" id="adminBroadcastModal">
+    <div class="modal-box" id="adminModalBox">
+      <button class="modal-close-btn" id="adPopupCloseBtn" aria-label="Dismiss alert">&times;</button>
+      
+      <div class="modal-hero-media-wrap" id="adPopupHeroWrap">
+        <img id="adPopupImg" class="modal-hero-img" src="" alt="Notice Banner" style="display:none;">
+        <video id="adPopupVideo" class="modal-hero-video" autoplay muted loop playsinline style="display:none;"></video>
+        <iframe id="adPopupIframe" class="modal-hero-iframe" src="" allow="autoplay; encrypted-media" allowfullscreen style="display:none;"></iframe>
+        <button id="adPopupUnmuteBtn" type="button" class="ad-unmute-btn" style="display:none;">🔊 Unmute</button>
+      </div>
+
+      <div class="modal-content-area">
+        <h3 id="adPopupTitle" class="modal-title">Announcement</h3>
+        <p id="adPopupBody" class="modal-desc"></p>
+        <a id="adPopupBtn" class="modal-action-btn" href="#" target="_blank">Visit Link</a>
+        
+        <div class="popup-timer-bar-wrap" id="popupTimerWrap">
+          <div class="popup-timer-bar" id="popupTimerBar"></div>
+        </div>
+        <span class="timer-badge" id="popupTimerBadge"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/api.js"></script>
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      // 1. Instant Render from Cache/Defaults
+      renderCategoryCards();
+      checkLiveStatus();
+
+      // 2. Register for background updates
+      portalAPI.onUpdate(() => {
+        renderCategoryCards();
+        checkLiveStatus();
+        initPopupQueue();
+      });
+
+      // 3. Trigger network sync
+      portalAPI.syncCatalog();
+      initPopupQueue();
+    });
+
+    function renderCategoryCards() {
+      const categories = portalAPI.getCategories();
+      const grid = document.getElementById('categoryGrid');
+      const countBadge = document.getElementById('categoryCountBadge');
+      
+      if (!grid) return;
+      grid.innerHTML = "";
+      if (countBadge) countBadge.textContent = `${categories.length} Categories`;
+
+      if (categories.length === 0) {
+        grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: #94a3b8; padding: 40px;">No categories available.</div>`;
+        return;
+      }
+
+      categories.forEach(cat => {
+        const card = document.createElement('a');
+        card.className = "category-card";
+        card.href = `subcategories.html?cat=${encodeURIComponent(cat.id)}`;
+        
+        const timeHtml = cat.createdAt ? `<div class="card-timestamp-badge">🕒 Published: ${cat.createdAt}</div>` : ``;
+
+        card.innerHTML = `
+          <div>
+            <div class="cat-icon-wrap">${cat.icon || "📁"}</div>
+            <div class="cat-name">${cat.name}</div>
+            <div class="cat-desc">${cat.description || "Browse modules and study materials"}</div>
+            ${timeHtml}
+          </div>
+          <div class="cat-action-indicator">Explore Category →</div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function checkLiveStatus() {
+      const liveEvent = portalAPI.getLiveEvent();
+      const banner = document.getElementById('liveEventBanner');
+      if (!banner) return;
+
+      if (liveEvent && liveEvent.active) {
+        banner.style.display = 'block';
+        document.getElementById('liveEventTitle').textContent = liveEvent.title || "Live Broadcast";
+        document.getElementById('liveEventDesc').textContent = liveEvent.description || "Administrative broadcast session.";
+        document.getElementById('liveEventStartTime').textContent = `Started: ${liveEvent.startTime || "Recently"}`;
+
+        const logo = document.getElementById('liveEventLogo');
+        const placeholder = document.getElementById('liveEventLogoPlaceholder');
+        if (liveEvent.logoUrl && liveEvent.logoUrl.trim().length > 5) {
+          logo.src = liveEvent.logoUrl;
+          logo.style.display = 'block';
+          placeholder.style.display = 'none';
+        } else {
+          logo.style.display = 'none';
+          placeholder.style.display = 'block';
+        }
+      } else {
+        banner.style.display = 'none';
+      }
+    }
+
+    // Rotational Popups System
+    let activePopupQueue = [];
+    let currentPopupIndex = 0;
+    let popupTimer = null;
+
+    function initPopupQueue() {
+      const popups = portalAPI.getPopups();
+      if (!popups || popups.length === 0) return;
+      activePopupQueue = popups;
+      currentPopupIndex = 0;
+      displayNextPopup();
+    }
+
+    function displayNextPopup() {
+      if (popupTimer) clearTimeout(popupTimer);
+      if (activePopupQueue.length === 0) return;
+
+      const p = activePopupQueue[currentPopupIndex];
+      const modal = document.getElementById('adminBroadcastModal');
+      const closeBtn = document.getElementById('adPopupCloseBtn');
+      const timerBar = document.getElementById('popupTimerBar');
+      const timerBadge = document.getElementById('popupTimerBadge');
+      const heroWrap = document.getElementById('adPopupHeroWrap');
+      const imgEl = document.getElementById('adPopupImg');
+
+      imgEl.style.display = 'none';
+      if (p.mediaUrl && p.mediaType !== 'video') {
+        heroWrap.style.display = 'flex';
+        imgEl.src = p.mediaUrl;
+        imgEl.style.display = 'block';
+      } else {
+        heroWrap.style.display = 'none';
+      }
+
+      document.getElementById('adPopupTitle').textContent = p.title || "Notice";
+      document.getElementById('adPopupBody').textContent = p.body || "";
+      const btn = document.getElementById('adPopupBtn');
+      btn.textContent = p.buttonText || "Open";
+      btn.href = p.buttonLink || "#";
+
+      modal.style.display = 'flex';
+
+      const closeHandler = () => {
+        modal.style.display = 'none';
+        currentPopupIndex = (currentPopupIndex + 1) % activePopupQueue.length;
+        const delayMs = Math.max(0.1, Number(p.intervalMinutes) || 1) * 60000;
+        popupTimer = setTimeout(displayNextPopup, delayMs);
+      };
+
+      closeBtn.onclick = closeHandler;
+      const seconds = Math.max(1, Number(p.timerSeconds) || 5);
+      if (p.closeMode === 'timer' || p.closeMode === 'both') {
+        document.getElementById('popupTimerWrap').style.display = 'block';
+        timerBadge.style.display = 'inline-block';
+        timerBadge.textContent = `Closing in ${seconds}s...`;
+        setTimeout(closeHandler, seconds * 1000);
+      }
+    }
+  </script>
+</body>
+</html>
