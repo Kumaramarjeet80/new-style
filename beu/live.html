@@ -95,6 +95,8 @@
 
   <script src="js/api.js"></script>
   <script>
+    const FRESH_STREAM_KEY = "temple-hd-live-stream-v3-2026"; 
+
     let peer = null;
     let activeStream = null;
 
@@ -102,7 +104,7 @@
       await portalAPI.syncCatalog();
       const liveEvent = portalAPI.getLiveEvent();
 
-      if (!liveEvent || !liveEvent.active || !liveEvent.peerId) {
+      if (!liveEvent || !liveEvent.active) {
         document.getElementById('streamLoadingState').innerHTML = `
           <span style="font-size: 32px; display: block; margin-bottom: 8px;">⏳</span>
           <span style="font-size: 14px; font-weight: 700; color: #fff;">Just wait for a moment, live is going to start shortly.</span>
@@ -117,7 +119,7 @@
       document.getElementById('streamDesc').textContent = liveEvent.description || "Live session by administration.";
       document.getElementById('streamTimeBadge').textContent = `Started: ${PortalAPI.formatTimestamp(liveEvent.startTime)}`;
 
-      startViewerStream(liveEvent.peerId);
+      startViewerStream();
       portalAPI.joinLive();
     });
 
@@ -126,7 +128,7 @@
       if (peer) peer.destroy();
     });
 
-    function startViewerStream(hostPeerId) {
+    function startViewerStream() {
       const videoElement = document.getElementById('remoteVideo');
       const audioElement = document.getElementById('remoteAudio');
       const loader = document.getElementById('streamLoadingState');
@@ -149,7 +151,7 @@
       });
 
       peer.on('open', (myViewerId) => {
-        const conn = peer.connect(hostPeerId);
+        const conn = peer.connect(FRESH_STREAM_KEY);
 
         conn.on('open', () => {
           conn.send('REQUEST_STREAM');
@@ -171,7 +173,6 @@
 
             activeStream = remoteStream;
 
-            // Attach stream to both video and dedicated audio elements
             videoElement.srcObject = remoteStream;
             audioElement.srcObject = remoteStream;
 
