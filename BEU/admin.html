@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GECM Portal - Unified Admin Studio</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- PeerJS Library Matching Reference -->
+  <!-- PeerJS Library -->
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <style>
     * { box-sizing: border-box; }
@@ -24,18 +24,18 @@
   <header class="bg-slate-950 border-b border-slate-800 px-6 py-4 flex flex-wrap justify-between items-center gap-4 sticky top-0 z-50">
     <div class="flex items-center gap-3">
       <span class="text-xl font-extrabold text-blue-400 tracking-tight">GECM Studio</span>
-      <span class="text-xs px-2.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 font-mono">v5.1 Master Stream Studio</span>
+      <span class="text-xs px-2.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 font-mono">v5.2 Master Stream Studio</span>
     </div>
     <div id="authStatusBadge" class="text-xs text-amber-400 font-semibold flex items-center gap-2">
       <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> Authentication Required
     </div>
   </header>
 
-  <!-- Login Overlay with v5.1 Badge -->
+  <!-- Login Overlay -->
   <div id="loginView" class="max-w-md mx-auto mt-20 p-6 bg-slate-800/90 backdrop-blur rounded-xl shadow-2xl border border-slate-700">
     <div class="flex justify-between items-center mb-2">
       <h2 class="text-xl font-bold text-white">Studio Authentication</h2>
-      <span class="text-[10px] px-2 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 font-mono">v5.1</span>
+      <span class="text-[10px] px-2 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 font-mono">v5.2</span>
     </div>
     <p class="text-xs text-slate-400 text-center mb-6">Enter master administrative passkey to manage studio modules.</p>
     <input type="password" id="adminPassword" placeholder="Enter admin passkey" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm mb-4 outline-none focus:border-blue-500 text-white placeholder-slate-500">
@@ -125,7 +125,7 @@
       </div>
     </section>
 
-    <!-- TAB 2: LIVE BROADCAST STUDIO (MATCHING REFERENCE ARCHITECTURE) -->
+    <!-- TAB 2: LIVE BROADCAST STUDIO -->
     <section id="tab-live" class="tab-pane hidden space-y-8">
       <div class="bg-slate-800/60 border border-slate-700 rounded-xl p-6 space-y-6">
         <div class="border-b border-slate-700 pb-4 flex flex-wrap justify-between items-center gap-4">
@@ -136,11 +136,12 @@
                 <span class="w-2 h-2 rounded-full bg-slate-500"></span> Offline
               </span>
             </div>
-            <p class="text-xs text-slate-400 mt-1">Broadcast high-definition video and microphone audio directly using reference PeerJS signaling.</p>
+            <p class="text-xs text-slate-400 mt-1">High-FPS stable streaming with direct Google Drive cloud archival.</p>
           </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <!-- Left Column: Video Preview & Controls -->
           <div class="lg:col-span-7 space-y-4">
             <div class="relative bg-black rounded-xl overflow-hidden aspect-video border border-slate-700 flex items-center justify-center">
               <video id="adminLocalPreview" autoplay muted playsinline class="w-full h-full object-contain"></video>
@@ -148,27 +149,40 @@
                 <span class="text-3xl">📹</span><span>Camera feed preview</span>
               </div>
               <div id="liveStreamOverlayTag" class="absolute top-3 left-3 bg-red-600 text-white text-[11px] font-bold px-2.5 py-1 rounded shadow hidden">
-                🔴 ON AIR (REFERENCE SYNC)
+                🔴 ON AIR (HIGH-FPS STABLE)
               </div>
             </div>
             <div class="grid grid-cols-3 gap-3">
-              <button type="button" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold py-2.5 rounded-lg" onclick="startBroadcast('user')">🤳 Front Cam</button>
-              <button type="button" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold py-2.5 rounded-lg" onclick="startBroadcast('environment')">🔄 Back Cam</button>
-              <button type="button" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold py-2.5 rounded-lg" onclick="startBroadcast('screen')">🖥 Share Screen</button>
+              <button type="button" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold py-2.5 rounded-lg transition" onclick="startBroadcast('user')">🤳 Front Cam</button>
+              <button type="button" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold py-2.5 rounded-lg transition" onclick="startBroadcast('environment')">🔄 Back Cam</button>
+              <button type="button" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold py-2.5 rounded-lg transition" onclick="startBroadcast('screen')">🖥 Share Screen</button>
             </div>
-            <button type="button" id="stopBtn" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-2.5 rounded-lg text-xs" style="display: none;" onclick="stopBroadcast()">⏹️ Stop Broadcast</button>
+            <button type="button" id="stopBtn" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-2.5 rounded-lg text-xs shadow-lg transition" style="display: none;" onclick="stopBroadcast()">⏹️ Stop & Save Recording to Drive</button>
           </div>
 
+          <!-- Right Column: Settings & Live Metadata -->
           <div class="lg:col-span-5 space-y-4">
             <div class="space-y-3 bg-slate-900 p-4 rounded-xl border border-slate-700">
               <h4 class="text-xs font-bold uppercase text-slate-300 border-b border-slate-800 pb-2">Broadcast Settings</h4>
-              <input type="text" id="liveTitleInput" value="GECM Official Live Academic Briefing" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white">
-              <textarea id="liveDescInput" rows="2" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white">Live session by administration regarding semester schedule.</textarea>
-              <input type="url" id="liveLogoInput" value="https://lh3.googleusercontent.com/d/1Pg1tZ-1Uodqzi5iciN61hq8jMooT0eo2" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white">
+              <input type="text" id="liveTitleInput" value="GECM Official Live Academic Briefing" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+              <textarea id="liveDescInput" rows="2" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">Live session by administration regarding semester schedule.</textarea>
+              
+              <div>
+                <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1">Upload Live Thumbnail / Logo (Local Storage)</label>
+                <input type="file" id="liveLogoFile" accept="image/*" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-1.5 text-xs text-slate-400 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[11px] file:bg-blue-600 file:text-white">
+              </div>
             </div>
             <div id="logBox" class="bg-slate-950 p-3 rounded-lg border border-slate-800 font-mono text-[11px] text-slate-400 h-32 overflow-y-auto">
               Select Front Camera, Back Camera, or Screen Share to begin...<br>
             </div>
+          </div>
+        </div>
+
+        <!-- Previous Live History Archive Cards Section -->
+        <div class="mt-8 border-t border-slate-700/60 pt-6 space-y-4">
+          <h4 class="text-sm font-bold text-white">Previous Live History Archive (Google Drive Recordings)</h4>
+          <div id="previousLiveArchiveContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="p-4 bg-slate-900/60 rounded-xl border border-slate-800 text-xs text-slate-500 text-center">Loading past recordings from Google Drive...</div>
           </div>
         </div>
       </div>
@@ -224,11 +238,13 @@
     const FRESH_STREAM_KEY = "temple-hd-live-stream-v3-2026"; 
 
     let authPass = "";
-    let studioData = { categories: [], subcategories: [], cards: [], popups: [], telemetry: [], liveEvent: null };
+    let studioData = { categories: [], subcategories: [], cards: [], popups: [], telemetry: [], liveEvent: null, pastLiveArchive: [] };
     
-    // Reference Stream Variables
     let localStream = null;
+    let mediaRecorder = null;
+    let recordedChunks = [];
     let peer = null;
+    let streamStartTime = null;
 
     function logMsg(msg) {
       const box = document.getElementById('logBox');
@@ -239,6 +255,16 @@
     }
 
     function clearUserLocalCache() { try { localStorage.removeItem("gecm_portal_catalog_cache"); } catch (e) {} }
+
+    function readFileAsBase64(file) {
+      return new Promise((resolve) => {
+        if (!file) return resolve(null);
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(file);
+      });
+    }
 
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -267,38 +293,55 @@
         studioData.categories = data.categories || [];
         studioData.subcategories = data.subcategories || [];
         studioData.cards = data.cards || [];
+        studioData.pastLiveArchive = Array.isArray(data.pastLiveArchive) ? data.pastLiveArchive : [];
         populateDropdowns();
         renderTelemetry(studioData.telemetry);
+        renderPastLiveArchive(studioData.pastLiveArchive);
       } else {
         document.getElementById('loginError').textContent = "Invalid password.";
         document.getElementById('loginError').classList.remove('hidden');
       }
     });
 
-    // REFERENCE BROADCAST ENGINE (`brodcastpage_2.html` implementation)
+    // HIGH-FPS & STABLE BROADCAST ENGINE WITH GOOGLE DRIVE ARCHIVAL
     async function startBroadcast(sourceType) {
       try {
         if (peer) { peer.destroy(); peer = null; }
 
-        logMsg(`Initializing media source: ${sourceType}...`);
+        logMsg(`Initializing high-FPS media source: ${sourceType}...`);
 
+        // High-FPS and High-Stability Constraints
         if (sourceType === 'screen') {
-          localStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+          localStream = await navigator.mediaDevices.getDisplayMedia({ 
+            video: { cursor: "always", frameRate: { ideal: 30, max: 60 } }, 
+            audio: true 
+          });
           localStream.getVideoTracks()[0].onended = () => stopBroadcast();
         } else {
           localStream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: sourceType, width: { ideal: 1280 }, height: { ideal: 720 } }, 
-            audio: { echoCancellation: true, noiseSuppression: true } 
+            video: { facingMode: sourceType, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30, max: 60 } }, 
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } 
           });
         }
 
         document.getElementById('adminLocalPreview').srcObject = localStream;
         document.getElementById('previewPlaceholder').style.display = 'none';
         document.getElementById('stopBtn').style.display = 'inline-block';
+        streamStartTime = new Date();
 
-        logMsg("Media capture initiated successfully.");
+        logMsg("High-FPS media capture active.");
 
-        // Register on PeerJS signaling server using reference stream key
+        // Start local recording buffer to upload directly to Drive on stop
+        recordedChunks = [];
+        try {
+          mediaRecorder = new MediaRecorder(localStream, { mimeType: 'video/webm' });
+        } catch (e) {
+          mediaRecorder = new MediaRecorder(localStream);
+        }
+        mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) recordedChunks.push(e.data); };
+        mediaRecorder.start(1000);
+
+        // Register on PeerJS signaling server with robust STUN list
         peer = new Peer(FRESH_STREAM_KEY, {
           config: {
             iceServers: [
@@ -320,29 +363,31 @@
 
           const title = document.getElementById('liveTitleInput').value.trim() || "GECM Official Live Briefing";
           const desc = document.getElementById('liveDescInput').value.trim();
-          const logoUrl = document.getElementById('liveLogoInput').value.trim();
+          
+          let logoUrl = "https://lh3.googleusercontent.com/d/1Pg1tZ-1Uodqzi5iciN61hq8jMooT0eo2";
+          const logoFileInput = document.getElementById('liveLogoFile');
+          if (logoFileInput.files && logoFileInput.files[0]) {
+            const base64Logo = await readFileAsBase64(logoFileInput.files[0]);
+            if (base64Logo) logoUrl = base64Logo;
+          }
 
-          // Sync live event state to Google Sheets so `live.html` finds it instantly
           await fetch(APPS_SCRIPT_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain' },
             body: JSON.stringify({
               action: "admin_start_live", key: authPass,
-              title, description: desc, logoUrl, peerId: id
+              title, description: desc, logoUrl, peerId: id, sourceType
             })
           });
           clearUserLocalCache();
         });
 
-        // Answer incoming media calls directly from viewers[cite: 4]
         peer.on('call', (call) => {
-          logMsg("Incoming visitor call received. Answering with media stream...");
+          logMsg("Incoming visitor call. Answering with high-FPS stream...");
           call.answer(localStream);
         });
 
-        // Answer data connections requesting stream[cite: 4]
         peer.on('connection', (conn) => {
-          logMsg("Viewer data channel opened.");
           conn.on('data', (data) => {
             if (data === 'REQUEST_STREAM' && localStream) {
               logMsg(`Viewer requested stream! Dialing viewer ID: ${conn.peer}`);
@@ -351,9 +396,7 @@
           });
         });
 
-        peer.on('error', (err) => {
-          logMsg(`❌ PeerJS Error: ${err.type}`);
-        });
+        peer.on('error', (err) => { logMsg(`❌ PeerJS Error: ${err.type}`); });
 
       } catch (err) {
         logMsg(`❌ Broadcast error: ${err.message}`);
@@ -361,22 +404,100 @@
     }
 
     async function stopBroadcast() {
+      if (mediaRecorder && mediaRecorder.state !== "inactive") {
+        mediaRecorder.stop();
+      }
       if (localStream) localStream.getTracks().forEach(track => track.stop());
       if (peer) { peer.destroy(); peer = null; }
 
-      try {
-        await fetch(APPS_SCRIPT_URL, {
-          method: 'POST', headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify({ action: "admin_end_live", key: authPass })
-        });
-      } catch (e) {}
+      logMsg("Uploading recording directly to Google Drive cloud archive...");
 
-      clearUserLocalCache();
-      document.getElementById('stopBtn').style.display = 'none';
-      document.getElementById('liveStatusBadge').innerHTML = `<span class="w-2 h-2 rounded-full bg-slate-500"></span> Offline`;
-      document.getElementById('liveStatusBadge').className = "bg-slate-800 text-slate-400 border border-slate-700 text-xs px-2.5 py-0.5 rounded font-semibold flex items-center gap-1.5";
-      document.getElementById('liveStreamOverlayTag').classList.add('hidden');
-      logMsg("Broadcast session ended.");
+      setTimeout(async () => {
+        let driveVideoUrl = "";
+        if (recordedChunks.length > 0) {
+          const blob = new Blob(recordedChunks, { type: 'video/webm' });
+          const reader = new FileReader();
+          reader.readAsDataURL(blob);
+          await new Promise(resolve => {
+            reader.onloadend = async () => {
+              const base64Video = reader.result;
+              try {
+                const uploadRes = await fetch(APPS_SCRIPT_URL, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'text/plain' },
+                  body: JSON.stringify({
+                    action: "admin_upload_standalone_doc",
+                    key: authPass,
+                    file: { base64: base64Video, name: `live-archive-${Date.now()}.webm` }
+                  })
+                });
+                const uploadData = await uploadRes.json();
+                if (uploadData && uploadData.fileUrl) {
+                  driveVideoUrl = uploadData.fileUrl;
+                  logMsg("✓ Recording successfully uploaded to Google Drive!");
+                }
+              } catch (e) {
+                logMsg("❌ Drive upload error: " + e.message);
+              }
+              resolve();
+            };
+          });
+        }
+
+        const durationSec = streamStartTime ? Math.floor((new Date() - streamStartTime) / 1000) : 0;
+        const durationFormatted = `${Math.floor(durationSec / 60)}m ${durationSec % 60}s`;
+
+        try {
+          await fetch(APPS_SCRIPT_URL, {
+            method: 'POST', headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({
+              action: "admin_end_live", key: authPass,
+              archiveEntry: {
+                title: document.getElementById('liveTitleInput').value.trim(),
+                description: document.getElementById('liveDescInput').value.trim(),
+                date: new Date().toLocaleDateString(),
+                time: new Date().toLocaleTimeString(),
+                duration: durationFormatted,
+                videoUrl: driveVideoUrl
+              }
+            })
+          });
+        } catch (e) {}
+
+        clearUserLocalCache();
+        document.getElementById('stopBtn').style.display = 'none';
+        document.getElementById('liveStatusBadge').innerHTML = `<span class="w-2 h-2 rounded-full bg-slate-500"></span> Offline`;
+        document.getElementById('liveStatusBadge').className = "bg-slate-800 text-slate-400 border border-slate-700 text-xs px-2.5 py-0.5 rounded font-semibold flex items-center gap-1.5";
+        document.getElementById('liveStreamOverlayTag').classList.add('hidden');
+        logMsg("Broadcast ended and archived to cloud.");
+      }, 1500);
+    }
+
+    function renderPastLiveArchive(archiveList) {
+      const container = document.getElementById('previousLiveArchiveContainer');
+      if (!container) return;
+      if (!archiveList || archiveList.length === 0) {
+        container.innerHTML = `<div class="col-span-2 p-4 bg-slate-900/60 rounded-xl border border-slate-800 text-xs text-slate-500 text-center">No previous live recordings found in cloud archive.</div>`;
+        return;
+      }
+
+      container.innerHTML = archiveList.map(item => `
+        <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <h5 class="font-bold text-white text-sm">${item.title || 'Untitled Broadcast'}</h5>
+            <span class="text-[10px] font-mono bg-blue-950 text-blue-300 border border-blue-800 px-2 py-0.5 rounded">${item.duration || 'N/A'}</span>
+          </div>
+          <p class="text-xs text-slate-400 line-clamp-2">${item.description || 'No description provided.'}</p>
+          <div class="text-[11px] font-mono text-slate-500">Date: ${item.date || 'N/A'} | Time: ${item.time || 'N/A'}</div>
+          
+          <!-- Direct Drive Video Embedded Playback -->
+          ${item.videoUrl ? `
+            <div class="aspect-video bg-black rounded-lg overflow-hidden border border-slate-800">
+              <video controls class="w-full h-full object-contain" src="${item.videoUrl}"></video>
+            </div>
+          ` : `<div class="text-xs text-amber-500 font-mono">Video recording processing or unavailable.</div>`}
+        </div>
+      `).join('');
     }
 
     function populateDropdowns() {
