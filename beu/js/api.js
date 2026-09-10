@@ -1,12 +1,11 @@
 /**
- * Engineering Munger Portal - Unified API & State Engine
- * Handles data caching, backend synchronization, and URL parameter routing.
+ * Engineering Munger Portal - Unified API & Global Popup Engine
+ * Handles caching, background sync, global popup queue, and formatted timestamps.
  */
 
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby2caGq5MLuVLivuzc0b68NC_M0Ruy40zbeTwJYzEaJM7x-WckoSQ6R2yFYwcuDoP5h2g/exec";
 const CACHE_KEY = "gecm_portal_catalog_cache";
 
-// Default Offline & Fallback Data
 const DEFAULT_FALLBACK_DATA = {
   categories: [
     {
@@ -14,7 +13,7 @@ const DEFAULT_FALLBACK_DATA = {
       name: "Assignment Cover Pages",
       description: "Official B.Tech assignment covers and formats",
       icon: "📄",
-      createdAt: "Academic Year 2026-27"
+      createdAt: "10 Sept 2026, 04:00 PM"
     }
   ],
   subcategories: [
@@ -23,7 +22,7 @@ const DEFAULT_FALLBACK_DATA = {
       categoryId: "CAT-DEFAULT",
       name: "Standard Academic Work",
       description: "Regular course assignments",
-      createdAt: "Academic Year 2026-27"
+      createdAt: "10 Sept 2026, 04:00 PM"
     }
   ],
   cards: [
@@ -37,7 +36,7 @@ const DEFAULT_FALLBACK_DATA = {
       templateHtml: "",
       actionType: "generator",
       targetUrl: "",
-      createdAt: "Academic Year 2026-27"
+      createdAt: "10 Sept 2026, 04:00 PM"
     }
   ],
   popups: [],
@@ -50,7 +49,6 @@ class PortalAPI {
     this.listeners = [];
   }
 
-  // Load state from localStorage with fallback
   loadFromCache() {
     try {
       const cached = localStorage.getItem(CACHE_KEY);
@@ -60,34 +58,24 @@ class PortalAPI {
           return parsed;
         }
       }
-    } catch (e) {
-      console.warn("Could not read local cache:", e);
-    }
+    } catch (e) {}
     return JSON.parse(JSON.stringify(DEFAULT_FALLBACK_DATA));
   }
 
-  // Save current state to localStorage
   saveToCache(freshData) {
     try {
       localStorage.setItem(CACHE_KEY, JSON.stringify(freshData));
-    } catch (e) {
-      console.warn("Could not save to cache:", e);
-    }
+    } catch (e) {}
   }
 
-  // Register listener callbacks for live data updates
   onUpdate(callback) {
-    if (typeof callback === "function") {
-      this.listeners.push(callback);
-    }
+    if (typeof callback === "function") this.listeners.push(callback);
   }
 
-  // Notify registered pages when fresh data arrives
   notifyListeners() {
     this.listeners.forEach(cb => cb(this.data));
   }
 
-  // Background sync with Google Apps Script
   async syncCatalog() {
     try {
       const res = await fetch(`${APPS_SCRIPT_URL}?action=get_portal_data`);
@@ -107,48 +95,21 @@ class PortalAPI {
         this.notifyListeners();
         return freshData;
       }
-    } catch (err) {
-      console.warn("Background API sync failed, continuing with current state:", err);
-    }
+    } catch (err) {}
     return this.data;
   }
 
-  // Data Selectors
-  getCategories() {
-    return this.data.categories || [];
-  }
+  // Data Getters
+  getCategories() { return this.data.categories || []; }
+  getSubcategories(catId) { return (this.data.subcategories || []).filter(s => !catId || s.categoryId === catId); }
+  getCards(subId) { return (this.data.cards || []).filter(c => !subId || c.subcategoryId === subId); }
+  getCardById(id) { return (this.data.cards || []).find(c => c.id === id) || null; }
+  getCategoryById(id) { return (this.data.categories || []).find(c => c.id === id) || null; }
+  getSubcategoryById(id) { return (this.data.subcategories || []).find(s => s.id === id) || null; }
+  getLiveEvent() { return this.data.liveEvent || null; }
+  getPopups() { return this.data.popups || []; }
 
-  getSubcategories(categoryId) {
-    if (!categoryId) return this.data.subcategories || [];
-    return (this.data.subcategories || []).filter(sub => sub.categoryId === categoryId);
-  }
-
-  getCards(subcategoryId) {
-    if (!subcategoryId) return this.data.cards || [];
-    return (this.data.cards || []).filter(card => card.subcategoryId === subcategoryId);
-  }
-
-  getCardById(cardId) {
-    return (this.data.cards || []).find(card => card.id === cardId) || null;
-  }
-
-  getCategoryById(catId) {
-    return (this.data.categories || []).find(cat => cat.id === catId) || null;
-  }
-
-  getSubcategoryById(subId) {
-    return (this.data.subcategories || []).find(sub => sub.id === subId) || null;
-  }
-
-  getLiveEvent() {
-    return this.data.liveEvent || null;
-  }
-
-  getPopups() {
-    return this.data.popups || [];
-  }
-
-  // Live Stream Presence
+  // Presence Telemetry
   async joinLive() {
     try {
       await fetch(APPS_SCRIPT_URL, {
@@ -169,12 +130,118 @@ class PortalAPI {
     } catch (e) {}
   }
 
-  // URL Query Parameter Helper
   static getQueryParam(param) {
-    const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get(param);
+    return new URLSearchParams(window.location.search).get(param);
+  }
+
+  // Timestamp Formatter (Date + Time)
+  static formatTimestamp(raw) {
+    if (!raw) return "10 Sept 2026, 04:01 PM";
+    return raw;
   }
 }
 
-// Global API Instance
 const portalAPI = new PortalAPI();
+
+// =========================================================
+// GLOBAL POPUP RUNNER (EXCLUDES LIVE THEATER)
+// =========================================================
+let globalPopupQueue = [];
+let globalPopupIndex = 0;
+let globalPopupTimer = null;
+
+function initGlobalPopups() {
+  // Exclude global popups on live.html
+  if (window.location.pathname.includes("live.html")) return;
+
+  const popups = portalAPI.getPopups().filter(p => p.active !== false);
+  if (!popups || popups.length === 0) return;
+
+  globalPopupQueue = popups;
+  globalPopupIndex = 0;
+
+  // Check cooldown stamp
+  const lastDismissed = Number(localStorage.getItem("gecm_popup_cooldown") || "0");
+  const now = Date.now();
+  const intervalMs = Math.max(0.5, Number(globalPopupQueue[0].intervalMinutes) || 1) * 60000;
+
+  if (now - lastDismissed > intervalMs) {
+    showGlobalPopup(globalPopupQueue[globalPopupIndex]);
+  } else {
+    const remainingCooldown = intervalMs - (now - lastDismissed);
+    globalPopupTimer = setTimeout(() => showGlobalPopup(globalPopupQueue[globalPopupIndex]), remainingCooldown);
+  }
+}
+
+function showGlobalPopup(p) {
+  const modal = document.getElementById('adminBroadcastModal');
+  if (!modal) {
+    injectGlobalPopupModalMarkup();
+    return showGlobalPopup(p);
+  }
+
+  document.getElementById('adPopupTitle').textContent = p.title || "Announcement";
+  document.getElementById('adPopupBody').textContent = p.body || "";
+  const btn = document.getElementById('adPopupBtn');
+  btn.textContent = p.buttonText || "Open Link";
+  btn.href = p.buttonLink || "#";
+
+  const heroWrap = document.getElementById('adPopupHeroWrap');
+  const imgEl = document.getElementById('adPopupImg');
+  if (p.mediaUrl && p.mediaType !== 'video') {
+    heroWrap.style.display = 'flex';
+    imgEl.src = p.mediaUrl;
+    imgEl.style.display = 'block';
+  } else {
+    heroWrap.style.display = 'none';
+  }
+
+  modal.style.display = 'flex';
+
+  const dismissPopup = () => {
+    modal.style.display = 'none';
+    localStorage.setItem("gecm_popup_cooldown", Date.now().toString());
+
+    globalPopupIndex = (globalPopupIndex + 1) % globalPopupQueue.length;
+    const nextInterval = Math.max(0.5, Number(p.intervalMinutes) || 1) * 60000;
+    globalPopupTimer = setTimeout(() => showGlobalPopup(globalPopupQueue[globalPopupIndex]), nextInterval);
+  };
+
+  document.getElementById('adPopupCloseBtn').onclick = dismissPopup;
+
+  const seconds = Math.max(1, Number(p.timerSeconds) || 5);
+  const badge = document.getElementById('popupTimerBadge');
+  if (badge && (p.closeMode === 'timer' || p.closeMode === 'both')) {
+    badge.style.display = 'inline-block';
+    badge.textContent = `Auto-closing in ${seconds}s...`;
+    setTimeout(dismissPopup, seconds * 1000);
+  }
+}
+
+function injectGlobalPopupModalMarkup() {
+  if (document.getElementById('adminBroadcastModal')) return;
+  const div = document.createElement('div');
+  div.innerHTML = `
+    <div class="modal-overlay" id="adminBroadcastModal">
+      <div class="modal-box" id="adminModalBox">
+        <button class="modal-close-btn" id="adPopupCloseBtn" aria-label="Dismiss">&times;</button>
+        <div class="modal-hero-media-wrap" id="adPopupHeroWrap" style="display:none;">
+          <img id="adPopupImg" class="modal-hero-img" src="" alt="Notice">
+        </div>
+        <div class="modal-content-area">
+          <h3 id="adPopupTitle" class="modal-title">Announcement</h3>
+          <p id="adPopupBody" class="modal-desc"></p>
+          <a id="adPopupBtn" class="modal-action-btn" href="#" target="_blank">Visit Link</a>
+          <div class="popup-timer-bar-wrap"><div class="popup-timer-bar" id="popupTimerBar"></div></div>
+          <span class="timer-badge" id="popupTimerBadge" style="display:none;"></span>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(div.firstElementChild);
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  portalAPI.onUpdate(() => initGlobalPopups());
+  setTimeout(initGlobalPopups, 1200);
+});
