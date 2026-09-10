@@ -14,121 +14,69 @@
   <link rel="stylesheet" href="css/theme.css">
 
   <style>
-    .theater-container {
-      max-width: 720px;
-      margin: 0 auto;
-      padding: 20px 16px 60px 16px;
-    }
+    .theater-container { max-width: 720px; margin: 0 auto; padding: 20px 16px 60px 16px; }
     .live-theater-card {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--card-radius);
-      padding: 16px;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+      background: var(--bg-secondary); border: 1px solid var(--border-subtle);
+      border-radius: var(--card-radius); padding: 16px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
     }
     .video-viewport {
-      width: 100%;
-      aspect-ratio: 16 / 9;
-      background: #000;
-      border-radius: 12px;
-      overflow: hidden;
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 14px;
+      width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 12px;
+      overflow: hidden; position: relative; display: flex; align-items: center; justify-content: center; margin-bottom: 14px;
     }
-    .video-viewport video {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-    }
-    .theater-controls-row {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 14px;
-    }
+    .video-viewport video { width: 100%; height: 100%; object-fit: contain; }
+    .theater-controls-row { display: flex; gap: 12px; margin-bottom: 14px; }
     .theater-btn {
-      flex: 1;
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid var(--border-subtle);
-      color: #fff;
-      padding: 10px;
-      border-radius: 10px;
-      font-size: 13px;
-      font-weight: 700;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      transition: background 0.2s;
+      flex: 1; background: rgba(255, 255, 255, 0.06); border: 1px solid var(--border-subtle);
+      color: #fff; padding: 10px; border-radius: 10px; font-size: 13px; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.2s;
     }
-    .theater-btn:hover {
-      background: rgba(255, 255, 255, 0.12);
-    }
-    /* Floating exit fullscreen button inside viewport */
+    .theater-btn:hover { background: rgba(255, 255, 255, 0.12); }
     .fullscreen-exit-overlay {
-      position: absolute;
-      top: 16px;
-      right: 16px;
-      background: rgba(15, 23, 42, 0.85);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      color: #fff;
-      padding: 8px 14px;
-      border-radius: 8px;
-      font-size: 12px;
-      font-weight: 700;
-      cursor: pointer;
-      display: none;
-      align-items: center;
-      gap: 6px;
-      z-index: 999;
-      backdrop-filter: blur(4px);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-      transition: background 0.2s;
+      position: absolute; top: 16px; right: 16px; background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.2); color: #fff; padding: 8px 14px;
+      border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; display: none;
+      align-items: center; gap: 6px; z-index: 999; backdrop-filter: blur(4px);
     }
-    .fullscreen-exit-overlay:hover {
-      background: rgba(30, 41, 59, 0.95);
+    .transition-spinner {
+      width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1);
+      border-top-color: #38bdf8; border-radius: 50%; animation: spin 0.8s linear infinite;
     }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
 
   <!-- Top Navigation Bar -->
   <header class="portal-navbar">
-    <a href="index.html" class="portal-brand">
-      <span>GECM</span> Live Theater
-    </a>
-    <a href="index.html" class="btn-back-to-catalog" style="padding: 6px 12px; font-size: 11.5px;">
-      ← Back to Catalog
-    </a>
+    <a href="index.html" class="portal-brand"><span>GECM</span> Live Theater</a>
+    <a href="index.html" class="btn-back-to-catalog" style="padding: 6px 12px; font-size: 11.5px;">← Back to Catalog</a>
   </header>
 
   <main class="theater-container">
-
-    <!-- Live Theater Box -->
     <div class="live-theater-card">
       
-      <!-- Topic Title Inside the Box Above Video -->
-      <h1 id="streamTitle" style="font-size: 20px; font-weight: 800; color: #fff; margin: 0 0 14px 0; letter-spacing: -0.4px;">Connecting to Live Session...</h1>
+      <!-- Stream Topic Inside Box Above Video -->
+      <h1 id="streamTitle" style="font-size: 20px; font-weight: 800; color: #fff; margin: 0 0 14px 0;">Connecting to Live Session...</h1>
 
       <!-- Broadcast Viewport -->
       <div class="video-viewport" id="videoViewport">
-        <video id="remoteVideo" autoplay playsinline></video>
+        <video id="liveVideoPlayer" autoplay playsinline></video>
+        
+        <!-- Dedicated secondary audio player to guarantee sound decoding stability -->
+        <audio id="liveAudioPlayer" autoplay></audio>
 
         <!-- Floating Fullscreen Exit Button -->
         <button type="button" id="btnExitFullscreenOverlay" class="fullscreen-exit-overlay">
           ✕ Exit Fullscreen
         </button>
 
-        <!-- Connecting / Offline Overlay State -->
-        <div id="streamLoadingState" style="position: absolute; display: flex; flex-direction: column; align-items: center; gap: 12px; color: #94a3b8; text-align: center; padding: 20px;">
-          <div class="spinner"></div>
-          <span style="font-size: 13.5px; font-weight: 600;">Connecting to secure live video stream...</span>
+        <!-- Loading / Transition / Countdown Waiting State Overlay -->
+        <div id="streamLoadingState" style="position: absolute; display: flex; flex-direction: column; align-items: center; gap: 12px; color: #94a3b8; text-align: center; padding: 20px; background: rgba(0,0,0,0.85); width: 100%; height: 100%; z-index: 10;">
+          <div class="transition-spinner"></div>
+          <span id="loadingMessageText" style="font-size: 13.5px; font-weight: 600; color: #fff;">Just wait for a moment, live is going to start shortly...</span>
         </div>
 
-        <!-- Live Indicator Tag -->
+        <!-- Live Badge -->
         <div id="liveBadgeTag" style="position: absolute; top: 12px; left: 12px; background: rgba(239, 68, 68, 0.9); color: #fff; font-size: 10.5px; font-weight: 800; padding: 3px 8px; border-radius: 6px; display: flex; align-items: center; gap: 5px; text-transform: uppercase; display: none;">
           <span class="live-pulse-dot" style="background-color: #fff; box-shadow: 0 0 6px #fff;"></span> LIVE
         </div>
@@ -136,28 +84,25 @@
 
       <!-- Controls Row -->
       <div class="theater-controls-row">
-        <button id="btnUnmuteAudio" type="button" class="theater-btn">
-          🔊 Unmute Audio
-        </button>
-        <button id="btnFullscreen" type="button" class="theater-btn">
-          ⛶ Fullscreen
-        </button>
+        <button id="btnUnmuteAudio" type="button" class="theater-btn">🔊 Unmute Audio</button>
+        <button id="btnFullscreen" type="button" class="theater-btn">⛶ Fullscreen</button>
       </div>
 
-      <!-- Highlighted Timestamp & Description -->
+      <!-- Highlighted Timestamp, Description & Audio Diagnostics -->
       <div style="font-size: 12.5px; color: #94a3b8; line-height: 1.5;">
-        <div id="streamTimeBadge" style="font-family: monospace; font-weight: 700; color: #38bdf8; margin-bottom: 4px;">Started: 10 Sept 2026, 05:52 PM</div>
-        <p id="streamDesc" style="margin: 0;">Institutional academic live broadcast stream.</p>
+        <div id="streamTimeBadge" style="font-family: monospace; font-weight: 700; color: #38bdf8; margin-bottom: 4px;">Status: Standby</div>
+        <p id="streamDesc" style="margin: 0 0 6px 0;">Institutional academic live broadcast stream.</p>
+        <div id="audioStatusIndicator" style="font-size: 11px; font-family: monospace; color: #f59e0b;">Audio Status: Waiting for stream connection...</div>
       </div>
 
     </div>
-
   </main>
 
   <script src="js/api.js"></script>
   <script>
-    let peer = null;
-    let activeStream = null;
+    let viewerPeer = null;
+    let liveCall = null;
+    let activeRemoteStream = null;
 
     window.addEventListener('DOMContentLoaded', async () => {
       await portalAPI.syncCatalog();
@@ -165,11 +110,12 @@
 
       if (!liveEvent || !liveEvent.active || !liveEvent.peerId) {
         document.getElementById('streamLoadingState').innerHTML = `
-          <span style="font-size: 32px; display: block; margin-bottom: 8px;">📡</span>
-          <span style="font-size: 14px; font-weight: 700; color: #fff;">No active broadcast at the moment.</span>
-          <br><a href="index.html" class="card-cta-btn" style="width: auto; margin-top: 10px; padding: 6px 14px;">Return Home</a>
+          <span style="font-size: 32px; display: block; margin-bottom: 8px;">⏳</span>
+          <span style="font-size: 14px; font-weight: 700; color: #fff;">Just wait for a moment, live is going to start shortly.</span>
+          <p style="font-size: 12px; color: #94a3b8; margin-top: 6px;">The administration will commence the transmission momentarily.</p>
+          <br><a href="index.html" class="card-cta-btn" style="width: auto; margin-top: 4px; padding: 6px 14px;">Return Home</a>
         `;
-        document.getElementById('streamTitle').textContent = "Stream Offline";
+        document.getElementById('streamTitle').textContent = "Stream Standby / Scheduled";
         return;
       }
 
@@ -177,113 +123,131 @@
       document.getElementById('streamDesc').textContent = liveEvent.description || "Live session by administration.";
       document.getElementById('streamTimeBadge').textContent = `Started: ${PortalAPI.formatTimestamp(liveEvent.startTime)}`;
 
-      startViewerStream(liveEvent.peerId);
+      connectToBroadcast(liveEvent.peerId);
       portalAPI.joinLive();
     });
 
     window.addEventListener('beforeunload', () => {
       portalAPI.leaveLive();
-      if (peer) peer.destroy();
+      if (viewerPeer) viewerPeer.destroy();
     });
 
-    function startViewerStream(hostPeerId) {
-      const videoElement = document.getElementById('remoteVideo');
+    function connectToBroadcast(hostPeerId) {
+      const videoEl = document.getElementById('liveVideoPlayer');
+      const audioEl = document.getElementById('liveAudioPlayer');
       const loader = document.getElementById('streamLoadingState');
       const liveBadge = document.getElementById('liveBadgeTag');
+      const audioStatus = document.getElementById('audioStatusIndicator');
+      const viewerId = "gecm_thtr_" + Math.random().toString(36).substring(2, 8);
 
-      if (peer) { peer.destroy(); }
+      viewerPeer = new Peer(viewerId, { debug: 1 });
 
-      peer = new Peer({
-        config: {
-          iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' },
-            { urls: 'stun:stun2.l.google.com:19302' },
-            { urls: 'stun:stun3.l.google.com:19302' },
-            { urls: 'stun:stun4.l.google.com:19302' },
-            { urls: 'stun:stun.services.mozilla.com' }
-          ]
-        }
-      });
+      viewerPeer.on('open', () => {
+        const dummyCanvas = document.createElement('canvas');
+        dummyCanvas.width = 16;
+        dummyCanvas.height = 16;
+        const dummyStream = dummyCanvas.captureStream(1);
 
-      peer.on('open', (myViewerId) => {
-        const conn = peer.connect(hostPeerId);
+        liveCall = viewerPeer.call(hostPeerId, dummyStream);
 
-        conn.on('open', () => {
-          conn.send('REQUEST_STREAM');
-        });
+        liveCall.on('stream', (remoteStream) => {
+          // If switching between streams (e.g. Camera to Screen Share), display smooth transition loader
+          if (activeRemoteStream && activeRemoteStream !== remoteStream) {
+            loader.style.display = 'flex';
+            document.getElementById('loadingMessageText').textContent = "Switching live source seamlessly...";
+          }
 
-        conn.on('error', () => {
-          loader.innerHTML = `<span style="color: #ef4444; font-weight: 600;">Broadcaster offline or connection failed.</span>`;
-        });
+          activeRemoteStream = remoteStream;
 
-        peer.on('call', (call) => {
-          call.answer();
-          
-          call.on('stream', (remoteStream) => {
-            activeStream = remoteStream;
+          // Bind stream to both video & audio elements
+          videoEl.srcObject = remoteStream;
+          audioEl.srcObject = remoteStream;
+
+          videoEl.muted = true;
+          audioEl.muted = true;
+
+          videoEl.play().catch(e => console.log(e));
+          audioEl.play().catch(e => console.log(e));
+
+          setTimeout(() => {
             loader.style.display = 'none';
             liveBadge.style.display = 'flex';
+          }, 500);
 
-            videoElement.srcObject = remoteStream;
-            videoElement.muted = true;
-            videoElement.play().catch(e => console.log("Autoplay waiting for interaction:", e));
-          });
+          // Audio track check & diagnostics
+          const audioTracks = remoteStream.getAudioTracks();
+          if (audioTracks.length > 0) {
+            audioStatus.textContent = `Audio Status: Connected (${audioTracks.length} audio track active)`;
+            audioStatus.style.color = "#34d399";
+          } else {
+            audioStatus.textContent = "Audio Status: Warning - Checking audio stream...";
+            audioStatus.style.color = "#f59e0b";
+            
+            setTimeout(() => {
+              const delayedAudio = remoteStream.getAudioTracks();
+              if (delayedAudio.length > 0) {
+                audioStatus.textContent = `Audio Status: Connected (${delayedAudio.length} audio track active)`;
+                audioStatus.style.color = "#34d399";
+              } else {
+                audioStatus.textContent = "Audio Status: Warning - No audio track detected!";
+                audioStatus.style.color = "#ef4444";
+              }
+            }, 1500);
+          }
         });
 
-        setTimeout(() => {
-          if (!videoElement.srcObject) {
-            loader.innerHTML = `<span style="color: #ef4444; font-weight: 600;">Waiting for broadcaster to connect...</span>`;
-          }
-        }, 8000);
+        liveCall.on('close', () => {
+          alert("The administrator has ended this live broadcast.");
+          window.location.href = "index.html";
+        });
+
+        liveCall.on('error', (err) => {
+          loader.style.display = 'flex';
+          document.getElementById('loadingMessageText').textContent = "Reconnecting stream feed...";
+        });
       });
 
-      peer.on('error', (err) => {
-        console.error("Peer connection error:", err);
-      });
-
-      // Mute / Unmute Audio Button Toggle
+      // Unmute Button Click Handler
       document.getElementById('btnUnmuteAudio').addEventListener('click', function() {
-        if (!videoElement) return;
+        if (!videoEl || !audioEl) return;
 
-        const willBeMuted = !videoElement.muted;
-        videoElement.muted = willBeMuted;
+        const willBeMuted = !videoEl.muted;
+        videoEl.muted = willBeMuted;
+        audioEl.muted = willBeMuted;
 
-        if (activeStream) {
-          activeStream.getAudioTracks().forEach(track => {
+        if (activeRemoteStream) {
+          activeRemoteStream.getAudioTracks().forEach(track => {
             track.enabled = !willBeMuted;
           });
         }
 
         if (!willBeMuted) {
-          videoElement.play().catch(e => console.log(e));
+          videoEl.play().catch(e => console.log(e));
+          audioEl.play().catch(e => console.log(e));
           this.textContent = "🔇 Mute Audio";
+          audioStatus.textContent = "Audio Status: UNMUTED & Playing Sound";
+          audioStatus.style.color = "#38bdf8";
         } else {
           this.textContent = "🔊 Unmute Audio";
+          audioStatus.textContent = "Audio Status: Muted by user";
+          audioStatus.style.color = "#f59e0b";
         }
       });
 
-      // Fullscreen Toggle Handlers
+      // Fullscreen & Exit Overlay Handlers
       const viewport = document.getElementById('videoViewport');
       const btnFullscreen = document.getElementById('btnFullscreen');
       const btnExitOverlay = document.getElementById('btnExitFullscreenOverlay');
 
-      function toggleFullscreen() {
-        if (!document.fullscreenElement) {
-          viewport.requestFullscreen().catch(() => {});
-        } else {
-          document.exitFullscreen().catch(() => {});
-        }
-      }
-
-      btnFullscreen.addEventListener('click', toggleFullscreen);
-      btnExitOverlay.addEventListener('click', () => {
-        if (document.fullscreenElement) {
-          document.exitFullscreen().catch(() => {});
-        }
+      btnFullscreen.addEventListener('click', () => {
+        if (!document.fullscreenElement) { viewport.requestFullscreen().catch(() => {}); }
+        else { document.exitFullscreen().catch(() => {}); }
       });
 
-      // Synchronize button labels and floating exit overlay visibility
+      btnExitOverlay.addEventListener('click', () => {
+        if (document.fullscreenElement) { document.exitFullscreen().catch(() => {}); }
+      });
+
       document.addEventListener('fullscreenchange', () => {
         if (!document.fullscreenElement) {
           btnFullscreen.textContent = "⛶ Fullscreen";
