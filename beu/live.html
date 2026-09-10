@@ -9,8 +9,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-  <!-- PeerJS Client Library for WebRTC -->
-  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <!-- PeerJS Client Library -->
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <link rel="stylesheet" href="css/theme.css">
 
   <style>
@@ -44,20 +44,18 @@
   <main class="theater-container">
     <div class="live-theater-card">
       
-      <!-- Stream Topic Inside Box Above Video -->
+      <!-- Stream Title Inside Box Above Video -->
       <h1 id="streamTitle" style="font-size: 20px; font-weight: 800; color: #fff; margin: 0 0 14px 0;">Connecting to Live Session...</h1>
 
       <!-- Broadcast Viewport -->
       <div class="video-viewport" id="videoViewport">
-        <video id="liveVideoPlayer" autoplay playsinline></video>
-        
-        <!-- Dedicated secondary audio player to guarantee sound decoding -->
-        <audio id="liveAudioPlayer" autoplay></audio>
+        <!-- Notice controls enabled to give users full playback control matching reference -->
+        <video id="remoteVideo" autoplay playsinline controls></video>
 
         <!-- Loading Overlay -->
         <div id="streamLoadingState" style="position: absolute; display: flex; flex-direction: column; align-items: center; gap: 12px; color: #94a3b8; text-align: center; padding: 20px;">
           <div class="spinner"></div>
-          <span style="font-size: 13.5px; font-weight: 600;">Connecting to secure live video & audio stream...</span>
+          <span style="font-size: 13.5px; font-weight: 600;">Connecting to secure live stream...</span>
         </div>
 
         <!-- Live Badge -->
@@ -72,11 +70,11 @@
         <button id="btnFullscreen" type="button" class="theater-btn">⛶ Fullscreen</button>
       </div>
 
-      <!-- Highlighted Timestamp, Description & Audio Diagnostics -->
+      <!-- Highlighted Timestamp & Description -->
       <div style="font-size: 12.5px; color: #94a3b8; line-height: 1.5;">
-        <div id="streamTimeBadge" style="font-family: monospace; font-weight: 700; color: #38bdf8; margin-bottom: 4px;">Started: 10 Sept 2026, 05:19 PM</div>
+        <div id="streamTimeBadge" style="font-family: monospace; font-weight: 700; color: #38bdf8; margin-bottom: 4px;">Started: 10 Sept 2026, 05:26 PM</div>
         <p id="streamDesc" style="margin: 0 0 6px 0;">Institutional academic live broadcast stream.</p>
-        <div id="audioStatusIndicator" style="font-size: 11px; font-family: monospace; color: #f59e0b;">Audio Status: Waiting for stream connection...</div>
+        <div id="audioStatusIndicator" style="font-size: 11px; font-family: monospace; color: #34d399;">Audio Status: Ready for broadcast feed</div>
       </div>
 
     </div>
@@ -84,9 +82,8 @@
 
   <script src="js/api.js"></script>
   <script>
-    let viewerPeer = null;
-    let liveCall = null;
-    let activeRemoteStream = null;
+    let peer = null;
+    let activeStream = null;
 
     window.addEventListener('DOMContentLoaded', async () => {
       await portalAPI.syncCatalog();
@@ -106,104 +103,99 @@
       document.getElementById('streamDesc').textContent = liveEvent.description || "Live session by administration.";
       document.getElementById('streamTimeBadge').textContent = `Started: ${PortalAPI.formatTimestamp(liveEvent.startTime)}`;
 
-      connectToBroadcast(liveEvent.peerId);
+      startViewerStream(liveEvent.peerId);
       portalAPI.joinLive();
     });
 
     window.addEventListener('beforeunload', () => {
       portalAPI.leaveLive();
-      if (viewerPeer) viewerPeer.destroy();
+      if (peer) peer.destroy();
     });
 
-    function connectToBroadcast(hostPeerId) {
-      const videoEl = document.getElementById('liveVideoPlayer');
-      const audioEl = document.getElementById('liveAudioPlayer');
+    function startViewerStream(hostPeerId) {
+      const videoElement = document.getElementById('remoteVideo');
       const loader = document.getElementById('streamLoadingState');
       const audioStatus = document.getElementById('audioStatusIndicator');
-      const viewerId = "gecm_thtr_" + Math.random().toString(36).substring(2, 8);
 
-      viewerPeer = new Peer(viewerId, { debug: 1 });
+      if (peer) { peer.destroy(); }
 
-      viewerPeer.on('open', () => {
-        const dummyCanvas = document.createElement('canvas');
-        dummyCanvas.width = 16;
-        dummyCanvas.height = 16;
-        const dummyStream = dummyCanvas.captureStream(1);
-
-        liveCall = viewerPeer.call(hostPeerId, dummyStream);
-
-        liveCall.on('stream', (remoteStream) => {
-          activeRemoteStream = remoteStream;
-          loader.style.display = 'none';
-
-          // Bind stream to both elements
-          videoEl.srcObject = remoteStream;
-          audioEl.srcObject = remoteStream;
-
-          videoEl.muted = true;
-          audioEl.muted = true;
-
-          videoEl.play().catch(e => console.log(e));
-          audioEl.play().catch(e => console.log(e));
-
-          // Check tracks immediately
-          const audioTracks = remoteStream.getAudioTracks();
-          const videoTracks = remoteStream.getVideoTracks();
-          
-          if (audioTracks.length > 0) {
-            audioStatus.textContent = `Audio Status: Connected (${audioTracks.length} audio track active)`;
-            audioStatus.style.color = "#34d399";
-          } else {
-            audioStatus.textContent = "Audio Status: Warning - Checking audio stream...";
-            audioStatus.style.color = "#f59e0b";
-            
-            // Re-check after 1.5 seconds in case tracks are bound asynchronously
-            setTimeout(() => {
-              const delayedAudio = remoteStream.getAudioTracks();
-              if (delayedAudio.length > 0) {
-                audioStatus.textContent = `Audio Status: Connected (${delayedAudio.length} audio track active)`;
-                audioStatus.style.color = "#34d399";
-              } else {
-                audioStatus.textContent = "Audio Status: Warning - No audio track detected!";
-                audioStatus.style.color = "#ef4444";
-              }
-            }, 1500);
-          }
-        });
-
-        liveCall.on('close', () => {
-          alert("The administrator has ended this live broadcast.");
-          window.location.href = "index.html";
-        });
-
-        liveCall.on('error', (err) => {
-          loader.innerHTML = `<span style="color: #ef4444; font-weight: 600;">Unable to connect to host broadcast.</span>`;
-        });
+      // Initialize Peer with reference STUN configuration
+      peer = new Peer({
+        config: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' },
+            { urls: 'stun:stun3.l.google.com:19302' },
+            { urls: 'stun:stun4.l.google.com:19302' },
+            { urls: 'stun:stun.services.mozilla.com' }
+          ]
+        }
       });
 
-      // Unmute Button Click Handler
+      peer.on('open', (myViewerId) => {
+        audioStatus.innerText = "Connecting to broadcaster data channel...";
+
+        // 1. Establish data connection to host matching reference architecture
+        const conn = peer.connect(hostPeerId);
+
+        conn.on('open', () => {
+          audioStatus.innerText = "Broadcaster found! Requesting live feed...";
+          conn.send('REQUEST_STREAM');
+        });
+
+        conn.on('error', () => {
+          loader.innerHTML = `<span style="color: #ef4444; font-weight: 600;">Broadcaster offline or connection failed.</span>`;
+        });
+
+        // 2. Accept incoming media stream called back from broadcaster
+        peer.on('call', (call) => {
+          call.answer(); // Answer incoming stream call
+          
+          call.on('stream', (remoteStream) => {
+            activeStream = remoteStream;
+            loader.style.display = 'none';
+            audioStatus.innerText = "Audio Status: Connected & Stream Active";
+            audioStatus.style.color = "#34d399";
+
+            videoElement.srcObject = remoteStream;
+            videoElement.muted = true; // Initial mute for browser autoplay compliance
+            videoElement.play().catch(e => console.log("Autoplay warning:", e));
+          });
+        });
+
+        setTimeout(() => {
+          if (!videoElement.srcObject) {
+            loader.innerHTML = `<span style="color: #ef4444; font-weight: 600;">Waiting for broadcaster to go live...</span>`;
+          }
+        }, 8000);
+      });
+
+      peer.on('error', (err) => {
+        console.error("Peer error:", err);
+      });
+
+      // Unmute Button Handler matching reference standards
       document.getElementById('btnUnmuteAudio').addEventListener('click', function() {
-        if (!videoEl || !audioEl) return;
+        if (!videoElement) return;
 
-        const willBeMuted = !videoEl.muted;
-        videoEl.muted = willBeMuted;
-        audioEl.muted = willBeMuted;
+        const willBeMuted = !videoElement.muted;
+        videoElement.muted = willBeMuted;
 
-        if (activeRemoteStream) {
-          activeRemoteStream.getAudioTracks().forEach(track => {
+        if (activeStream) {
+          activeStream.getAudioTracks().forEach(track => {
             track.enabled = !willBeMuted;
           });
         }
 
         if (!willBeMuted) {
-          videoEl.play().catch(e => console.log(e));
-          audioEl.play().catch(e => console.log(e));
+          videoElement.play().catch(e => console.log(e));
           this.textContent = "🔇 Mute Audio";
-          audioStatus.textContent = "Audio Status: UNMUTED & Playing Sound";
+          audioStatus.innerText = "Audio Status: UNMUTED & Playing Sound";
           audioStatus.style.color = "#38bdf8";
         } else {
           this.textContent = "🔊 Unmute Audio";
-          audioStatus.textContent = "Audio Status: Muted by user";
+          audioStatus.innerText = "Audio Status: Muted by user";
           audioStatus.style.color = "#f59e0b";
         }
       });
