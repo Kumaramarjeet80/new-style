@@ -14,70 +14,117 @@
   <link rel="stylesheet" href="css/theme.css">
 
   <style>
-    .theater-container { max-width: 720px; margin: 0 auto; padding: 20px 16px 60px 16px; }
+    .theater-container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 20px 16px 60px 16px;
+    }
     .live-theater-card {
-      background: var(--bg-secondary); border: 1px solid var(--border-subtle);
-      border-radius: var(--card-radius); padding: 16px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--card-radius);
+      padding: 16px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
     }
     .video-viewport {
-      width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 12px;
-      overflow: hidden; position: relative; display: flex; align-items: center; justify-content: center; margin-bottom: 14px;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 14px;
     }
-    .video-viewport video { width: 100%; height: 100%; object-fit: contain; }
-    .theater-controls-row { display: flex; gap: 12px; margin-bottom: 14px; }
+    /* Strictly video with no default controls bar */
+    .video-viewport video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    .theater-controls-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
     .theater-btn {
-      flex: 1; background: rgba(255, 255, 255, 0.06); border: 1px solid var(--border-subtle);
-      color: #fff; padding: 10px; border-radius: 10px; font-size: 13px; font-weight: 700;
-      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.2s;
+      flex: 1;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-subtle);
+      color: #fff;
+      padding: 10px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background 0.2s;
     }
-    .theater-btn:hover { background: rgba(255, 255, 255, 0.12); }
+    .theater-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+    }
   </style>
 </head>
 <body>
 
   <!-- Top Navigation Bar -->
   <header class="portal-navbar">
-    <a href="index.html" class="portal-brand"><span>GECM</span> Live Theater</a>
-    <a href="index.html" class="btn-back-to-catalog" style="padding: 6px 12px; font-size: 11.5px;">← Back to Catalog</a>
+    <a href="index.html" class="portal-brand">
+      <span>GECM</span> Live Theater
+    </a>
+    <a href="index.html" class="btn-back-to-catalog" style="padding: 6px 12px; font-size: 11.5px;">
+      ← Back to Catalog
+    </a>
   </header>
 
   <main class="theater-container">
+
+    <!-- Live Theater Box -->
     <div class="live-theater-card">
       
-      <!-- Stream Title Inside Box Above Video -->
-      <h1 id="streamTitle" style="font-size: 20px; font-weight: 800; color: #fff; margin: 0 0 14px 0;">Connecting to Live Session...</h1>
+      <!-- Topic Title Inside the Box Above Video -->
+      <h1 id="streamTitle" style="font-size: 20px; font-weight: 800; color: #fff; margin: 0 0 14px 0; letter-spacing: -0.4px;">Connecting to Live Session...</h1>
 
       <!-- Broadcast Viewport -->
       <div class="video-viewport" id="videoViewport">
-        <!-- Notice controls enabled to give users full playback control matching reference -->
-        <video id="remoteVideo" autoplay playsinline controls></video>
+        <!-- Clean video element without native controls progress bar -->
+        <video id="remoteVideo" autoplay playsinline></video>
 
-        <!-- Loading Overlay -->
+        <!-- Connecting / Offline Overlay State -->
         <div id="streamLoadingState" style="position: absolute; display: flex; flex-direction: column; align-items: center; gap: 12px; color: #94a3b8; text-align: center; padding: 20px;">
           <div class="spinner"></div>
-          <span style="font-size: 13.5px; font-weight: 600;">Connecting to secure live stream...</span>
+          <span style="font-size: 13.5px; font-weight: 600;">Connecting to secure live video stream...</span>
         </div>
 
-        <!-- Live Badge -->
-        <div style="position: absolute; top: 12px; left: 12px; background: rgba(239, 68, 68, 0.9); color: #fff; font-size: 10.5px; font-weight: 800; padding: 3px 8px; border-radius: 6px; display: flex; align-items: center; gap: 5px;">
+        <!-- Live Indicator Tag -->
+        <div id="liveBadgeTag" style="position: absolute; top: 12px; left: 12px; background: rgba(239, 68, 68, 0.9); color: #fff; font-size: 10.5px; font-weight: 800; padding: 3px 8px; border-radius: 6px; display: flex; align-items: center; gap: 5px; text-transform: uppercase; display: none;">
           <span class="live-pulse-dot" style="background-color: #fff; box-shadow: 0 0 6px #fff;"></span> LIVE
         </div>
       </div>
 
       <!-- Controls Row -->
       <div class="theater-controls-row">
-        <button id="btnUnmuteAudio" type="button" class="theater-btn">🔊 Unmute Audio</button>
-        <button id="btnFullscreen" type="button" class="theater-btn">⛶ Fullscreen</button>
+        <button id="btnUnmuteAudio" type="button" class="theater-btn">
+          🔊 Unmute Audio
+        </button>
+        <button id="btnFullscreen" type="button" class="theater-btn">
+          ⛶ Fullscreen
+        </button>
       </div>
 
       <!-- Highlighted Timestamp & Description -->
       <div style="font-size: 12.5px; color: #94a3b8; line-height: 1.5;">
-        <div id="streamTimeBadge" style="font-family: monospace; font-weight: 700; color: #38bdf8; margin-bottom: 4px;">Started: 10 Sept 2026, 05:26 PM</div>
-        <p id="streamDesc" style="margin: 0 0 6px 0;">Institutional academic live broadcast stream.</p>
-        <div id="audioStatusIndicator" style="font-size: 11px; font-family: monospace; color: #34d399;">Audio Status: Ready for broadcast feed</div>
+        <div id="streamTimeBadge" style="font-family: monospace; font-weight: 700; color: #38bdf8; margin-bottom: 4px;">Started: 10 Sept 2026, 05:46 PM</div>
+        <p id="streamDesc" style="margin: 0;">Institutional academic live broadcast stream.</p>
       </div>
 
     </div>
+
   </main>
 
   <script src="js/api.js"></script>
@@ -115,11 +162,10 @@
     function startViewerStream(hostPeerId) {
       const videoElement = document.getElementById('remoteVideo');
       const loader = document.getElementById('streamLoadingState');
-      const audioStatus = document.getElementById('audioStatusIndicator');
+      const liveBadge = document.getElementById('liveBadgeTag');
 
       if (peer) { peer.destroy(); }
 
-      // Initialize Peer with reference STUN configuration
       peer = new Peer({
         config: {
           iceServers: [
@@ -134,13 +180,9 @@
       });
 
       peer.on('open', (myViewerId) => {
-        audioStatus.innerText = "Connecting to broadcaster data channel...";
-
-        // 1. Establish data connection to host matching reference architecture
         const conn = peer.connect(hostPeerId);
 
         conn.on('open', () => {
-          audioStatus.innerText = "Broadcaster found! Requesting live feed...";
           conn.send('REQUEST_STREAM');
         });
 
@@ -148,34 +190,32 @@
           loader.innerHTML = `<span style="color: #ef4444; font-weight: 600;">Broadcaster offline or connection failed.</span>`;
         });
 
-        // 2. Accept incoming media stream called back from broadcaster
         peer.on('call', (call) => {
-          call.answer(); // Answer incoming stream call
+          call.answer();
           
           call.on('stream', (remoteStream) => {
             activeStream = remoteStream;
             loader.style.display = 'none';
-            audioStatus.innerText = "Audio Status: Connected & Stream Active";
-            audioStatus.style.color = "#34d399";
+            liveBadge.style.display = 'flex';
 
             videoElement.srcObject = remoteStream;
-            videoElement.muted = true; // Initial mute for browser autoplay compliance
-            videoElement.play().catch(e => console.log("Autoplay warning:", e));
+            videoElement.muted = true; // Muted by default to satisfy browser autoplay requirements
+            videoElement.play().catch(e => console.log("Autoplay waiting for interaction:", e));
           });
         });
 
         setTimeout(() => {
           if (!videoElement.srcObject) {
-            loader.innerHTML = `<span style="color: #ef4444; font-weight: 600;">Waiting for broadcaster to go live...</span>`;
+            loader.innerHTML = `<span style="color: #ef4444; font-weight: 600;">Waiting for broadcaster to connect...</span>`;
           }
         }, 8000);
       });
 
       peer.on('error', (err) => {
-        console.error("Peer error:", err);
+        console.error("Peer connection error:", err);
       });
 
-      // Unmute Button Handler matching reference standards
+      // Mute / Unmute Audio Button Toggle
       document.getElementById('btnUnmuteAudio').addEventListener('click', function() {
         if (!videoElement) return;
 
@@ -191,20 +231,33 @@
         if (!willBeMuted) {
           videoElement.play().catch(e => console.log(e));
           this.textContent = "🔇 Mute Audio";
-          audioStatus.innerText = "Audio Status: UNMUTED & Playing Sound";
-          audioStatus.style.color = "#38bdf8";
         } else {
           this.textContent = "🔊 Unmute Audio";
-          audioStatus.innerText = "Audio Status: Muted by user";
-          audioStatus.style.color = "#f59e0b";
         }
       });
 
+      // Fullscreen Toggle Handler
       document.getElementById('btnFullscreen').addEventListener('click', () => {
+        const viewport = document.getElementById('videoViewport');
+        const btn = document.getElementById('btnFullscreen');
+
         if (!document.fullscreenElement) {
-          document.getElementById('videoViewport').requestFullscreen().catch(() => {});
+          viewport.requestFullscreen().then(() => {
+            btn.textContent = "⛶ Exit Fullscreen";
+          }).catch(() => {});
         } else {
-          document.exitFullscreen().catch(() => {});
+          document.exitFullscreen().then(() => {
+            btn.textContent = "⛶ Fullscreen";
+          }).catch(() => {});
+        }
+      });
+
+      document.addEventListener('fullscreenchange', () => {
+        const btn = document.getElementById('btnFullscreen');
+        if (!document.fullscreenElement) {
+          btn.textContent = "⛶ Fullscreen";
+        } else {
+          btn.textContent = "⛶ Exit Fullscreen";
         }
       });
     }
