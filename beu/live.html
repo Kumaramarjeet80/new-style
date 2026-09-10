@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Live Broadcast Theater - GEC Munger</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- PeerJS Client Library for WebRTC -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <link rel="stylesheet" href="css/theme.css">
+
+  <style>
+    .theater-container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px 16px 60px 16px;
+    }
+    .video-viewport {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #000;
+      border-radius: 16px;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .video-viewport video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    .theater-controls {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-top: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header class="portal-navbar">
+    <a href="index.html" class="portal-brand">
+      <span>GECM</span> Live Theater
+    </a>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <a href="index.html" class="btn-back-to-catalog" style="padding: 6px 14px; font-size: 12px;">
+        ← Back to Catalog
+      </a>
+    </div>
+  </header>
+
+  <main class="theater-container">
+
+    <!-- Broadcast Viewport -->
+    <div class="video-viewport" id="videoViewport">
+      <video id="liveVideoPlayer" autoplay playsinline></video>
+
+      <!-- Connecting / Offline Overlay -->
+      <div id="streamLoadingState" style="position: absolute; display: flex; flex-direction: column; align-items: center; gap: 14px; color: #94a3b8; text-align: center; padding: 20px;">
+        <div class="spinner"></div>
+        <span style="font-size: 14px; font-weight: 600;">Connecting to secure live video stream...</span>
+      </div>
+
+      <!-- Live Indicator Tag -->
+      <div style="position: absolute; top: 16px; left: 16px; background: rgba(239, 68, 68, 0.9); color: #fff; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 6px; display: flex; align-items: center; gap: 6px; text-transform: uppercase;">
+        <span class="live-pulse-dot" style="background-color: #fff; box-shadow: 0 0 6px #fff;"></span> ON AIR
+      </div>
+    </div>
+
+    <!-- Theater Control Strip -->
+    <div class="theater-controls">
+      <div>
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+          <h1 id="streamTitle" style="font-size: 18px; font-weight: 800; color: #fff; margin: 0;">Connecting to Live Session...</h1>
+          <span id="streamTimeBadge" style="font-size: 11px; font-family: monospace; color: #38bdf8; background: rgba(56, 189, 248, 0.1); padding: 2px 8px; border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.25);">IST</span>
+        </div>
+        <p id="streamDesc" style="font-size: 13px; color: #94a3b8; margin: 0;">Institutional academic live stream.</p>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <button id="btnUnmuteAudio" type="button" class="btn-back-to-catalog" style="font-weight: 700;">
+          🔊 Unmute Audio
+        </button>
+        <button id="btnFullscreen" type="button" class="card-cta-btn" style="width: auto; padding: 8px 18px;">
+          ⛶ Fullscreen
+        </button>
+      </div>
+    </div>
+
+  </main>
+
+  <script src="js/api.js"></script>
+  <script>
+    let viewerPeer = null;
+    let liveCall = null;
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      // Sync fresh catalog to check for active broadcast
+      await portalAPI.syncCatalog();
+      const liveEvent = portalAPI.getLiveEvent();
+
+      if (!liveEvent || !liveEvent.active || !liveEvent.peerId) {
+        document.getElementById('streamLoadingState').innerHTML = `
+          <span style="font-size: 32px; display: block; margin-bottom: 8px;">📡</span>
+          <span style="font-size: 15px; font-weight: 700; color: #fff;">No active broadcast at the moment.</span>
+          <br><a href="index.html" class="btn-back-to-catalog" style="margin-top: 12px;">← Return to Portal Hub</a>
+        `;
+        document.getElementById('streamTitle').textContent = "Stream Offline";
+        return;
+      }
+
+      document.getElementById('streamTitle').textContent = liveEvent.title || "Live Broadcast";
+      document.getElementById('streamDesc').textContent = liveEvent.description || "Official administrative session.";
+      document.getElementById('streamTimeBadge').textContent = `Started: ${liveEvent.startTime || "Recently"}`;
+
+      connectToBroadcast(liveEvent.peerId);
+      portalAPI.joinLive();
+    });
+
+    window.addEventListener('beforeunload', () => {
+      portalAPI.leaveLive();
+      if (viewerPeer) viewerPeer.destroy();
+    });
+
+    function connectToBroadcast(hostPeerId) {
+      const video = document.getElementById('liveVideoPlayer');
+      const loader = document.getElementById('streamLoadingState');
+      const viewerId = "gecm_thtr_" + Math.random().toString(36).substring(2, 8);
+
+      viewerPeer = new Peer(viewerId, { debug: 1 });
+
+      viewerPeer.on('open', () => {
+        // Create dummy video/audio stream to establish WebRTC media handshake
+        const dummyCanvas = document.createElement('canvas');
+        dummyCanvas.width = 16;
+        dummyCanvas.height = 16;
+        const dummyStream = dummyCanvas.captureStream(1);
+
+        liveCall = viewerPeer.call(hostPeerId, dummyStream);
+
+        liveCall.on('stream', (remoteStream) => {
+          loader.style.display = 'none';
+          video.srcObject = remoteStream;
+          video.muted = true; // Auto-play policies require initial mute
+          video.play().catch(() => {});
+        });
+
+        liveCall.on('close', () => {
+          alert("The administrator has ended this live broadcast.");
+          window.location.href = "index.html";
+        });
+
+        liveCall.on('error', (err) => {
+          console.error("PeerJS Call Error:", err);
+          loader.innerHTML = `<span style="color: #ef4444; font-weight: 600;">Unable to connect to host. The stream may have concluded.</span>`;
+        });
+      });
+
+      viewerPeer.on('error', (err) => {
+        console.error("Viewer Node Error:", err);
+        loader.innerHTML = `<span style="color: #ef4444; font-weight: 600;">Signaling connection failed. Please refresh.</span>`;
+      });
+
+      // Controls
+      document.getElementById('btnUnmuteAudio').addEventListener('click', function() {
+        if (video) {
+          video.muted = !video.muted;
+          this.textContent = video.muted ? "🔊 Unmute Audio" : "🔇 Mute Audio";
+        }
+      });
+
+      document.getElementById('btnFullscreen').addEventListener('click', () => {
+        if (!document.fullscreenElement) {
+          document.getElementById('videoViewport').requestFullscreen().catch(() => {});
+        } else {
+          document.exitFullscreen().catch(() => {});
+        }
+      });
+    }
+  </script>
+</body>
+</html>
