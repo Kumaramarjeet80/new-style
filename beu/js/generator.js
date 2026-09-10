@@ -37,7 +37,6 @@ window.addEventListener('DOMContentLoaded', () => {
   initCanvasControls();
   setupCelebrationToastControls();
 
-  // Load specific card if requested
   if (targetCardId) {
     currentCardData = portalAPI.getCardById(targetCardId);
     if (currentCardData) {
@@ -232,9 +231,6 @@ function initCanvasControls() {
     return filename;
   }
 
-  // =========================================================================
-  // STRICTLY UNTOUCHED RENDERING ENGINE WITH DRIVE AUTO-SYNC
-  // =========================================================================
   const downloadBtn = document.getElementById('btnDirectDownload');
   if (downloadBtn) {
     downloadBtn.addEventListener('click', function() {
@@ -289,16 +285,9 @@ function initCanvasControls() {
         page.style.position = originalPosition;
         page.style.boxShadow = originalBoxShadow;
 
-        // 1. Direct local file download
         pdfObj.save(filename);
-
-        // 2. Extract Base64 stream from render engine
         const pdfBase64 = pdfObj.output('datauristring');
-
-        // 3. Telemetry + Google Drive permanent archiving
         logTelemetryAndArchiveToDrive(pdfBase64);
-
-        // 4. Trigger celebration animation modal
         showCelebrationToast();
 
         downloadBtn.disabled = false;
@@ -351,7 +340,6 @@ function logTelemetryAndArchiveToDrive(pdfBase64) {
   }).catch(() => {});
 }
 
-// Celebration Toast Controls
 let toastDismissTimer = null;
 
 function setupCelebrationToastControls() {
