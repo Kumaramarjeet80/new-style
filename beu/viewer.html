@@ -29,27 +29,63 @@
       height: 100%;
       border: none;
     }
+    .doc-viewer-header {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 12px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .doc-viewer-title-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .doc-viewer-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .doc-viewer-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .btn-doc-download, .btn-doc-close {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-subtle);
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+    .btn-doc-download:hover, .btn-doc-close:hover {
+      background: #334155;
+    }
   </style>
 </head>
 <body>
 
   <!-- Reader Header Bar -->
-  <header class="doc-viewer-header" style="position: relative; z-index: 10;">
+  <header class="doc-viewer-header">
     <div class="doc-viewer-title-group">
-      <span class="doc-viewer-badge">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-        Document Reader
-      </span>
+      <span class="portal-badge" style="margin: 0; padding: 3px 8px; font-size: 10px;">PDF</span>
       <span id="readerDocumentTitle" class="doc-viewer-title">Academic Document</span>
     </div>
 
     <div class="doc-viewer-actions">
       <a id="btnDownloadDoc" href="#" target="_blank" download class="btn-doc-download">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-        Download Original
+        ↓ Download File
       </a>
-      <a href="javascript:history.back()" class="btn-doc-close" style="text-decoration: none;">
-        ✕ Exit Reader
+      <a href="javascript:history.back()" class="btn-doc-close">
+        ✕ Exit
       </a>
     </div>
   </header>
@@ -71,7 +107,7 @@
         <h4 class="toast-heading">Downloading Document!</h4>
         <p class="toast-desc">Original academic file has opened for offline reference.</p>
       </div>
-      <button class="toast-close-btn" id="celebrationToastCloseBtn" aria-label="Close notification" type="button">✕</button>
+      <button class="toast-close-btn" id="celebrationToastCloseBtn" aria-label="Close" type="button">✕</button>
     </div>
     <div class="toast-progress-bar-wrap">
       <div class="toast-progress-bar" id="toastProgressBar"></div>
@@ -101,7 +137,6 @@
       let embedUrl = rawUrl;
       let downloadUrl = rawUrl;
 
-      // Parse Google Drive shareable URLs into clean embed previews
       if (rawUrl.includes("drive.google.com")) {
         const fileIdMatch = rawUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
         if (fileIdMatch && fileIdMatch[1]) {
@@ -115,10 +150,7 @@
       const dlBtn = document.getElementById('btnDownloadDoc');
       dlBtn.href = downloadUrl;
 
-      dlBtn.addEventListener('click', () => {
-        showToast();
-      });
-
+      dlBtn.addEventListener('click', () => showToast());
       setupToastControls();
     });
 
