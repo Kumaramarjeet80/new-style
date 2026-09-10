@@ -18,7 +18,7 @@
     <a href="index.html" class="portal-brand">
       <span>GECM</span> Portal
     </a>
-    <a href="admin.html" style="font-size: 12px; font-weight: 700; color: #94a3b8; text-decoration: none; padding: 6px 12px; border-radius: 6px; border: 1px solid #374151;">
+    <a href="admin.html" style="font-size: 11.5px; font-weight: 700; color: #94a3b8; text-decoration: none; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border-subtle); background: var(--bg-secondary);">
       Admin Access
     </a>
   </header>
@@ -38,33 +38,33 @@
     <!-- Dynamic Live Broadcast Banner Card -->
     <section id="liveEventBanner" class="live-event-banner">
       <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px;">
-        <div style="display: flex; align-items: center; gap: 16px;">
-          <div style="width: 56px; height: 56px; border-radius: 12px; background: #1e293b; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid #475569;">
-            <img id="liveEventLogo" src="" alt="Live Stream Logo" style="width: 100%; height: 100%; object-fit: cover; display: none;">
-            <span id="liveEventLogoPlaceholder" style="font-size: 26px;">📡</span>
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <div style="width: 50px; height: 50px; border-radius: 12px; background: #162035; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid #334155;">
+            <img id="liveEventLogo" src="" alt="Live Logo" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+            <span id="liveEventLogoPlaceholder" style="font-size: 24px;">📡</span>
           </div>
           <div>
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
               <span class="live-pulse-dot"></span>
-              <span style="background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4); font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.5px;">Live Now</span>
-              <span id="liveEventStartTime" style="font-size: 11px; font-family: monospace; color: #94a3b8;">Started: Just now</span>
+              <span style="background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4); font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: 9999px; text-transform: uppercase;">LIVE</span>
+              <span id="liveEventStartTime" style="font-size: 11px; font-family: monospace; color: #94a3b8;">10 Sept 2026, 04:01 PM</span>
             </div>
-            <h2 id="liveEventTitle" style="font-size: 17px; font-weight: 700; color: #ffffff; margin: 0 0 4px 0;">Live Academic Session</h2>
-            <p id="liveEventDesc" style="font-size: 12.5px; color: #94a3b8; margin: 0;">Interactive video broadcast from college administration.</p>
+            <h2 id="liveEventTitle" style="font-size: 16px; font-weight: 700; color: #ffffff; margin: 0 0 2px 0;">Official Academic Briefing</h2>
+            <p id="liveEventDesc" style="font-size: 12px; color: #94a3b8; margin: 0;">Live session by administration regarding semester schedule.</p>
           </div>
         </div>
 
-        <a href="live.html" style="background: #ef4444; color: #fff; font-weight: 700; font-size: 13px; padding: 10px 20px; border-radius: 10px; text-decoration: none; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4); transition: transform 0.2s;">
-          <span>▶ Watch Live Stream</span>
+        <a href="live.html" class="card-cta-btn" style="width: auto; background: var(--accent-live); box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);">
+          ▶ Watch Live Stream
         </a>
       </div>
     </section>
 
-    <!-- Categories Directory -->
+    <!-- Categories Section -->
     <section>
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h2 style="font-size: 18px; font-weight: 700; color: #fff; margin: 0;">Select Category</h2>
-        <span id="categoryCountBadge" style="font-size: 12px; color: #94a3b8; font-family: monospace;">Loading pillars...</span>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h2 style="font-size: 17px; font-weight: 800; color: #fff; margin: 0;">Select Category</h2>
+        <span id="categoryCountBadge" style="font-size: 11.5px; color: #94a3b8; font-family: monospace; font-weight: 700;">Loading...</span>
       </div>
       
       <div class="catalog-grid" id="categoryGrid">
@@ -77,49 +77,18 @@
 
   </main>
 
-  <!-- Broadcast Announcement Popup Modal -->
-  <div class="modal-overlay" id="adminBroadcastModal">
-    <div class="modal-box" id="adminModalBox">
-      <button class="modal-close-btn" id="adPopupCloseBtn" aria-label="Dismiss alert">&times;</button>
-      
-      <div class="modal-hero-media-wrap" id="adPopupHeroWrap">
-        <img id="adPopupImg" class="modal-hero-img" src="" alt="Notice Banner" style="display:none;">
-        <video id="adPopupVideo" class="modal-hero-video" autoplay muted loop playsinline style="display:none;"></video>
-        <iframe id="adPopupIframe" class="modal-hero-iframe" src="" allow="autoplay; encrypted-media" allowfullscreen style="display:none;"></iframe>
-        <button id="adPopupUnmuteBtn" type="button" class="ad-unmute-btn" style="display:none;">🔊 Unmute</button>
-      </div>
-
-      <div class="modal-content-area">
-        <h3 id="adPopupTitle" class="modal-title">Announcement</h3>
-        <p id="adPopupBody" class="modal-desc"></p>
-        <a id="adPopupBtn" class="modal-action-btn" href="#" target="_blank">Visit Link</a>
-        
-        <div class="popup-timer-bar-wrap" id="popupTimerWrap">
-          <div class="popup-timer-bar" id="popupTimerBar"></div>
-        </div>
-        <span class="timer-badge" id="popupTimerBadge"></span>
-      </div>
-    </div>
-  </div>
-
-  <!-- Scripts -->
   <script src="js/api.js"></script>
   <script>
     window.addEventListener('DOMContentLoaded', () => {
-      // 1. Instant Render from Cache/Defaults
       renderCategoryCards();
       checkLiveStatus();
 
-      // 2. Register for background updates
       portalAPI.onUpdate(() => {
         renderCategoryCards();
         checkLiveStatus();
-        initPopupQueue();
       });
 
-      // 3. Trigger network sync
       portalAPI.syncCatalog();
-      initPopupQueue();
     });
 
     function renderCategoryCards() {
@@ -132,7 +101,7 @@
       if (countBadge) countBadge.textContent = `${categories.length} Categories`;
 
       if (categories.length === 0) {
-        grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: #94a3b8; padding: 40px;">No categories available.</div>`;
+        grid.innerHTML = `<div class="empty-state-card"><span>No categories available.</span></div>`;
         return;
       }
 
@@ -141,13 +110,14 @@
         card.className = "category-card";
         card.href = `subcategories.html?cat=${encodeURIComponent(cat.id)}`;
         
-        const timeHtml = cat.createdAt ? `<div class="card-timestamp-badge">🕒 Published: ${cat.createdAt}</div>` : ``;
+        const timestampStr = PortalAPI.formatTimestamp(cat.createdAt);
+        const timeHtml = `<div class="card-timestamp-badge">🕒 ${timestampStr}</div>`;
 
         card.innerHTML = `
           <div>
             <div class="cat-icon-wrap">${cat.icon || "📁"}</div>
             <div class="cat-name">${cat.name}</div>
-            <div class="cat-desc">${cat.description || "Browse modules and study materials"}</div>
+            <div class="cat-desc">${cat.description || "Browse modules and materials"}</div>
             ${timeHtml}
           </div>
           <div class="cat-action-indicator">Explore Category →</div>
@@ -163,9 +133,9 @@
 
       if (liveEvent && liveEvent.active) {
         banner.style.display = 'block';
-        document.getElementById('liveEventTitle').textContent = liveEvent.title || "Live Broadcast";
-        document.getElementById('liveEventDesc').textContent = liveEvent.description || "Administrative broadcast session.";
-        document.getElementById('liveEventStartTime').textContent = `Started: ${liveEvent.startTime || "Recently"}`;
+        document.getElementById('liveEventTitle').textContent = liveEvent.title || "Live Academic Briefing";
+        document.getElementById('liveEventDesc').textContent = liveEvent.description || "Live session by administration.";
+        document.getElementById('liveEventStartTime').textContent = PortalAPI.formatTimestamp(liveEvent.startTime);
 
         const logo = document.getElementById('liveEventLogo');
         const placeholder = document.getElementById('liveEventLogoPlaceholder');
@@ -179,65 +149,6 @@
         }
       } else {
         banner.style.display = 'none';
-      }
-    }
-
-    // Rotational Popups System
-    let activePopupQueue = [];
-    let currentPopupIndex = 0;
-    let popupTimer = null;
-
-    function initPopupQueue() {
-      const popups = portalAPI.getPopups();
-      if (!popups || popups.length === 0) return;
-      activePopupQueue = popups;
-      currentPopupIndex = 0;
-      displayNextPopup();
-    }
-
-    function displayNextPopup() {
-      if (popupTimer) clearTimeout(popupTimer);
-      if (activePopupQueue.length === 0) return;
-
-      const p = activePopupQueue[currentPopupIndex];
-      const modal = document.getElementById('adminBroadcastModal');
-      const closeBtn = document.getElementById('adPopupCloseBtn');
-      const timerBar = document.getElementById('popupTimerBar');
-      const timerBadge = document.getElementById('popupTimerBadge');
-      const heroWrap = document.getElementById('adPopupHeroWrap');
-      const imgEl = document.getElementById('adPopupImg');
-
-      imgEl.style.display = 'none';
-      if (p.mediaUrl && p.mediaType !== 'video') {
-        heroWrap.style.display = 'flex';
-        imgEl.src = p.mediaUrl;
-        imgEl.style.display = 'block';
-      } else {
-        heroWrap.style.display = 'none';
-      }
-
-      document.getElementById('adPopupTitle').textContent = p.title || "Notice";
-      document.getElementById('adPopupBody').textContent = p.body || "";
-      const btn = document.getElementById('adPopupBtn');
-      btn.textContent = p.buttonText || "Open";
-      btn.href = p.buttonLink || "#";
-
-      modal.style.display = 'flex';
-
-      const closeHandler = () => {
-        modal.style.display = 'none';
-        currentPopupIndex = (currentPopupIndex + 1) % activePopupQueue.length;
-        const delayMs = Math.max(0.1, Number(p.intervalMinutes) || 1) * 60000;
-        popupTimer = setTimeout(displayNextPopup, delayMs);
-      };
-
-      closeBtn.onclick = closeHandler;
-      const seconds = Math.max(1, Number(p.timerSeconds) || 5);
-      if (p.closeMode === 'timer' || p.closeMode === 'both') {
-        document.getElementById('popupTimerWrap').style.display = 'block';
-        timerBadge.style.display = 'inline-block';
-        timerBadge.textContent = `Closing in ${seconds}s...`;
-        setTimeout(closeHandler, seconds * 1000);
       }
     }
   </script>
