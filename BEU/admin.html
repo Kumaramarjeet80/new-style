@@ -25,7 +25,7 @@
   <header class="bg-slate-950 border-b border-slate-800 px-6 py-4 flex flex-wrap justify-between items-center gap-4 sticky top-0 z-50">
     <div class="flex items-center gap-3">
       <span class="text-xl font-extrabold text-blue-400 tracking-tight">GECM Studio</span>
-      <span class="text-xs px-2.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 font-mono">v5.3 Master Studio</span>
+      <span class="text-xs px-2.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 font-mono">v5.4 Scheduled Studio</span>
     </div>
     <div id="authStatusBadge" class="text-xs text-amber-400 font-semibold flex items-center gap-2">
       <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> Authentication Required
@@ -36,7 +36,7 @@
   <div id="loginView" class="max-w-md mx-auto mt-20 p-6 bg-slate-800/90 backdrop-blur rounded-xl shadow-2xl border border-slate-700">
     <div class="flex justify-between items-center mb-2">
       <h2 class="text-xl font-bold text-white">Studio Authentication</h2>
-      <span class="text-[10px] px-2 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 font-mono">v5.3</span>
+      <span class="text-[10px] px-2 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 font-mono">v5.4</span>
     </div>
     <p class="text-xs text-slate-400 text-center mb-6">Enter master administrative passkey to manage studio modules.</p>
     <input type="password" id="adminPassword" placeholder="Enter admin passkey" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm mb-4 outline-none focus:border-blue-500 text-white placeholder-slate-500">
@@ -137,7 +137,7 @@
                 <span class="w-2 h-2 rounded-full bg-slate-500"></span> Offline
               </span>
             </div>
-            <p class="text-xs text-slate-400 mt-1">High-FPS stable streaming with direct Google Drive cloud archival.</p>
+            <p class="text-xs text-slate-400 mt-1">High-FPS stable streaming with scheduled countdown & direct Google Drive cloud archival.</p>
           </div>
         </div>
 
@@ -149,27 +149,34 @@
                 <span class="text-3xl">📹</span><span>Camera feed preview</span>
               </div>
               <div id="liveStreamOverlayTag" class="absolute top-3 left-3 bg-red-600 text-white text-[11px] font-bold px-2.5 py-1 rounded shadow hidden">
-                🔴 ON AIR (HIGH-FPS STABLE)
+                🔴 ON AIR (SEAMLESS SWITCHING)
               </div>
             </div>
             <div class="grid grid-cols-3 gap-3">
-              <button type="button" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold py-2.5 rounded-lg transition" onclick="startBroadcast('user')">🤳 Front Cam</button>
-              <button type="button" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold py-2.5 rounded-lg transition" onclick="startBroadcast('environment')">🔄 Back Cam</button>
-              <button type="button" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold py-2.5 rounded-lg transition" onclick="startBroadcast('screen')">🖥 Share Screen</button>
+              <button type="button" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold py-2.5 rounded-lg transition" onclick="switchBroadcastSource('user')">🤳 Front Cam</button>
+              <button type="button" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold py-2.5 rounded-lg transition" onclick="switchBroadcastSource('environment')">🔄 Back Cam</button>
+              <button type="button" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold py-2.5 rounded-lg transition" onclick="switchBroadcastSource('screen')">🖥 Share Screen</button>
             </div>
             <button type="button" id="stopBtn" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-2.5 rounded-lg text-xs shadow-lg transition" style="display: none;" onclick="stopBroadcast()">⏹️ Stop & Save Recording to Drive</button>
           </div>
 
           <div class="lg:col-span-5 space-y-4">
             <div class="space-y-3 bg-slate-900 p-4 rounded-xl border border-slate-700">
-              <h4 class="text-xs font-bold uppercase text-slate-300 border-b border-slate-800 pb-2">Broadcast Settings</h4>
+              <h4 class="text-xs font-bold uppercase text-slate-300 border-b border-slate-800 pb-2">Broadcast Settings & Scheduling</h4>
               <input type="text" id="liveTitleInput" value="GECM Official Live Academic Briefing" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
               <textarea id="liveDescInput" rows="2" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">Live session by administration regarding semester schedule.</textarea>
               
               <div>
+                <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1">Schedule Live Start Time</label>
+                <input type="datetime-local" id="liveScheduleInput" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+              </div>
+
+              <div>
                 <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1">Upload Live Thumbnail / Logo (Local Storage)</label>
                 <input type="file" id="liveLogoFile" accept="image/*" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-1.5 text-xs text-slate-400 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[11px] file:bg-blue-600 file:text-white">
               </div>
+
+              <button type="button" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-lg text-xs shadow" onclick="saveScheduledLiveMetadata()">Save Schedule / Metadata</button>
             </div>
             <div id="logBox" class="bg-slate-950 p-3 rounded-lg border border-slate-800 font-mono text-[11px] text-slate-400 h-32 overflow-y-auto">
               Select Front Camera, Back Camera, or Screen Share to begin...<br>
@@ -248,6 +255,7 @@
     let recordedChunks = [];
     let peer = null;
     let streamStartTime = null;
+    let isCurrentlyLive = false;
 
     function logMsg(msg) {
       const box = document.getElementById('logBox');
@@ -309,7 +317,50 @@
       }
     });
 
-    // HIGH-FPS & STABLE BROADCAST ENGINE WITH GOOGLE DRIVE ARCHIVAL
+    // SEAMLESS HIGH-FPS SOURCE SWITCHING & BROADCAST ENGINE
+    async function switchBroadcastSource(sourceType) {
+      if (!isCurrentlyLive) {
+        await startBroadcast(sourceType);
+        return;
+      }
+
+      logMsg(`Seamlessly switching source to: ${sourceType}...`);
+      try {
+        if (localStream) {
+          localStream.getTracks().forEach(track => track.stop());
+        }
+
+        if (sourceType === 'screen') {
+          localStream = await navigator.mediaDevices.getDisplayMedia({ 
+            video: { cursor: "always", frameRate: { ideal: 30, max: 60 } }, 
+            audio: true 
+          });
+          localStream.getVideoTracks()[0].onended = () => stopBroadcast();
+        } else {
+          localStream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: sourceType, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30, max: 60 } }, 
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } 
+          });
+        }
+
+        document.getElementById('adminLocalPreview').srcObject = localStream;
+
+        // Broadcast updated stream instantly to connected peer calls without destroying PeerJS connection
+        if (peer && peer.connections) {
+          Object.keys(peer.connections).forEach(peerId => {
+            peer.connections[peerId].forEach(conn => {
+              if (conn && conn.peer) {
+                peer.call(conn.peer, localStream);
+              }
+            });
+          });
+        }
+        logMsg("✓ Source switched successfully with zero connection drop.");
+      } catch (err) {
+        logMsg(`❌ Source switch error: ${err.message}`);
+      }
+    }
+
     async function startBroadcast(sourceType) {
       try {
         if (peer) { peer.destroy(); peer = null; }
@@ -333,6 +384,7 @@
         document.getElementById('previewPlaceholder').style.display = 'none';
         document.getElementById('stopBtn').style.display = 'inline-block';
         streamStartTime = new Date();
+        isCurrentlyLive = true;
 
         logMsg("High-FPS media capture active.");
 
@@ -364,29 +416,11 @@
           document.getElementById('liveStatusBadge').className = "bg-rose-950 text-rose-300 border border-rose-800 text-xs px-2.5 py-0.5 rounded font-bold flex items-center gap-1.5";
           document.getElementById('liveStreamOverlayTag').classList.remove('hidden');
 
-          const title = document.getElementById('liveTitleInput').value.trim() || "GECM Official Live Briefing";
-          const desc = document.getElementById('liveDescInput').value.trim();
-          
-          let logoUrl = "https://lh3.googleusercontent.com/d/1Pg1tZ-1Uodqzi5iciN61hq8jMooT0eo2";
-          const logoFileInput = document.getElementById('liveLogoFile');
-          if (logoFileInput.files && logoFileInput.files[0]) {
-            const base64Logo = await readFileAsBase64(logoFileInput.files[0]);
-            if (base64Logo) logoUrl = base64Logo;
-          }
-
-          await fetch(APPS_SCRIPT_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain' },
-            body: JSON.stringify({
-              action: "admin_start_live", key: authPass,
-              title, description: desc, logoUrl, peerId: id, sourceType
-            })
-          });
-          clearUserLocalCache();
+          await pushLiveEventState(id, sourceType);
         });
 
         peer.on('call', (call) => {
-          logMsg("Incoming visitor call. Answering with high-FPS stream...");
+          logMsg("Incoming visitor call. Answering with stream...");
           call.answer(localStream);
         });
 
@@ -406,7 +440,48 @@
       }
     }
 
+    async function pushLiveEventState(peerId, sourceType = "camera") {
+      const title = document.getElementById('liveTitleInput').value.trim() || "GECM Official Live Briefing";
+      const desc = document.getElementById('liveDescInput').value.trim();
+      const scheduledTime = document.getElementById('liveScheduleInput').value;
+      
+      let logoUrl = "https://lh3.googleusercontent.com/d/1Pg1tZ-1Uodqzi5iciN61hq8jMooT0eo2";
+      const logoFileInput = document.getElementById('liveLogoFile');
+      if (logoFileInput.files && logoFileInput.files[0]) {
+        const base64Logo = await readFileAsBase64(logoFileInput.files[0]);
+        if (base64Logo) logoUrl = base64Logo;
+      }
+
+      await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({
+          action: "admin_start_live", key: authPass,
+          title, description: desc, logoUrl, peerId, sourceType, scheduledTime
+        })
+      });
+      clearUserLocalCache();
+    }
+
+    async function saveScheduledLiveMetadata() {
+      const title = document.getElementById('liveTitleInput').value.trim();
+      const desc = document.getElementById('liveDescInput').value.trim();
+      const scheduledTime = document.getElementById('liveScheduleInput').value;
+
+      await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({
+          action: "admin_save_schedule", key: authPass,
+          title, description: desc, scheduledTime
+        })
+      });
+      clearUserLocalCache();
+      alert("Live schedule and metadata updated successfully!");
+    }
+
     async function stopBroadcast() {
+      isCurrentlyLive = false;
       if (mediaRecorder && mediaRecorder.state !== "inactive") {
         mediaRecorder.stop();
       }
