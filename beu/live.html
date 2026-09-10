@@ -38,7 +38,6 @@
       justify-content: center;
       margin-bottom: 14px;
     }
-    /* Strictly video with no default controls bar */
     .video-viewport video {
       width: 100%;
       height: 100%;
@@ -68,6 +67,30 @@
     .theater-btn:hover {
       background: rgba(255, 255, 255, 0.12);
     }
+    /* Floating exit fullscreen button inside viewport */
+    .fullscreen-exit-overlay {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      gap: 6px;
+      z-index: 999;
+      backdrop-filter: blur(4px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      transition: background 0.2s;
+    }
+    .fullscreen-exit-overlay:hover {
+      background: rgba(30, 41, 59, 0.95);
+    }
   </style>
 </head>
 <body>
@@ -92,8 +115,12 @@
 
       <!-- Broadcast Viewport -->
       <div class="video-viewport" id="videoViewport">
-        <!-- Clean video element without native controls progress bar -->
         <video id="remoteVideo" autoplay playsinline></video>
+
+        <!-- Floating Fullscreen Exit Button -->
+        <button type="button" id="btnExitFullscreenOverlay" class="fullscreen-exit-overlay">
+          ✕ Exit Fullscreen
+        </button>
 
         <!-- Connecting / Offline Overlay State -->
         <div id="streamLoadingState" style="position: absolute; display: flex; flex-direction: column; align-items: center; gap: 12px; color: #94a3b8; text-align: center; padding: 20px;">
@@ -119,7 +146,7 @@
 
       <!-- Highlighted Timestamp & Description -->
       <div style="font-size: 12.5px; color: #94a3b8; line-height: 1.5;">
-        <div id="streamTimeBadge" style="font-family: monospace; font-weight: 700; color: #38bdf8; margin-bottom: 4px;">Started: 10 Sept 2026, 05:46 PM</div>
+        <div id="streamTimeBadge" style="font-family: monospace; font-weight: 700; color: #38bdf8; margin-bottom: 4px;">Started: 10 Sept 2026, 05:52 PM</div>
         <p id="streamDesc" style="margin: 0;">Institutional academic live broadcast stream.</p>
       </div>
 
@@ -199,7 +226,7 @@
             liveBadge.style.display = 'flex';
 
             videoElement.srcObject = remoteStream;
-            videoElement.muted = true; // Muted by default to satisfy browser autoplay requirements
+            videoElement.muted = true;
             videoElement.play().catch(e => console.log("Autoplay waiting for interaction:", e));
           });
         });
@@ -236,28 +263,34 @@
         }
       });
 
-      // Fullscreen Toggle Handler
-      document.getElementById('btnFullscreen').addEventListener('click', () => {
-        const viewport = document.getElementById('videoViewport');
-        const btn = document.getElementById('btnFullscreen');
+      // Fullscreen Toggle Handlers
+      const viewport = document.getElementById('videoViewport');
+      const btnFullscreen = document.getElementById('btnFullscreen');
+      const btnExitOverlay = document.getElementById('btnExitFullscreenOverlay');
 
+      function toggleFullscreen() {
         if (!document.fullscreenElement) {
-          viewport.requestFullscreen().then(() => {
-            btn.textContent = "⛶ Exit Fullscreen";
-          }).catch(() => {});
+          viewport.requestFullscreen().catch(() => {});
         } else {
-          document.exitFullscreen().then(() => {
-            btn.textContent = "⛶ Fullscreen";
-          }).catch(() => {});
+          document.exitFullscreen().catch(() => {});
+        }
+      }
+
+      btnFullscreen.addEventListener('click', toggleFullscreen);
+      btnExitOverlay.addEventListener('click', () => {
+        if (document.fullscreenElement) {
+          document.exitFullscreen().catch(() => {});
         }
       });
 
+      // Synchronize button labels and floating exit overlay visibility
       document.addEventListener('fullscreenchange', () => {
-        const btn = document.getElementById('btnFullscreen');
         if (!document.fullscreenElement) {
-          btn.textContent = "⛶ Fullscreen";
+          btnFullscreen.textContent = "⛶ Fullscreen";
+          btnExitOverlay.style.display = 'none';
         } else {
-          btn.textContent = "⛶ Exit Fullscreen";
+          btnFullscreen.textContent = "⛶ Exit Fullscreen";
+          btnExitOverlay.style.display = 'flex';
         }
       });
     }
