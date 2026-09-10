@@ -51,7 +51,7 @@
       <div class="video-viewport" id="videoViewport">
         <video id="liveVideoPlayer" autoplay playsinline></video>
         
-        <!-- Dedicated hidden audio backup element to guarantee audio decoding -->
+        <!-- Dedicated secondary audio player to guarantee sound decoding -->
         <audio id="liveAudioPlayer" autoplay></audio>
 
         <!-- Loading Overlay -->
@@ -74,7 +74,7 @@
 
       <!-- Highlighted Timestamp, Description & Audio Diagnostics -->
       <div style="font-size: 12.5px; color: #94a3b8; line-height: 1.5;">
-        <div id="streamTimeBadge" style="font-family: monospace; font-weight: 700; color: #38bdf8; margin-bottom: 4px;">Started: 10 Sept 2026, 04:55 PM</div>
+        <div id="streamTimeBadge" style="font-family: monospace; font-weight: 700; color: #38bdf8; margin-bottom: 4px;">Started: 10 Sept 2026, 05:19 PM</div>
         <p id="streamDesc" style="margin: 0 0 6px 0;">Institutional academic live broadcast stream.</p>
         <div id="audioStatusIndicator" style="font-size: 11px; font-family: monospace; color: #f59e0b;">Audio Status: Waiting for stream connection...</div>
       </div>
@@ -130,35 +130,44 @@
         dummyCanvas.height = 16;
         const dummyStream = dummyCanvas.captureStream(1);
 
-        // Call the admin broadcast node using the master studio configuration
         liveCall = viewerPeer.call(hostPeerId, dummyStream);
 
         liveCall.on('stream', (remoteStream) => {
           activeRemoteStream = remoteStream;
           loader.style.display = 'none';
 
-          // Bind stream to both video player and dedicated audio backup element
+          // Bind stream to both elements
           videoEl.srcObject = remoteStream;
           audioEl.srcObject = remoteStream;
 
-          // Enforce muted initial state for browser autoplay compliance
           videoEl.muted = true;
           audioEl.muted = true;
 
-          videoEl.play().catch(e => console.log("Video play restriction:", e));
-          audioEl.play().catch(e => console.log("Audio play restriction:", e));
+          videoEl.play().catch(e => console.log(e));
+          audioEl.play().catch(e => console.log(e));
 
-          // Audio track check & diagnostics
+          // Check tracks immediately
           const audioTracks = remoteStream.getAudioTracks();
           const videoTracks = remoteStream.getVideoTracks();
-          console.log(`Stream connected. Video tracks: ${videoTracks.length}, Audio tracks: ${audioTracks.length}`);
-
+          
           if (audioTracks.length > 0) {
             audioStatus.textContent = `Audio Status: Connected (${audioTracks.length} audio track active)`;
             audioStatus.style.color = "#34d399";
           } else {
-            audioStatus.textContent = "Audio Status: Warning - No audio tracks detected in stream!";
-            audioStatus.style.color = "#ef4444";
+            audioStatus.textContent = "Audio Status: Warning - Checking audio stream...";
+            audioStatus.style.color = "#f59e0b";
+            
+            // Re-check after 1.5 seconds in case tracks are bound asynchronously
+            setTimeout(() => {
+              const delayedAudio = remoteStream.getAudioTracks();
+              if (delayedAudio.length > 0) {
+                audioStatus.textContent = `Audio Status: Connected (${delayedAudio.length} audio track active)`;
+                audioStatus.style.color = "#34d399";
+              } else {
+                audioStatus.textContent = "Audio Status: Warning - No audio track detected!";
+                audioStatus.style.color = "#ef4444";
+              }
+            }, 1500);
           }
         });
 
@@ -168,21 +177,18 @@
         });
 
         liveCall.on('error', (err) => {
-          console.error("PeerJS error:", err);
           loader.innerHTML = `<span style="color: #ef4444; font-weight: 600;">Unable to connect to host broadcast.</span>`;
         });
       });
 
-      // Unmute Button with Bulletproof Audio Activation
+      // Unmute Button Click Handler
       document.getElementById('btnUnmuteAudio').addEventListener('click', function() {
         if (!videoEl || !audioEl) return;
 
-        // Toggle mute state
         const willBeMuted = !videoEl.muted;
         videoEl.muted = willBeMuted;
         audioEl.muted = willBeMuted;
 
-        // Force enable all audio tracks in the WebRTC stream
         if (activeRemoteStream) {
           activeRemoteStream.getAudioTracks().forEach(track => {
             track.enabled = !willBeMuted;
@@ -193,7 +199,7 @@
           videoEl.play().catch(e => console.log(e));
           audioEl.play().catch(e => console.log(e));
           this.textContent = "🔇 Mute Audio";
-          audioStatus.textContent = "Audio Status: UNMUTED & Playing Live Sound";
+          audioStatus.textContent = "Audio Status: UNMUTED & Playing Sound";
           audioStatus.style.color = "#38bdf8";
         } else {
           this.textContent = "🔊 Unmute Audio";
