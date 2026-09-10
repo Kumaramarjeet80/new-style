@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GECM Portal - Unified Admin Studio</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    button, input, select, textarea, a {
+      cursor: pointer;
+      position: relative;
+      z-index: 10;
+    }
+    .tab-pane {
+      display: block;
+    }
+    .tab-pane.hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+
+  <!-- Top Header Navigation with Omni-Search Bar[cite: 4] -->
+  <header class="bg-slate-950 border-b border-slate-800 px-6 py-4 flex flex-wrap justify-between items-center gap-4 sticky top-0 z-50">
+    <div class="flex items-center gap-3">
+      <span class="text-xl font-extrabold text-blue-400 tracking-tight">GECM Studio</span>
+      <span class="text-xs px-2.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 font-mono">v4.5 Omni CRUD</span>
+    </div>
+    
+    <!-- Omni-Search Bar (Searches across categories, subcategories, cards, popups, and telemetry)[cite: 4] -->
+    <div class="flex-1 max-w-md hidden md:block">
+      <input type="text" id="omniSearchInput" placeholder="🔍 Omni-Search categories, cards, popups, student logs..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-1.5 text-xs text-white outline-none focus:border-blue-500 placeholder-slate-500">
+    </div>
+
+    <div id="authStatusBadge" class="text-xs text-amber-400 font-semibold flex items-center gap-2">
+      <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> Authentication Required
+    </div>
+  </header>
+
+  <!-- Login Overlay[cite: 4] -->
+  <div id="loginView" class="max-w-md mx-auto mt-20 p-6 bg-slate-800/90 backdrop-blur rounded-xl shadow-2xl border border-slate-700">
+    <h2 class="text-xl font-bold text-center text-white mb-2">Studio Authentication</h2>
+    <p class="text-xs text-slate-400 text-center mb-6">Enter the master administrative key to manage academic categories, cards, popups, and telemetry.</p>
+    <input type="password" id="adminPassword" placeholder="Enter admin passkey" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm mb-4 outline-none focus:border-blue-500 text-white placeholder-slate-500">
+    <button type="button" id="btnLogin" class="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold py-3 rounded-lg text-sm transition-all shadow-lg shadow-blue-600/30">
+      Unlock Master Studio
+    </button>
+    <p id="loginError" class="text-xs text-rose-400 text-center mt-3 hidden font-semibold"></p>
+  </div>
+
+  <!-- Master Dashboard Workspace[cite: 4] -->
+  <main id="dashboardView" class="hidden max-w-7xl mx-auto p-4 sm:p-6 space-y-8">
+
+    <!-- Section Tabs[cite: 4] -->
+    <div class="flex border-b border-slate-800 gap-6 text-sm font-bold">
+      <button type="button" class="pb-3 border-b-2 border-blue-500 text-blue-400 tab-btn" data-tab="tab-taxonomy">Categories & Cards</button>
+      <button type="button" class="pb-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 tab-btn" data-tab="tab-popups">Multi-Popup Studio</button>
+      <button type="button" class="pb-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 tab-btn" data-tab="tab-telemetry">Student Telemetry & Drive Archive</button>
+    </div>
+
+    <!-- TAB 1: CATEGORIES, SUBCATEGORIES & CARDS[cite: 4] -->
+    <section id="tab-taxonomy" class="tab-pane space-y-8">
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <!-- Add / Edit Category Form[cite: 4] -->
+        <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-5 space-y-4">
+          <div class="border-b border-slate-700/60 pb-3 flex justify-between items-center">
+            <div>
+              <h3 class="text-base font-bold text-white" id="catFormHeading">Create / Update Category</h3>
+              <p class="text-xs text-slate-400">Pillar groupings (e.g. Cover Pages, Syllabus, PYQs)</p>
+            </div>
+            <button type="button" id="btnCancelEditCat" class="text-[11px] text-amber-400 hover:underline hidden">Cancel Edit</button>
+          </div>
+          <input type="hidden" id="editingCatId" value="">
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Category Name</label>
+              <input type="text" id="catName" placeholder="e.g. Academic Handbooks & Syllabus" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Description</label>
+              <input type="text" id="catDesc" placeholder="Official institutional curriculum resources" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Icon / Emoji</label>
+              <input type="text" id="catIcon" value="📁" class="w-24 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+            </div>
+            <button type="button" id="btnSaveCategory" class="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold py-2 rounded-lg text-xs transition">
+              Save Category
+            </button>
+          </div>
+        </div>
+
+        <!-- Add / Edit Subcategory Form[cite: 4] -->
+        <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-5 space-y-4">
+          <div class="border-b border-slate-700/60 pb-3 flex justify-between items-center">
+            <div>
+              <h3 class="text-base font-bold text-white" id="subFormHeading">Create / Update Subcategory</h3>
+              <p class="text-xs text-slate-400">Nested branches (e.g. 1st Year Syllabus, Lab Manuals)</p>
+            </div>
+            <button type="button" id="btnCancelEditSub" class="text-[11px] text-amber-400 hover:underline hidden">Cancel Edit</button>
+          </div>
+          <input type="hidden" id="editingSubId" value="">
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Parent Category</label>
+              <select id="subParentCat" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500"></select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Subcategory Name</label>
+              <input type="text" id="subName" placeholder="e.g. Civil Engineering Notes" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Description</label>
+              <input type="text" id="subDesc" placeholder="Official modules and reading materials" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+            </div>
+            <button type="button" id="btnSaveSubcategory" class="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold py-2 rounded-lg text-xs transition">
+              Save Subcategory
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Categories & Subcategories Inventory Tables[cite: 4] -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-4">
+          <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-3">Categories Repository</h4>
+          <div class="overflow-x-auto max-h-48">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-900 text-slate-400">
+                <tr><th class="p-2">Icon</th><th class="p-2">Name</th><th class="p-2 text-right">Actions</th></tr>
+              </thead>
+              <tbody id="categoryTableBody" class="divide-y divide-slate-800 text-slate-300">
+                <tr><td colspan="3" class="p-3 text-center text-slate-500">No categories found.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-4">
+          <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-3">Subcategories Repository</h4>
+          <div class="overflow-x-auto max-h-48">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-900 text-slate-400">
+                <tr><th class="p-2">Name</th><th class="p-2">Parent ID</th><th class="p-2 text-right">Actions</th></tr>
+              </thead>
+              <tbody id="subcategoryTableBody" class="divide-y divide-slate-800 text-slate-300">
+                <tr><td colspan="3" class="p-3 text-center text-slate-500">No subcategories found.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card Creator & Document Publishing Studio[cite: 4] -->
+      <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-6 space-y-5">
+        <div class="border-b border-slate-700/60 pb-3 flex flex-wrap justify-between items-center gap-2">
+          <div>
+            <h3 class="text-lg font-bold text-white" id="cardFormHeading">Card Creator & Document Publishing Studio</h3>
+            <p class="text-xs text-slate-400">Upload standalone academic documents, add Drive links, or customize HTML cover templates</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <button type="button" id="btnCancelEditCard" class="text-xs text-amber-400 hover:underline hidden">Cancel Edit</button>
+            <button type="button" id="btnSaveCard" class="bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold px-6 py-2 rounded-lg text-xs transition shadow-lg shadow-emerald-600/20">
+              Publish New Card
+            </button>
+          </div>
+        </div>
+
+        <input type="hidden" id="editingCardId" value="">
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          
+          <!-- Column 1: Card Metadata -->
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Subcategory Placement</label>
+              <select id="cardSubcategorySelect" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500"></select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Card Title</label>
+              <input type="text" id="cardTitle" placeholder="e.g. B.Tech Chemistry Complete Syllabus" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Description</label>
+              <textarea id="cardDescription" rows="2" placeholder="Brief summary displayed on the card..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500"></textarea>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Button Text</label>
+              <input type="text" id="cardButtonText" placeholder="View / Read Document or Customize Cover" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+            </div>
+          </div>
+
+          <!-- Column 2: Media, Standalone Uploader & Routing -->
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Card Thumbnail Image</label>
+              <input type="file" id="cardThumbnailFile" accept="image/*" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-slate-400 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-blue-600 file:text-white">
+              <input type="url" id="cardThumbnailUrl" placeholder="Or paste thumbnail image URL" class="w-full mt-2 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Card Action Type</label>
+              <select id="cardActionType" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+                <option value="generator" selected>Open Custom PDF Generator Canvas</option>
+                <option value="link">Direct Document / Drive Link (Embedded PDF Viewer)</option>
+              </select>
+            </div>
+
+            <div id="cardTargetUrlWrap" style="display:none;" class="space-y-3 bg-slate-900/90 p-3 rounded-lg border border-slate-700">
+              <div class="flex items-center justify-between">
+                <label class="block text-xs font-bold text-blue-400 uppercase">Document Attachment</label>
+                <span id="uploadBadge" class="text-[10px] text-slate-400">Step 1: Select & Upload</span>
+              </div>
+              
+              <div>
+                <label class="block text-[11px] text-slate-400 mb-1">Select File (PDF, DOCX, ZIP)</label>
+                <input type="file" id="cardDocFile" accept=".pdf,.doc,.docx,.zip,.ppt,.pptx" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-xs text-slate-400 file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:bg-slate-800 file:text-white">
+              </div>
+
+              <button type="button" id="btnUploadDocToDrive" class="w-full bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold py-2 rounded-lg text-xs transition flex items-center justify-center gap-2">
+                <span>☁ Upload Document to Google Drive</span>
+              </button>
+
+              <div>
+                <label class="block text-[11px] text-slate-400 mb-1">Google Drive View Link (Auto-Filled On Upload)</label>
+                <input type="url" id="cardTargetUrl" placeholder="https://drive.google.com/file/d/..." class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-emerald-400 font-mono outline-none focus:border-blue-500">
+              </div>
+            </div>
+          </div>
+
+          <!-- Column 3: Live Custom Template HTML Code Editor -->
+          <div class="space-y-2 flex flex-col">
+            <div class="flex justify-between items-center">
+              <label class="block text-xs font-bold text-slate-300 uppercase">Cover Page Template HTML Code</label>
+              <span class="text-[10px] text-blue-400 font-mono">User Editable Placeholders</span>
+            </div>
+            <textarea id="cardTemplateHtml" placeholder="<!-- Paste custom cover page inner HTML here -->&#10;<div class='college-title'><span id='outCollege1'></span></div>..." class="flex-1 w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs font-mono text-emerald-400 outline-none focus:border-blue-500 resize-none min-h-[220px]"></textarea>
+            <span class="text-[11px] text-slate-500">Any ID starting with 'out' or custom ID will automatically become an editable input field for students.</span>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Published Inventory Table with IST Timestamps[cite: 4] -->
+      <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-5">
+        <h4 class="text-sm font-bold text-white mb-4">Published Cards Inventory</h4>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead class="bg-slate-900/80 text-slate-400 border-b border-slate-700">
+              <tr>
+                <th class="p-3">Card ID</th>
+                <th class="p-3">Published (IST)</th>
+                <th class="p-3">Thumbnail</th>
+                <th class="p-3">Title</th>
+                <th class="p-3">Subcategory ID</th>
+                <th class="p-3">Action Type</th>
+                <th class="p-3">Attached Link</th>
+                <th class="p-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="inventoryTableBody" class="divide-y divide-slate-800 text-slate-300">
+              <tr><td colspan="8" class="p-4 text-center text-slate-500">Loading published cards...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- TAB 2: MULTI-POPUP MANAGEMENT STUDIO[cite: 4] -->
+    <section id="tab-popups" class="tab-pane hidden space-y-8">
+      
+      <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-6 space-y-6">
+        <div class="border-b border-slate-700/60 pb-3 flex justify-between items-center">
+          <div>
+            <h3 class="text-lg font-bold text-white" id="popupFormHeading">Create Broadcast Popup</h3>
+            <p class="text-xs text-slate-400">When multiple popups are active, users will see them cyclically in order, starting with the latest added popup</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <button type="button" id="btnCancelEditPopup" class="text-xs text-amber-400 hover:underline hidden">Cancel Edit</button>
+            <button type="button" id="btnSavePopup" class="bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold px-6 py-2 rounded-lg text-xs transition shadow-lg">
+              Save & Publish Popup
+            </button>
+          </div>
+        </div>
+
+        <input type="hidden" id="editingPopupId" value="">
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="space-y-4">
+            <div class="flex items-center gap-3 bg-slate-900/60 p-3 rounded-lg border border-slate-700">
+              <input type="checkbox" id="popupActive" checked class="w-4 h-4">
+              <label for="popupActive" class="text-xs font-bold text-white">Active (Rotates dynamically in user queue)</label>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Media Format</label>
+                <select id="popupMediaType" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white">
+                  <option value="image" selected>Photo Banner</option>
+                  <option value="video">Video (Drive / YouTube / MP4)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Click Behavior</label>
+                <select id="popupClickMode" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white">
+                  <option value="button" selected>Button Only</option>
+                  <option value="card">Entire Card Clickable</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Upload Media File to Drive</label>
+              <input type="file" id="popupFileInput" accept="image/*,video/*" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-slate-400 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-blue-600 file:text-white">
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Or Direct Media / YouTube Link</label>
+              <input type="url" id="popupMediaUrl" placeholder="https://www.youtube.com/watch?v=... or direct URL" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Popup Title</label>
+              <input type="text" id="popupTitle" placeholder="e.g. End-Semester Examination Schedule" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Popup Body Text</label>
+              <textarea id="popupBody" rows="3" placeholder="Notice details..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500"></textarea>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Action Button Text</label>
+                <input type="text" id="popupButtonText" value="View Notice" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+              </div>
+              <div>
+                <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Destination URL</label>
+                <input type="url" id="popupButtonLink" placeholder="https://..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+              </div>
+            </div>
+            <div class="grid grid-cols-3 gap-3">
+              <div>
+                <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Closing Mode</label>
+                <select id="popupCloseMode" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white">
+                  <option value="both" selected>Both (Timer + Button)</option>
+                  <option value="timer">Timer Only</option>
+                  <option value="manual">Manual Close Only</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Timer (Sec)</label>
+                <input type="number" id="popupTimerSeconds" value="5" min="1" max="60" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+              </div>
+              <div>
+                <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Interval (Min)</label>
+                <input type="number" id="popupIntervalMinutes" value="1" min="0.2" step="0.1" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+              </div>
+            </div>
+
+            <!-- Live Card Preview -->
+            <div class="pt-2">
+              <span class="block text-[11px] font-bold uppercase text-slate-400 mb-2">Live Visual Card Preview</span>
+              <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-col items-center">
+                <div class="w-full max-w-xs bg-white text-slate-900 rounded-lg overflow-hidden shadow-xl text-center">
+                  <div class="h-28 bg-slate-900 flex items-center justify-center overflow-hidden">
+                    <span class="text-xs text-slate-400" id="previewMediaPlaceholder">Media Display</span>
+                  </div>
+                  <div class="p-4">
+                    <div class="font-bold text-sm" id="previewTitleDisplay">Announcement Title</div>
+                    <div class="text-xs text-slate-500 mt-1" id="previewBodyDisplay">Body description here...</div>
+                    <div class="mt-3 bg-blue-600 text-white text-xs font-bold py-1.5 rounded" id="previewBtnDisplay">Action Button</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- Permanent Popups Table[cite: 4] -->
+      <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-5">
+        <div class="border-b border-slate-700/60 pb-3 mb-4 flex justify-between items-center">
+          <h4 class="text-sm font-bold text-white">Permanent Popups Repository</h4>
+          <span class="text-xs text-slate-400" id="popupCountBadge">0 Total Popups</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead class="bg-slate-900/80 text-slate-400 border-b border-slate-700">
+              <tr>
+                <th class="p-3">ID</th>
+                <th class="p-3">Status</th>
+                <th class="p-3">Format</th>
+                <th class="p-3">Title</th>
+                <th class="p-3">Destination</th>
+                <th class="p-3">Timing</th>
+                <th class="p-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="popupListTableBody" class="divide-y divide-slate-800 text-slate-300">
+              <tr><td colspan="7" class="p-4 text-center text-slate-500">No popups stored yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- TAB 3: STUDENT TELEMETRY & DRIVE ARCHIVE[cite: 4] -->
+    <section id="tab-telemetry" class="tab-pane hidden space-y-6">
+      <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-700/60">
+          <div>
+            <h3 class="text-lg font-bold text-white">Student Download Telemetry & Drive Archive</h3>
+            <p class="text-xs text-slate-400">All student download telemetry logs and generated Google Drive PDF archives</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="text-xs font-bold text-slate-300">Total Downloads: <span id="telemetryCount" class="text-blue-400 font-mono text-sm">0</span></span>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto mt-4 max-h-[550px]">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead class="bg-slate-900/95 text-slate-400 sticky top-0 border-b border-slate-700 z-20">
+              <tr>
+                <th class="p-3 whitespace-nowrap">Timestamp (IST)</th>
+                <th class="p-3 whitespace-nowrap">Order ID</th>
+                <th class="p-3 whitespace-nowrap">Card ID</th>
+                <th class="p-3 whitespace-nowrap">Student Name</th>
+                <th class="p-3 whitespace-nowrap">Roll No</th>
+                <th class="p-3 whitespace-nowrap">Reg No</th>
+                <th class="p-3 whitespace-nowrap">Subject & Code</th>
+                <th class="p-3 whitespace-nowrap">Semester</th>
+                <th class="p-3 whitespace-nowrap">Branch</th>
+                <th class="p-3 whitespace-nowrap">College</th>
+                <th class="p-3 whitespace-nowrap">Faculty Guide</th>
+                <th class="p-3 whitespace-nowrap text-right">Drive PDF Archive</th>
+              </tr>
+            </thead>
+            <tbody id="telemetryTableBody" class="divide-y divide-slate-800 text-slate-300">
+              <tr><td colspan="12" class="p-6 text-center text-slate-500">No downloads logged yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxNbXMEmz8PorS5-muBGmPP3XaZ7kizx08v2dZuhUqTyt69CW5727qxtSxQ6tQZ7v928Q/exec";
+    const USER_CACHE_KEY = "gecm_portal_catalog_cache";
+
+    let authPass = "";
+    let studioData = {
+      categories: [],
+      subcategories: [],
+      cards: [],
+      popups: [],
+      telemetry: []
+    };
+
+    function clearUserLocalCache() {
+      try {
+        localStorage.removeItem(USER_CACHE_KEY);
+      } catch (e) {}
+    }
+
+    function readFileAsBase64(file) {
+      return new Promise((resolve) => {
+        if (!file) return resolve(null);
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const res = e.target.result;
+          if (typeof res === 'string' && res.startsWith('data:')) {
+            resolve({ base64: res, name: file.name });
+          } else {
+            resolve(null);
+          }
+        };
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // Tab Navigation[cite: 4]
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.querySelectorAll('.tab-btn').forEach(b => {
+          b.classList.remove('border-blue-500', 'text-blue-400');
+          b.classList.add('border-transparent', 'text-slate-400');
+        });
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));
+
+        btn.classList.add('border-blue-500', 'text-blue-400');
+        btn.classList.remove('border-transparent', 'text-slate-400');
+        const target = document.getElementById(btn.dataset.tab);
+        if (target) target.classList.remove('hidden');
+      });
+    });
+
+    // Authentication Login[cite: 4]
+    document.getElementById('btnLogin').addEventListener('click', async (e) => {
+      e.preventDefault();
+      const passInput = document.getElementById('adminPassword');
+      const pass = passInput.value.trim();
+      const err = document.getElementById('loginError');
+      const btn = document.getElementById('btnLogin');
+
+      if (!pass) {
+        err.textContent = "Please enter the admin passkey.";
+        err.classList.remove('hidden');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = "Connecting to Backend & Syncing Database...";
+      err.classList.add('hidden');
+
+      try {
+        const res = await fetch(APPS_SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ action: "admin_login", key: pass })
+        });
+
+        const rawText = await res.text();
+        let data = JSON.parse(rawText);
+
+        if (data.status === "unauthorized") {
+          err.textContent = "Invalid master administrative password.";
+          err.classList.remove('hidden');
+        } else if (data.status === "success") {
+          authPass = pass;
+          document.getElementById('loginView').classList.add('hidden');
+          document.getElementById('dashboardView').classList.remove('hidden');
+          document.getElementById('authStatusBadge').innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span> Authenticated`;
+          document.getElementById('authStatusBadge').className = "text-xs text-emerald-400 font-semibold flex items-center gap-2";
+
+          studioData.telemetry = Array.isArray(data.users) ? data.users : [];
+          studioData.popups = Array.isArray(data.popups) ? data.popups : [];
+          studioData.categories = Array.isArray(data.categories) ? data.categories : [];
+          studioData.subcategories = Array.isArray(data.subcategories) ? data.subcategories : [];
+          studioData.cards = Array.isArray(data.cards) ? data.cards : [];
+
+          renderAllAdminViews();
+        } else {
+          err.textContent = data.message || "Authentication error.";
+          err.classList.remove('hidden');
+        }
+      } catch (error) {
+        err.textContent = "Connection failed: " + error.message;
+        err.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Unlock Master Studio";
+      }
+    });
+
+    function populateDropdowns() {
+      const subParent = document.getElementById('subParentCat');
+      if (subParent && studioData.categories.length > 0) {
+        subParent.innerHTML = studioData.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+      }
+
+      const cardSub = document.getElementById('cardSubcategorySelect');
+      if (cardSub && studioData.subcategories.length > 0) {
+        cardSub.innerHTML = studioData.subcategories.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+      }
+    }
+
+    function renderAllAdminViews() {
+      populateDropdowns();
+      renderCategoriesTable(studioData.categories);
+      renderSubcategoriesTable(studioData.subcategories);
+      renderCardsInventory(studioData.cards);
+      renderPopupsList(studioData.popups);
+      renderTelemetry(studioData.telemetry);
+    }
+
+    // --- CATEGORY CRUD[cite: 4] ---
+    document.getElementById('btnSaveCategory').addEventListener('click', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('editingCatId').value;
+      const name = document.getElementById('catName').value.trim();
+      const description = document.getElementById('catDesc').value.trim();
+      const icon = document.getElementById('catIcon').value.trim() || "📁";
+      if (!name) return alert("Category Name is required!");
+
+      const btn = document.getElementById('btnSaveCategory');
+      btn.disabled = true;
+      btn.textContent = "Saving...";
+
+      try {
+        const res = await fetch(APPS_SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({
+            action: "admin_save_category",
+            key: authPass,
+            category: { id, name, description, icon }
+          })
+        });
+        const d = await res.json();
+        if (d.status === "success") {
+          clearUserLocalCache();
+          alert("Category saved successfully!");
+          resetCategoryForm();
+          await reloadStudioData();
+        } else {
+          alert("Save failed: " + d.message);
+        }
+      } catch (err) {
+        alert("Request error: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Save Category";
+      }
+    });
+
+    function resetCategoryForm() {
+      document.getElementById('editingCatId').value = "";
+      document.getElementById('catName').value = "";
+      document.getElementById('catDesc').value = "";
+      document.getElementById('catIcon').value = "📁";
+      document.getElementById('catFormHeading').textContent = "Create / Update Category";
+      document.getElementById('btnCancelEditCat').classList.add('hidden');
+    }
+
+    document.getElementById('btnCancelEditCat').addEventListener('click', resetCategoryForm);
+
+    window.editCategory = function(c) {
+      document.getElementById('editingCatId').value = c.id;
+      document.getElementById('catName').value = c.name || "";
+      document.getElementById('catDesc').value = c.description || "";
+      document.getElementById('catIcon').value = c.icon || "📁";
+      document.getElementById('catFormHeading').textContent = `Edit Category: ${c.id}`;
+      document.getElementById('btnCancelEditCat').classList.remove('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    function renderCategoriesTable(list) {
+      const tbody = document.getElementById('categoryTableBody');
+      if (!tbody) return;
+      tbody.innerHTML = "";
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="3" class="p-3 text-center text-slate-500">No categories found.</td></tr>`;
+        return;
+      }
+      list.forEach(c => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="p-2 text-base">${c.icon || '📁'}</td>
+          <td class="p-2 font-semibold text-white">${c.name}</td>
+          <td class="p-2 text-right space-x-2">
+            <button type="button" class="text-blue-400 hover:underline" onclick='editCategory(${JSON.stringify(c)})'>Edit</button>
+            <button type="button" class="text-rose-400 hover:underline" onclick="deleteItem('Categories', '${c.id}')">Delete</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // --- SUBCATEGORY CRUD[cite: 4] ---
+    document.getElementById('btnSaveSubcategory').addEventListener('click', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('editingSubId').value;
+      const categoryId = document.getElementById('subParentCat').value;
+      const name = document.getElementById('subName').value.trim();
+      const description = document.getElementById('subDesc').value.trim();
+      if (!name || !categoryId) return alert("Parent Category and Subcategory Name required!");
+
+      const btn = document.getElementById('btnSaveSubcategory');
+      btn.disabled = true;
+      btn.textContent = "Saving...";
+
+      try {
+        const res = await fetch(APPS_SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({
+            action: "admin_save_subcategory",
+            key: authPass,
+            subcategory: { id, categoryId, name, description }
+          })
+        });
+        const d = await res.json();
+        if (d.status === "success") {
+          clearUserLocalCache();
+          alert("Subcategory saved successfully!");
+          resetSubcategoryForm();
+          await reloadStudioData();
+        } else {
+          alert("Save failed: " + d.message);
+        }
+      } catch (err) {
+        alert("Request error: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Save Subcategory";
+      }
+    });
+
+    function resetSubcategoryForm() {
+      document.getElementById('editingSubId').value = "";
+      document.getElementById('subName').value = "";
+      document.getElementById('subDesc').value = "";
+      document.getElementById('subFormHeading').textContent = "Create / Update Subcategory";
+      document.getElementById('btnCancelEditSub').classList.add('hidden');
+    }
+
+    document.getElementById('btnCancelEditSub').addEventListener('click', resetSubcategoryForm);
+
+    window.editSubcategory = function(s) {
+      document.getElementById('editingSubId').value = s.id;
+      document.getElementById('subParentCat').value = s.categoryId || "";
+      document.getElementById('subName').value = s.name || "";
+      document.getElementById('subDesc').value = s.description || "";
+      document.getElementById('subFormHeading').textContent = `Edit Subcategory: ${s.id}`;
+      document.getElementById('btnCancelEditSub').classList.remove('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    function renderSubcategoriesTable(list) {
+      const tbody = document.getElementById('subcategoryTableBody');
+      if (!tbody) return;
+      tbody.innerHTML = "";
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="3" class="p-3 text-center text-slate-500">No subcategories found.</td></tr>`;
+        return;
+      }
+      list.forEach(s => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="p-2 font-semibold text-white">${s.name}</td>
+          <td class="p-2 font-mono text-slate-400">${s.categoryId}</td>
+          <td class="p-2 text-right space-x-2">
+            <button type="button" class="text-blue-400 hover:underline" onclick='editSubcategory(${JSON.stringify(s)})'>Edit</button>
+            <button type="button" class="text-rose-400 hover:underline" onclick="deleteItem('Subcategories', '${s.id}')">Delete</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // --- CARD CRUD[cite: 4] ---
+    const actionSelect = document.getElementById('cardActionType');
+    if (actionSelect) {
+      actionSelect.addEventListener('change', (e) => {
+        const wrap = document.getElementById('cardTargetUrlWrap');
+        if (wrap) wrap.style.display = (e.target.value === 'link') ? 'block' : 'none';
+      });
+    }
+
+    document.getElementById('btnUploadDocToDrive').addEventListener('click', async (e) => {
+      e.preventDefault();
+      const docInput = document.getElementById('cardDocFile');
+      if (!docInput.files || docInput.files.length === 0) {
+        return alert("Please select a document file first!");
+      }
+
+      const file = docInput.files[0];
+      const btn = document.getElementById('btnUploadDocToDrive');
+      const badge = document.getElementById('uploadBadge');
+
+      btn.disabled = true;
+      btn.innerHTML = `Uploading ${file.name}...`;
+
+      try {
+        const filePayload = await readFileAsBase64(file);
+        const res = await fetch(APPS_SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ action: "admin_upload_standalone_doc", key: authPass, file: filePayload })
+        });
+
+        const d = await res.json();
+        if (d && d.status === "success" && d.fileUrl) {
+          document.getElementById('cardTargetUrl').value = d.fileUrl;
+          document.getElementById('cardActionType').value = 'link';
+          badge.textContent = "✓ Uploaded Successfully";
+          badge.className = "text-[10px] text-emerald-400 font-bold";
+          alert("Document uploaded successfully to Google Drive!");
+        } else {
+          throw new Error(d ? d.message : "Upload error");
+        }
+      } catch (err) {
+        alert("Upload failed: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<span>☁ Upload Document to Google Drive</span>`;
+      }
+    });
+
+    document.getElementById('btnSaveCard').addEventListener('click', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('editingCardId').value;
+      const subcategoryId = document.getElementById('cardSubcategorySelect').value;
+      const title = document.getElementById('cardTitle').value.trim();
+      const description = document.getElementById('cardDescription').value.trim();
+      const manualThumb = document.getElementById('cardThumbnailUrl').value.trim();
+      let actionType = document.getElementById('cardActionType').value;
+      let targetUrl = document.getElementById('cardTargetUrl').value.trim();
+      const templateHtml = document.getElementById('cardTemplateHtml').value.trim();
+      const thumbInput = document.getElementById('cardThumbnailFile');
+
+      if (!title || !subcategoryId) return alert("Subcategory and Card Title are required!");
+      if (targetUrl.length > 0) actionType = "link";
+
+      const btn = document.getElementById('btnSaveCard');
+      btn.disabled = true;
+      btn.textContent = "Publishing Card...";
+
+      try {
+        let thumbPayload = null;
+        if (thumbInput.files && thumbInput.files.length > 0) {
+          thumbPayload = await readFileAsBase64(thumbInput.files[0]);
+        }
+
+        const defaultBtnLabel = (actionType === "link") ? "View / Read Document" : "Customize Cover Page";
+        const buttonText = document.getElementById('cardButtonText').value.trim() || defaultBtnLabel;
+
+        const res = await fetch(APPS_SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({
+            action: "admin_save_card",
+            key: authPass,
+            card: {
+              id, subcategoryId, title, description,
+              thumbnailUrl: manualThumb,
+              thumbnailFile: thumbPayload,
+              buttonText, templateHtml: (actionType === "link") ? "" : templateHtml,
+              actionType, targetUrl
+            }
+          })
+        });
+
+        const d = await res.json();
+        if (d && d.status === "success") {
+          clearUserLocalCache();
+          alert("Card saved successfully!");
+          resetCardForm();
+          await reloadStudioData();
+        } else {
+          alert("Card save failed: " + d.message);
+        }
+      } catch (err) {
+        alert("Upload error: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Publish New Card";
+      }
+    });
+
+    function resetCardForm() {
+      document.getElementById('editingCardId').value = "";
+      document.getElementById('cardTitle').value = "";
+      document.getElementById('cardDescription').value = "";
+      document.getElementById('cardThumbnailUrl').value = "";
+      document.getElementById('cardThumbnailFile').value = "";
+      document.getElementById('cardDocFile').value = "";
+      document.getElementById('cardTargetUrl').value = "";
+      document.getElementById('cardTemplateHtml').value = "";
+      document.getElementById('cardButtonText').value = "";
+      document.getElementById('cardActionType').value = "generator";
+      document.getElementById('cardTargetUrlWrap').style.display = "none";
+      document.getElementById('cardFormHeading').textContent = "Card Creator & Document Publishing Studio";
+      document.getElementById('btnCancelEditCard').classList.add('hidden');
+      document.getElementById('btnSaveCard').textContent = "Publish New Card";
+    }
+
+    document.getElementById('btnCancelEditCard').addEventListener('click', resetCardForm);
+
+    window.editCard = function(c) {
+      document.getElementById('editingCardId').value = c.id;
+      document.getElementById('cardSubcategorySelect').value = c.subcategoryId || "";
+      document.getElementById('cardTitle').value = c.title || "";
+      document.getElementById('cardDescription').value = c.description || "";
+      document.getElementById('cardThumbnailUrl').value = c.thumbnailUrl || "";
+      document.getElementById('cardActionType').value = c.actionType || "generator";
+      document.getElementById('cardTargetUrl').value = c.targetUrl || "";
+      document.getElementById('cardTemplateHtml').value = c.templateHtml || "";
+      document.getElementById('cardButtonText').value = c.buttonText || "";
+
+      if (c.actionType === "link" || (c.targetUrl && c.targetUrl.trim().length > 0)) {
+        document.getElementById('cardTargetUrlWrap').style.display = "block";
+      } else {
+        document.getElementById('cardTargetUrlWrap').style.display = "none";
+      }
+
+      document.getElementById('cardFormHeading').textContent = `Edit Card: ${c.id}`;
+      document.getElementById('btnCancelEditCard').classList.remove('hidden');
+      document.getElementById('btnSaveCard').textContent = "Update Card";
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    function renderCardsInventory(list) {
+      const tbody = document.getElementById('inventoryTableBody');
+      if (!tbody) return;
+      tbody.innerHTML = "";
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-slate-500">No cards registered yet.</td></tr>`;
+        return;
+      }
+      list.forEach(c => {
+        const hasDocLink = Boolean(c.targetUrl && c.targetUrl.trim().length > 0);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="p-3 font-mono text-blue-400">${c.id}</td>
+          <td class="p-3 font-mono text-[11px] text-slate-400">${c.createdAt || 'N/A'}</td>
+          <td class="p-3">
+            ${c.thumbnailUrl ? `<img src="${c.thumbnailUrl}" class="w-10 h-10 object-cover rounded border border-slate-700">` : 'N/A'}
+          </td>
+          <td class="p-3 font-semibold text-white">${c.title}</td>
+          <td class="p-3 font-mono text-slate-400">${c.subcategoryId}</td>
+          <td class="p-3">
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${c.actionType === 'link' || hasDocLink ? 'bg-amber-950 text-amber-300 border border-amber-800' : 'bg-blue-950 text-blue-300 border border-blue-800'}">
+              ${c.actionType === 'link' || hasDocLink ? 'Document Link' : 'Canvas Cover'}
+            </span>
+          </td>
+          <td class="p-3 text-slate-400 max-w-xs truncate">
+            ${hasDocLink ? `<a href="${c.targetUrl}" target="_blank" class="text-blue-400 hover:underline font-mono text-[11px]">${c.targetUrl}</a>` : '<span class="text-slate-500">Canvas Cover</span>'}
+          </td>
+          <td class="p-3 text-right space-x-2">
+            <button type="button" class="text-blue-400 hover:underline font-bold" onclick='editCard(${JSON.stringify(c)})'>Edit</button>
+            <button type="button" class="text-rose-400 hover:underline font-bold" onclick="deleteItem('Cards', '${c.id}')">Delete</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // --- POPUP CRUD[cite: 4] ---
+    let pendingPopupFile = null;
+    document.getElementById('popupFileInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          pendingPopupFile = { base64: evt.target.result, name: file.name };
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    ['popupTitle', 'popupBody', 'popupButtonText'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('input', () => {
+          document.getElementById('previewTitleDisplay').textContent = document.getElementById('popupTitle').value || "Title";
+          document.getElementById('previewBodyDisplay').textContent = document.getElementById('popupBody').value || "Body";
+          document.getElementById('previewBtnDisplay').textContent = document.getElementById('popupButtonText').value || "Button";
+        });
+      }
+    });
+
+    document.getElementById('btnSavePopup').addEventListener('click', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('editingPopupId').value;
+      const active = document.getElementById('popupActive').checked;
+      const mediaType = document.getElementById('popupMediaType').value;
+      const mediaUrl = document.getElementById('popupMediaUrl').value.trim();
+      const title = document.getElementById('popupTitle').value.trim();
+      const body = document.getElementById('popupBody').value.trim();
+      const buttonText = document.getElementById('popupButtonText').value.trim() || "Visit";
+      const buttonLink = document.getElementById('popupButtonLink').value.trim();
+      const clickMode = document.getElementById('popupClickMode').value;
+      const closeMode = document.getElementById('popupCloseMode').value;
+      const timerSeconds = Number(document.getElementById('popupTimerSeconds').value) || 5;
+      const intervalMinutes = Number(document.getElementById('popupIntervalMinutes').value) || 1;
+
+      const btn = document.getElementById('btnSavePopup');
+      btn.disabled = true;
+      btn.textContent = "Publishing to Drive & Sheets...";
+
+      try {
+        const res = await fetch(APPS_SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({
+            action: "admin_save_popup",
+            key: authPass,
+            popup: {
+              id, active, mediaType, mediaUrl,
+              mediaFile: pendingPopupFile,
+              title, body, buttonText, buttonLink,
+              clickMode, closeMode, timerSeconds, intervalMinutes
+            }
+          })
+        });
+        const d = await res.json();
+        if (d.status === "success") {
+          clearUserLocalCache();
+          alert("Popup saved successfully!");
+          resetPopupForm();
+          await reloadStudioData();
+        } else {
+          alert("Save failed: " + d.message);
+        }
+      } catch (err) {
+        alert("Upload error: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Save & Publish Popup";
+      }
+    });
+
+    function resetPopupForm() {
+      document.getElementById('editingPopupId').value = "";
+      document.getElementById('popupFormHeading').textContent = "Create Broadcast Popup";
+      document.getElementById('popupTitle').value = "";
+      document.getElementById('popupBody').value = "";
+      document.getElementById('popupMediaUrl').value = "";
+      document.getElementById('popupFileInput').value = "";
+      document.getElementById('btnCancelEditPopup').classList.add('hidden');
+      pendingPopupFile = null;
+    }
+
+    document.getElementById('btnCancelEditPopup').addEventListener('click', resetPopupForm);
+
+    window.editPopup = function(p) {
+      document.getElementById('editingPopupId').value = p.id;
+      document.getElementById('popupFormHeading').textContent = `Edit Popup: ${p.id}`;
+      document.getElementById('popupActive').checked = p.active;
+      document.getElementById('popupMediaType').value = p.mediaType || "image";
+      document.getElementById('popupMediaUrl').value = p.mediaUrl || "";
+      document.getElementById('popupTitle').value = p.title || "";
+      document.getElementById('popupBody').value = p.body || "";
+      document.getElementById('popupButtonText').value = p.buttonText || "";
+      document.getElementById('popupButtonLink').value = p.buttonLink || "";
+      document.getElementById('popupClickMode').value = p.clickMode || "button";
+      document.getElementById('popupCloseMode').value = p.closeMode || "both";
+      document.getElementById('popupTimerSeconds').value = p.timerSeconds || 5;
+      document.getElementById('popupIntervalMinutes').value = p.intervalMinutes || 1;
+      document.getElementById('btnCancelEditPopup').classList.remove('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    window.togglePopupStatus = async function(id, newStatus) {
+      try {
+        await fetch(APPS_SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ action: "admin_toggle_popup", key: authPass, id: id, active: newStatus })
+        });
+        clearUserLocalCache();
+        await reloadStudioData();
+      } catch (err) {
+        alert("Toggle failed: " + err.message);
+      }
+    };
+
+    window.deleteItem = async function(sheet, id) {
+      if (!confirm(`Permanently delete record ${id} from ${sheet}?`)) return;
+      try {
+        await fetch(APPS_SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ action: "admin_delete_item", key: authPass, targetSheet: sheet, id: id })
+        });
+        clearUserLocalCache();
+        await reloadStudioData();
+      } catch (err) {
+        alert("Delete failed: " + err.message);
+      }
+    };
+
+    async function reloadStudioData() {
+      try {
+        const res = await fetch(APPS_SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ action: "admin_login", key: authPass })
+        });
+        const data = await res.json();
+        if (data.status === "success") {
+          studioData.telemetry = data.users || [];
+          studioData.popups = data.popups || [];
+          studioData.categories = data.categories || [];
+          studioData.subcategories = data.subcategories || [];
+          studioData.cards = data.cards || [];
+          renderAllAdminViews();
+        }
+      } catch (e) {
+        console.error("Reload error:", e);
+      }
+    }
+
+    function renderPopupsList(list) {
+      const badge = document.getElementById('popupCountBadge');
+      if (badge) badge.textContent = `${list.length} Total Popups`;
+      const tbody = document.getElementById('popupListTableBody');
+      if (!tbody) return;
+      tbody.innerHTML = "";
+
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-500">No popups stored yet.</td></tr>`;
+        return;
+      }
+
+      list.forEach(p => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="p-3 font-mono text-blue-400">${p.id}</td>
+          <td class="p-3">
+            <span class="${p.active ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-slate-800 text-slate-400 border border-slate-700'} px-2 py-0.5 rounded text-[10px] font-bold uppercase">${p.active ? 'Active' : 'Deactivated'}</span>
+          </td>
+          <td class="p-3 uppercase font-bold text-[11px] text-slate-400">${p.mediaType}</td>
+          <td class="p-3 font-semibold text-white">${p.title || 'Untitled'}</td>
+          <td class="p-3 text-slate-400 max-w-xs truncate">${p.buttonLink ? `<a href="${p.buttonLink}" target="_blank" class="text-blue-400 hover:underline">${p.buttonLink}</a>` : 'N/A'}</td>
+          <td class="p-3 text-slate-400">${p.closeMode} (${p.timerSeconds}s / ${p.intervalMinutes || 1}m)</td>
+          <td class="p-3 text-right space-x-2">
+            <button type="button" class="text-blue-400 hover:underline font-bold" onclick='editPopup(${JSON.stringify(p)})'>Edit</button>
+            <button type="button" class="${p.active ? 'text-amber-400' : 'text-emerald-400'} hover:underline font-bold" onclick="togglePopupStatus('${p.id}', ${!p.active})">
+              ${p.active ? 'Deactivate' : 'Activate'}
+            </button>
+            <button type="button" class="text-rose-400 hover:underline font-bold" onclick="deleteItem('Popups', '${p.id}')">Delete</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderTelemetry(list) {
+      const countEl = document.getElementById('telemetryCount');
+      if (countEl) countEl.textContent = list.length;
+      const tbody = document.getElementById('telemetryTableBody');
+      if (!tbody) return;
+      tbody.innerHTML = "";
+
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="12" class="p-6 text-center text-slate-500">No downloads logged yet.</td></tr>`;
+        return;
+      }
+
+      list.forEach(u => {
+        const tr = document.createElement('tr');
+        const hasDriveLink = u.pdfLink && typeof u.pdfLink === 'string' && u.pdfLink.startsWith("http");
+        
+        let subjectDisplay = u.course || 'N/A';
+        if (u.courseCode && u.courseCode !== 'N/A' && u.courseCode.trim().length > 0) {
+          const codeFormatted = u.courseCode.startsWith('(') ? u.courseCode : `(${u.courseCode})`;
+          subjectDisplay = `${u.course} <span class="text-blue-400 font-mono text-[11px]">${codeFormatted}</span>`;
+        }
+
+        tr.innerHTML = `
+          <td class="p-3 font-mono text-slate-400 whitespace-nowrap">${u.timestamp || 'N/A'}</td>
+          <td class="p-3 font-mono font-bold text-amber-400 whitespace-nowrap">${u.orderId || 'ORD-N/A'}</td>
+          <td class="p-3 font-mono text-blue-400 whitespace-nowrap">${u.cardId || 'DEFAULT'}</td>
+          <td class="p-3 font-bold text-white whitespace-nowrap">${u.name || 'N/A'}</td>
+          <td class="p-3 font-mono whitespace-nowrap">${u.roll || 'N/A'}</td>
+          <td class="p-3 font-mono text-slate-400 whitespace-nowrap">${u.reg || 'N/A'}</td>
+          <td class="p-3 text-slate-200 whitespace-nowrap">${subjectDisplay}</td>
+          <td class="p-3 whitespace-nowrap"><span class="bg-slate-800 text-blue-300 border border-slate-700 px-2 py-0.5 rounded text-[11px] font-semibold">${u.semester || 'N/A'}</span></td>
+          <td class="p-3 text-slate-300 whitespace-nowrap">${u.branch || 'N/A'}</td>
+          <td class="p-3 text-slate-400 whitespace-nowrap max-w-xs truncate" title="${u.college || ''}">${u.college || 'N/A'}</td>
+          <td class="p-3 text-slate-300 whitespace-nowrap">${u.faculty || 'N/A'}</td>
+          <td class="p-3 whitespace-nowrap text-right">
+            ${hasDriveLink 
+              ? `<a href="${u.pdfLink}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-blue-400 hover:text-blue-300 bg-blue-950/60 hover:bg-blue-900/80 border border-blue-800/80 px-2.5 py-1 rounded text-[11px] font-mono transition">
+                   📁 View in Drive
+                 </a>`
+              : `<span class="text-slate-500 font-mono text-[11px]">Local Only</span>`}
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // --- OMNI-SEARCH ENGINE (Searches Categories, Subcategories, Cards, Popups, and Telemetry)[cite: 4] ---
+    const omniInput = document.getElementById('omniSearchInput');
+    if (omniInput) {
+      omniInput.addEventListener('input', (e) => {
+        const q = e.target.value.toLowerCase().trim();
+        if (!q) {
+          renderAllAdminViews();
+          return;
+        }
+
+        const filteredCats = studioData.categories.filter(c => 
+          (c.name && c.name.toLowerCase().includes(q)) || 
+          (c.description && c.description.toLowerCase().includes(q)) ||
+          (c.id && c.id.toLowerCase().includes(q))
+        );
+        renderCategoriesTable(filteredCats);
+
+        const filteredSubs = studioData.subcategories.filter(s => 
+          (s.name && s.name.toLowerCase().includes(q)) || 
+          (s.description && s.description.toLowerCase().includes(q)) ||
+          (s.categoryId && s.categoryId.toLowerCase().includes(q)) ||
+          (s.id && s.id.toLowerCase().includes(q))
+        );
+        renderSubcategoriesTable(filteredSubs);
+
+        const filteredCards = studioData.cards.filter(c => 
+          (c.title && c.title.toLowerCase().includes(q)) || 
+          (c.description && c.description.toLowerCase().includes(q)) ||
+          (c.id && c.id.toLowerCase().includes(q)) ||
+          (c.subcategoryId && c.subcategoryId.toLowerCase().includes(q))
+        );
+        renderCardsInventory(filteredCards);
+
+        const filteredPopups = studioData.popups.filter(p => 
+          (p.title && p.title.toLowerCase().includes(q)) || 
+          (p.body && p.body.toLowerCase().includes(q)) ||
+          (p.id && p.id.toLowerCase().includes(q))
+        );
+        renderPopupsList(filteredPopups);
+
+        const filteredTelemetry = studioData.telemetry.filter(u => 
+          (u.name && u.name.toLowerCase().includes(q)) ||
+          (u.roll && u.roll.toLowerCase().includes(q)) ||
+          (u.reg && u.reg.toLowerCase().includes(q)) ||
+          (u.orderId && u.orderId.toLowerCase().includes(q)) ||
+          (u.cardId && u.cardId.toLowerCase().includes(q)) ||
+          (u.course && u.course.toLowerCase().includes(q)) ||
+          (u.courseCode && u.courseCode.toLowerCase().includes(q)) ||
+          (u.branch && u.branch.toLowerCase().includes(q)) ||
+          (u.college && u.college.toLowerCase().includes(q)) ||
+          (u.faculty && u.faculty.toLowerCase().includes(q)) ||
+          (u.semester && u.semester.toLowerCase().includes(q))
+        );
+        renderTelemetry(filteredTelemetry);
+      });
+    }
+  </script>
+</body>
+</html>
+```[cite: 4]
+
+Let me know if you would like me to send the final file (`code.gs`) or if you have any questions!
