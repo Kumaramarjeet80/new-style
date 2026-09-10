@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document Reader - GEC Munger</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/theme.css">
+
+  <style>
+    body {
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .reader-frame-container {
+      flex: 1;
+      width: 100%;
+      background: #000;
+      position: relative;
+    }
+    .reader-frame-container iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Reader Header Bar -->
+  <header class="doc-viewer-header" style="position: relative; z-index: 10;">
+    <div class="doc-viewer-title-group">
+      <span class="doc-viewer-badge">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+        Document Reader
+      </span>
+      <span id="readerDocumentTitle" class="doc-viewer-title">Academic Document</span>
+    </div>
+
+    <div class="doc-viewer-actions">
+      <a id="btnDownloadDoc" href="#" target="_blank" download class="btn-doc-download">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        Download Original
+      </a>
+      <a href="javascript:history.back()" class="btn-doc-close" style="text-decoration: none;">
+        ✕ Exit Reader
+      </a>
+    </div>
+  </header>
+
+  <!-- Document Iframe Viewport -->
+  <main class="reader-frame-container">
+    <iframe id="readerFrame" src="" allowfullscreen></iframe>
+  </main>
+
+  <!-- Animated Celebration Toast -->
+  <div class="celebration-toast" id="celebrationToast">
+    <div class="celebration-toast-body">
+      <div class="toast-icon-circle">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      </div>
+      <div class="toast-text-group">
+        <h4 class="toast-heading">Downloading Document!</h4>
+        <p class="toast-desc">Original academic file has opened for offline reference.</p>
+      </div>
+      <button class="toast-close-btn" id="celebrationToastCloseBtn" aria-label="Close notification" type="button">✕</button>
+    </div>
+    <div class="toast-progress-bar-wrap">
+      <div class="toast-progress-bar" id="toastProgressBar"></div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script>
+    const targetCardId = PortalAPI.getQueryParam('card');
+
+    window.addEventListener('DOMContentLoaded', () => {
+      if (!targetCardId) {
+        window.location.href = "index.html";
+        return;
+      }
+
+      const card = portalAPI.getCardById(targetCardId);
+      if (!card || !card.targetUrl) {
+        alert("Document link not found.");
+        window.location.href = "index.html";
+        return;
+      }
+
+      document.getElementById('readerDocumentTitle').textContent = card.title || "Academic Document";
+
+      let rawUrl = card.targetUrl.trim();
+      let embedUrl = rawUrl;
+      let downloadUrl = rawUrl;
+
+      // Parse Google Drive shareable URLs into clean embed previews
+      if (rawUrl.includes("drive.google.com")) {
+        const fileIdMatch = rawUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+        if (fileIdMatch && fileIdMatch[1]) {
+          const fileId = fileIdMatch[1];
+          embedUrl = `https://drive.google.com/file/d/${fileId}/preview`;
+          downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+        }
+      }
+
+      document.getElementById('readerFrame').src = embedUrl;
+      const dlBtn = document.getElementById('btnDownloadDoc');
+      dlBtn.href = downloadUrl;
+
+      dlBtn.addEventListener('click', () => {
+        showToast();
+      });
+
+      setupToastControls();
+    });
+
+    let toastTimer = null;
+    function setupToastControls() {
+      const closeBtn = document.getElementById('celebrationToastCloseBtn');
+      const toast = document.getElementById('celebrationToast');
+      if (closeBtn && toast) {
+        closeBtn.addEventListener('click', () => {
+          toast.classList.remove('show');
+          if (toastTimer) clearTimeout(toastTimer);
+        });
+      }
+    }
+
+    function showToast() {
+      const toast = document.getElementById('celebrationToast');
+      const bar = document.getElementById('toastProgressBar');
+      if (!toast) return;
+
+      if (toastTimer) clearTimeout(toastTimer);
+      toast.classList.add('show');
+
+      if (bar) {
+        bar.style.transition = 'none';
+        bar.style.transform = 'scaleX(1)';
+        setTimeout(() => {
+          bar.style.transition = 'transform 4.5s linear';
+          bar.style.transform = 'scaleX(0)';
+        }, 50);
+      }
+
+      toastTimer = setTimeout(() => {
+        toast.classList.remove('show');
+      }, 4500);
+    }
+  </script>
+</body>
+</html>
