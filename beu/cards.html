@@ -18,7 +18,7 @@
     <a href="index.html" class="portal-brand">
       <span>GECM</span> Portal
     </a>
-    <a href="admin.html" style="font-size: 12px; font-weight: 700; color: #94a3b8; text-decoration: none; padding: 6px 12px; border-radius: 6px; border: 1px solid #374151;">
+    <a href="admin.html" style="font-size: 11.5px; font-weight: 700; color: #94a3b8; text-decoration: none; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border-subtle); background: var(--bg-secondary);">
       Admin Access
     </a>
   </header>
@@ -28,7 +28,7 @@
     <!-- Breadcrumb Chain -->
     <nav class="breadcrumb-bar" id="breadcrumbNav">
       <a href="index.html" class="breadcrumb-item">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
         Home
       </a>
       <span class="breadcrumb-separator">›</span>
@@ -38,19 +38,19 @@
     </nav>
 
     <!-- Header Section -->
-    <section class="portal-header" style="text-align: left; margin-bottom: 28px;">
-      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-        <span style="font-size: 28px;">📑</span>
-        <h1 class="portal-title" id="subHeaderTitle" style="margin: 0; font-size: 26px;">Published Academic Resources</h1>
+    <section class="portal-header">
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+        <span style="font-size: 24px;">📑</span>
+        <h1 class="portal-title" id="subHeaderTitle" style="margin: 0; font-size: 22px;">Available Documents</h1>
       </div>
-      <p class="portal-subtitle" id="subHeaderDesc" style="margin: 0; max-width: 100%;">Select a document to read online or customize an official university cover sheet.</p>
+      <p class="portal-subtitle" id="subHeaderDesc">Only for Government Engineering College, Munger</p>
     </section>
 
     <!-- Resource Cards Grid -->
     <section>
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;">
-        <h2 style="font-size: 16px; font-weight: 700; color: #fff; margin: 0;">Available Documents & Templates</h2>
-        <span id="cardCountBadge" style="font-size: 12px; color: #94a3b8; font-family: monospace;">Loading...</span>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <h2 style="font-size: 15px; font-weight: 800; color: #fff; margin: 0;">Documents & Templates</h2>
+        <span id="cardCountBadge" style="font-size: 11.5px; color: #94a3b8; font-family: monospace; font-weight: 700;">Loading...</span>
       </div>
 
       <div class="cards-grid" id="cardGrid">
@@ -75,7 +75,6 @@
 
       renderResourceCards();
 
-      // Listen for background updates
       portalAPI.onUpdate(() => {
         renderResourceCards();
       });
@@ -92,7 +91,7 @@
       if (subcategory) {
         document.getElementById('bcSubcategoryTitle').textContent = subcategory.name;
         document.getElementById('subHeaderTitle').textContent = subcategory.name;
-        document.getElementById('subHeaderDesc').textContent = subcategory.description || "Academic templates and documents.";
+        document.getElementById('subHeaderDesc').textContent = subcategory.description || "Only for Government Engineering College, Munger";
 
         const category = portalAPI.getCategoryById(subcategory.categoryId);
         const bcCatLink = document.getElementById('bcCategoryLink');
@@ -108,10 +107,9 @@
 
       if (cards.length === 0) {
         grid.innerHTML = `
-          <div style="grid-column: 1/-1; text-align: center; color: #94a3b8; padding: 50px;">
-            <span style="font-size: 32px; display: block; margin-bottom: 12px;">📄</span>
-            No cards or templates registered under this subcategory yet.
-            <br><a href="javascript:history.back()" class="btn-back-to-catalog" style="display: inline-flex; margin-top: 18px;">← Go Back</a>
+          <div class="empty-state-card">
+            <span>No documents published under this subcategory yet.</span>
+            <a href="javascript:history.back()" class="card-cta-btn" style="width: auto; margin-top: 10px; padding: 8px 16px;">← Go Back</a>
           </div>`;
         return;
       }
@@ -126,14 +124,13 @@
 
         const hasTarget = Boolean(cardData.targetUrl && String(cardData.targetUrl).trim().length > 5);
         const isDoc = (cardData.actionType === "link" || hasTarget);
-        const defaultLabel = isDoc ? "View / Read Document" : "Customize Cover Page";
+        const formatLabel = isDoc ? "PDF" : "COVER";
+        const defaultLabel = isDoc ? "Download File" : "Customize Cover Page";
         const btnLabel = (cardData.buttonText && cardData.buttonText.trim().length > 0) ? cardData.buttonText : defaultLabel;
 
-        const timeHtml = cardData.createdAt 
-          ? `<div class="card-timestamp-badge" style="margin-bottom: 12px;">🕒 Published: ${cardData.createdAt}</div>`
-          : ``;
+        const timestampStr = PortalAPI.formatTimestamp(cardData.createdAt);
+        const timeHtml = `<div class="card-timestamp-badge">🕒 ${timestampStr}</div>`;
 
-        // Routing link: Link cards go to viewer.html; generator cards go to canvas.html
         const destinationUrl = (isDoc && hasTarget)
           ? `viewer.html?card=${encodeURIComponent(cardData.id)}`
           : `canvas.html?card=${encodeURIComponent(cardData.id)}`;
@@ -141,8 +138,9 @@
         cardEl.innerHTML = `
           <div class="card-thumbnail-wrap">
             ${thumbHtml}
+            <span class="card-format-tag">${formatLabel}</span>
           </div>
-          <div class="card-body">
+          <div class="card-body" style="padding: 0;">
             <div class="card-title">${cardData.title}</div>
             <div class="card-desc">${cardData.description || "Academic resource ready for access."}</div>
             ${timeHtml}
