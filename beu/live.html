@@ -117,7 +117,7 @@
 
       <!-- Highlighted Timestamp & Description -->
       <div style="font-size: 12.5px; color: #94a3b8; line-height: 1.5;">
-        <div id="streamTimeBadge" style="font-family: monospace; font-weight: 700; color: #38bdf8; margin-bottom: 4px;">Started: 10 Sept 2026, 04:06 PM</div>
+        <div id="streamTimeBadge" style="font-family: monospace; font-weight: 700; color: #38bdf8; margin-bottom: 4px;">Started: 10 Sept 2026, 04:27 PM</div>
         <p id="streamDesc" style="margin: 0;">Institutional academic live broadcast stream.</p>
       </div>
 
@@ -129,6 +129,7 @@
   <script>
     let viewerPeer = null;
     let liveCall = null;
+    let currentRemoteStream = null;
 
     window.addEventListener('DOMContentLoaded', async () => {
       await portalAPI.syncCatalog();
@@ -173,10 +174,19 @@
         liveCall = viewerPeer.call(hostPeerId, dummyStream);
 
         liveCall.on('stream', (remoteStream) => {
+          currentRemoteStream = remoteStream;
           loader.style.display = 'none';
           video.srcObject = remoteStream;
-          video.muted = true;
-          video.play().catch(() => {});
+          video.muted = true; // Initially muted to comply with browser autoplay policies
+          
+          video.play().then(() => {
+            console.log("Video playback started successfully.");
+          }).catch(err => {
+            console.warn("Autoplay blocked or restricted:", err);
+          });
+
+          const audioTracks = remoteStream.getAudioTracks();
+          console.log(`Received stream with ${audioTracks.length} audio track(s) and ${remoteStream.getVideoTracks().length} video track(s).`);
         });
 
         liveCall.on('close', () => {
@@ -184,15 +194,29 @@
           window.location.href = "index.html";
         });
 
-        liveCall.on('error', () => {
+        liveCall.on('error', (err) => {
+          console.error("PeerJS Call Error:", err);
           loader.innerHTML = `<span style="color: #ef4444; font-weight: 600;">Unable to connect to host.</span>`;
         });
       });
 
+      // Robust Unmute Audio Handler
       document.getElementById('btnUnmuteAudio').addEventListener('click', function() {
-        if (video) {
-          video.muted = !video.muted;
-          this.textContent = video.muted ? "🔊 Unmute Audio" : "🔇 Mute Audio";
+        if (!video) return;
+
+        video.muted = !video.muted;
+
+        if (currentRemoteStream) {
+          currentRemoteStream.getAudioTracks().forEach(track => {
+            track.enabled = !video.muted;
+          });
+        }
+
+        if (!video.muted) {
+          video.play().catch(e => console.log("Play error on unmute:", e));
+          this.textContent = "🔇 Mute Audio";
+        } else {
+          this.textContent = "🔊 Unmute Audio";
         }
       });
 
