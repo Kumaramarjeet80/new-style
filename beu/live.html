@@ -15,39 +15,57 @@
 
   <style>
     .theater-container {
-      max-width: 1100px;
+      max-width: 720px;
       margin: 0 auto;
-      padding: 24px 16px 60px 16px;
+      padding: 20px 16px 60px 16px;
+    }
+    .live-theater-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--card-radius);
+      padding: 16px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
     }
     .video-viewport {
       width: 100%;
       aspect-ratio: 16 / 9;
       background: #000;
-      border-radius: 16px;
+      border-radius: 12px;
       overflow: hidden;
       position: relative;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
-      border: 1px solid var(--border-subtle);
       display: flex;
       align-items: center;
       justify-content: center;
+      margin-bottom: 14px;
     }
     .video-viewport video {
       width: 100%;
       height: 100%;
       object-fit: contain;
     }
-    .theater-controls {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border-subtle);
-      border-radius: 12px;
-      padding: 16px 20px;
-      margin-top: 20px;
+    .theater-controls-row {
       display: flex;
-      flex-wrap: wrap;
-      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .theater-btn {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-subtle);
+      color: #fff;
+      padding: 10px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
       align-items: center;
-      gap: 16px;
+      justify-content: center;
+      gap: 8px;
+      transition: background 0.2s;
+    }
+    .theater-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
     }
   </style>
 </head>
@@ -58,49 +76,51 @@
     <a href="index.html" class="portal-brand">
       <span>GECM</span> Live Theater
     </a>
-    <div style="display: flex; align-items: center; gap: 12px;">
-      <a href="index.html" class="btn-back-to-catalog" style="padding: 6px 14px; font-size: 12px;">
-        ← Back to Catalog
-      </a>
-    </div>
+    <a href="index.html" class="btn-back-to-catalog" style="padding: 6px 12px; font-size: 11.5px;">
+      ← Back to Catalog
+    </a>
   </header>
 
   <main class="theater-container">
 
-    <!-- Broadcast Viewport -->
-    <div class="video-viewport" id="videoViewport">
-      <video id="liveVideoPlayer" autoplay playsinline></video>
+    <!-- Live Theater Box -->
+    <div class="live-theater-card">
+      
+      <!-- Topic Title Inside the Box Above Video -->
+      <h1 id="streamTitle" style="font-size: 20px; font-weight: 800; color: #fff; margin: 0 0 14px 0; letter-spacing: -0.4px;">Connecting to Live Session...</h1>
 
-      <!-- Connecting / Offline Overlay -->
-      <div id="streamLoadingState" style="position: absolute; display: flex; flex-direction: column; align-items: center; gap: 14px; color: #94a3b8; text-align: center; padding: 20px;">
-        <div class="spinner"></div>
-        <span style="font-size: 14px; font-weight: 600;">Connecting to secure live video stream...</span>
-      </div>
+      <!-- Broadcast Viewport -->
+      <div class="video-viewport" id="videoViewport">
+        <video id="liveVideoPlayer" autoplay playsinline></video>
 
-      <!-- Live Indicator Tag -->
-      <div style="position: absolute; top: 16px; left: 16px; background: rgba(239, 68, 68, 0.9); color: #fff; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 6px; display: flex; align-items: center; gap: 6px; text-transform: uppercase;">
-        <span class="live-pulse-dot" style="background-color: #fff; box-shadow: 0 0 6px #fff;"></span> ON AIR
-      </div>
-    </div>
-
-    <!-- Theater Control Strip -->
-    <div class="theater-controls">
-      <div>
-        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
-          <h1 id="streamTitle" style="font-size: 18px; font-weight: 800; color: #fff; margin: 0;">Connecting to Live Session...</h1>
-          <span id="streamTimeBadge" style="font-size: 11px; font-family: monospace; color: #38bdf8; background: rgba(56, 189, 248, 0.1); padding: 2px 8px; border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.25);">IST</span>
+        <!-- Connecting / Offline Overlay -->
+        <div id="streamLoadingState" style="position: absolute; display: flex; flex-direction: column; align-items: center; gap: 12px; color: #94a3b8; text-align: center; padding: 20px;">
+          <div class="spinner"></div>
+          <span style="font-size: 13.5px; font-weight: 600;">Connecting to secure live video stream...</span>
         </div>
-        <p id="streamDesc" style="font-size: 13px; color: #94a3b8; margin: 0;">Institutional academic live stream.</p>
+
+        <!-- Live Indicator Tag -->
+        <div style="position: absolute; top: 12px; left: 12px; background: rgba(239, 68, 68, 0.9); color: #fff; font-size: 10.5px; font-weight: 800; padding: 3px 8px; border-radius: 6px; display: flex; align-items: center; gap: 5px; text-transform: uppercase;">
+          <span class="live-pulse-dot" style="background-color: #fff; box-shadow: 0 0 6px #fff;"></span> LIVE
+        </div>
       </div>
 
-      <div style="display: flex; align-items: center; gap: 12px;">
-        <button id="btnUnmuteAudio" type="button" class="btn-back-to-catalog" style="font-weight: 700;">
+      <!-- Controls Row -->
+      <div class="theater-controls-row">
+        <button id="btnUnmuteAudio" type="button" class="theater-btn">
           🔊 Unmute Audio
         </button>
-        <button id="btnFullscreen" type="button" class="card-cta-btn" style="width: auto; padding: 8px 18px;">
+        <button id="btnFullscreen" type="button" class="theater-btn">
           ⛶ Fullscreen
         </button>
       </div>
+
+      <!-- Highlighted Timestamp & Description -->
+      <div style="font-size: 12.5px; color: #94a3b8; line-height: 1.5;">
+        <div id="streamTimeBadge" style="font-family: monospace; font-weight: 700; color: #38bdf8; margin-bottom: 4px;">Started: 10 Sept 2026, 04:06 PM</div>
+        <p id="streamDesc" style="margin: 0;">Institutional academic live broadcast stream.</p>
+      </div>
+
     </div>
 
   </main>
@@ -111,23 +131,22 @@
     let liveCall = null;
 
     window.addEventListener('DOMContentLoaded', async () => {
-      // Sync fresh catalog to check for active broadcast
       await portalAPI.syncCatalog();
       const liveEvent = portalAPI.getLiveEvent();
 
       if (!liveEvent || !liveEvent.active || !liveEvent.peerId) {
         document.getElementById('streamLoadingState').innerHTML = `
           <span style="font-size: 32px; display: block; margin-bottom: 8px;">📡</span>
-          <span style="font-size: 15px; font-weight: 700; color: #fff;">No active broadcast at the moment.</span>
-          <br><a href="index.html" class="btn-back-to-catalog" style="margin-top: 12px;">← Return to Portal Hub</a>
+          <span style="font-size: 14px; font-weight: 700; color: #fff;">No active broadcast at the moment.</span>
+          <br><a href="index.html" class="card-cta-btn" style="width: auto; margin-top: 10px; padding: 6px 14px;">Return Home</a>
         `;
         document.getElementById('streamTitle').textContent = "Stream Offline";
         return;
       }
 
-      document.getElementById('streamTitle').textContent = liveEvent.title || "Live Broadcast";
-      document.getElementById('streamDesc').textContent = liveEvent.description || "Official administrative session.";
-      document.getElementById('streamTimeBadge').textContent = `Started: ${liveEvent.startTime || "Recently"}`;
+      document.getElementById('streamTitle').textContent = liveEvent.title || "GEC Munger Official Live Academic Briefing";
+      document.getElementById('streamDesc').textContent = liveEvent.description || "Live session by administration.";
+      document.getElementById('streamTimeBadge').textContent = `Started: ${PortalAPI.formatTimestamp(liveEvent.startTime)}`;
 
       connectToBroadcast(liveEvent.peerId);
       portalAPI.joinLive();
@@ -146,7 +165,6 @@
       viewerPeer = new Peer(viewerId, { debug: 1 });
 
       viewerPeer.on('open', () => {
-        // Create dummy video/audio stream to establish WebRTC media handshake
         const dummyCanvas = document.createElement('canvas');
         dummyCanvas.width = 16;
         dummyCanvas.height = 16;
@@ -157,7 +175,7 @@
         liveCall.on('stream', (remoteStream) => {
           loader.style.display = 'none';
           video.srcObject = remoteStream;
-          video.muted = true; // Auto-play policies require initial mute
+          video.muted = true;
           video.play().catch(() => {});
         });
 
@@ -166,18 +184,11 @@
           window.location.href = "index.html";
         });
 
-        liveCall.on('error', (err) => {
-          console.error("PeerJS Call Error:", err);
-          loader.innerHTML = `<span style="color: #ef4444; font-weight: 600;">Unable to connect to host. The stream may have concluded.</span>`;
+        liveCall.on('error', () => {
+          loader.innerHTML = `<span style="color: #ef4444; font-weight: 600;">Unable to connect to host.</span>`;
         });
       });
 
-      viewerPeer.on('error', (err) => {
-        console.error("Viewer Node Error:", err);
-        loader.innerHTML = `<span style="color: #ef4444; font-weight: 600;">Signaling connection failed. Please refresh.</span>`;
-      });
-
-      // Controls
       document.getElementById('btnUnmuteAudio').addEventListener('click', function() {
         if (video) {
           video.muted = !video.muted;
