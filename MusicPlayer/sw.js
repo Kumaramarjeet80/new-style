@@ -1,4 +1,4 @@
-const CACHE_NAME = 'amarjeet-audio-v6';
+const CACHE_NAME = 'amarjeet-audio-v7';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -23,7 +23,6 @@ self.addEventListener('activate', (e) => {
   return self.clients.claim();
 });
 
-// Stale-While-Revalidate: Instant offline startup + fresh updates downloaded in background
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
   e.respondWith(
