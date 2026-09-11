@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
-  <!-- Toast Notification Container with 4-Second Animated Progress Bar -->
+  <!-- Toast Container Placed DIRECTLY ABOVE the Bottom Player Bar -->
   <div id="toast-container" class="toast-container"></div>
 
   <!-- Welcome Modal -->
@@ -17,25 +17,35 @@
       <div class="welcome-icon">🎵</div>
       <h2>Welcome Back!</h2>
       <p class="credit-highlight">Made by & for <strong>Amarjeet kumar</strong></p>
-      <p class="modal-desc">Your offline studio player with hardware EQ limiter, local playlist storage, and lock-screen controls.</p>
+      <p class="modal-desc">Offline studio equalizer, custom playlists, and clean audio.</p>
       <button id="btn-close-welcome" class="btn-primary-large">Start Listening</button>
     </div>
   </div>
 
-  <!-- Create Playlist Modal with Direct Album Art Upload -->
+  <!-- "Thanks!" Action Feedback Modal -->
+  <div id="thanks-modal" class="modal-backdrop" style="display:none;">
+    <div class="modal-box text-center">
+      <div style="font-size: 3rem; margin-bottom: 6px;">🎉</div>
+      <h2 id="thanks-title">Thank You!</h2>
+      <p id="thanks-msg" style="color: var(--text-muted); font-size: 0.9rem; margin: 10px 0 18px 0;"></p>
+      <button id="btn-close-thanks" class="btn-primary-large">Continue</button>
+    </div>
+  </div>
+
+  <!-- Create Playlist Modal -->
   <div id="playlist-create-modal" class="modal-backdrop" style="display:none;">
     <div class="modal-box">
       <h3>Create New Playlist</h3>
       <div class="form-group">
         <label for="new-playlist-name">Playlist Name</label>
-        <input type="text" id="new-playlist-name" placeholder="e.g. Punjabi Hits" class="input-text" />
+        <input type="text" id="new-playlist-name" placeholder="e.g. My Favorites" class="input-text" />
       </div>
       <div class="form-group">
         <label for="new-playlist-img">Choose Album Art</label>
         <input type="file" id="new-playlist-img" accept="image/*" />
         <div class="preview-row">
           <img id="preview-art-tag" src="" alt="Preview" />
-          <span>Auto-compressed for fast loading</span>
+          <span>Uploaded image preview</span>
         </div>
       </div>
       <div class="modal-actions">
@@ -50,15 +60,15 @@
     <header class="app-top">
       <div>
         <span class="brand-title">Amarjeet Studio</span>
-        <span class="badge">HQ DSP</span>
+        <span class="badge">Pure Audio</span>
       </div>
       <button id="btn-open-create-playlist" class="btn-action">➕ New Playlist</button>
     </header>
 
-    <!-- Playlist Chips Selector -->
+    <!-- Playlist Horizontal Tabs -->
     <div class="playlist-chips" id="playlist-tabs"></div>
 
-    <!-- UPPER SECTION: Current Playlist Song List -->
+    <!-- UPPER CONTENT: Song List -->
     <main class="upper-content">
       <div class="section-title-row">
         <div>
@@ -66,56 +76,37 @@
           <small id="track-count-label">0 songs</small>
         </div>
         <label class="btn-action" for="file-picker">➕ Add Songs</label>
+        <!-- Multiple attribute allows selecting multiple files at once -->
         <input type="file" id="file-picker" accept="audio/*" multiple style="display:none;" />
       </div>
       <ul id="song-list" class="song-list"></ul>
     </main>
-
-    <!-- EXPANDABLE PANEL: Opens when clicking Player Bar, keeps Player Bar visible below -->
-    <div class="now-playing-panel" id="now-playing-panel">
-      <button id="btn-close-panel" class="panel-close-btn">✕ Close</button>
-      <div class="large-cover-wrap">
-        <img id="panel-cover" src="" alt="Album Art" />
-      </div>
-      <div class="panel-meta">
-        <h3 id="panel-title">Select a track</h3>
-        <p id="panel-playlist">Playlist: Default</p>
-      </div>
-      <div class="progress-bar-box">
-        <span id="curr-time">0:00</span>
-        <input type="range" id="seek-bar" min="0" max="100" value="0" />
-        <span id="dur-time">0:00</span>
-      </div>
-    </div>
 
     <!-- Permanent Attribution Footer -->
     <footer class="app-footer">
       Made by & for <strong>Amarjeet kumar</strong>
     </footer>
 
-    <!-- LOWER SECTION: Prominent, Raised Bottom Player Bar (Permanently Visible) -->
+    <!-- LOWER SECTION: Fixed Bottom Player Bar -->
     <div class="bottom-player-bar" id="mini-player">
-      <div class="player-left-group" id="open-panel-trigger">
+      <div class="player-left-group" id="open-box-trigger">
         <img id="mini-cover" class="mini-art" src="" alt="Art" />
         <div class="mini-meta">
           <span class="mini-title" id="mini-title">No track playing</span>
-          <span class="mini-sub" id="mini-sub">Tap to view album art</span>
+          <span class="mini-sub" id="mini-sub">Tap to open player details</span>
         </div>
       </div>
 
-      <!-- Player Bar Controls -->
       <div class="player-bar-actions">
-        <button id="bar-btn-playlist" class="icon-btn" title="Reorder Playlist">📑</button>
-        <button id="bar-btn-volume" class="icon-btn" title="Volume">🔊</button>
-        <button id="bar-btn-eq" class="icon-btn" title="Equalizer">🎛</button>
+        <button id="bar-btn-like" class="icon-btn like-btn" title="Add to Favorites">🤍</button>
         <button id="bar-btn-play" class="play-btn-large" title="Play/Pause">▶</button>
       </div>
     </div>
 
-    <!-- Pop-up Volume Slider (Hidden until volume icon clicked) -->
-    <div id="volume-popup" class="popover-box">
+    <!-- Floating Volume Popover -->
+    <div id="volume-popup" class="popover-box" style="display:none;">
       <div class="popover-header">
-        <span>Volume</span>
+        <span>Volume Control</span>
         <span id="vol-popup-label">20%</span>
       </div>
       <div class="vol-slider-row">
@@ -126,7 +117,50 @@
     </div>
   </div>
 
-  <!-- Reorder Queue Fullscreen Modal -->
+  <!-- ALL-IN-ONE PLAYER DETAIL MODAL (Opens on Player Bar click) -->
+  <div class="modal-backdrop" id="player-box-modal" style="display:none;">
+    <div class="modal-box player-detail-card">
+      <div class="player-detail-header">
+        <button id="btn-close-box" class="btn-action">✕ Close</button>
+        <span style="font-weight:600;font-size:0.9rem;">Player Box</span>
+        <button id="modal-btn-like" class="icon-btn like-btn" title="Favorite">🤍</button>
+      </div>
+
+      <!-- Large Album Artwork -->
+      <div class="detail-art-wrap">
+        <img id="box-cover" src="" alt="Album Art" />
+      </div>
+
+      <!-- Title and Playlist Name -->
+      <div class="detail-titles">
+        <h3 id="box-title">Song Title</h3>
+        <p id="box-playlist">Playlist: Default</p>
+      </div>
+
+      <!-- Song Progress Bar (Timestamps + Slider) -->
+      <div class="progress-bar-box">
+        <span id="curr-time">0:00</span>
+        <input type="range" id="seek-bar" min="0" max="100" value="0" />
+        <span id="dur-time">0:00</span>
+      </div>
+
+      <!-- Player Controls inside Modal -->
+      <div class="box-player-controls">
+        <button id="box-btn-prev" class="icon-btn">⏮</button>
+        <button id="box-btn-play" class="play-btn-large">▶</button>
+        <button id="box-btn-next" class="icon-btn">⏭</button>
+      </div>
+
+      <!-- Modal Tool Action Row: View Playlist, Volume, Equalizer -->
+      <div class="box-tool-row">
+        <button id="box-btn-view-playlist" class="btn-action flex-grow">≡ View Playlist</button>
+        <button id="box-btn-volume" class="icon-btn" title="Volume">🔊</button>
+        <button id="box-btn-eq" class="icon-btn" title="Equalizer">🎛</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reorder / Playlist Songs Fullscreen Modal -->
   <div class="fullscreen-overlay" id="queue-modal">
     <div class="overlay-head">
       <button id="close-queue-btn" class="btn-action">← Back</button>
@@ -136,15 +170,16 @@
     <ul id="reorder-list" class="song-list" style="margin-top:10px;"></ul>
   </div>
 
-  <!-- 10-Band Equalizer Fullscreen Modal -->
+  <!-- Equalizer Fullscreen Modal -->
   <div class="fullscreen-overlay" id="eq-modal">
     <div class="overlay-head">
       <button id="close-eq-btn" class="btn-action">✕ Done</button>
-      <span style="font-weight:600">Equalizer (VLC Preset)</span>
+      <span style="font-weight:600">Studio Equalizer</span>
       <button id="btn-reset-eq" class="btn-action">Reset</button>
     </div>
     <div class="eq-controls-top">
       <label><input type="checkbox" id="eq-enable" checked /> Enable Audio DSP</label>
+      <span style="font-size:0.75rem;color:var(--text-muted);">(Turn off for direct hardware bypass)</span>
     </div>
     <div class="eq-container">
       <div class="eq-col"><span class="eq-val" id="val-preamp">14.1dB</span><input type="range" class="vertical-slider" id="eq-preamp" min="-20" max="20" step="0.1" value="14.1" /><span class="eq-freq">Pre</span></div>
