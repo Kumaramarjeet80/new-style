@@ -693,7 +693,7 @@ function logTelemetryAndArchiveToDrive(pdfBase64) {
 }
 
 /* =========================================================
-   4. STABLE WEBRTC VIEWER ENGINE WITH AUTO-RECONNECT & SYNC
+   4. STABLE WEBRTC VIEWER ENGINE WITH ZERO-DRIFT AUTO-SYNC
 ========================================================= */
 const BROADCAST_HOST_ID = "gecm-live-host";
 let viewerPeerInstance = null;
@@ -918,7 +918,7 @@ function stopLiveWaitingAutoPoller() {
   }
 }
 
-// STABLE WEBRTC CONNECTION ENGINE WITH DATA CHANNEL & AUTO-RECONNECT
+// Low-Latency PeerJS Handshake & Buffer Purge
 function connectToLiveBroadcast(hostPeerId) {
   const connectingOverlay = document.getElementById('liveConnectingOverlay');
   const connectingText = document.getElementById('liveConnectingText');
@@ -926,26 +926,25 @@ function connectToLiveBroadcast(hostPeerId) {
   const videoEl = document.getElementById('liveViewerVideo');
 
   if (connectingOverlay) connectingOverlay.style.display = 'flex';
-  if (connectingText) connectingText.textContent = "Connecting to signaling server..."; //
+  if (connectingText) connectingText.textContent = "Connecting to signaling server...";
   if (waitingOverlay) waitingOverlay.style.display = 'none';
 
   if (viewerPeerInstance) {
-    try { viewerPeerInstance.destroy(); } catch (e) {} //
+    try { viewerPeerInstance.destroy(); } catch (e) {}
     viewerPeerInstance = null;
   }
 
-  // Initialize viewer peer with reference multi-STUN servers
   viewerPeerInstance = new Peer(ICE_CONFIG);
 
   viewerPeerInstance.on('open', (myViewerId) => {
-    if (connectingText) connectingText.textContent = "Connecting to broadcaster..."; //
+    if (connectingText) connectingText.textContent = "Connecting to broadcaster...";
 
     // 1. Establish Data Channel connection to the broadcaster
     const conn = viewerPeerInstance.connect(hostPeerId, { reliable: true });
 
     conn.on('open', () => {
-      if (connectingText) connectingText.textContent = "Broadcaster found! Requesting video feed..."; //
-      conn.send('REQUEST_STREAM'); //
+      if (connectingText) connectingText.textContent = "Broadcaster found! Requesting video feed...";
+      conn.send('REQUEST_STREAM');
     });
 
     conn.on('error', () => {
@@ -955,7 +954,7 @@ function connectToLiveBroadcast(hostPeerId) {
     // 2. Accept incoming media stream from broadcaster
     viewerPeerInstance.on('call', (call) => {
       currentLiveCall = call;
-      call.answer(); //
+      call.answer();
 
       call.on('stream', (remoteStream) => {
         if (autoReconnectInterval) {
@@ -965,9 +964,12 @@ function connectToLiveBroadcast(hostPeerId) {
         isReconnecting = false;
 
         if (videoEl) {
-          videoEl.srcObject = remoteStream; //
+          videoEl.srcObject = remoteStream;
           videoEl.muted = false;
-          const playPromise = videoEl.play(); //
+          videoEl.setAttribute('playsinline', '');
+          videoEl.setAttribute('autoplay', '');
+
+          const playPromise = videoEl.play();
           if (playPromise !== undefined) {
             playPromise.then(() => {
               if (connectingOverlay) connectingOverlay.style.display = 'none';
@@ -979,6 +981,18 @@ function connectToLiveBroadcast(hostPeerId) {
               updateAudioButtonStates(true);
             });
           }
+
+          // Real-Time Drift Killer: Snaps video directly to the live edge if lag > 0.4s
+          if (window._liveDriftTimer) clearInterval(window._liveDriftTimer);
+          window._liveDriftTimer = setInterval(() => {
+            if (videoEl && !videoEl.paused && videoEl.buffered.length > 0) {
+              const liveEdge = videoEl.buffered.end(videoEl.buffered.length - 1);
+              const drift = liveEdge - videoEl.currentTime;
+              if (drift > 0.4) {
+                videoEl.currentTime = liveEdge - 0.05;
+              }
+            }
+          }, 1500);
         }
       });
 
@@ -1058,6 +1072,10 @@ function triggerStreamAutoReconnect(statusMsg) {
 
 function closeLiveStreamWatchRoom() {
   stopLiveWaitingAutoPoller();
+  if (window._liveDriftTimer) {
+    clearInterval(window._liveDriftTimer);
+    window._liveDriftTimer = null;
+  }
   if (autoReconnectInterval) {
     clearInterval(autoReconnectInterval);
     autoReconnectInterval = null;
@@ -1067,7 +1085,7 @@ function closeLiveStreamWatchRoom() {
   const videoEl = document.getElementById('liveViewerVideo');
   if (videoEl) {
     videoEl.pause();
-    videoEl.srcObject = null; //
+    videoEl.srcObject = null;
   }
 
   if (currentLiveCall) {
@@ -1076,7 +1094,7 @@ function closeLiveStreamWatchRoom() {
   }
 
   if (viewerPeerInstance) {
-    try { viewerPeerInstance.destroy(); } catch (e) {} //
+    try { viewerPeerInstance.destroy(); } catch (e) {}
     viewerPeerInstance = null;
   }
 
@@ -1297,7 +1315,9 @@ function showUserPopup(p, onClosedCallback) {
     if (videoEl) videoEl.pause();
     if (iframeEl) iframeEl.src = "";
     if (countdownInterval) clearInterval(countdownInterval);
-    if (typeof onClosedCallback === "function") onClosedCallback();
+    if (typeof onClosedCallback === "function") {
+      onClosedCallback();
+    }
   }
 
   function startCloseTimer() {
