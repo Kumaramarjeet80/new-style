@@ -717,9 +717,24 @@ function logTelemetryAndArchiveToDrive(pdfBase64) {
 /* =========================================================
    4. LIVE BROADCAST BANNER, WAITING ROOM & WEBRTC CONTROLS
 ========================================================= */
+const BROADCAST_HOST_ID = "gecm-live-host";
 let viewerPeerInstance = null;
 let currentLiveCall = null;
 let livePollingInterval = null;
+
+// Extended STUN configuration from reference files
+const ICE_CONFIG = {
+  config: {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun2.l.google.com:19302' },
+      { urls: 'stun:stun3.l.google.com:19302' },
+      { urls: 'stun:stun4.l.google.com:19302' },
+      { urls: 'stun:stun.services.mozilla.com' }
+    ]
+  }
+};
 
 function updateLiveBannerUI(activeLive) {
   const banner = document.getElementById('liveBroadcastBanner');
@@ -900,7 +915,7 @@ function openLiveStreamWatchRoom() {
   const waitingOverlay = document.getElementById('liveWaitingOverlay');
   const connectingOverlay = document.getElementById('liveConnectingOverlay');
 
-  // Check if Admin has gone live or is still scheduled
+  // Check if Admin has gone live or is still in scheduled waiting state
   if (!activeLive.isLive) {
     // Show Waiting Overlay
     if (statusPill) statusPill.textContent = "⏳ SESSION SCHEDULED - NOT LIVE YET";
@@ -908,12 +923,12 @@ function openLiveStreamWatchRoom() {
     if (connectingOverlay) connectingOverlay.style.display = 'none';
     startLiveWaitingAutoPoller();
   } else {
-    // Live is active! Connect to WebRTC
+    // Live is active: Connect via reference WebRTC handshake
     if (statusPill) statusPill.textContent = "🔴 BROADCAST IN PROGRESS";
     if (waitingOverlay) waitingOverlay.style.display = 'none';
     if (connectingOverlay) connectingOverlay.style.display = 'flex';
     stopLiveWaitingAutoPoller();
-    connectToLiveBroadcast(activeLive.peerId || "gecm-live-host");
+    connectToLiveBroadcast(activeLive.peerId || BROADCAST_HOST_ID);
   }
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -951,41 +966,56 @@ function stopLiveWaitingAutoPoller() {
   }
 }
 
+// STABLE WEBRTC CONNECTION ENGINE MIRRORING VISITORPAGE.HTML
 function connectToLiveBroadcast(hostPeerId) {
   const connectingOverlay = document.getElementById('liveConnectingOverlay');
   const connectingText = document.getElementById('liveConnectingText');
+  const waitingOverlay = document.getElementById('liveWaitingOverlay');
   const videoEl = document.getElementById('liveViewerVideo');
 
   if (connectingOverlay) connectingOverlay.style.display = 'flex';
-  if (connectingText) connectingText.textContent = "Connecting to live academic broadcast...";
+  if (connectingText) connectingText.textContent = "Connecting to signaling server...";
+  if (waitingOverlay) waitingOverlay.style.display = 'none';
 
   if (viewerPeerInstance) {
     try { viewerPeerInstance.destroy(); } catch (e) {}
+    viewerPeerInstance = null;
   }
 
-  viewerPeerInstance = new Peer();
+  // Initialize viewer peer with the reference multi-STUN configuration
+  viewerPeerInstance = new Peer(ICE_CONFIG);
 
-  viewerPeerInstance.on('open', () => {
-    try {
-      const emptyStream = new MediaStream();
-      currentLiveCall = viewerPeerInstance.call(hostPeerId, emptyStream);
+  viewerPeerInstance.on('open', (myViewerId) => {
+    if (connectingText) connectingText.textContent = "Connecting to broadcaster...";
 
-      if (!currentLiveCall) {
-        if (connectingText) connectingText.textContent = "Broadcaster is offline or preparing stream.";
-        return;
-      }
+    // 1. Establish Data Channel connection to the broadcaster
+    const conn = viewerPeerInstance.connect(hostPeerId, { reliable: true });
 
-      currentLiveCall.on('stream', (remoteStream) => {
+    conn.on('open', () => {
+      if (connectingText) connectingText.textContent = "Broadcaster found! Requesting video feed...";
+      conn.send('REQUEST_STREAM'); // Ping broadcaster to dial this viewer
+    });
+
+    conn.on('error', () => {
+      showStreamOfflineNotice("❌ Broadcaster is currently offline.");
+    });
+
+    // 2. Accept incoming media stream from broadcaster (Without calling with an empty MediaStream)
+    viewerPeerInstance.on('call', (call) => {
+      currentLiveCall = call;
+      call.answer(); // Directly answer incoming media call
+
+      call.on('stream', (remoteStream) => {
         if (videoEl) {
           videoEl.srcObject = remoteStream;
-          videoEl.muted = false;
+          videoEl.muted = false; // User clicked watch live, start unmuted
           const playPromise = videoEl.play();
           if (playPromise !== undefined) {
             playPromise.then(() => {
               if (connectingOverlay) connectingOverlay.style.display = 'none';
               updateAudioButtonStates(false);
             }).catch(() => {
-              // Autoplay policy fallback: mute and play
+              // Browser autoplay policy fallback
               videoEl.muted = true;
               videoEl.play();
               if (connectingOverlay) connectingOverlay.style.display = 'none';
@@ -995,28 +1025,35 @@ function connectToLiveBroadcast(hostPeerId) {
         }
       });
 
-      currentLiveCall.on('close', () => {
-        if (connectingOverlay) {
-          connectingOverlay.style.display = 'flex';
-          if (connectingText) connectingText.textContent = "Live stream has ended.";
-        }
+      call.on('close', () => {
+        showStreamOfflineNotice("Live broadcast session ended.");
       });
 
-      currentLiveCall.on('error', (err) => {
+      call.on('error', (err) => {
         console.error("Peer call error:", err);
-        if (connectingText) connectingText.textContent = "Unable to connect. Click Reconnect Live to retry.";
+        showStreamOfflineNotice("Stream error. Click Reconnect Live to retry.");
       });
+    });
 
-    } catch (err) {
-      console.error("Call initiation error:", err);
-      if (connectingText) connectingText.textContent = "Connection error. Retrying...";
-    }
+    // Fallback timeout check if broadcaster did not return stream
+    setTimeout(() => {
+      if (videoEl && !videoEl.srcObject && connectingOverlay && connectingOverlay.style.display !== 'none') {
+        showStreamOfflineNotice("Broadcaster stream offline. Retrying shortly...");
+      }
+    }, 7000);
   });
 
   viewerPeerInstance.on('error', (err) => {
-    console.error("Peer client error:", err);
-    if (connectingText) connectingText.textContent = "Broadcast stream is offline. Retrying shortly...";
+    console.error("PeerJS client error:", err);
+    showStreamOfflineNotice("Unable to reach broadcaster. Please retry.");
   });
+}
+
+function showStreamOfflineNotice(message) {
+  const connectingOverlay = document.getElementById('liveConnectingOverlay');
+  const connectingText = document.getElementById('liveConnectingText');
+  if (connectingOverlay) connectingOverlay.style.display = 'flex';
+  if (connectingText) connectingText.textContent = message;
 }
 
 function closeLiveStreamWatchRoom() {
