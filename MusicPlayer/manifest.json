@@ -1,15 +1,16 @@
 {
-    "name": "Amarjeet Music Studio",
-    "short_name": "AmarjeetMusic",
-    "start_url": "./index.html",
-    "display": "standalone",
-    "background_color": "#0d1117",
-    "theme_color": "#161b22",
-    "icons": [
-      {
-        "src": "https://cdn-icons-png.flaticon.com/512/3844/3844724.png",
-        "sizes": "512x512",
-        "type": "image/png"
-      }
-    ]
-  }
+  "name": "Amarjeet Audio Studio",
+  "short_name": "AmarjeetAudio",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0a0d14",
+  "theme_color": "#171f2d",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3844/3844724.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
