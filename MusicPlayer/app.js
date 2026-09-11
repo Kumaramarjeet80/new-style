@@ -3,7 +3,7 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').catch(() => {});
 }
 
-// 4-Second Notification with Animated Progress Bar (Positioned directly above Player Bar)
+// 4-Second Notification with Animated Progress Bar
 function showNotification(msg) {
   const container = document.getElementById('toast-container');
   const toast = document.createElement('div');
@@ -16,7 +16,7 @@ function showNotification(msg) {
   setTimeout(() => toast.remove(), 4000);
 }
 
-// "Thanks!" Popup Modal Trigger
+// "Thanks!" Feedback Modal
 function showThanksPopup(msg) {
   const modal = document.getElementById('thanks-modal');
   document.getElementById('thanks-msg').textContent = msg;
@@ -26,8 +26,8 @@ document.getElementById('btn-close-thanks').onclick = () => {
   document.getElementById('thanks-modal').style.display = 'none';
 };
 
-// IndexedDB Storage
-const DB_NAME = 'AmarjeetAudioStudioDB_v2';
+// IndexedDB Persistence
+const DB_NAME = 'AmarjeetAudioStudioDB_v3';
 const DB_VER = 1;
 let db;
 
@@ -42,6 +42,9 @@ function initDB() {
       if (!d.objectStoreNames.contains('tracks')) {
         const trk = d.createObjectStore('tracks', { keyPath: 'id', autoIncrement: true });
         trk.createIndex('playlistId', 'playlistId', { unique: false });
+      }
+      if (!d.objectStoreNames.contains('favorites')) {
+        d.createObjectStore('favorites', { keyPath: 'songKey' });
       }
     };
     req.onsuccess = () => { db = req.result; resolve(); };
@@ -90,10 +93,32 @@ const dbOps = {
       tx.objectStore('tracks').delete(id);
       tx.oncomplete = () => res();
     });
+  },
+  // Favorites Store
+  async isFavorite(songKey) {
+    return new Promise((res) => {
+      const tx = db.transaction('favorites', 'readonly');
+      const req = tx.objectStore('favorites').get(songKey);
+      req.onsuccess = () => res(!!req.result);
+    });
+  },
+  async setFavorite(songKey, trackData) {
+    return new Promise((res) => {
+      const tx = db.transaction('favorites', 'readwrite');
+      tx.objectStore('favorites').put({ songKey, trackData });
+      tx.oncomplete = () => res();
+    });
+  },
+  async removeFavorite(songKey) {
+    return new Promise((res) => {
+      const tx = db.transaction('favorites', 'readwrite');
+      tx.objectStore('favorites').delete(songKey);
+      tx.oncomplete = () => res();
+    });
   }
 };
 
-// PURE AUDIO ENGINE (Noise-free with Hardware Bypass & Auto-Attenuator)
+// PURE AUDIO ENGINE
 const audio = document.getElementById('audio-engine');
 let audioCtx, sourceNode, preampGain, masterGainNode;
 const bands = [60, 170, 310, 600, 1000, 3000, 6000, 12000, 14000, 16000];
@@ -101,7 +126,7 @@ const defaultGains = [18.2, 11.8, 3.7, -1.7, -7.8, 2.1, 9.8, 14.1, -3.6, 11.6];
 const defaultPreamp = 14.1;
 let filters = [];
 let eqEnabled = true;
-let currentVol = 0.20; // Default 20%
+let currentVol = 0.20;
 
 function setupAudioNodes() {
   if (audioCtx) return;
@@ -109,11 +134,9 @@ function setupAudioNodes() {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     sourceNode = audioCtx.createMediaElementSource(audio);
 
-    // Master Volume Node
     masterGainNode = audioCtx.createGain();
     masterGainNode.gain.value = currentVol;
 
-    // Preamp Node: Softened to avoid internal clipping / farfarahat noise
     preampGain = audioCtx.createGain();
     preampGain.gain.value = Math.pow(10, defaultPreamp / 20) * 0.35;
 
@@ -121,7 +144,7 @@ function setupAudioNodes() {
     bands.forEach((freq, i) => {
       const f = audioCtx.createBiquadFilter();
       f.type = i === 0 ? 'lowshelf' : i === bands.length - 1 ? 'highshelf' : 'peaking';
-      if (i !== 0 && i !== bands.length - 1) f.Q.value = 1.0; // Musical Q, avoids phase-ringing noise
+      if (i !== 0 && i !== bands.length - 1) f.Q.value = 1.0;
       f.frequency.value = freq;
       f.gain.value = defaultGains[i];
       prev.connect(f);
@@ -129,14 +152,11 @@ function setupAudioNodes() {
       filters.push(f);
     });
 
-    // DSP Path
     sourceNode.connect(preampGain);
     prev.connect(masterGainNode);
-
-    // Output
     masterGainNode.connect(audioCtx.destination);
   } catch (err) {
-    console.error('Web Audio Init:', err);
+    console.error('Audio init err:', err);
   }
 }
 
@@ -172,7 +192,6 @@ const miniSub = document.getElementById('mini-sub');
 const barBtnPlay = document.getElementById('bar-btn-play');
 const barBtnLike = document.getElementById('bar-btn-like');
 
-// Player Box Modal
 const playerBoxModal = document.getElementById('player-box-modal');
 const boxCover = document.getElementById('box-cover');
 const boxTitle = document.getElementById('box-title');
@@ -194,7 +213,7 @@ document.getElementById('btn-close-welcome').onclick = () => {
   showNotification('Welcome to Amarjeet Studio!');
 };
 
-// Load Playlists
+// Playlists Loading
 async function loadPlaylists() {
   let list = await dbOps.getPlaylists();
   if (!list.length) {
@@ -222,7 +241,7 @@ async function loadPlaylists() {
   loadTracks();
 }
 
-// Load Tracks
+// Tracks Loading with Dynamic 💛 vs ❤️ states
 async function loadTracks() {
   tracks = await dbOps.getTracks(activePlaylistId);
   tracks.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
@@ -234,7 +253,11 @@ async function loadTracks() {
     return;
   }
 
-  tracks.forEach((trk, idx) => {
+  for (let idx = 0; idx < tracks.length; idx++) {
+    const trk = tracks[idx];
+    const songKey = trk.name;
+    const isFav = await dbOps.isFavorite(songKey);
+
     const li = document.createElement('li');
     li.className = `song-row ${idx === currentIndex ? 'active' : ''}`;
 
@@ -246,14 +269,14 @@ async function loadTracks() {
     const actions = document.createElement('div');
     actions.className = 'row-actions';
 
-    // Heart Like Button per song
+    // Toggle Favorite Button (💛 <-> ❤️)
     const btnLikeRow = document.createElement('button');
     btnLikeRow.className = 'btn-icon-sm';
-    btnLikeRow.innerHTML = '❤️';
-    btnLikeRow.title = 'Add to Favorites';
-    btnLikeRow.onclick = (e) => {
+    btnLikeRow.innerHTML = isFav ? '❤️' : '💛';
+    btnLikeRow.title = isFav ? 'Remove from Favorites' : 'Add to Favorites';
+    btnLikeRow.onclick = async (e) => {
       e.stopPropagation();
-      addToFavorites(trk);
+      await toggleFavorite(trk);
     };
 
     const del = document.createElement('button');
@@ -270,86 +293,154 @@ async function loadTracks() {
     actions.append(btnLikeRow, del);
     li.append(info, actions);
     songList.appendChild(li);
-  });
+  }
 }
 
-// Add Song to Favorites Playlist
-async function addToFavorites(trk) {
+// Toggle Favorite Logic: 💛 (Yellow Default) <-> ❤️ (Red Liked)
+async function toggleFavorite(trk) {
+  const songKey = trk.name;
+  const isFav = await dbOps.isFavorite(songKey);
+
   let pls = await dbOps.getPlaylists();
-  let fav = pls.find((p) => p.name.toLowerCase() === 'favorites') || pls[0];
+  let favPlaylist = pls.find((p) => p.name.toLowerCase() === 'favorites') || pls[0];
 
-  await dbOps.saveTrack({
-    playlistId: fav.id,
-    name: trk.name,
-    blob: trk.blob,
-    order: Date.now()
-  });
+  if (isFav) {
+    // Already red -> remove from Favorites playlist & turn yellow
+    await dbOps.removeFavorite(songKey);
+    const favTracks = await dbOps.getTracks(favPlaylist.id);
+    const existing = favTracks.find((t) => t.name === trk.name);
+    if (existing) {
+      await dbOps.deleteTrack(existing.id);
+    }
+    showNotification(`Removed "${trk.name}" from Favorites 💛`);
+  } else {
+    // Currently yellow -> save to Favorites playlist & turn red
+    await dbOps.setFavorite(songKey, true);
+    await dbOps.saveTrack({
+      playlistId: favPlaylist.id,
+      name: trk.name,
+      blob: trk.blob,
+      order: Date.now()
+    });
+    showThanksPopup(`"${trk.name}" added to Favorites ❤️!`);
+  }
 
-  syncLikeUI(true);
-  showThanksPopup(`"${trk.name}" was added to your ${fav.name} playlist!`);
-  if (activePlaylistId === fav.id) loadTracks();
+  // Sync current playing song if it's the one modified
+  if (currentIndex !== -1 && tracks[currentIndex] && tracks[currentIndex].name === trk.name) {
+    const updatedFavState = await dbOps.isFavorite(songKey);
+    updateLikeButtonsUI(updatedFavState);
+  }
+
+  loadTracks();
 }
 
-function syncLikeUI(isLiked) {
-  barBtnLike.textContent = isLiked ? '❤️' : '🤍';
-  modalBtnLike.textContent = isLiked ? '❤️' : '🤍';
-  barBtnLike.classList.toggle('liked', isLiked);
-  modalBtnLike.classList.toggle('liked', isLiked);
+function updateLikeButtonsUI(isLiked) {
+  const heart = isLiked ? '❤️' : '💛';
+  barBtnLike.textContent = heart;
+  modalBtnLike.textContent = heart;
 }
 
-// Image Resizer (Compresses uploaded playlist art for speed)
-function compressImage(file) {
+// Mobile-Safe Image Compression (Non-blocking fallback)
+function compressImageSafe(file) {
   return new Promise((resolve) => {
+    if (!file) return resolve(DEFAULT_ART);
     const reader = new FileReader();
     reader.onload = (e) => {
       const img = new Image();
       img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = 180;
-        canvas.height = 180;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, 180, 180);
-        resolve(canvas.toDataURL('image/jpeg', 0.8));
+        try {
+          const canvas = document.createElement('canvas');
+          const maxDim = 200;
+          let w = img.width;
+          let h = img.height;
+          if (w > h) {
+            h = Math.round((h * maxDim) / w);
+            w = maxDim;
+          } else {
+            w = Math.round((w * maxDim) / h);
+            h = maxDim;
+          }
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', 0.8));
+        } catch {
+          resolve(e.target.result || DEFAULT_ART);
+        }
       };
+      img.onerror = () => resolve(DEFAULT_ART);
       img.src = e.target.result;
     };
+    reader.onerror = () => resolve(DEFAULT_ART);
     reader.readAsDataURL(file);
   });
 }
 
-// Create Playlist Handlers
+// Create Playlist Handlers (Robust on smartphones & desktops)
 const createModal = document.getElementById('playlist-create-modal');
 const newPlaylistName = document.getElementById('new-playlist-name');
 const newPlaylistImg = document.getElementById('new-playlist-img');
 const previewArt = document.getElementById('preview-art-tag');
+const previewStatus = document.getElementById('preview-status-text');
+const btnConfirmPlaylist = document.getElementById('btn-confirm-playlist');
 
 document.getElementById('btn-open-create-playlist').onclick = () => {
   newPlaylistName.value = '';
+  newPlaylistImg.value = '';
   newBase64Cover = DEFAULT_ART;
   previewArt.src = DEFAULT_ART;
+  previewStatus.textContent = 'Default art selected';
   createModal.style.display = 'flex';
 };
-document.getElementById('btn-cancel-playlist').onclick = () => createModal.style.display = 'none';
+
+document.getElementById('btn-cancel-playlist').onclick = () => {
+  createModal.style.display = 'none';
+};
 
 newPlaylistImg.onchange = async (e) => {
-  if (e.target.files[0]) {
-    newBase64Cover = await compressImage(e.target.files[0]);
+  if (e.target.files && e.target.files[0]) {
+    previewStatus.textContent = 'Processing image...';
+    newBase64Cover = await compressImageSafe(e.target.files[0]);
     previewArt.src = newBase64Cover;
+    previewStatus.textContent = 'Image ready';
   }
 };
 
-document.getElementById('btn-confirm-playlist').onclick = async () => {
+// Reliable pointer & touch event for mobile buttons
+btnConfirmPlaylist.addEventListener('click', async (e) => {
+  e.preventDefault();
   const name = newPlaylistName.value.trim();
-  if (!name) return;
-  const pl = { id: 'pl_' + Date.now(), name, cover: newBase64Cover || DEFAULT_ART };
-  await dbOps.savePlaylist(pl);
-  createModal.style.display = 'none';
-  activePlaylistId = pl.id;
-  await loadPlaylists();
-  showThanksPopup(`Playlist "${name}" created successfully!`);
-};
+  if (!name) {
+    showNotification('Please enter a playlist name!');
+    newPlaylistName.focus();
+    return;
+  }
 
-// Multiple Songs Added at Once with Thanks Popup
+  btnConfirmPlaylist.disabled = true;
+  btnConfirmPlaylist.textContent = 'Saving...';
+
+  try {
+    const pl = {
+      id: 'pl_' + Date.now(),
+      name,
+      cover: newBase64Cover || DEFAULT_ART
+    };
+    await dbOps.savePlaylist(pl);
+    createModal.style.display = 'none';
+    activePlaylistId = pl.id;
+    await loadPlaylists();
+    showThanksPopup(`Playlist "${name}" created successfully!`);
+  } catch (err) {
+    console.error('Playlist create err:', err);
+    showNotification('Could not save playlist. Try again.');
+  } finally {
+    btnConfirmPlaylist.disabled = false;
+    btnConfirmPlaylist.textContent = 'Create';
+  }
+});
+
+// Multiple Songs Added at Once
 document.getElementById('file-picker').onchange = async (e) => {
   const files = Array.from(e.target.files);
   if (!files.length) return;
@@ -367,8 +458,8 @@ document.getElementById('file-picker').onchange = async (e) => {
   loadTracks();
 };
 
-// Playback Logic
-function playTrack(idx) {
+// Play Track
+async function playTrack(idx) {
   if (idx < 0 || idx >= tracks.length) return;
   setupAudioNodes();
   if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
@@ -383,9 +474,11 @@ function playTrack(idx) {
   boxTitle.textContent = trk.name;
   boxPlaylist.textContent = `Playlist: ${currentPlaylist.name}`;
   syncButtons(true);
-  syncLikeUI(false);
 
-  // Lock Screen Notification with Custom Album Art
+  // Sync heart button with favorite status
+  const isFav = await dbOps.isFavorite(trk.name);
+  updateLikeButtonsUI(isFav);
+
   if ('mediaSession' in navigator) {
     navigator.mediaSession.metadata = new MediaMetadata({
       title: trk.name,
@@ -423,7 +516,7 @@ function togglePlay() {
 function loopNext() {
   if (!tracks.length) return;
   let next = currentIndex + 1;
-  if (next >= tracks.length) next = 0; // Seamless playlist loop
+  if (next >= tracks.length) next = 0;
   playTrack(next);
 }
 
@@ -433,16 +526,16 @@ boxBtnPrev.onclick = () => playTrack(currentIndex > 0 ? currentIndex - 1 : track
 boxBtnNext.onclick = loopNext;
 audio.onended = loopNext;
 
-// Like button clicks
+// Player Bar & Modal Heart Clicks
 barBtnLike.onclick = (e) => {
   e.stopPropagation();
-  if (currentIndex !== -1 && tracks[currentIndex]) addToFavorites(tracks[currentIndex]);
+  if (currentIndex !== -1 && tracks[currentIndex]) toggleFavorite(tracks[currentIndex]);
 };
 modalBtnLike.onclick = () => {
-  if (currentIndex !== -1 && tracks[currentIndex]) addToFavorites(tracks[currentIndex]);
+  if (currentIndex !== -1 && tracks[currentIndex]) toggleFavorite(tracks[currentIndex]);
 };
 
-// OPEN ALL-IN-ONE PLAYER DETAIL MODAL (Opens when bottom player bar is clicked)
+// Player Box Modal
 document.getElementById('open-box-trigger').onclick = () => {
   playerBoxModal.style.display = 'flex';
 };
@@ -450,7 +543,7 @@ document.getElementById('btn-close-box').onclick = () => {
   playerBoxModal.style.display = 'none';
 };
 
-// Tool Buttons inside the Player Detail Modal Box
+// Tools inside Player Detail Modal
 const queueModal = document.getElementById('queue-modal');
 const eqModal = document.getElementById('eq-modal');
 const volPopup = document.getElementById('volume-popup');
@@ -524,7 +617,7 @@ window.shiftTrack = async (from, delta) => {
   showNotification('Playlist order updated');
 };
 
-// Equalizer & True Hardware Bypass
+// Equalizer
 document.querySelectorAll('[data-band]').forEach((s) => {
   s.oninput = (e) => {
     const b = parseInt(e.target.dataset.band, 10);
@@ -563,7 +656,7 @@ document.getElementById('btn-reset-eq').onclick = () => {
   showNotification('Equalizer reset to VLC preset');
 };
 
-// Initial App Boot
+// Bootstrapping
 initDB().then(() => {
   loadPlaylists();
   setVolume(20);
