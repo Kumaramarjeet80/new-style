@@ -20,16 +20,23 @@ let activePopupQueue = [];
 let currentPopupIndex = 0;
 let popupCycleTimer = null;
 
-window.addEventListener('DOMContentLoaded', () => {
+// Safe Startup Launcher (Handles DOM readyState race conditions)
+function startApp() {
   const dynamicWrap = document.getElementById('dynamicPageContent');
   if (dynamicWrap) {
     defaultTemplateHtml = dynamicWrap.innerHTML;
   }
 
-  if (document.body.classList.contains('user-body')) {
+  if (document.body && document.body.classList.contains('user-body')) {
     initUserPortal();
   }
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', startApp);
+} else {
+  startApp();
+}
 
 /* =========================================================
    1. USER PORTAL ROUTING & INSTANT LOCALSTORAGE CACHING
@@ -40,10 +47,13 @@ function initUserPortal() {
   setupDocViewerControls();
   setupCelebrationToastControls();
   
-  // 1. Instant Cache Hydration
-  loadPortalDataFromCache();
+  // 1. Instant Cache Hydration or Instant Fallback (Clears the loading spinner immediately)
+  const hasLoadedCache = loadPortalDataFromCache();
+  if (!hasLoadedCache) {
+    renderFallbackCategories();
+  }
   
-  // 2. Background Revalidation
+  // 2. Background Revalidation (Updates in background without freezing UI)
   fetchPortalCatalog();
 }
 
@@ -58,23 +68,30 @@ function loadPortalDataFromCache() {
         if (portalData.popups && portalData.popups.length > 0) {
           initSequentialPopupQueue(portalData.popups);
         }
+        return true;
       }
     }
   } catch (err) {
     console.warn("Local storage cache hydration warning:", err);
   }
+  return false;
 }
 
 function fetchPortalCatalog() {
   if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes("YOUR_APPS_SCRIPT")) {
-    renderFallbackCategories();
+    if (portalData.categories.length === 0) renderFallbackCategories();
     return;
   }
 
-  fetch(`${APPS_SCRIPT_URL}?action=get_portal_data`)
+  // 8-second fetch timeout controller
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+  fetch(`${APPS_SCRIPT_URL}?action=get_portal_data`, { signal: controller.signal })
     .then(res => res.json())
     .then(data => {
-      if (data.status === "success") {
+      clearTimeout(timeoutId);
+      if (data && data.status === "success" && Array.isArray(data.categories) && data.categories.length > 0) {
         const freshData = {
           categories: data.categories || [],
           subcategories: data.subcategories || [],
@@ -86,7 +103,9 @@ function fetchPortalCatalog() {
         
         if (hasChanged || portalData.categories.length === 0) {
           portalData = freshData;
-          localStorage.setItem(CACHE_KEY, JSON.stringify(freshData));
+          try {
+            localStorage.setItem(CACHE_KEY, JSON.stringify(freshData));
+          } catch (e) {}
           
           if (!currentCategoryId) {
             renderCategories();
@@ -105,7 +124,8 @@ function fetchPortalCatalog() {
       }
     })
     .catch(err => {
-      console.error("Portal Data Fetch Error:", err);
+      clearTimeout(timeoutId);
+      console.warn("Portal Data Fetch Notice (Using Cached/Fallback Data):", err.message);
       if (portalData.categories.length === 0) {
         renderFallbackCategories();
       }
@@ -136,25 +156,31 @@ function renderFallbackCategories() {
   renderCategories();
 }
 
-// Stage A: Render Categories with Timestamps
+// Stage A: Render Categories
 function renderCategories() {
   currentCategoryId = null;
   currentSubcategoryId = null;
   activeCard = null;
 
-  document.getElementById('view-catalog').style.display = 'block';
-  document.getElementById('view-generator').style.display = 'none';
+  const viewCatalog = document.getElementById('view-catalog');
+  const viewGenerator = document.getElementById('view-generator');
+  if (viewCatalog) viewCatalog.style.display = 'block';
+  if (viewGenerator) viewGenerator.style.display = 'none';
 
-  document.getElementById('stageCategories').style.display = 'block';
-  document.getElementById('stageSubcategories').style.display = 'none';
-  document.getElementById('stageCards').style.display = 'none';
+  const stageCat = document.getElementById('stageCategories');
+  const stageSub = document.getElementById('stageSubcategories');
+  const stageCards = document.getElementById('stageCards');
+  if (stageCat) stageCat.style.display = 'block';
+  if (stageSub) stageSub.style.display = 'none';
+  if (stageCards) stageCards.style.display = 'none';
 
   updateBreadcrumbs();
 
   const grid = document.getElementById('categoryGrid');
+  if (!grid) return;
   grid.innerHTML = "";
 
-  if (portalData.categories.length === 0) {
+  if (!portalData.categories || portalData.categories.length === 0) {
     grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: #94a3b8; padding: 40px;">No categories published yet.</div>`;
     return;
   }
@@ -181,18 +207,22 @@ function renderCategories() {
   });
 }
 
-// Stage B: Open Subcategories with Timestamps
+// Stage B: Open Subcategories
 function openCategory(catId) {
   currentCategoryId = catId;
   const filteredSubs = portalData.subcategories.filter(s => s.categoryId === catId);
 
-  document.getElementById('stageCategories').style.display = 'none';
-  document.getElementById('stageSubcategories').style.display = 'block';
-  document.getElementById('stageCards').style.display = 'none';
+  const stageCat = document.getElementById('stageCategories');
+  const stageSub = document.getElementById('stageSubcategories');
+  const stageCards = document.getElementById('stageCards');
+  if (stageCat) stageCat.style.display = 'none';
+  if (stageSub) stageSub.style.display = 'block';
+  if (stageCards) stageCards.style.display = 'none';
 
   updateBreadcrumbs();
 
   const grid = document.getElementById('subcategoryGrid');
+  if (!grid) return;
   grid.innerHTML = "";
 
   if (filteredSubs.length === 0) {
@@ -226,18 +256,22 @@ function openCategory(catId) {
   });
 }
 
-// Stage C: Open Resource Cards with Timestamps
+// Stage C: Open Resource Cards
 function openSubcategory(subId) {
   currentSubcategoryId = subId;
   const filteredCards = portalData.cards.filter(c => c.subcategoryId === subId);
 
-  document.getElementById('stageCategories').style.display = 'none';
-  document.getElementById('stageSubcategories').style.display = 'none';
-  document.getElementById('stageCards').style.display = 'block';
+  const stageCat = document.getElementById('stageCategories');
+  const stageSub = document.getElementById('stageSubcategories');
+  const stageCards = document.getElementById('stageCards');
+  if (stageCat) stageCat.style.display = 'none';
+  if (stageSub) stageSub.style.display = 'none';
+  if (stageCards) stageCards.style.display = 'block';
 
   updateBreadcrumbs();
 
   const grid = document.getElementById('cardGrid');
+  if (!grid) return;
   grid.innerHTML = "";
 
   if (filteredCards.length === 0) {
@@ -279,11 +313,13 @@ function openSubcategory(subId) {
     `;
 
     const actionBtn = cardEl.querySelector('.card-cta-btn');
-    actionBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      launchCardAction(cardData);
-    });
+    if (actionBtn) {
+      actionBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        launchCardAction(cardData);
+      });
+    }
 
     grid.appendChild(cardEl);
   });
@@ -300,19 +336,25 @@ function launchCardAction(cardData) {
   }
 
   activeCard = cardData;
-  document.getElementById('view-catalog').style.display = 'none';
-  document.getElementById('view-generator').style.display = 'block';
-  document.getElementById('activeCardLabel').textContent = cardData.title;
+  const viewCatalog = document.getElementById('view-catalog');
+  const viewGenerator = document.getElementById('view-generator');
+  const activeCardLabel = document.getElementById('activeCardLabel');
+
+  if (viewCatalog) viewCatalog.style.display = 'none';
+  if (viewGenerator) viewGenerator.style.display = 'block';
+  if (activeCardLabel) activeCardLabel.textContent = cardData.title;
 
   const dynamicWrap = document.getElementById('dynamicPageContent');
-  if (cardData.templateHtml && typeof cardData.templateHtml === 'string' && cardData.templateHtml.trim().length > 20) {
-    dynamicWrap.innerHTML = cardData.templateHtml.trim();
-  } else {
-    dynamicWrap.innerHTML = defaultTemplateHtml;
+  if (dynamicWrap) {
+    if (cardData.templateHtml && typeof cardData.templateHtml === 'string' && cardData.templateHtml.trim().length > 20) {
+      dynamicWrap.innerHTML = cardData.templateHtml.trim();
+    } else {
+      dynamicWrap.innerHTML = defaultTemplateHtml;
+    }
   }
 
   rebindEditorFields();
-  buildUniversalDynamicFields(dynamicWrap);
+  if (dynamicWrap) buildUniversalDynamicFields(dynamicWrap);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -344,7 +386,7 @@ let customTemplateDynamicBindings = [];
 
 function buildUniversalDynamicFields(container) {
   const dynamicFieldsWrap = document.getElementById('dynamicCustomFieldsWrap');
-  if (!dynamicFieldsWrap) return;
+  if (!dynamicFieldsWrap || !container) return;
   
   dynamicFieldsWrap.innerHTML = "";
   customTemplateDynamicBindings = [];
@@ -378,9 +420,11 @@ function buildUniversalDynamicFields(container) {
     dynamicFieldsWrap.appendChild(formGroup);
 
     const inputEl = formGroup.querySelector('input');
-    inputEl.addEventListener('input', () => {
-      el.textContent = inputEl.value;
-    });
+    if (inputEl) {
+      inputEl.addEventListener('input', () => {
+        el.textContent = inputEl.value;
+      });
+    }
 
     customTemplateDynamicBindings.push({ input: dynamicInputId, output: elId });
   });
@@ -512,7 +556,8 @@ function initPdfGeneratorEngine() {
   const fontSelect = document.getElementById('fontSelect');
   if (fontSelect) {
     fontSelect.addEventListener('change', function(e) {
-      document.getElementById('pageDocument').style.fontFamily = e.target.value;
+      const page = document.getElementById('pageDocument');
+      if (page) page.style.fontFamily = e.target.value;
     });
   }
 
@@ -520,8 +565,10 @@ function initPdfGeneratorEngine() {
   if (sizeRange) {
     sizeRange.addEventListener('input', function(e) {
       const scalePercent = e.target.value;
-      document.getElementById('zoomVal').textContent = scalePercent + '%';
-      document.getElementById('pageDocument').style.fontSize = (scalePercent / 100) + 'em';
+      const zoomVal = document.getElementById('zoomVal');
+      const page = document.getElementById('pageDocument');
+      if (zoomVal) zoomVal.textContent = scalePercent + '%';
+      if (page) page.style.fontSize = (scalePercent / 100) + 'em';
     });
   }
 
@@ -537,6 +584,7 @@ function initPdfGeneratorEngine() {
   if (downloadBtn) {
     downloadBtn.addEventListener('click', function() {
       const page = document.getElementById('pageDocument');
+      if (!page) return;
       const filename = getIncrementalFilename();
 
       downloadBtn.disabled = true;
@@ -572,6 +620,13 @@ function initPdfGeneratorEngine() {
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
         pagebreak: { mode: 'avoid-all' }
       };
+
+      if (typeof html2pdf !== "function") {
+        alert("PDF library is still loading. Please try again in a moment.");
+        downloadBtn.disabled = false;
+        downloadBtn.textContent = "Download PDF Document";
+        return;
+      }
 
       html2pdf().set(opt).from(page).toPdf().get('pdf').then(function(pdfObj) {
         const totalPages = pdfObj.internal.getNumberOfPages();
@@ -624,7 +679,7 @@ function logTelemetryAndArchiveToDrive(pdfBase64) {
     cardId: activeCard ? activeCard.id : "DEFAULT",
     name: document.getElementById('inStudentName')?.value || 'N/A',
     roll: document.getElementById('inRollNo')?.value || 'N/A',
-    reg: (regCheckbox && (regCheckbox.checked || !['1st', '3rd'].includes(semSelect.value)))
+    reg: (regCheckbox && (regCheckbox.checked || !['1st', '3rd'].includes(semSelect?.value)))
          ? (document.getElementById('inRegNo')?.value || 'N/A') : 'N/A',
     course: document.getElementById('inCourseName')?.value || 'N/A',
     subject: document.getElementById('inCourseName')?.value || 'N/A',
@@ -673,9 +728,11 @@ function openDocumentViewer(cardData) {
   const title = document.getElementById('docViewerHeading');
   const downloadBtn = document.getElementById('docViewerDownloadBtn');
 
+  if (!modal || !iframe || !title || !downloadBtn) return;
+
   title.textContent = cardData.title || "Academic Document";
 
-  let rawUrl = cardData.targetUrl.trim();
+  let rawUrl = (cardData.targetUrl || "").trim();
   let embedUrl = rawUrl;
   let downloadUrl = rawUrl;
 
@@ -694,14 +751,24 @@ function openDocumentViewer(cardData) {
 }
 
 function setupBreadcrumbs() {
-  document.getElementById('bcHome').addEventListener('click', renderCategories);
-  document.getElementById('bcCat').addEventListener('click', () => {
-    if (currentCategoryId) openCategory(currentCategoryId);
-  });
-  document.getElementById('btnBackToPortal').addEventListener('click', () => {
-    document.getElementById('view-generator').style.display = 'none';
-    document.getElementById('view-catalog').style.display = 'block';
-  });
+  const bcHome = document.getElementById('bcHome');
+  const bcCat = document.getElementById('bcCat');
+  const btnBack = document.getElementById('btnBackToPortal');
+
+  if (bcHome) bcHome.addEventListener('click', renderCategories);
+  if (bcCat) {
+    bcCat.addEventListener('click', () => {
+      if (currentCategoryId) openCategory(currentCategoryId);
+    });
+  }
+  if (btnBack) {
+    btnBack.addEventListener('click', () => {
+      const viewGen = document.getElementById('view-generator');
+      const viewCat = document.getElementById('view-catalog');
+      if (viewGen) viewGen.style.display = 'none';
+      if (viewCat) viewCat.style.display = 'block';
+    });
+  }
 }
 
 function updateBreadcrumbs() {
@@ -710,6 +777,8 @@ function updateBreadcrumbs() {
   const bcSub = document.getElementById('bcSub');
   const sep1 = document.getElementById('bcSep1');
   const sep2 = document.getElementById('bcSep2');
+
+  if (!bar || !bcCat || !bcSub) return;
 
   if (!currentCategoryId) {
     bar.style.display = 'none';
@@ -720,16 +789,16 @@ function updateBreadcrumbs() {
   const catObj = portalData.categories.find(c => c.id === currentCategoryId);
   bcCat.textContent = catObj ? catObj.name : "Category";
   bcCat.style.display = 'inline';
-  sep1.style.display = 'inline';
+  if (sep1) sep1.style.display = 'inline';
 
   if (currentSubcategoryId) {
     const subObj = portalData.subcategories.find(s => s.id === currentSubcategoryId);
     bcSub.textContent = subObj ? subObj.name : "Subcategory";
     bcSub.style.display = 'inline';
-    sep2.style.display = 'inline';
+    if (sep2) sep2.style.display = 'inline';
   } else {
     bcSub.style.display = 'none';
-    sep2.style.display = 'none';
+    if (sep2) sep2.style.display = 'none';
   }
 }
 
@@ -802,23 +871,30 @@ function showUserPopup(p, onClosedCallback) {
   const iframeEl = document.getElementById('adPopupIframe');
   const unmuteBtn = document.getElementById('adPopupUnmuteBtn');
 
+  if (!modal || !modalBox) return;
+
   const mediaType = p.mediaType || "image";
   const mediaUrl = p.mediaUrl || "";
 
-  imgEl.style.display = "none";
-  videoEl.style.display = "none";
-  iframeEl.style.display = "none";
+  if (imgEl) imgEl.style.display = "none";
+  if (videoEl) {
+    videoEl.style.display = "none";
+    videoEl.pause();
+    videoEl.removeAttribute('src');
+    videoEl.load();
+  }
+  if (iframeEl) {
+    iframeEl.style.display = "none";
+    iframeEl.src = "";
+  }
   if (unmuteBtn) unmuteBtn.style.display = "none";
 
-  videoEl.pause();
-  videoEl.removeAttribute('src');
-  videoEl.load();
-  iframeEl.src = "";
-
-  timerWrap.style.display = "none";
-  timerBadge.style.display = "none";
-  timerBar.style.transition = "none";
-  timerBar.style.transform = "scaleX(1)";
+  if (timerWrap) timerWrap.style.display = "none";
+  if (timerBadge) timerBadge.style.display = "none";
+  if (timerBar) {
+    timerBar.style.transition = "none";
+    timerBar.style.transform = "scaleX(1)";
+  }
 
   let countdownInterval = null;
   let hasClosed = false;
@@ -827,8 +903,8 @@ function showUserPopup(p, onClosedCallback) {
     if (hasClosed) return;
     hasClosed = true;
     modal.style.display = "none";
-    videoEl.pause();
-    iframeEl.src = "";
+    if (videoEl) videoEl.pause();
+    if (iframeEl) iframeEl.src = "";
     if (countdownInterval) clearInterval(countdownInterval);
     if (typeof onClosedCallback === "function") {
       onClosedCallback();
@@ -842,21 +918,24 @@ function showUserPopup(p, onClosedCallback) {
     if (mode !== "timer" && mode !== "both") return;
 
     const seconds = Math.max(1, Number(p.timerSeconds) || 5);
-    timerWrap.style.display = "block";
-    timerBadge.style.display = "inline-block";
+    if (timerWrap) timerWrap.style.display = "block";
+    if (timerBadge) {
+      timerBadge.style.display = "inline-block";
+      timerBadge.textContent = `Auto-closing in ${seconds}s...`;
+    }
 
     let remaining = seconds;
-    timerBadge.textContent = `Auto-closing in ${remaining}s...`;
-
     setTimeout(() => {
-      timerBar.style.transition = `transform ${seconds}s linear`;
-      timerBar.style.transform = "scaleX(0)";
+      if (timerBar) {
+        timerBar.style.transition = `transform ${seconds}s linear`;
+        timerBar.style.transform = "scaleX(0)";
+      }
     }, 50);
 
     countdownInterval = setInterval(() => {
       remaining -= 1;
       if (remaining > 0) {
-        timerBadge.textContent = `Auto-closing in ${remaining}s...`;
+        if (timerBadge) timerBadge.textContent = `Auto-closing in ${remaining}s...`;
       } else {
         clearInterval(countdownInterval);
         hideModal();
@@ -865,13 +944,15 @@ function showUserPopup(p, onClosedCallback) {
   }
 
   const mode = p.closeMode || "both";
-  closeBtn.style.display = (mode === "timer") ? "none" : "flex";
-  closeBtn.onclick = (e) => {
-    e.stopPropagation();
-    hideModal();
-  };
+  if (closeBtn) {
+    closeBtn.style.display = (mode === "timer") ? "none" : "flex";
+    closeBtn.onclick = (e) => {
+      e.stopPropagation();
+      hideModal();
+    };
+  }
 
-  if (mediaUrl) {
+  if (mediaUrl && heroWrap) {
     heroWrap.style.display = "flex";
 
     if (mediaType === "video") {
@@ -880,12 +961,12 @@ function showUserPopup(p, onClosedCallback) {
                           mediaUrl.includes("youtube.com") || 
                           mediaUrl.includes("youtu.be");
 
-      if (isDriveOrYt) {
+      if (isDriveOrYt && iframeEl) {
         iframeEl.setAttribute('allow', 'autoplay *; encrypted-media *; picture-in-picture *');
         iframeEl.src = formatVideoEmbedUrl(mediaUrl);
         iframeEl.style.display = "block";
         iframeEl.onload = () => startCloseTimer();
-      } else {
+      } else if (videoEl) {
         videoEl.muted = true;
         videoEl.defaultMuted = true;
         videoEl.loop = true;
@@ -902,53 +983,38 @@ function showUserPopup(p, onClosedCallback) {
           unmuteBtn.textContent = "🔊 Tap to Unmute";
           unmuteBtn.onclick = (e) => {
             e.stopPropagation();
-            if (videoEl.muted) {
-              videoEl.muted = false;
-              unmuteBtn.textContent = "🔇 Mute";
-            } else {
-              videoEl.muted = true;
-              unmuteBtn.textContent = "🔊 Tap to Unmute";
-            }
+            videoEl.muted = !videoEl.muted;
+            unmuteBtn.textContent = videoEl.muted ? "🔊 Tap to Unmute" : "🔇 Mute";
           };
         }
 
         videoEl.onplaying = () => startCloseTimer();
-
-        const attemptPlay = () => {
-          videoEl.muted = true;
-          const playPromise = videoEl.play();
-          if (playPromise !== undefined) {
-            playPromise.then(() => startCloseTimer())
-              .catch(() => {
-                videoEl.muted = true;
-                videoEl.play().catch(() => startCloseTimer());
-              });
-          }
-        };
-
-        if (videoEl.readyState >= 3) {
-          attemptPlay();
-        } else {
-          videoEl.oncanplay = () => attemptPlay();
+        const playPromise = videoEl.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(() => startCloseTimer());
         }
       }
-    } else {
+    } else if (imgEl) {
       imgEl.src = mediaUrl;
       imgEl.style.display = "block";
       imgEl.onload = () => startCloseTimer();
       if (imgEl.complete) startCloseTimer();
     }
   } else {
-    heroWrap.style.display = "none";
+    if (heroWrap) heroWrap.style.display = "none";
     startCloseTimer();
   }
 
-  document.getElementById('adPopupTitle').textContent = p.title || "Announcement";
-  document.getElementById('adPopupBody').textContent = p.body || "";
-  
+  const titleEl = document.getElementById('adPopupTitle');
+  const bodyEl = document.getElementById('adPopupBody');
   const actionBtn = document.getElementById('adPopupBtn');
-  actionBtn.textContent = p.buttonText || "Open Link";
-  actionBtn.href = p.buttonLink || "#";
+
+  if (titleEl) titleEl.textContent = p.title || "Announcement";
+  if (bodyEl) bodyEl.textContent = p.body || "";
+  if (actionBtn) {
+    actionBtn.textContent = p.buttonText || "Open Link";
+    actionBtn.href = p.buttonLink || "#";
+  }
 
   if (p.clickMode === "card" && p.buttonLink) {
     modalBox.classList.add('clickable-card');
@@ -1002,6 +1068,3 @@ function showCelebrationToast() {
     toast.classList.remove('show');
   }, 4500);
 }
-```[cite: 2]
-
-Let me know if you would like me to send the next file (`admin.html`), or if you have any questions!
