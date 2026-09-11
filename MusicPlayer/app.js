@@ -1,45 +1,30 @@
-// Auto-updating Service Worker for offline capability
+// Service Worker Registration for Instant Offline Execution
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').then((reg) => {
-      reg.update();
-      reg.addEventListener('updatefound', () => {
-        const worker = reg.installing;
-        worker.addEventListener('statechange', () => {
-          if (worker.state === 'activated' && !navigator.serviceWorker.controller) {
-            window.location.reload();
-          }
-        });
-      });
-    }).catch(console.error);
-
-    let refreshing = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (!refreshing) {
-        refreshing = true;
-        window.location.reload();
-      }
-    });
-  });
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
 }
 
-// Toast Notification System
-function showToast(msg) {
+// 4-Second Notification with Animated Green Progress Bar
+function showNotification(msg) {
   const container = document.getElementById('toast-container');
-  const el = document.createElement('div');
-  el.className = 'toast';
-  el.textContent = msg;
-  container.appendChild(el);
-  setTimeout(() => el.remove(), 2900);
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.innerHTML = `
+    <div class="toast-msg">${msg}</div>
+    <div class="toast-progress"></div>
+  `;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.remove();
+  }, 4000);
 }
 
-// IndexedDB Persistence
-const DB_NAME = 'AmarjeetAudioStudioDB';
+// Lightweight IndexedDB Store
+const DB_NAME = 'AmarjeetStudioLiteDB';
 const DB_VER = 1;
 let db;
 
 function initDB() {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const req = indexedDB.open(DB_NAME, DB_VER);
     req.onupgradeneeded = (e) => {
       const d = e.target.result;
@@ -47,12 +32,12 @@ function initDB() {
         d.createObjectStore('playlists', { keyPath: 'id' });
       }
       if (!d.objectStoreNames.contains('tracks')) {
-        const trkStore = d.createObjectStore('tracks', { keyPath: 'id', autoIncrement: true });
-        trkStore.createIndex('playlistId', 'playlistId', { unique: false });
+        const trk = d.createObjectStore('tracks', { keyPath: 'id', autoIncrement: true });
+        trk.createIndex('playlistId', 'playlistId', { unique: false });
       }
     };
     req.onsuccess = () => { db = req.result; resolve(); };
-    req.onerror = reject;
+    req.onerror = () => resolve();
   });
 }
 
@@ -84,7 +69,7 @@ const dbOps = {
       tx.oncomplete = () => res();
     });
   },
-  async updateTrackOrder(track) {
+  async updateTrack(track) {
     return new Promise((res) => {
       const tx = db.transaction('tracks', 'readwrite');
       tx.objectStore('tracks').put(track);
@@ -100,215 +85,141 @@ const dbOps = {
   }
 };
 
-// AUDIO DSP & VOLUME ENGINE
+// AUDIO DSP ENGINE (Prevents crackling, distortion & farfarahat sound)
 const audio = document.getElementById('audio-engine');
 let audioCtx, sourceNode, preampGain, masterGainNode, compressor;
 const bands = [60, 170, 310, 600, 1000, 3000, 6000, 12000, 14000, 16000];
 const defaultGains = [18.2, 11.8, 3.7, -1.7, -7.8, 2.1, 9.8, 14.1, -3.6, 11.6];
 const defaultPreamp = 14.1;
 let filters = [];
+let currentVol = 0.20; // Default 20% Volume
 
-// System volume set to 20% by default
-let currentVolumeFraction = 0.20;
-
-function setupAudioDSP() {
+function ensureAudioNodes() {
   if (audioCtx) return;
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  sourceNode = audioCtx.createMediaElementSource(audio);
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    sourceNode = audioCtx.createMediaElementSource(audio);
 
-  // Preamp Gain
-  preampGain = audioCtx.createGain();
-  preampGain.gain.value = Math.pow(10, defaultPreamp / 20) * 0.45;
+    preampGain = audioCtx.createGain();
+    preampGain.gain.value = Math.pow(10, defaultPreamp / 20) * 0.45;
 
-  // Master Gain Node for guaranteed hardware-level volume control
-  masterGainNode = audioCtx.createGain();
-  masterGainNode.gain.value = currentVolumeFraction;
+    masterGainNode = audioCtx.createGain();
+    masterGainNode.gain.value = currentVol;
 
-  // Dynamics Compressor to stop crackle / flutter
-  compressor = audioCtx.createDynamicsCompressor();
-  compressor.threshold.setValueAtTime(-18, audioCtx.currentTime);
-  compressor.knee.setValueAtTime(12, audioCtx.currentTime);
-  compressor.ratio.setValueAtTime(10, audioCtx.currentTime);
-  compressor.attack.setValueAtTime(0.003, audioCtx.currentTime);
-  compressor.release.setValueAtTime(0.25, audioCtx.currentTime);
+    compressor = audioCtx.createDynamicsCompressor();
+    compressor.threshold.setValueAtTime(-18, audioCtx.currentTime);
+    compressor.knee.setValueAtTime(12, audioCtx.currentTime);
+    compressor.ratio.setValueAtTime(10, audioCtx.currentTime);
 
-  let prevNode = preampGain;
-  bands.forEach((freq, idx) => {
-    const f = audioCtx.createBiquadFilter();
-    f.type = idx === 0 ? 'lowshelf' : idx === bands.length - 1 ? 'highshelf' : 'peaking';
-    if (idx !== 0 && idx !== bands.length - 1) f.Q.value = 1.4;
-    f.frequency.value = freq;
-    f.gain.value = defaultGains[idx];
-    prevNode.connect(f);
-    prevNode = f;
-    filters.push(f);
-  });
+    let prev = preampGain;
+    bands.forEach((freq, i) => {
+      const f = audioCtx.createBiquadFilter();
+      f.type = i === 0 ? 'lowshelf' : i === bands.length - 1 ? 'highshelf' : 'peaking';
+      if (i !== 0 && i !== bands.length - 1) f.Q.value = 1.4;
+      f.frequency.value = freq;
+      f.gain.value = defaultGains[i];
+      prev.connect(f);
+      prev = f;
+      filters.push(f);
+    });
 
-  sourceNode.connect(preampGain);
-  prevNode.connect(compressor);
-  compressor.connect(masterGainNode);
-  masterGainNode.connect(audioCtx.destination);
+    sourceNode.connect(preampGain);
+    prev.connect(compressor);
+    compressor.connect(masterGainNode);
+    masterGainNode.connect(audioCtx.destination);
+  } catch (err) {
+    console.error('Audio setup exception', err);
+  }
 }
 
-// Dedicated Volume Setter (HTML5 audio + Web Audio node)
-function applyVolume(percent) {
-  currentVolumeFraction = percent / 100;
-  audio.volume = currentVolumeFraction;
+function setVolume(pct) {
+  currentVol = pct / 100;
+  audio.volume = currentVol;
   if (masterGainNode && audioCtx) {
-    masterGainNode.gain.setValueAtTime(currentVolumeFraction, audioCtx.currentTime);
+    masterGainNode.gain.setValueAtTime(currentVol, audioCtx.currentTime);
   }
-  // Sync all volume inputs & labels
-  document.getElementById('vol-slider').value = percent;
-  document.getElementById('vol-popup-slider').value = percent;
-  document.getElementById('vol-label').textContent = `${percent}%`;
-  document.getElementById('vol-popup-label').textContent = `${percent}%`;
+  document.getElementById('vol-popup-slider').value = pct;
+  document.getElementById('vol-popup-label').textContent = `${pct}%`;
 }
 
 // State
 let activePlaylistId = 'default';
-let currentPlaylistMeta = null;
-let currentTracks = [];
+let currentPlaylist = null;
+let tracks = [];
 let currentIndex = -1;
-let newPlaylistBase64Art = null;
+let newBase64Cover = null;
 
-const DEFAULT_ART = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 24 24' fill='%232ea043'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z'/%3E%3C/svg%3E";
+const DEFAULT_ART = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 24 24' fill='%232ea043'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z'/%3E%3C/svg%3E";
 
-// UI references
+// UI References
+const welcomeModal = document.getElementById('welcome-modal');
 const playlistTabs = document.getElementById('playlist-tabs');
 const songList = document.getElementById('song-list');
 const reorderList = document.getElementById('reorder-list');
 const viewPlaylistName = document.getElementById('view-playlist-name');
 const trackCountLabel = document.getElementById('track-count-label');
-const filePicker = document.getElementById('file-picker');
-
 const miniCover = document.getElementById('mini-cover');
 const miniTitle = document.getElementById('mini-title');
 const miniSub = document.getElementById('mini-sub');
 const barBtnPlay = document.getElementById('bar-btn-play');
 
-const playerModal = document.getElementById('player-modal');
-const queueModal = document.getElementById('queue-modal');
-const eqModal = document.getElementById('eq-modal');
-const volumePopup = document.getElementById('volume-popup');
-const fullCover = document.getElementById('full-cover');
-const modalSongTitle = document.getElementById('modal-song-title');
-const modalPlaylistName = document.getElementById('modal-playlist-name');
-
-const btnPlay = document.getElementById('btn-play');
-const btnPrev = document.getElementById('btn-prev');
-const btnNext = document.getElementById('btn-next');
+const nowPlayingPanel = document.getElementById('now-playing-panel');
+const panelCover = document.getElementById('panel-cover');
+const panelTitle = document.getElementById('panel-title');
+const panelPlaylist = document.getElementById('panel-playlist');
 const seekBar = document.getElementById('seek-bar');
 const currTime = document.getElementById('curr-time');
 const durTime = document.getElementById('dur-time');
 
-// Welcome Modal
-document.getElementById('btn-close-welcome').onclick = () => {
-  document.getElementById('welcome-modal').style.display = 'none';
-  setupAudioDSP();
+// 1. Welcome Modal Dismissal (Works reliably on mobile & desktop)
+document.getElementById('btn-close-welcome').addEventListener('click', () => {
+  welcomeModal.style.display = 'none';
+  ensureAudioNodes();
   if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-  showToast('Welcome to Amarjeet Studio!');
-};
+  showNotification('Welcome to Amarjeet Studio!');
+});
 
-// Playlists Loading
+// Load Playlists
 async function loadPlaylists() {
-  let pls = await dbOps.getPlaylists();
-  if (pls.length === 0) {
+  let list = await dbOps.getPlaylists();
+  if (!list.length) {
     const def = { id: 'default', name: 'Favorites', cover: DEFAULT_ART };
     await dbOps.savePlaylist(def);
-    pls = [def];
+    list = [def];
   }
   playlistTabs.innerHTML = '';
-  pls.forEach((p) => {
+  list.forEach((p) => {
     const chip = document.createElement('div');
     chip.className = `chip ${p.id === activePlaylistId ? 'active' : ''}`;
-    chip.innerHTML = `
-      <img src="${p.cover || DEFAULT_ART}" class="chip-img" alt="art" />
-      <span>${p.name}</span>
-    `;
-    chip.onclick = () => switchPlaylist(p.id);
+    chip.innerHTML = `<img src="${p.cover || DEFAULT_ART}" class="chip-img" /><span>${p.name}</span>`;
+    chip.onclick = () => {
+      activePlaylistId = p.id;
+      loadPlaylists();
+    };
     playlistTabs.appendChild(chip);
   });
 
-  currentPlaylistMeta = pls.find((p) => p.id === activePlaylistId) || pls[0];
-  activePlaylistId = currentPlaylistMeta.id;
-  viewPlaylistName.textContent = currentPlaylistMeta.name;
-  updateCovers(currentPlaylistMeta.cover || DEFAULT_ART);
+  currentPlaylist = list.find((p) => p.id === activePlaylistId) || list[0];
+  activePlaylistId = currentPlaylist.id;
+  viewPlaylistName.textContent = currentPlaylist.name;
+  miniCover.src = currentPlaylist.cover || DEFAULT_ART;
+  panelCover.src = currentPlaylist.cover || DEFAULT_ART;
   loadTracks();
 }
 
-function updateCovers(url) {
-  miniCover.src = url;
-  fullCover.src = url;
-}
-
-async function switchPlaylist(id) {
-  activePlaylistId = id;
-  await loadPlaylists();
-  showToast(`Switched to: ${currentPlaylistMeta.name}`);
-}
-
-// Create Playlist Modal Handlers
-const createModal = document.getElementById('playlist-create-modal');
-const newPlaylistNameInput = document.getElementById('new-playlist-name');
-const newPlaylistImgInput = document.getElementById('new-playlist-img');
-const previewArtTag = document.getElementById('preview-art-tag');
-
-document.getElementById('btn-open-create-playlist').onclick = () => {
-  newPlaylistNameInput.value = '';
-  newPlaylistBase64Art = DEFAULT_ART;
-  previewArtTag.src = DEFAULT_ART;
-  createModal.style.display = 'flex';
-};
-
-document.getElementById('btn-cancel-playlist').onclick = () => {
-  createModal.style.display = 'none';
-};
-
-newPlaylistImgInput.onchange = (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    newPlaylistBase64Art = ev.target.result;
-    previewArtTag.src = newPlaylistBase64Art;
-  };
-  reader.readAsDataURL(file);
-};
-
-document.getElementById('btn-confirm-playlist').onclick = async () => {
-  const name = newPlaylistNameInput.value.trim();
-  if (!name) {
-    showToast('Please enter a playlist name!');
-    return;
-  }
-  const newPl = {
-    id: 'pl_' + Date.now(),
-    name,
-    cover: newPlaylistBase64Art || DEFAULT_ART
-  };
-  await dbOps.savePlaylist(newPl);
-  createModal.style.display = 'none';
-  activePlaylistId = newPl.id;
-  await loadPlaylists();
-  showToast(`Playlist "${name}" created!`);
-};
-
-// Tracks Loading
+// Load Tracks
 async function loadTracks() {
-  currentTracks = await dbOps.getTracks(activePlaylistId);
-  currentTracks.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-  trackCountLabel.textContent = `${currentTracks.length} song${currentTracks.length === 1 ? '' : 's'}`;
-  renderUpperSongs();
-  renderReorderView();
-}
+  tracks = await dbOps.getTracks(activePlaylistId);
+  tracks.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  trackCountLabel.textContent = `${tracks.length} track${tracks.length === 1 ? '' : 's'}`;
 
-function renderUpperSongs() {
   songList.innerHTML = '';
-  if (currentTracks.length === 0) {
-    songList.innerHTML = '<li style="color:var(--text-muted);text-align:center;padding:24px 0;">No songs here yet. Click "➕ Add Songs" above.</li>';
+  if (!tracks.length) {
+    songList.innerHTML = '<li style="color:var(--text-muted);text-align:center;padding:24px 0;">No songs here yet. Tap "➕ Add Songs".</li>';
     return;
   }
-  currentTracks.forEach((trk, idx) => {
+
+  tracks.forEach((trk, idx) => {
     const li = document.createElement('li');
     li.className = `song-row ${idx === currentIndex ? 'active' : ''}`;
 
@@ -317,59 +228,76 @@ function renderUpperSongs() {
     info.innerHTML = `<span class="song-name"><strong>${idx + 1}.</strong> ${trk.name}</span>`;
     info.onclick = () => playTrack(idx);
 
-    const btnDel = document.createElement('button');
-    btnDel.className = 'btn-del';
-    btnDel.innerHTML = '🗑';
-    btnDel.title = 'Delete Song';
-    btnDel.onclick = async (e) => {
+    const del = document.createElement('button');
+    del.className = 'btn-del';
+    del.innerHTML = '🗑';
+    del.title = 'Delete Song';
+    del.onclick = async (e) => {
       e.stopPropagation();
       await dbOps.deleteTrack(trk.id);
-      showToast(`Removed "${trk.name}"`);
+      showNotification(`Removed: ${trk.name}`);
       loadTracks();
     };
 
-    li.append(info, btnDel);
+    li.append(info, del);
     songList.appendChild(li);
   });
 }
 
-function renderReorderView() {
-  reorderList.innerHTML = '';
-  currentTracks.forEach((trk, idx) => {
-    const li = document.createElement('li');
-    li.className = 'song-row';
-    li.innerHTML = `
-      <span class="song-name" style="max-width:68%">${idx + 1}. ${trk.name}</span>
-      <div>
-        <button class="btn-action" onclick="moveTrack(${idx}, -1)">▲</button>
-        <button class="btn-action" onclick="moveTrack(${idx}, 1)">▼</button>
-      </div>
-    `;
-    reorderList.appendChild(li);
+// Dynamic Client-side Image Compression (Keeps storage fast and lightweight)
+function compressImage(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 180;
+        canvas.height = 180;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, 180, 180);
+        resolve(canvas.toDataURL('image/jpeg', 0.8));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
   });
 }
 
-window.moveTrack = async function(from, delta) {
-  const to = from + delta;
-  if (to < 0 || to >= currentTracks.length) return;
-  const temp = currentTracks[from];
-  currentTracks[from] = currentTracks[to];
-  currentTracks[to] = temp;
+// Create Playlist Modal Handlers
+const createModal = document.getElementById('playlist-create-modal');
+const newPlaylistName = document.getElementById('new-playlist-name');
+const newPlaylistImg = document.getElementById('new-playlist-img');
+const previewArt = document.getElementById('preview-art-tag');
 
-  for (let i = 0; i < currentTracks.length; i++) {
-    currentTracks[i].order = i;
-    await dbOps.updateTrackOrder(currentTracks[i]);
+document.getElementById('btn-open-create-playlist').onclick = () => {
+  newPlaylistName.value = '';
+  newBase64Cover = DEFAULT_ART;
+  previewArt.src = DEFAULT_ART;
+  createModal.style.display = 'flex';
+};
+document.getElementById('btn-cancel-playlist').onclick = () => createModal.style.display = 'none';
+
+newPlaylistImg.onchange = async (e) => {
+  if (e.target.files[0]) {
+    newBase64Cover = await compressImage(e.target.files[0]);
+    previewArt.src = newBase64Cover;
   }
-  if (currentIndex === from) currentIndex = to;
-  else if (currentIndex === to) currentIndex = from;
+};
 
-  renderUpperSongs();
-  renderReorderView();
-  showToast('Playlist track order updated');
+document.getElementById('btn-confirm-playlist').onclick = async () => {
+  const name = newPlaylistName.value.trim();
+  if (!name) return;
+  const pl = { id: 'pl_' + Date.now(), name, cover: newBase64Cover || DEFAULT_ART };
+  await dbOps.savePlaylist(pl);
+  createModal.style.display = 'none';
+  activePlaylistId = pl.id;
+  await loadPlaylists();
+  showNotification(`Playlist created: ${name}`);
 };
 
 // Add Songs
-filePicker.onchange = async (e) => {
+document.getElementById('file-picker').onchange = async (e) => {
   const files = Array.from(e.target.files);
   if (!files.length) return;
   for (let i = 0; i < files.length; i++) {
@@ -377,115 +305,93 @@ filePicker.onchange = async (e) => {
       playlistId: activePlaylistId,
       name: files[i].name,
       blob: files[i],
-      order: currentTracks.length + i
+      order: tracks.length + i
     });
   }
-  showToast(`Added ${files.length} song(s) successfully!`);
+  showNotification(`Added ${files.length} song(s) successfully!`);
   loadTracks();
 };
 
-// Play Track
+// Play Track Logic
 function playTrack(idx) {
-  if (idx < 0 || idx >= currentTracks.length) return;
-  setupAudioDSP();
-  if (audioCtx.state === 'suspended') audioCtx.resume();
+  if (idx < 0 || idx >= tracks.length) return;
+  ensureAudioNodes();
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
 
   currentIndex = idx;
-  const trk = currentTracks[currentIndex];
+  const trk = tracks[currentIndex];
   audio.src = URL.createObjectURL(trk.blob);
   audio.play();
 
   miniTitle.textContent = trk.name;
-  miniSub.textContent = `Playlist: ${currentPlaylistMeta.name}`;
-  modalSongTitle.textContent = trk.name;
-  modalPlaylistName.textContent = `Playlist: ${currentPlaylistMeta.name}`;
-  btnPlay.textContent = '⏸';
+  miniSub.textContent = `Playlist: ${currentPlaylist.name}`;
+  panelTitle.textContent = trk.name;
+  panelPlaylist.textContent = `Playlist: ${currentPlaylist.name}`;
   barBtnPlay.textContent = '⏸';
 
-  updateMediaSession(trk);
-  renderUpperSongs();
-  showToast(`Playing: ${trk.name}`);
-}
+  // Lock Screen Notification with Custom Album Art & "Made by & for Amarjeet kumar"
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: trk.name,
+      artist: 'Made by & for Amarjeet kumar',
+      album: currentPlaylist.name,
+      artwork: [{ src: currentPlaylist.cover || DEFAULT_ART, sizes: '192x192', type: 'image/png' }]
+    });
+    navigator.mediaSession.setActionHandler('play', () => { audio.play(); barBtnPlay.textContent = '⏸'; });
+    navigator.mediaSession.setActionHandler('pause', () => { audio.pause(); barBtnPlay.textContent = '▶'; });
+    navigator.mediaSession.setActionHandler('nexttrack', () => loopNext());
+    navigator.mediaSession.setActionHandler('previoustrack', () => playTrack(currentIndex > 0 ? currentIndex - 1 : tracks.length - 1));
+  }
 
-// Media Session (Lock screen notification)
-function updateMediaSession(trk) {
-  if (!('mediaSession' in navigator)) return;
-  navigator.mediaSession.metadata = new MediaMetadata({
-    title: trk.name,
-    artist: 'Made by & for Amarjeet kumar',
-    album: currentPlaylistMeta.name,
-    artwork: [{ src: currentPlaylistMeta.cover || DEFAULT_ART, sizes: '512x512', type: 'image/png' }]
-  });
-
-  navigator.mediaSession.setActionHandler('play', () => { audio.play(); syncButtons(true); });
-  navigator.mediaSession.setActionHandler('pause', () => { audio.pause(); syncButtons(false); });
-  navigator.mediaSession.setActionHandler('previoustrack', () => playTrack(currentIndex - 1));
-  navigator.mediaSession.setActionHandler('nexttrack', () => playNextWithLoop());
-}
-
-function syncButtons(isPlaying) {
-  btnPlay.textContent = isPlaying ? '⏸' : '▶';
-  barBtnPlay.textContent = isPlaying ? '⏸' : '▶';
+  loadTracks();
 }
 
 function togglePlay() {
-  setupAudioDSP();
+  ensureAudioNodes();
   if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-  if (!audio.src && currentTracks.length > 0) return playTrack(0);
+  if (!audio.src && tracks.length) return playTrack(0);
   if (audio.paused) {
     audio.play();
-    syncButtons(true);
-    showToast('Resumed playback');
+    barBtnPlay.textContent = '⏸';
   } else {
     audio.pause();
-    syncButtons(false);
-    showToast('Paused');
+    barBtnPlay.textContent = '▶';
   }
 }
 
-// Infinite Loop: If last song ends, repeat the playlist from index 0
-function playNextWithLoop() {
-  if (currentTracks.length === 0) return;
-  let nextIdx = currentIndex + 1;
-  if (nextIdx >= currentTracks.length) {
-    nextIdx = 0; // Loop back to the first song
-    showToast('Repeating playlist from start');
-  }
-  playTrack(nextIdx);
+// Automatic Playlist Looping (Last track wraps back to first track)
+function loopNext() {
+  if (!tracks.length) return;
+  let next = currentIndex + 1;
+  if (next >= tracks.length) next = 0;
+  playTrack(next);
 }
 
 barBtnPlay.onclick = (e) => { e.stopPropagation(); togglePlay(); };
-btnPlay.onclick = togglePlay;
-btnPrev.onclick = () => playTrack(currentIndex > 0 ? currentIndex - 1 : currentTracks.length - 1);
-btnNext.onclick = playNextWithLoop;
-audio.onended = playNextWithLoop;
+audio.onended = loopNext;
 
-// Open Modals from Bottom Bar Icons
-document.getElementById('open-full-player').onclick = () => { playerModal.style.display = 'flex'; };
-document.getElementById('close-modal-btn').onclick = () => { playerModal.style.display = 'none'; };
+// Toggle Upper Artwork Panel (Leaves bottom player bar visible and pinned)
+const openPanelTrigger = document.getElementById('open-panel-trigger');
+openPanelTrigger.onclick = () => {
+  nowPlayingPanel.style.display = nowPlayingPanel.style.display === 'flex' ? 'none' : 'flex';
+};
+document.getElementById('btn-close-panel').onclick = () => {
+  nowPlayingPanel.style.display = 'none';
+};
 
-document.getElementById('bar-btn-playlist').onclick = () => { queueModal.style.display = 'flex'; };
-document.getElementById('close-queue-btn').onclick = () => { queueModal.style.display = 'none'; };
-document.getElementById('btn-open-queue').onclick = () => { queueModal.style.display = 'flex'; };
-
-document.getElementById('bar-btn-eq').onclick = () => { eqModal.style.display = 'flex'; };
-document.getElementById('close-eq-btn').onclick = () => { eqModal.style.display = 'none'; };
-
-// Volume Popup Toggle
-const btnBarVolume = document.getElementById('bar-btn-volume');
-btnBarVolume.onclick = (e) => {
+// Floating Volume Popover
+const volPopup = document.getElementById('volume-popup');
+const btnBarVol = document.getElementById('bar-btn-volume');
+btnBarVol.onclick = (e) => {
   e.stopPropagation();
-  volumePopup.style.display = volumePopup.style.display === 'none' ? 'block' : 'none';
+  volPopup.style.display = volPopup.style.display === 'block' ? 'none' : 'block';
 };
 window.addEventListener('click', (e) => {
-  if (!volumePopup.contains(e.target) && e.target !== btnBarVolume) {
-    volumePopup.style.display = 'none';
+  if (!volPopup.contains(e.target) && e.target !== btnBarVol) {
+    volPopup.style.display = 'none';
   }
 });
-
-// Dual Volume Slider Synchronization
-document.getElementById('vol-slider').oninput = (e) => applyVolume(e.target.value);
-document.getElementById('vol-popup-slider').oninput = (e) => applyVolume(e.target.value);
+document.getElementById('vol-popup-slider').oninput = (e) => setVolume(e.target.value);
 
 // Seek Bar
 audio.ontimeupdate = () => {
@@ -494,17 +400,60 @@ audio.ontimeupdate = () => {
   const cM = Math.floor(audio.currentTime / 60) || 0;
   const cS = Math.floor(audio.currentTime % 60) || 0;
   currTime.textContent = `${cM}:${cS < 10 ? '0' : ''}${cS}`;
-
   const dM = Math.floor(audio.duration / 60) || 0;
   const dS = Math.floor(audio.duration % 60) || 0;
   durTime.textContent = `${dM}:${dS < 10 ? '0' : ''}${dS}`;
 };
-
 seekBar.oninput = () => {
   if (audio.duration) audio.currentTime = (seekBar.value / 100) * audio.duration;
 };
 
-// Equalizer Inputs
+// Reorder View (Shift Tracks Up / Down)
+const queueModal = document.getElementById('queue-modal');
+document.getElementById('bar-btn-playlist').onclick = () => {
+  renderReorderList();
+  queueModal.style.display = 'flex';
+};
+document.getElementById('close-queue-btn').onclick = () => queueModal.style.display = 'none';
+
+function renderReorderList() {
+  reorderList.innerHTML = '';
+  tracks.forEach((trk, idx) => {
+    const li = document.createElement('li');
+    li.className = 'song-row';
+    li.innerHTML = `
+      <span class="song-name" style="max-width:68%">${idx + 1}. ${trk.name}</span>
+      <div>
+        <button class="btn-action" onclick="shiftTrack(${idx}, -1)">▲</button>
+        <button class="btn-action" onclick="shiftTrack(${idx}, 1)">▼</button>
+      </div>
+    `;
+    reorderList.appendChild(li);
+  });
+}
+
+window.shiftTrack = async (from, delta) => {
+  const to = from + delta;
+  if (to < 0 || to >= tracks.length) return;
+  const temp = tracks[from];
+  tracks[from] = tracks[to];
+  tracks[to] = temp;
+  for (let i = 0; i < tracks.length; i++) {
+    tracks[i].order = i;
+    await dbOps.updateTrack(tracks[i]);
+  }
+  if (currentIndex === from) currentIndex = to;
+  else if (currentIndex === to) currentIndex = from;
+  renderReorderList();
+  loadTracks();
+  showNotification('Playlist order updated');
+};
+
+// 10-Band Equalizer Modal Handlers
+const eqModal = document.getElementById('eq-modal');
+document.getElementById('bar-btn-eq').onclick = () => eqModal.style.display = 'flex';
+document.getElementById('close-eq-btn').onclick = () => eqModal.style.display = 'none';
+
 document.querySelectorAll('[data-band]').forEach((s) => {
   s.oninput = (e) => {
     const b = parseInt(e.target.dataset.band, 10);
@@ -513,13 +462,11 @@ document.querySelectorAll('[data-band]').forEach((s) => {
     document.getElementById(`val-${bands[b]}`).textContent = `${val}dB`;
   };
 });
-
 document.getElementById('eq-preamp').oninput = (e) => {
   const val = parseFloat(e.target.value);
   document.getElementById('val-preamp').textContent = `${val}dB`;
   if (preampGain) preampGain.gain.value = Math.pow(10, val / 20) * 0.45;
 };
-
 document.getElementById('btn-reset-eq').onclick = () => {
   document.getElementById('eq-preamp').value = 14.1;
   document.getElementById('val-preamp').textContent = '14.1dB';
@@ -531,19 +478,19 @@ document.getElementById('btn-reset-eq').onclick = () => {
     document.getElementById(`val-${bands[i]}`).textContent = `${g}dB`;
     if (filters[i]) filters[i].gain.value = g;
   });
-  showToast('Equalizer reset to default preset');
+  showNotification('Equalizer reset to VLC preset');
 };
 
 document.getElementById('eq-enable').onchange = (e) => {
   const on = e.target.checked;
   filters.forEach((f, i) => {
-    f.gain.value = on ? parseFloat(document.querySelector(`[data-band="${i}"]`).value) : 0;
+    f.gain.value = on ? parseFloat(document.querySelectorAll('[data-band]')[i].value) : 0;
   });
-  showToast(on ? 'Audio DSP Enabled' : 'DSP Bypassed');
+  showNotification(on ? 'Audio DSP Enabled' : 'DSP Bypassed');
 };
 
-// Initial Bootstrap
+// Initial App Bootstrapping
 initDB().then(() => {
   loadPlaylists();
-  applyVolume(20); // 20% Initial default
+  setVolume(20); // 20% Initial default
 });
