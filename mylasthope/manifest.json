@@ -1,6 +1,6 @@
 {
-  "name": "Amarjeet Audio Studio",
-  "short_name": "AmarjeetAudio",
+  "name": "My last hope",
+  "short_name": "MY Fav One",
   "description": "Offline Studio Audio Player with 10-Band Equalizer and Custom Playlists. Made by & for Amarjeet kumar.",
   "start_url": "./index.html",
   "scope": "./",
