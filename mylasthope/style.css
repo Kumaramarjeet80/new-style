@@ -79,7 +79,13 @@ body {
   touch-action: manipulation;
 }
 
-/* Playlist Chips */
+.btn-install {
+  background: #238636;
+  border-color: #2ea043;
+  color: white;
+}
+
+/* Playlist Horizontal Tabs */
 .playlist-chips {
   display: flex;
   gap: 8px;
@@ -120,7 +126,7 @@ body {
   object-fit: cover;
 }
 
-/* Upper Content (Songs) */
+/* Upper Songs Section */
 .upper-content {
   flex: 1;
   overflow-y: auto;
@@ -198,7 +204,7 @@ body {
   padding: 4px;
 }
 
-/* Bottom Player Bar */
+/* Bottom Mini Player Bar */
 .bottom-player-bar {
   position: absolute;
   bottom: 12px;
@@ -292,7 +298,7 @@ body {
   box-shadow: 0 3px 12px rgba(46, 160, 67, 0.45);
 }
 
-/* FULLSCREEN PLAYER CARD */
+/* Fullscreen Player Card */
 .fullscreen-player-card {
   position: fixed;
   inset: 0;
@@ -442,7 +448,7 @@ body {
   color: #fff;
 }
 
-/* Embedded Drawers inside Card */
+/* Embedded Drawers */
 .embedded-card-panel {
   width: 100%;
   max-width: 440px;
@@ -467,7 +473,6 @@ body {
 }
 .vol-slider-row input { flex: 1; }
 
-/* Equalizer Sliders */
 .eq-container {
   display: flex;
   overflow-x: auto;
@@ -491,7 +496,7 @@ body {
 .eq-val { font-size: 0.65rem; color: var(--accent-light); }
 .eq-freq { font-size: 0.65rem; color: var(--text-muted); }
 
-/* Toast Container: Above the Bottom Player Bar */
+/* Toast Notifications */
 .toast-container {
   position: absolute;
   bottom: calc(var(--bar-height) + 22px);
