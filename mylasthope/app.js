@@ -1,6 +1,6 @@
-// Instant Service Worker Registration
+// Instant Service Worker Registration with relative scope for GitHub Pages subfolders
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js').catch(() => {});
+  navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(() => {});
 }
 
 // 4-Second Notification with Animated Progress Bar
@@ -27,7 +27,7 @@ document.getElementById('btn-close-thanks').onclick = () => {
 };
 
 // IndexedDB Persistence
-const DB_NAME = 'AmarjeetAudioStudioDB_v4';
+const DB_NAME = 'AmarjeetAudioStudioDB_v5';
 const DB_VER = 1;
 let db;
 
@@ -179,14 +179,13 @@ function setVolume(pct) {
 }
 
 // State
-let activePlaylistId = 'all'; // Default to "all" category
+let activePlaylistId = 'all';
 let currentPlaylist = { id: 'all', name: 'All Songs', cover: '' };
 let tracks = [];
 let currentIndex = -1;
 let newBase64Cover = null;
-let wasPlayingBeforeHidden = false;
 
-const DEFAULT_ART = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 24 24' fill='%232ea043'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z'/%3E%3C/svg%3E";
+const DEFAULT_ART = "https://cdn-icons-png.flaticon.com/512/3844/3844724.png";
 
 // UI references
 const playlistTabs = document.getElementById('playlist-tabs');
@@ -222,27 +221,7 @@ document.getElementById('btn-close-welcome').onclick = () => {
   showNotification('Welcome to Amarjeet Studio!');
 };
 
-// 1. PAGE VISIBILITY HANDLER (Auto-Pause on Home/Switch, Auto-Resume from Recents)
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden) {
-    if (!audio.paused) {
-      wasPlayingBeforeHidden = true;
-      audio.pause();
-      syncButtons(false);
-    } else {
-      wasPlayingBeforeHidden = false;
-    }
-  } else {
-    // When returning back to the site from recent apps
-    if (wasPlayingBeforeHidden) {
-      audio.play().then(() => {
-        syncButtons(true);
-      }).catch(() => {});
-    }
-  }
-});
-
-// Load Playlists with permanent "All" as first Category
+// Load Playlists
 async function loadPlaylists() {
   let list = await dbOps.getPlaylists();
   if (!list.length) {
@@ -251,7 +230,6 @@ async function loadPlaylists() {
     list = [def];
   }
 
-  // Prepend permanent "All" Category
   const allCategory = { id: 'all', name: 'All', cover: DEFAULT_ART };
   const combined = [allCategory, ...list];
 
@@ -301,7 +279,6 @@ async function loadTracks() {
     const actions = document.createElement('div');
     actions.className = 'row-actions';
 
-    // Favorite Button (💛 <-> ❤️)
     const btnLikeRow = document.createElement('button');
     btnLikeRow.className = 'btn-icon-sm';
     btnLikeRow.innerHTML = isFav ? '❤️' : '💛';
@@ -369,7 +346,7 @@ function updateLikeButtonsUI(isLiked) {
   modalBtnLike.textContent = heart;
 }
 
-// Mobile-Safe Image Compression
+// Image Compression
 function compressImageSafe(file) {
   return new Promise((resolve) => {
     if (!file) return resolve(DEFAULT_ART);
@@ -406,11 +383,9 @@ function compressImageSafe(file) {
   });
 }
 
-// Edit Cover Image Any Time
+// Edit Cover
 const editCoverInput = document.getElementById('edit-cover-input');
-document.getElementById('btn-edit-art').onclick = () => {
-  editCoverInput.click();
-};
+document.getElementById('btn-edit-art').onclick = () => editCoverInput.click();
 
 editCoverInput.onchange = async (e) => {
   if (e.target.files && e.target.files[0]) {
@@ -509,13 +484,13 @@ document.getElementById('file-picker').onchange = async (e) => {
   loadTracks();
 };
 
-// 2. PREVENT SONG RESTART: If clicking the currently playing song, keep playing smoothly
+// Play Track (Continuous background & lock screen support)
 async function playTrack(idx) {
   if (idx < 0 || idx >= tracks.length) return;
   setupAudioNodes();
   if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
 
-  // If already playing this song: DO NOT RESTART
+  // If clicking the current track: do not restart
   if (currentIndex === idx && audio.src) {
     if (audio.paused) {
       audio.play();
@@ -542,6 +517,7 @@ async function playTrack(idx) {
   loadTracks();
 }
 
+// MediaSession: Continuous Background & Lock-Screen Notifications
 function updateMediaSession() {
   if (!('mediaSession' in navigator) || currentIndex === -1) return;
   const trk = tracks[currentIndex];
@@ -558,8 +534,18 @@ function updateMediaSession() {
     ]
   });
 
-  navigator.mediaSession.setActionHandler('play', () => { audio.play(); syncButtons(true); });
-  navigator.mediaSession.setActionHandler('pause', () => { audio.pause(); syncButtons(false); });
+  navigator.mediaSession.playbackState = audio.paused ? 'paused' : 'playing';
+
+  navigator.mediaSession.setActionHandler('play', () => { 
+    audio.play(); 
+    syncButtons(true); 
+    navigator.mediaSession.playbackState = 'playing';
+  });
+  navigator.mediaSession.setActionHandler('pause', () => { 
+    audio.pause(); 
+    syncButtons(false); 
+    navigator.mediaSession.playbackState = 'paused';
+  });
   navigator.mediaSession.setActionHandler('nexttrack', () => loopNext());
   navigator.mediaSession.setActionHandler('previoustrack', () => playTrack(currentIndex > 0 ? currentIndex - 1 : tracks.length - 1));
 }
@@ -567,6 +553,9 @@ function updateMediaSession() {
 function syncButtons(isPlaying) {
   barBtnPlay.textContent = isPlaying ? '⏸' : '▶';
   boxBtnPlay.textContent = isPlaying ? '⏸' : '▶';
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+  }
 }
 
 function togglePlay() {
@@ -603,7 +592,7 @@ modalBtnLike.onclick = () => {
   if (currentIndex !== -1 && tracks[currentIndex]) toggleFavorite(tracks[currentIndex]);
 };
 
-// 3. FULLSCREEN PLAYER CARD WITH EMBEDDED DRAWERS
+// Fullscreen Player Card
 document.getElementById('open-box-trigger').onclick = () => {
   playerBoxModal.style.display = 'flex';
 };
@@ -611,7 +600,7 @@ document.getElementById('btn-close-box').onclick = () => {
   playerBoxModal.style.display = 'none';
 };
 
-// Embedded Card Toggle Drawers
+// Embedded Panels
 const cardVolPanel = document.getElementById('card-volume-panel');
 const cardEqPanel = document.getElementById('card-eq-panel');
 const cardPlaylistPanel = document.getElementById('card-playlist-panel');
@@ -656,7 +645,7 @@ seekBar.oninput = () => {
   if (audio.duration) audio.currentTime = (seekBar.value / 100) * audio.duration;
 };
 
-// Card Playlist Reorder View
+// Reorder View
 function renderCardReorderList() {
   cardReorderList.innerHTML = '';
   tracks.forEach((trk, idx) => {
@@ -729,7 +718,7 @@ document.getElementById('btn-reset-eq-card').onclick = () => {
   showNotification('Equalizer reset to VLC preset');
 };
 
-// Bootstrapping
+// Initial Boot
 initDB().then(() => {
   loadPlaylists();
   setVolume(20);
