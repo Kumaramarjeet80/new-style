@@ -80,9 +80,10 @@ function loadPortalDataFromCache() {
   return false;
 }
 
-function fetchPortalCatalog() {
+function fetchPortalCatalog(onCompleteCallback) {
   if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes("YOUR_APPS_SCRIPT")) {
     if (portalData.categories.length === 0) renderFallbackCategories();
+    if (typeof onCompleteCallback === "function") onCompleteCallback();
     return;
   }
 
@@ -124,17 +125,21 @@ function fetchPortalCatalog() {
           if (portalData.popups && portalData.popups.length > 0 && !popupCycleTimer) {
             initSequentialPopupQueue(portalData.popups);
           }
+        } else {
+          updateLiveBannerUI(portalData.activeLive);
         }
       } else if (portalData.categories.length === 0) {
         renderFallbackCategories();
       }
+      if (typeof onCompleteCallback === "function") onCompleteCallback();
     })
     .catch(err => {
       clearTimeout(timeoutId);
-      console.warn("Portal Data Fetch Notice (Using Cached/Fallback Data):", err.message);
+      console.warn("Portal Data Fetch Notice:", err.message);
       if (portalData.categories.length === 0) {
         renderFallbackCategories();
       }
+      if (typeof onCompleteCallback === "function") onCompleteCallback();
     });
 }
 
@@ -500,7 +505,7 @@ function updateRegVisibility() {
 }
 
 /* =========================================================
-   3. UNTOUCHED PDF ENGINE WITH AUTO-DRIVE ARCHIVAL
+   3. UNTOUCHED PDF ENGINE WITH AUTO-DRIVE ARCHIVAL[cite: 1]
 ========================================================= */
 function initPdfGeneratorEngine() {
   const mobileToggleBtn = document.getElementById('btnToggleMobileSidebar');
@@ -710,25 +715,38 @@ function logTelemetryAndArchiveToDrive(pdfBase64) {
 }
 
 /* =========================================================
-   4. LIVE BROADCAST BANNER & WEBRTC VIEWER CONTROLS
+   4. LIVE BROADCAST BANNER, WAITING ROOM & WEBRTC CONTROLS
 ========================================================= */
 let viewerPeerInstance = null;
 let currentLiveCall = null;
+let livePollingInterval = null;
 
 function updateLiveBannerUI(activeLive) {
   const banner = document.getElementById('liveBroadcastBanner');
   if (!banner) return;
 
-  if (activeLive && (activeLive.isLive === true || String(activeLive.isLive).toUpperCase() === "TRUE")) {
+  if (activeLive && (activeLive.isLive === true || activeLive.isScheduled === true)) {
     const topicEl = document.getElementById('liveBannerTopic');
     const descEl = document.getElementById('liveBannerDesc');
     const timeEl = document.getElementById('liveBannerTime');
     const logoImg = document.getElementById('liveBannerLogo');
     const placeholder = document.getElementById('liveBannerPlaceholder');
+    const pill = document.getElementById('liveStatusPill');
+    const pillText = document.getElementById('liveStatusPillText');
 
     if (topicEl) topicEl.textContent = activeLive.topic || "GEC Munger Live Broadcast";
-    if (descEl) descEl.textContent = activeLive.description || "Official academic session is now live.";
-    if (timeEl) timeEl.textContent = `Started: ${activeLive.startedAt || activeLive.timestamp || 'Just now'}`;
+    if (descEl) descEl.textContent = activeLive.description || "Academic lecture session.";
+    if (timeEl) timeEl.textContent = `Started: ${activeLive.startedAt || activeLive.timestamp || 'Today'}`;
+
+    if (pillText) {
+      if (activeLive.isLive) {
+        pillText.textContent = "LIVE NOW";
+        if (pill) pill.className = "live-pulse-badge";
+      } else {
+        pillText.textContent = "SCHEDULED / STARTING SOON";
+        if (pill) pill.className = "live-pulse-badge";
+      }
+    }
 
     if (activeLive.thumbnailUrl && activeLive.thumbnailUrl.trim().length > 5) {
       if (logoImg) {
@@ -747,19 +765,57 @@ function updateLiveBannerUI(activeLive) {
   }
 }
 
+function updateAudioButtonStates(isMuted) {
+  const audioIcon = document.getElementById('liveAudioIcon');
+  const audioLabel = document.getElementById('liveAudioLabel');
+  const fsIcon = document.getElementById('fsLiveAudioIcon');
+  const fsLabel = document.getElementById('fsLiveAudioLabel');
+
+  const iconText = isMuted ? "🔊" : "🔇";
+  const labelText = isMuted ? "Unmute Audio" : "Mute Audio";
+
+  if (audioIcon) audioIcon.textContent = iconText;
+  if (audioLabel) audioLabel.textContent = labelText;
+  if (fsIcon) fsIcon.textContent = iconText;
+  if (fsLabel) fsLabel.textContent = labelText;
+}
+
+function toggleLiveAudio() {
+  const videoEl = document.getElementById('liveViewerVideo');
+  if (!videoEl) return;
+  videoEl.muted = !videoEl.muted;
+  updateAudioButtonStates(videoEl.muted);
+}
+
 function setupLiveViewerControls() {
   const btnWatchLive = document.getElementById('btnWatchLive');
   const btnBackFromLive = document.getElementById('btnBackFromLive');
   const btnAudioToggle = document.getElementById('btnLiveAudioToggle');
+  const btnFsAudioToggle = document.getElementById('btnFsLiveAudioToggle');
   const btnFullscreen = document.getElementById('btnLiveFullscreen');
   const btnExitFullscreen = document.getElementById('btnLiveExitFullscreen');
-  const videoEl = document.getElementById('liveViewerVideo');
+  const btnFsExitFullscreen = document.getElementById('btnFsLiveExitFullscreen');
+  const btnRefreshLive = document.getElementById('btnRefreshLiveStatus');
+  const btnPlayerReconnect = document.getElementById('btnLivePlayerReconnect');
+  const btnWaitingReconnect = document.getElementById('btnPlayerWaitingReconnect');
   const videoContainer = document.getElementById('liveVideoContainer');
 
   // Watch Live Button Click
   if (btnWatchLive) {
     btnWatchLive.addEventListener('click', () => {
       openLiveStreamWatchRoom();
+    });
+  }
+
+  // Live Card Refresh Button Click
+  if (btnRefreshLive) {
+    btnRefreshLive.addEventListener('click', () => {
+      btnRefreshLive.disabled = true;
+      btnRefreshLive.innerHTML = `<span>⏳</span><span>Checking...</span>`;
+      fetchPortalCatalog(() => {
+        btnRefreshLive.disabled = false;
+        btnRefreshLive.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg><span>Refresh</span>`;
+      });
     });
   }
 
@@ -770,21 +826,19 @@ function setupLiveViewerControls() {
     });
   }
 
-  // Audio Toggle Button
-  if (btnAudioToggle && videoEl) {
-    btnAudioToggle.addEventListener('click', () => {
-      const audioIcon = document.getElementById('liveAudioIcon');
-      const audioLabel = document.getElementById('liveAudioLabel');
+  // Audio Toggle Buttons (Standard & Floating Fullscreen)
+  if (btnAudioToggle) btnAudioToggle.addEventListener('click', toggleLiveAudio);
+  if (btnFsAudioToggle) btnFsAudioToggle.addEventListener('click', toggleLiveAudio);
 
-      if (videoEl.muted) {
-        videoEl.muted = false;
-        if (audioIcon) audioIcon.textContent = "🔇";
-        if (audioLabel) audioLabel.textContent = "Mute Audio";
-      } else {
-        videoEl.muted = true;
-        if (audioIcon) audioIcon.textContent = "🔊";
-        if (audioLabel) audioLabel.textContent = "Unmute Audio";
-      }
+  // In-Player Reconnect Buttons
+  if (btnPlayerReconnect) {
+    btnPlayerReconnect.addEventListener('click', () => {
+      openLiveStreamWatchRoom();
+    });
+  }
+  if (btnWaitingReconnect) {
+    btnWaitingReconnect.addEventListener('click', () => {
+      openLiveStreamWatchRoom();
     });
   }
 
@@ -799,15 +853,16 @@ function setupLiveViewerControls() {
     });
   }
 
-  if (btnExitFullscreen) {
-    btnExitFullscreen.addEventListener('click', () => {
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
-      } else if (document.webkitExitFullscreen) {
-        document.webkitExitFullscreen();
-      }
-    });
+  function exitFullscreenHandler() {
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+    }
   }
+
+  if (btnExitFullscreen) btnExitFullscreen.addEventListener('click', exitFullscreenHandler);
+  if (btnFsExitFullscreen) btnFsExitFullscreen.addEventListener('click', exitFullscreenHandler);
 
   // Sync Fullscreen Button State on change or ESC key
   document.addEventListener('fullscreenchange', () => {
@@ -820,7 +875,7 @@ function setupLiveViewerControls() {
 function openLiveStreamWatchRoom() {
   const activeLive = portalData.activeLive;
   if (!activeLive) {
-    alert("No active live stream found at this time.");
+    alert("No active live stream announcement found.");
     return;
   }
 
@@ -832,18 +887,68 @@ function openLiveStreamWatchRoom() {
   if (viewGenerator) viewGenerator.style.display = 'none';
   if (viewLive) viewLive.style.display = 'block';
 
-  // Populate Info
+  // Populate Details
   const topicEl = document.getElementById('liveWatchTopic');
   const descEl = document.getElementById('liveWatchDesc');
   const timeEl = document.getElementById('liveWatchTimestamp');
+  const statusPill = document.getElementById('livePlayerStatusPill');
 
   if (topicEl) topicEl.textContent = activeLive.topic || "GEC Munger Live Broadcast";
   if (descEl) descEl.textContent = activeLive.description || "Official academic lecture session.";
   if (timeEl) timeEl.textContent = `🕒 Stream Started: ${activeLive.startedAt || activeLive.timestamp || 'Today'}`;
 
-  // Start Peer Client & Connect to Broadcast Host
-  connectToLiveBroadcast(activeLive.peerId || "gecm-live-host");
+  const waitingOverlay = document.getElementById('liveWaitingOverlay');
+  const connectingOverlay = document.getElementById('liveConnectingOverlay');
+
+  // Check if Admin has gone live or is still scheduled
+  if (!activeLive.isLive) {
+    // Show Waiting Overlay
+    if (statusPill) statusPill.textContent = "⏳ SESSION SCHEDULED - NOT LIVE YET";
+    if (waitingOverlay) waitingOverlay.style.display = 'flex';
+    if (connectingOverlay) connectingOverlay.style.display = 'none';
+    startLiveWaitingAutoPoller();
+  } else {
+    // Live is active! Connect to WebRTC
+    if (statusPill) statusPill.textContent = "🔴 BROADCAST IN PROGRESS";
+    if (waitingOverlay) waitingOverlay.style.display = 'none';
+    if (connectingOverlay) connectingOverlay.style.display = 'flex';
+    stopLiveWaitingAutoPoller();
+    connectToLiveBroadcast(activeLive.peerId || "gecm-live-host");
+  }
+
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Auto-poller while waiting for Admin to click Go Live
+function startLiveWaitingAutoPoller() {
+  stopLiveWaitingAutoPoller();
+  livePollingInterval = setInterval(() => {
+    const viewLive = document.getElementById('view-live');
+    if (!viewLive || viewLive.style.display === 'none') {
+      stopLiveWaitingAutoPoller();
+      return;
+    }
+
+    fetch(`${APPS_SCRIPT_URL}?action=get_portal_data`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.status === "success" && data.activeLive) {
+          portalData.activeLive = data.activeLive;
+          if (data.activeLive.isLive) {
+            stopLiveWaitingAutoPoller();
+            openLiveStreamWatchRoom();
+          }
+        }
+      })
+      .catch(() => {});
+  }, 4000);
+}
+
+function stopLiveWaitingAutoPoller() {
+  if (livePollingInterval) {
+    clearInterval(livePollingInterval);
+    livePollingInterval = null;
+  }
 }
 
 function connectToLiveBroadcast(hostPeerId) {
@@ -861,34 +966,30 @@ function connectToLiveBroadcast(hostPeerId) {
   viewerPeerInstance = new Peer();
 
   viewerPeerInstance.on('open', () => {
-    // Call host peer
     try {
-      // Create empty stream to establish call handshake
       const emptyStream = new MediaStream();
       currentLiveCall = viewerPeerInstance.call(hostPeerId, emptyStream);
 
       if (!currentLiveCall) {
-        if (connectingText) connectingText.textContent = "Host is offline or unreachable.";
+        if (connectingText) connectingText.textContent = "Broadcaster is offline or preparing stream.";
         return;
       }
 
       currentLiveCall.on('stream', (remoteStream) => {
         if (videoEl) {
           videoEl.srcObject = remoteStream;
-          videoEl.muted = false; // user clicked watch live, play unmuted
+          videoEl.muted = false;
           const playPromise = videoEl.play();
           if (playPromise !== undefined) {
             playPromise.then(() => {
               if (connectingOverlay) connectingOverlay.style.display = 'none';
-              const audioIcon = document.getElementById('liveAudioIcon');
-              const audioLabel = document.getElementById('liveAudioLabel');
-              if (audioIcon) audioIcon.textContent = "🔇";
-              if (audioLabel) audioLabel.textContent = "Mute Audio";
+              updateAudioButtonStates(false);
             }).catch(() => {
               // Autoplay policy fallback: mute and play
               videoEl.muted = true;
               videoEl.play();
               if (connectingOverlay) connectingOverlay.style.display = 'none';
+              updateAudioButtonStates(true);
             });
           }
         }
@@ -903,7 +1004,7 @@ function connectToLiveBroadcast(hostPeerId) {
 
       currentLiveCall.on('error', (err) => {
         console.error("Peer call error:", err);
-        if (connectingText) connectingText.textContent = "Unable to connect to host stream.";
+        if (connectingText) connectingText.textContent = "Unable to connect. Click Reconnect Live to retry.";
       });
 
     } catch (err) {
@@ -914,11 +1015,13 @@ function connectToLiveBroadcast(hostPeerId) {
 
   viewerPeerInstance.on('error', (err) => {
     console.error("Peer client error:", err);
-    if (connectingText) connectingText.textContent = "Connection error. Please refresh.";
+    if (connectingText) connectingText.textContent = "Broadcast stream is offline. Retrying shortly...";
   });
 }
 
 function closeLiveStreamWatchRoom() {
+  stopLiveWaitingAutoPoller();
+
   const videoEl = document.getElementById('liveViewerVideo');
   if (videoEl) {
     videoEl.pause();
