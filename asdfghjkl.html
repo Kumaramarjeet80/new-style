@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Live Broadcast & P2P Viewer</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0b0f19;
+      color: #f1f5f9;
+      margin: 0;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .container {
+      width: 100%;
+      max-width: 800px;
+    }
+    .toggle-bar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      background: #1e293b;
+      padding: 6px;
+      border-radius: 8px;
+    }
+    button {
+      flex: 1;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: #94a3b8;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    button.active {
+      background: #2563eb;
+      color: #fff;
+    }
+    .player-box {
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+      aspect-ratio: 16 / 9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .card {
+      margin-top: 16px;
+      padding: 16px;
+      background: #1e293b;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 13px;
+    }
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      border-bottom: 1px solid #334155;
+    }
+    .stat-row:last-child {
+      border-bottom: none;
+    }
+    .action-btn {
+      background: #16a34a;
+      color: white;
+      margin-top: 10px;
+      width: 100%;
+    }
+    .action-btn.stop {
+      background: #dc2626;
+    }
+    .info-note {
+      color: #94a3b8;
+      font-size: 12px;
+      margin-top: 8px;
+      line-height: 1.4;
+    }
+  </style>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "p2p-media-loader-core": "https://cdn.jsdelivr.net/npm/p2p-media-loader-core@^2/dist/p2p-media-loader-core.es.min.js",
+        "p2p-media-loader-hlsjs": "https://cdn.jsdelivr.net/npm/p2p-media-loader-hlsjs@^2/dist/p2p-media-loader-hlsjs.es.min.js"
+      }
+    }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
+</head>
+<body>
+
+<div class="container">
+  <!-- Top Switcher -->
+  <div class="toggle-bar">
+    <button id="btn-mode-viewer" class="active" onclick="switchMode('viewer')">Receiver (P2P Viewer)</button>
+    <button id="btn-mode-host" onclick="switchMode('host')">Broadcaster (Go Live)</button>
+  </div>
+
+  <!-- Shared Video Display Window -->
+  <div class="player-box">
+    <video id="main-video" playsinline controls></video>
+  </div>
+
+  <!-- VIEWER PANEL -->
+  <div id="viewer-panel">
+    <div class="card">
+      <div class="stat-row"><span>Status:</span> <strong id="p2p-status">Connecting to stream...</strong></div>
+      <div class="stat-row"><span>Connected Peers (Swarm):</span> <strong id="peers-count">0</strong></div>
+      <div class="stat-row"><span>Downloaded via P2P:</span> <strong id="p2p-down">0 MB</strong></div>
+      <div class="stat-row"><span>Downloaded via Server:</span> <strong id="http-down">0 MB</strong></div>
+      <div class="stat-row"><span>Uploaded to Other Peers:</span> <strong id="p2p-up">0 MB</strong></div>
+    </div>
+  </div>
+
+  <!-- BROADCASTER PANEL -->
+  <div id="host-panel" style="display: none;">
+    <button id="camera-toggle-btn" class="action-btn" onclick="toggleCamera()">Start Camera & Mic</button>
+    <div class="card">
+      <div class="stat-row"><span>Camera Status:</span> <strong id="cam-status">Offline</strong></div>
+      <div class="stat-row"><span>Resolution:</span> <strong id="cam-res">--</strong></div>
+      <div class="info-note">
+        * Note: A browser captures media, but to convert it to HLS (.m3u8), your stream must push to a free media server (like SRS or OBS) via WebRTC/WHIP or RTMP.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { HlsJsP2PEngine } from "p2p-media-loader-hlsjs";
+
+  const videoElement = document.getElementById("main-video");
+  
+  // Replace this with your actual HLS live stream endpoint (.m3u8)
+  const HLS_STREAM_URL = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8";
+
+  let hlsInstance = null;
+  let localMediaStream = null;
+  let connectedPeers = new Set();
+  let p2pBytes = 0, httpBytes = 0, upBytes = 0;
+
+  // --- VIEWER MODE INITIALIZATION ---
+  function startViewerMode() {
+    stopCamera();
+    videoElement.muted = false;
+    videoElement.controls = true;
+
+    if (Hls.isSupported()) {
+      const HlsWithP2P = HlsJsP2PEngine.injectMixin(Hls);
+      hlsInstance = new HlsWithP2P({
+        p2p: {
+          core: { swarmId: "shared-production-channel" },
+          onHlsJsCreated: (instance) => {
+            const engine = instance.p2pEngine;
+
+            engine.addEventListener("onPeerConnect", (p) => {
+              connectedPeers.add(p.peerId);
+              renderStats();
+            });
+            engine.addEventListener("onPeerClose", (p) => {
+              connectedPeers.delete(p.peerId);
+              renderStats();
+            });
+            engine.addEventListener("onSegmentLoaded", (data) => {
+              if (data.downloadSource === "p2p") p2pBytes += data.bytesLength;
+              else httpBytes += data.bytesLength;
+              renderStats();
+            });
+            engine.addEventListener("onChunkUploaded", (data) => {
+              upBytes += data.bytesLength;
+              renderStats();
+            });
+          }
+        }
+      });
+
+      hlsInstance.attachMedia(videoElement);
+      hlsInstance.loadSource(HLS_STREAM_URL);
+      document.getElementById("p2p-status").innerText = "Playing HLS Live Feed";
+      videoElement.play().catch(() => { videoElement.muted = true; videoElement.play(); });
+    }
+  }
+
+  function renderStats() {
+    document.getElementById("peers-count").innerText = connectedPeers.size;
+    document.getElementById("p2p-down").innerText = (p2pBytes / (1024 * 1024)).toFixed(2) + " MB";
+    document.getElementById("http-down").innerText = (httpBytes / (1024 * 1024)).toFixed(2) + " MB";
+    document.getElementById("p2p-up").innerText = (upBytes / (1024 * 1024)).toFixed(2) + " MB";
+  }
+
+  // --- BROADCASTER CAMERA LOGIC ---
+  window.toggleCamera = async function () {
+    const btn = document.getElementById("camera-toggle-btn");
+    
+    if (localMediaStream) {
+      stopCamera();
+      btn.innerText = "Start Camera & Mic";
+      btn.classList.remove("stop");
+      document.getElementById("cam-status").innerText = "Offline";
+      document.getElementById("cam-res").innerText = "--";
+      return;
+    }
+
+    try {
+      localMediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: true
+      });
+      videoElement.srcObject = localMediaStream;
+      videoElement.muted = true; // Avoid feedback loop
+      videoElement.play();
+
+      const track = localMediaStream.getVideoTracks()[0].getSettings();
+      document.getElementById("cam-status").innerText = "Broadcasting locally";
+      document.getElementById("cam-res").innerText = `${track.width}x${track.height} @ ${Math.round(track.frameRate)}fps`;
+      btn.innerText = "Stop Camera";
+      btn.classList.add("stop");
+    } catch (err) {
+      alert("Camera access denied or unavailable: " + err.message);
+    }
+  };
+
+  function stopCamera() {
+    if (localMediaStream) {
+      localMediaStream.getTracks().forEach(t => t.stop());
+      localMediaStream = null;
+      videoElement.srcObject = null;
+    }
+  }
+
+  function stopViewer() {
+    if (hlsInstance) {
+      hlsInstance.destroy();
+      hlsInstance = null;
+    }
+    videoElement.removeAttribute("src");
+    videoElement.load();
+  }
+
+  // --- TAB SWITCHER ---
+  window.switchMode = function (mode) {
+    document.getElementById("btn-mode-viewer").classList.toggle("active", mode === "viewer");
+    document.getElementById("btn-mode-host").classList.toggle("active", mode === "host");
+    document.getElementById("viewer-panel").style.display = mode === "viewer" ? "block" : "none";
+    document.getElementById("host-panel").style.display = mode === "host" ? "block" : "none";
+
+    if (mode === "viewer") {
+      startViewerMode();
+    } else {
+      stopViewer();
+      videoElement.controls = false;
+    }
+  };
+
+  // Start in Viewer mode by default
+  startViewerMode();
+</script>
+
+</body>
+</html>
