@@ -37,7 +37,7 @@
   <header class="bg-slate-950 border-b border-slate-800 px-6 py-4 flex flex-wrap justify-between items-center gap-4 sticky top-0 z-50">
     <div class="flex items-center gap-3">
       <span class="text-xl font-extrabold text-blue-400 tracking-tight">GECM Studio</span>
-      <span class="text-xs px-2.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 font-mono">v5.1 Live Workflow</span>
+      <span class="text-xs px-2.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 font-mono">v5.2 Stable WebRTC</span>
     </div>
     
     <!-- Omni-Search Bar -->
@@ -767,8 +767,9 @@
     }
 
     // =========================================================================
-    // 1. LIVE BROADCAST STUDIO (TWO-STAGE PUBLISH & STREAM WORKFLOW)
+    // 1. STABLE WEBRTC BROADCASTER ENGINE WITH DUAL-HANDSHAKE
     // =========================================================================
+    const BROADCAST_HOST_ID = "gecm-live-host";
     let isBroadcasting = false;
     let isPreviewActive = false;
     let currentLiveStreamId = null;
@@ -782,6 +783,20 @@
     let liveSecondsElapsed = 0;
     let peerInstance = null;
     let activePeerCalls = [];
+
+    // Extended STUN configuration from reference file for robust traversal across all networks
+    const ICE_CONFIG = {
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+          { urls: 'stun:stun2.l.google.com:19302' },
+          { urls: 'stun:stun3.l.google.com:19302' },
+          { urls: 'stun:stun4.l.google.com:19302' },
+          { urls: 'stun:stun.services.mozilla.com' }
+        ]
+      }
+    };
 
     function hydrateLiveStreamState() {
       if (studioData.activeLive) {
@@ -798,43 +813,62 @@
       }
     }
 
-    // Initialize PeerJS Host
+    // Initialize Host Peer with Dual Handshake
     function initHostPeer() {
       return new Promise((resolve) => {
         if (peerInstance && !peerInstance.destroyed) return resolve(peerInstance.id);
-        const hostId = "gecm-live-host";
-        peerInstance = new Peer(hostId);
+        
+        peerInstance = new Peer(BROADCAST_HOST_ID, ICE_CONFIG);
 
         peerInstance.on('open', (id) => {
-          console.log("PeerJS Host ID:", id);
+          console.log("PeerJS Broadcaster Host registered with ID:", id);
           resolve(id);
         });
 
+        // 1. Answer direct calls from viewers
         peerInstance.on('call', (call) => {
           if (localStream) {
+            console.log("Direct call received from student viewer. Answering with media stream...");
             call.answer(localStream);
-            activePeerCalls.push(call);
+            if (!activePeerCalls.includes(call)) activePeerCalls.push(call);
             call.on('close', () => {
               activePeerCalls = activePeerCalls.filter(c => c !== call);
             });
           }
         });
 
+        // 2. Answer data channel requests ('REQUEST_STREAM' handshake from reference architecture)
+        peerInstance.on('connection', (conn) => {
+          console.log("Student viewer opened data channel:", conn.peer);
+          conn.on('data', (data) => {
+            if (data === 'REQUEST_STREAM' && localStream) {
+              console.log(`Student requested stream! Calling student viewer peer ID: ${conn.peer}`);
+              const call = peerInstance.call(conn.peer, localStream);
+              if (call) {
+                if (!activePeerCalls.includes(call)) activePeerCalls.push(call);
+                call.on('close', () => {
+                  activePeerCalls = activePeerCalls.filter(c => c !== call);
+                });
+              }
+            }
+          });
+        });
+
         peerInstance.on('error', (err) => {
           console.warn("PeerJS notice:", err);
-          resolve("gecm-live-host");
+          resolve(BROADCAST_HOST_ID);
         });
       });
     }
 
-    // Audio Track Management (Persistent)
+    // Persistent Audio Track Management
     async function ensureAudioTrack() {
       if (!audioTrack || audioTrack.readyState === "ended") {
         try {
           const aStream = await navigator.mediaDevices.getUserMedia({ audio: true });
           audioTrack = aStream.getAudioTracks()[0];
         } catch (e) {
-          console.warn("No audio device found:", e);
+          console.warn("No microphone device found or permission denied:", e);
         }
       }
       return audioTrack;
@@ -843,7 +877,7 @@
     // Video Track Switcher
     async function getVideoTrackForMode(mode) {
       if (mode === "screen") {
-        const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
         return screenStream.getVideoTracks()[0];
       } else if (mode === "back") {
         const camStream = await navigator.mediaDevices.getUserMedia({
@@ -858,7 +892,7 @@
       }
     }
 
-    // Smooth Device Preview & Switcher
+    // Smooth Device Preview & Mid-Stream Switcher
     async function activateSourceMode(mode) {
       try {
         currentSourceMode = mode;
@@ -885,11 +919,13 @@
           localStream.addTrack(activeVideoTrack);
         }
 
-        // Seamlessly replace video track for all active viewers
+        // Smoothly replace track for all actively connected viewers
         activePeerCalls.forEach(call => {
-          if (call.peerConnection) {
+          if (call && call.peerConnection) {
             const sender = call.peerConnection.getSenders().find(s => s.track && s.track.kind === "video");
-            if (sender) sender.replaceTrack(activeVideoTrack);
+            if (sender && activeVideoTrack) {
+              sender.replaceTrack(activeVideoTrack);
+            }
           }
         });
 
@@ -927,7 +963,7 @@
       }
     }
 
-    // STEP 1: SAVE & PUBLISH LIVE NOTICE (Appears on student portal in scheduled/waiting state)
+    // STEP 1: SAVE & PUBLISH LIVE NOTICE
     document.getElementById('btnSaveLiveNotice').addEventListener('click', async () => {
       const topic = document.getElementById('liveTopic').value.trim() || "GEC Munger Live Broadcast";
       const desc = document.getElementById('liveDesc').value.trim() || "Official academic session. Live stream will start shortly.";
@@ -989,7 +1025,6 @@
         const peerId = await initHostPeer();
         const topic = document.getElementById('liveTopic').value.trim() || "GEC Munger Live Broadcast";
 
-        // Notify backend that stream is now active
         const res = await fetch(APPS_SCRIPT_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain' },
