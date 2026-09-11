@@ -8,39 +8,23 @@
   <!-- PeerJS for WebRTC Peer-to-Peer Live Streaming -->
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <style>
-    * {
-      box-sizing: border-box;
-    }
-    button, input, select, textarea, a {
-      cursor: pointer;
-      position: relative;
-      z-index: 10;
-    }
-    .tab-pane {
-      display: block;
-    }
-    .tab-pane.hidden {
-      display: none !important;
-    }
-    .pulse-dot {
-      animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(1.15); }
-    }
+    * { box-sizing: border-box; }
+    button, input, select, textarea, a { cursor: pointer; position: relative; z-index: 10; }
+    .tab-pane { display: block; }
+    .tab-pane.hidden { display: none !important; }
+    .pulse-dot { animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.15); } }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen">
 
-  <!-- Top Header Navigation with Omni-Search Bar -->
+  <!-- Top Header Navigation -->
   <header class="bg-slate-950 border-b border-slate-800 px-6 py-4 flex flex-wrap justify-between items-center gap-4 sticky top-0 z-50">
     <div class="flex items-center gap-3">
       <span class="text-xl font-extrabold text-blue-400 tracking-tight">GECM Studio</span>
-      <span class="text-xs px-2.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 font-mono">v5.2 Stable WebRTC</span>
+      <span class="text-xs px-2.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 font-mono">v5.3 Pro Audio & Auto-Reconnect</span>
     </div>
     
-    <!-- Omni-Search Bar -->
     <div class="flex-1 max-w-md hidden md:block">
       <input type="text" id="omniSearchInput" placeholder="🔍 Omni-Search categories, cards, popups, live, student logs..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-1.5 text-xs text-white outline-none focus:border-blue-500 placeholder-slate-500">
     </div>
@@ -72,12 +56,9 @@
       <button type="button" class="pb-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 whitespace-nowrap tab-btn" data-tab="tab-telemetry">Student Telemetry & Drive Archive</button>
     </div>
 
-    <!-- TAB 1: CATEGORIES, SUBCATEGORIES & CARDS -->
+    <!-- TAB 1: TAXONOMY -->
     <section id="tab-taxonomy" class="tab-pane space-y-8">
-      
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        
-        <!-- Add / Edit Category Form -->
         <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-5 space-y-4">
           <div class="border-b border-slate-700/60 pb-3 flex justify-between items-center">
             <div>
@@ -100,13 +81,10 @@
               <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Icon / Emoji</label>
               <input type="text" id="catIcon" value="📁" class="w-24 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
             </div>
-            <button type="button" id="btnSaveCategory" class="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold py-2 rounded-lg text-xs transition">
-              Save Category
-            </button>
+            <button type="button" id="btnSaveCategory" class="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold py-2 rounded-lg text-xs transition">Save Category</button>
           </div>
         </div>
 
-        <!-- Add / Edit Subcategory Form -->
         <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-5 space-y-4">
           <div class="border-b border-slate-700/60 pb-3 flex justify-between items-center">
             <div>
@@ -129,23 +107,17 @@
               <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Description</label>
               <input type="text" id="subDesc" placeholder="Official modules and reading materials" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
             </div>
-            <button type="button" id="btnSaveSubcategory" class="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold py-2 rounded-lg text-xs transition">
-              Save Subcategory
-            </button>
+            <button type="button" id="btnSaveSubcategory" class="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold py-2 rounded-lg text-xs transition">Save Subcategory</button>
           </div>
         </div>
-
       </div>
 
-      <!-- Categories & Subcategories Inventory Tables -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-4">
           <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-3">Categories Repository</h4>
           <div class="overflow-x-auto max-h-48">
             <table class="w-full text-left text-xs">
-              <thead class="bg-slate-900 text-slate-400">
-                <tr><th class="p-2">Icon</th><th class="p-2">Name</th><th class="p-2 text-right">Actions</th></tr>
-              </thead>
+              <thead class="bg-slate-900 text-slate-400"><tr><th class="p-2">Icon</th><th class="p-2">Name</th><th class="p-2 text-right">Actions</th></tr></thead>
               <tbody id="categoryTableBody" class="divide-y divide-slate-800 text-slate-300">
                 <tr><td colspan="3" class="p-3 text-center text-slate-500">No categories found.</td></tr>
               </tbody>
@@ -157,9 +129,7 @@
           <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-3">Subcategories Repository</h4>
           <div class="overflow-x-auto max-h-48">
             <table class="w-full text-left text-xs">
-              <thead class="bg-slate-900 text-slate-400">
-                <tr><th class="p-2">Name</th><th class="p-2">Parent ID</th><th class="p-2 text-right">Actions</th></tr>
-              </thead>
+              <thead class="bg-slate-900 text-slate-400"><tr><th class="p-2">Name</th><th class="p-2">Parent ID</th><th class="p-2 text-right">Actions</th></tr></thead>
               <tbody id="subcategoryTableBody" class="divide-y divide-slate-800 text-slate-300">
                 <tr><td colspan="3" class="p-3 text-center text-slate-500">No subcategories found.</td></tr>
               </tbody>
@@ -168,7 +138,7 @@
         </div>
       </div>
 
-      <!-- Card Creator & Document Publishing Studio -->
+      <!-- Card Creator -->
       <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-6 space-y-5">
         <div class="border-b border-slate-700/60 pb-3 flex flex-wrap justify-between items-center gap-2">
           <div>
@@ -177,17 +147,12 @@
           </div>
           <div class="flex items-center gap-3">
             <button type="button" id="btnCancelEditCard" class="text-xs text-amber-400 hover:underline hidden">Cancel Edit</button>
-            <button type="button" id="btnSaveCard" class="bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold px-6 py-2 rounded-lg text-xs transition shadow-lg shadow-emerald-600/20">
-              Publish New Card
-            </button>
+            <button type="button" id="btnSaveCard" class="bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold px-6 py-2 rounded-lg text-xs transition shadow-lg shadow-emerald-600/20">Publish New Card</button>
           </div>
         </div>
-
         <input type="hidden" id="editingCardId" value="">
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          
-          <!-- Column 1: Card Metadata -->
           <div class="space-y-4">
             <div>
               <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Subcategory Placement</label>
@@ -207,7 +172,6 @@
             </div>
           </div>
 
-          <!-- Column 2: Media, Standalone Uploader & Routing -->
           <div class="space-y-4">
             <div>
               <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Card Thumbnail Image</label>
@@ -228,51 +192,41 @@
                 <label class="block text-xs font-bold text-blue-400 uppercase">Document Attachment</label>
                 <span id="uploadBadge" class="text-[10px] text-slate-400">Step 1: Select & Upload</span>
               </div>
-              
               <div>
                 <label class="block text-[11px] text-slate-400 mb-1">Select File (PDF, DOCX, ZIP)</label>
                 <input type="file" id="cardDocFile" accept=".pdf,.doc,.docx,.zip,.ppt,.pptx" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-xs text-slate-400 file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:bg-slate-800 file:text-white">
               </div>
-
               <button type="button" id="btnUploadDocToDrive" class="w-full bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold py-2 rounded-lg text-xs transition flex items-center justify-center gap-2">
                 <span>☁ Upload Document to Google Drive</span>
               </button>
-
               <div>
-                <label class="block text-[11px] text-slate-400 mb-1">Google Drive View Link (Auto-Filled On Upload)</label>
+                <label class="block text-[11px] text-slate-400 mb-1">Google Drive View Link (Auto-Filled)</label>
                 <input type="url" id="cardTargetUrl" placeholder="https://drive.google.com/file/d/..." class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-emerald-400 font-mono outline-none focus:border-blue-500">
               </div>
             </div>
           </div>
 
-          <!-- Column 3: Live Custom Template HTML Code Editor -->
           <div class="space-y-2 flex flex-col">
             <div class="flex justify-between items-center">
               <label class="block text-xs font-bold text-slate-300 uppercase">Cover Page Template HTML Code</label>
               <span class="text-[10px] text-blue-400 font-mono">User Editable Placeholders</span>
             </div>
-            <textarea id="cardTemplateHtml" placeholder="<!-- Paste custom cover page inner HTML here -->&#10;<div class='college-title'><span id='outCollege1'></span></div>..." class="flex-1 w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs font-mono text-emerald-400 outline-none focus:border-blue-500 resize-none min-h-[220px]"></textarea>
-            <span class="text-[11px] text-slate-500">Any ID starting with 'out' or custom ID will automatically become an editable input field for students.</span>
+            <textarea id="cardTemplateHtml" placeholder="<!-- Paste custom cover page inner HTML here -->" class="flex-1 w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs font-mono text-emerald-400 outline-none focus:border-blue-500 resize-none min-h-[220px]"></textarea>
+            <span class="text-[11px] text-slate-500">Any ID starting with 'out' will become an editable field for students.</span>
           </div>
-
         </div>
       </div>
 
-      <!-- Published Inventory Table with IST Timestamps -->
+      <!-- Published Inventory Table -->
       <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-5">
         <h4 class="text-sm font-bold text-white mb-4">Published Cards Inventory</h4>
         <div class="overflow-x-auto">
           <table class="w-full text-left text-xs border-collapse">
             <thead class="bg-slate-900/80 text-slate-400 border-b border-slate-700">
               <tr>
-                <th class="p-3">Card ID</th>
-                <th class="p-3">Published (IST)</th>
-                <th class="p-3">Thumbnail</th>
-                <th class="p-3">Title</th>
-                <th class="p-3">Subcategory ID</th>
-                <th class="p-3">Action Type</th>
-                <th class="p-3">Attached Link</th>
-                <th class="p-3 text-right">Actions</th>
+                <th class="p-3">Card ID</th><th class="p-3">Published (IST)</th><th class="p-3">Thumbnail</th>
+                <th class="p-3">Title</th><th class="p-3">Subcategory ID</th><th class="p-3">Action Type</th>
+                <th class="p-3">Attached Link</th><th class="p-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody id="inventoryTableBody" class="divide-y divide-slate-800 text-slate-300">
@@ -281,26 +235,21 @@
           </table>
         </div>
       </div>
-
     </section>
 
-    <!-- TAB 2: MULTI-POPUP MANAGEMENT STUDIO -->
+    <!-- TAB 2: POPUPS -->
     <section id="tab-popups" class="tab-pane hidden space-y-8">
-      
       <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-6 space-y-6">
         <div class="border-b border-slate-700/60 pb-3 flex justify-between items-center">
           <div>
             <h3 class="text-lg font-bold text-white" id="popupFormHeading">Create Broadcast Popup</h3>
-            <p class="text-xs text-slate-400">When multiple popups are active, users will see them cyclically in order, starting with the latest added popup</p>
+            <p class="text-xs text-slate-400">Sequential, circular display starting with the latest added popup</p>
           </div>
           <div class="flex items-center gap-3">
             <button type="button" id="btnCancelEditPopup" class="text-xs text-amber-400 hover:underline hidden">Cancel Edit</button>
-            <button type="button" id="btnSavePopup" class="bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold px-6 py-2 rounded-lg text-xs transition shadow-lg">
-              Save & Publish Popup
-            </button>
+            <button type="button" id="btnSavePopup" class="bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold px-6 py-2 rounded-lg text-xs transition shadow-lg">Save & Publish Popup</button>
           </div>
         </div>
-
         <input type="hidden" id="editingPopupId" value="">
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -331,11 +280,11 @@
             </div>
             <div>
               <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Or Direct Media / YouTube Link</label>
-              <input type="url" id="popupMediaUrl" placeholder="https://www.youtube.com/watch?v=... or direct URL" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+              <input type="url" id="popupMediaUrl" placeholder="https://..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
             </div>
             <div>
               <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Popup Title</label>
-              <input type="text" id="popupTitle" placeholder="e.g. End-Semester Examination Schedule" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
+              <input type="text" id="popupTitle" placeholder="e.g. End-Semester Exam Schedule" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
             </div>
             <div>
               <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Popup Body Text</label>
@@ -358,9 +307,9 @@
               <div>
                 <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Closing Mode</label>
                 <select id="popupCloseMode" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white">
-                  <option value="both" selected>Both (Timer + Button)</option>
+                  <option value="both" selected>Both</option>
                   <option value="timer">Timer Only</option>
-                  <option value="manual">Manual Close Only</option>
+                  <option value="manual">Manual Only</option>
                 </select>
               </div>
               <div>
@@ -372,29 +321,10 @@
                 <input type="number" id="popupIntervalMinutes" value="1" min="0.2" step="0.1" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-blue-500">
               </div>
             </div>
-
-            <!-- Live Card Preview -->
-            <div class="pt-2">
-              <span class="block text-[11px] font-bold uppercase text-slate-400 mb-2">Live Visual Card Preview</span>
-              <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-col items-center">
-                <div class="w-full max-w-xs bg-white text-slate-900 rounded-lg overflow-hidden shadow-xl text-center">
-                  <div class="h-28 bg-slate-900 flex items-center justify-center overflow-hidden">
-                    <span class="text-xs text-slate-400" id="previewMediaPlaceholder">Media Display</span>
-                  </div>
-                  <div class="p-4">
-                    <div class="font-bold text-sm" id="previewTitleDisplay">Announcement Title</div>
-                    <div class="text-xs text-slate-500 mt-1" id="previewBodyDisplay">Body description here...</div>
-                    <div class="mt-3 bg-blue-600 text-white text-xs font-bold py-1.5 rounded" id="previewBtnDisplay">Action Button</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
           </div>
         </div>
       </div>
 
-      <!-- Permanent Popups Table -->
       <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-5">
         <div class="border-b border-slate-700/60 pb-3 mb-4 flex justify-between items-center">
           <h4 class="text-sm font-bold text-white">Permanent Popups Repository</h4>
@@ -404,12 +334,8 @@
           <table class="w-full text-left text-xs border-collapse">
             <thead class="bg-slate-900/80 text-slate-400 border-b border-slate-700">
               <tr>
-                <th class="p-3">ID</th>
-                <th class="p-3">Status</th>
-                <th class="p-3">Format</th>
-                <th class="p-3">Title</th>
-                <th class="p-3">Destination</th>
-                <th class="p-3">Timing</th>
+                <th class="p-3">ID</th><th class="p-3">Status</th><th class="p-3">Format</th>
+                <th class="p-3">Title</th><th class="p-3">Destination</th><th class="p-3">Timing</th>
                 <th class="p-3 text-right">Actions</th>
               </tr>
             </thead>
@@ -419,108 +345,98 @@
           </table>
         </div>
       </div>
-
     </section>
 
-    <!-- TAB 3: LIVE BROADCAST STUDIO (TWO-STAGE PUBLISH & STREAM WORKFLOW) -->
+    <!-- TAB 3: LIVE BROADCAST STUDIO (STABLE WEBRTC & SCREEN AUDIO SWITCHER) -->
     <section id="tab-live" class="tab-pane hidden space-y-8">
-      
-      <!-- Live Control Center -->
       <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-6 space-y-6">
-        
         <div class="border-b border-slate-700/60 pb-3 flex flex-wrap justify-between items-center gap-3">
           <div>
             <h3 class="text-lg font-bold text-white flex items-center gap-2">
               <span id="liveStatusDot" class="w-3 h-3 rounded-full bg-slate-500"></span>
               GECM Live Studio
             </h3>
-            <p class="text-xs text-slate-400">Publish your live announcement to students, preview your stream, and broadcast smoothly</p>
+            <p class="text-xs text-slate-400">Stream front camera, back camera, or screen share with persistent high-availability WebRTC</p>
           </div>
           <div class="flex items-center gap-3">
-            <span id="liveStageIndicator" class="text-xs font-mono font-semibold bg-slate-800 text-slate-300 border border-slate-700 px-3 py-1 rounded-full">
-              Status: Offline
-            </span>
-            <span id="liveTimerBadge" class="hidden text-xs font-mono font-bold bg-rose-950 text-rose-300 border border-rose-800 px-3 py-1 rounded-full">
-              🔴 LIVE 00:00
-            </span>
+            <span id="liveStageIndicator" class="text-xs font-mono font-semibold bg-slate-800 text-slate-300 border border-slate-700 px-3 py-1 rounded-full">Status: Offline</span>
+            <span id="liveTimerBadge" class="hidden text-xs font-mono font-bold bg-rose-950 text-rose-300 border border-rose-800 px-3 py-1 rounded-full">🔴 LIVE 00:00</span>
           </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          
-          <!-- Left: Stage 1 & Device Controls (5 Cols) -->
+          <!-- Left Column -->
           <div class="lg:col-span-5 space-y-5">
-            
-            <!-- STAGE 1: Live Details Form -->
+            <!-- Step 1: Announcement Notice -->
             <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-700/80 space-y-3">
               <div class="flex items-center justify-between border-b border-slate-800 pb-2">
                 <span class="text-xs font-bold text-blue-400 uppercase tracking-wider">Step 1: Live Announcement Details</span>
                 <span class="text-[10px] text-slate-400">Shows on Student Page</span>
               </div>
-
               <div>
                 <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Live Topic / Title</label>
                 <input type="text" id="liveTopic" placeholder="e.g. Engineering Mathematics Live Problem Solving" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white outline-none focus:border-rose-500">
               </div>
-
               <div>
                 <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Topic Description</label>
                 <textarea id="liveDesc" rows="2" placeholder="Explain the key topics, chapter, or interactive Q&A format..." class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white outline-none focus:border-rose-500"></textarea>
               </div>
-
               <div class="space-y-1.5">
                 <label class="block text-xs font-bold text-slate-300 uppercase">Live Logo / Thumbnail</label>
                 <input type="file" id="liveThumbFile" accept="image/*" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-1 text-xs text-slate-400 file:mr-2 file:py-1 file:px-2.5 file:rounded file:border-0 file:text-xs file:bg-slate-800 file:text-white">
                 <input type="url" id="liveThumbUrl" placeholder="Or paste logo image URL" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white outline-none focus:border-rose-500">
               </div>
-
               <button type="button" id="btnSaveLiveNotice" class="w-full bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold py-2.5 rounded-lg text-xs transition flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20">
-                <span>📢</span>
-                <span id="btnSaveLiveNoticeText">Save & Publish Live Notice (Show to Students)</span>
+                <span>📢</span><span>Save & Publish Live Notice (Show to Students)</span>
               </button>
             </div>
 
-            <!-- STAGE 2: Camera & Screen Switcher Controls -->
+            <!-- Step 2: Camera & Screenshare Source Switcher -->
             <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-700 space-y-3">
               <div class="flex items-center justify-between">
-                <span class="text-xs font-bold text-white uppercase tracking-wider">Step 2: Choose Source & Preview</span>
-                <span class="text-[10px] text-emerald-400 font-mono">Audio Persistent</span>
+                <span class="text-xs font-bold text-white uppercase tracking-wider">Step 2: Source & Audio Selector</span>
+                <span class="text-[10px] text-emerald-400 font-mono" id="activeAudioIndicator">Mic Active</span>
               </div>
-              <p class="text-[11px] text-slate-400">Click a source below to turn on the preview monitor. You can switch smoothly anytime during broadcast without disconnects.</p>
+              <p class="text-[11px] text-slate-400">Switch devices on the fly without disconnecting students.</p>
               
               <div class="grid grid-cols-3 gap-2 pt-1">
                 <button type="button" id="btnSourceFront" class="bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2 px-2 rounded-lg text-xs border border-slate-600 transition flex flex-col items-center gap-1">
-                  <span>📱</span>
-                  <span>Front Cam</span>
+                  <span>📱</span><span>Front Cam</span>
                 </button>
                 <button type="button" id="btnSourceBack" class="bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2 px-2 rounded-lg text-xs border border-slate-600 transition flex flex-col items-center gap-1">
-                  <span>📷</span>
-                  <span>Back Cam</span>
+                  <span>📷</span><span>Back Cam</span>
                 </button>
                 <button type="button" id="btnSourceScreen" class="bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2 px-2 rounded-lg text-xs border border-slate-600 transition flex flex-col items-center gap-1">
-                  <span>🖥️</span>
-                  <span>Screen Share</span>
+                  <span>🖥️</span><span>Screen Share</span>
+                </button>
+              </div>
+
+              <!-- Screenshare Audio Source Selector -->
+              <div id="screenshareAudioWrap" class="hidden mt-3 p-3 bg-slate-950 rounded-lg border border-slate-800 space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-[11px] font-bold text-amber-400 uppercase">🖥️ Screenshare Audio Choice</span>
+                  <span class="text-[10px] text-slate-400 font-mono" id="audioModeLabel">Mode: System Audio</span>
+                </div>
+                <p class="text-[10px] text-slate-400">System sound is shared by default. Toggle below if you wish to use your microphone instead.</p>
+                <button type="button" id="btnToggleScreenAudioMode" class="w-full bg-slate-800 hover:bg-slate-700 text-blue-400 border border-blue-800 font-semibold py-1.5 px-3 rounded text-xs transition flex items-center justify-center gap-2">
+                  <span id="screenAudioIcon">🎙️</span><span id="screenAudioBtnText">Switch Audio to: Microphone</span>
                 </button>
               </div>
             </div>
-
           </div>
 
-          <!-- Right: Live Monitor & Broadcast Trigger (7 Cols) -->
+          <!-- Right Column: Monitor & Controls -->
           <div class="lg:col-span-7 flex flex-col space-y-4">
-            
-            <!-- Video Preview Canvas -->
             <div class="relative bg-black rounded-xl overflow-hidden aspect-video border border-slate-800 flex items-center justify-center shadow-2xl">
               <video id="adminLivePreview" autoplay muted playsinline class="w-full h-full object-contain"></video>
               
               <div id="previewPlaceholder" class="absolute flex flex-col items-center gap-2 text-slate-500">
-                <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>
+                <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="17" x2="22" y2="17"></line></svg>
                 <span class="text-xs font-semibold">Select Front Cam, Back Cam, or Screen Share to Preview</span>
               </div>
 
               <div id="liveOnAirBadge" class="hidden absolute top-3 left-3 bg-rose-600/90 backdrop-blur text-white text-[11px] font-extrabold uppercase px-2.5 py-0.5 rounded flex items-center gap-1.5 shadow">
-                <span class="w-2 h-2 rounded-full bg-white pulse-dot"></span>
-                ON AIR
+                <span class="w-2 h-2 rounded-full bg-white pulse-dot"></span>ON AIR
               </div>
 
               <div id="activeSourceLabel" class="hidden absolute bottom-3 right-3 bg-slate-950/80 backdrop-blur text-slate-300 text-[10px] font-mono px-2 py-0.5 rounded border border-slate-700">
@@ -528,38 +444,31 @@
               </div>
             </div>
 
-            <!-- Action Controls (Step 3: Go Live) -->
             <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-800 flex flex-wrap items-center justify-between gap-4">
               <div>
                 <span class="block text-xs font-bold text-white uppercase">Step 3: Broadcast Control</span>
                 <span class="text-[11px] text-slate-400" id="broadcastHint">Preview camera/screen above, then click Go Live to start streaming.</span>
               </div>
-
               <div class="flex items-center gap-3">
                 <button type="button" id="btnGoLive" disabled class="bg-slate-700 text-slate-400 cursor-not-allowed font-bold px-6 py-2.5 rounded-lg text-xs transition flex items-center gap-2 shadow">
-                  <span>●</span>
-                  <span id="btnGoLiveText">Go Live & Start Recording</span>
+                  <span>●</span><span id="btnGoLiveText">Go Live & Start Recording</span>
                 </button>
                 <button type="button" id="btnEndLive" class="hidden bg-rose-700 hover:bg-rose-600 active:bg-rose-800 text-white font-bold px-6 py-2.5 rounded-lg text-xs transition shadow-lg shadow-rose-600/30 flex items-center gap-2">
-                  <span>■</span>
-                  <span>End Live Stream & Save Video</span>
+                  <span>■</span><span>End Live Stream & Save Video</span>
                 </button>
               </div>
             </div>
 
-            <!-- Upload progress notification bar -->
             <div id="liveUploadStatus" class="hidden bg-indigo-950/90 border border-indigo-800 p-3 rounded-lg text-xs text-indigo-200 flex items-center justify-between">
               <span id="liveUploadText" class="flex items-center gap-2">
                 <span class="animate-spin">⏳</span> Uploading stream recording to Google Drive...
               </span>
             </div>
           </div>
-
         </div>
-
       </div>
 
-      <!-- Live Stream Archives & Video Player Table -->
+      <!-- Live Stream Archives -->
       <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-5">
         <div class="border-b border-slate-700/60 pb-3 mb-4 flex justify-between items-center">
           <h4 class="text-sm font-bold text-white">Live Recordings & Stream Archives</h4>
@@ -569,13 +478,9 @@
           <table class="w-full text-left text-xs border-collapse">
             <thead class="bg-slate-900/80 text-slate-400 border-b border-slate-700">
               <tr>
-                <th class="p-3 whitespace-nowrap">ID</th>
-                <th class="p-3 whitespace-nowrap">Timestamp (IST)</th>
-                <th class="p-3">Logo / Banner</th>
-                <th class="p-3">Topic</th>
-                <th class="p-3">Description</th>
-                <th class="p-3">Video Recording</th>
-                <th class="p-3 text-right">Actions</th>
+                <th class="p-3 whitespace-nowrap">ID</th><th class="p-3 whitespace-nowrap">Timestamp (IST)</th>
+                <th class="p-3">Logo / Banner</th><th class="p-3">Topic</th><th class="p-3">Description</th>
+                <th class="p-3">Video Recording</th><th class="p-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody id="liveArchiveTableBody" class="divide-y divide-slate-800 text-slate-300">
@@ -584,10 +489,9 @@
           </table>
         </div>
       </div>
-
     </section>
 
-    <!-- TAB 4: STUDENT TELEMETRY & DRIVE ARCHIVE -->
+    <!-- TAB 4: TELEMETRY -->
     <section id="tab-telemetry" class="tab-pane hidden space-y-6">
       <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-6">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-700/60">
@@ -604,18 +508,12 @@
           <table class="w-full text-left text-xs border-collapse">
             <thead class="bg-slate-900/95 text-slate-400 sticky top-0 border-b border-slate-700 z-20">
               <tr>
-                <th class="p-3 whitespace-nowrap">Timestamp (IST)</th>
-                <th class="p-3 whitespace-nowrap">Order ID</th>
-                <th class="p-3 whitespace-nowrap">Card ID</th>
-                <th class="p-3 whitespace-nowrap">Student Name</th>
-                <th class="p-3 whitespace-nowrap">Roll No</th>
-                <th class="p-3 whitespace-nowrap">Reg No</th>
-                <th class="p-3 whitespace-nowrap">Subject & Code</th>
-                <th class="p-3 whitespace-nowrap">Semester</th>
-                <th class="p-3 whitespace-nowrap">Branch</th>
-                <th class="p-3 whitespace-nowrap">College</th>
-                <th class="p-3 whitespace-nowrap">Faculty Guide</th>
-                <th class="p-3 whitespace-nowrap text-right">Drive PDF Archive</th>
+                <th class="p-3 whitespace-nowrap">Timestamp (IST)</th><th class="p-3 whitespace-nowrap">Order ID</th>
+                <th class="p-3 whitespace-nowrap">Card ID</th><th class="p-3 whitespace-nowrap">Student Name</th>
+                <th class="p-3 whitespace-nowrap">Roll No</th><th class="p-3 whitespace-nowrap">Reg No</th>
+                <th class="p-3 whitespace-nowrap">Subject & Code</th><th class="p-3 whitespace-nowrap">Semester</th>
+                <th class="p-3 whitespace-nowrap">Branch</th><th class="p-3 whitespace-nowrap">College</th>
+                <th class="p-3 whitespace-nowrap">Faculty Guide</th><th class="p-3 whitespace-nowrap text-right">Drive PDF Archive</th>
               </tr>
             </thead>
             <tbody id="telemetryTableBody" class="divide-y divide-slate-800 text-slate-300">
@@ -633,20 +531,10 @@
     const USER_CACHE_KEY = "gecm_portal_catalog_cache";
 
     let authPass = "";
-    let studioData = {
-      categories: [],
-      subcategories: [],
-      cards: [],
-      popups: [],
-      telemetry: [],
-      liveArchives: [],
-      activeLive: null
-    };
+    let studioData = { categories: [], subcategories: [], cards: [], popups: [], telemetry: [], liveArchives: [], activeLive: null };
 
     function clearUserLocalCache() {
-      try {
-        localStorage.removeItem(USER_CACHE_KEY);
-      } catch (e) {}
+      try { localStorage.removeItem(USER_CACHE_KEY); } catch (e) {}
     }
 
     function readFileAsBase64(file) {
@@ -655,18 +543,14 @@
         const reader = new FileReader();
         reader.onload = (e) => {
           const res = e.target.result;
-          if (typeof res === 'string' && res.startsWith('data:')) {
-            resolve({ base64: res, name: file.name });
-          } else {
-            resolve(null);
-          }
+          resolve(typeof res === 'string' && res.startsWith('data:') ? { base64: res, name: file.name } : null);
         };
         reader.onerror = () => resolve(null);
         reader.readAsDataURL(file);
       });
     }
 
-    // Tab Navigation
+    // Tabs
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
@@ -683,7 +567,7 @@
       });
     });
 
-    // Authentication Login
+    // Login
     document.getElementById('btnLogin').addEventListener('click', async (e) => {
       e.preventDefault();
       const passInput = document.getElementById('adminPassword');
@@ -749,7 +633,6 @@
       if (subParent && studioData.categories.length > 0) {
         subParent.innerHTML = studioData.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
       }
-
       const cardSub = document.getElementById('cardSubcategorySelect');
       if (cardSub && studioData.subcategories.length > 0) {
         cardSub.innerHTML = studioData.subcategories.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
@@ -767,16 +650,19 @@
     }
 
     // =========================================================================
-    // 1. STABLE WEBRTC BROADCASTER ENGINE WITH DUAL-HANDSHAKE
+    // 1. STABLE WEBRTC BROADCASTER ENGINE WITH SYSTEM AUDIO & AUTO-RECONNECT
     // =========================================================================
     const BROADCAST_HOST_ID = "gecm-live-host";
     let isBroadcasting = false;
     let isPreviewActive = false;
     let currentLiveStreamId = null;
     let localStream = null;
-    let audioTrack = null;
     let activeVideoTrack = null;
-    let currentSourceMode = "front"; // front | back | screen
+    let activeAudioTrack = null;
+    let micAudioTrack = null;
+    let systemAudioTrack = null;
+    let screenshareAudioChoice = "system"; // "system" | "mic"
+    let currentSourceMode = "front"; // "front" | "back" | "screen"
     let mediaRecorder = null;
     let recordedChunks = [];
     let liveTimerInterval = null;
@@ -784,7 +670,7 @@
     let peerInstance = null;
     let activePeerCalls = [];
 
-    // Extended STUN configuration from reference file for robust traversal across all networks
+    // Extended STUN configuration from reference file for cross-network NAT traversal
     const ICE_CONFIG = {
       config: {
         iceServers: [
@@ -813,7 +699,7 @@
       }
     }
 
-    // Initialize Host Peer with Dual Handshake
+    // Initialize Host Peer with Auto-Reconnect and Dual Handshake
     function initHostPeer() {
       return new Promise((resolve) => {
         if (peerInstance && !peerInstance.destroyed) return resolve(peerInstance.id);
@@ -825,30 +711,32 @@
           resolve(id);
         });
 
+        // Auto-reconnect if signaling connection drops
+        peerInstance.on('disconnected', () => {
+          console.warn("PeerJS host disconnected from server. Auto-reconnecting...");
+          try { peerInstance.reconnect(); } catch (e) {}
+        });
+
         // 1. Answer direct calls from viewers
         peerInstance.on('call', (call) => {
           if (localStream) {
-            console.log("Direct call received from student viewer. Answering with media stream...");
-            call.answer(localStream);
+            console.log("Direct visitor call received. Answering with media stream...");
+            call.answer(localStream); //
             if (!activePeerCalls.includes(call)) activePeerCalls.push(call);
-            call.on('close', () => {
-              activePeerCalls = activePeerCalls.filter(c => c !== call);
-            });
+            call.on('close', () => { activePeerCalls = activePeerCalls.filter(c => c !== call); });
           }
         });
 
-        // 2. Answer data channel requests ('REQUEST_STREAM' handshake from reference architecture)
+        // 2. Answer data channel requests ('REQUEST_STREAM' handshake from reference)
         peerInstance.on('connection', (conn) => {
           console.log("Student viewer opened data channel:", conn.peer);
           conn.on('data', (data) => {
-            if (data === 'REQUEST_STREAM' && localStream) {
-              console.log(`Student requested stream! Calling student viewer peer ID: ${conn.peer}`);
-              const call = peerInstance.call(conn.peer, localStream);
+            if (data === 'REQUEST_STREAM' && localStream) { //
+              console.log(`Viewer requested stream! Dialing student viewer: ${conn.peer}`); //
+              const call = peerInstance.call(conn.peer, localStream); //
               if (call) {
                 if (!activePeerCalls.includes(call)) activePeerCalls.push(call);
-                call.on('close', () => {
-                  activePeerCalls = activePeerCalls.filter(c => c !== call);
-                });
+                call.on('close', () => { activePeerCalls = activePeerCalls.filter(c => c !== call); });
               }
             }
           });
@@ -856,76 +744,159 @@
 
         peerInstance.on('error', (err) => {
           console.warn("PeerJS notice:", err);
-          resolve(BROADCAST_HOST_ID);
+          if (err.type === 'unavailable-id') {
+            resolve(BROADCAST_HOST_ID);
+          } else {
+            resolve(BROADCAST_HOST_ID);
+          }
         });
       });
     }
 
-    // Persistent Audio Track Management
-    async function ensureAudioTrack() {
-      if (!audioTrack || audioTrack.readyState === "ended") {
+    // Get or maintain microphone track
+    async function getMicrophoneTrack() {
+      if (!micAudioTrack || micAudioTrack.readyState === "ended") {
         try {
-          const aStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          audioTrack = aStream.getAudioTracks()[0];
+          const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          micAudioTrack = micStream.getAudioTracks()[0];
         } catch (e) {
-          console.warn("No microphone device found or permission denied:", e);
+          console.warn("Microphone not available:", e);
         }
       }
-      return audioTrack;
+      return micAudioTrack;
     }
 
-    // Video Track Switcher
-    async function getVideoTrackForMode(mode) {
-      if (mode === "screen") {
-        const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-        return screenStream.getVideoTracks()[0];
-      } else if (mode === "back") {
-        const camStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: "environment" } }
-        });
-        return camStream.getVideoTracks()[0];
+    // Smoothly swap active audio track across localStream & all viewer connections
+    function applyAudioTrack(newTrack) {
+      if (!newTrack) return;
+      activeAudioTrack = newTrack;
+
+      if (localStream) {
+        const oldAudio = localStream.getAudioTracks()[0];
+        if (oldAudio && oldAudio !== newTrack) {
+          localStream.removeTrack(oldAudio);
+        }
+        if (!localStream.getAudioTracks().includes(newTrack)) {
+          localStream.addTrack(newTrack);
+        }
+      }
+
+      // Replace track on all viewer connections seamlessly
+      activePeerCalls.forEach(call => {
+        if (call && call.peerConnection) {
+          const sender = call.peerConnection.getSenders().find(s => s.track && s.track.kind === "audio");
+          if (sender && newTrack) {
+            sender.replaceTrack(newTrack);
+          }
+        }
+      });
+
+      const audioIndicator = document.getElementById('activeAudioIndicator');
+      if (currentSourceMode === 'screen') {
+        audioIndicator.textContent = (screenshareAudioChoice === 'system') ? "🔊 System Audio (Default)" : "🎙️ Mic Audio";
       } else {
-        const camStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user" }
-        });
-        return camStream.getVideoTracks()[0];
+        audioIndicator.textContent = "🎙️ Mic Audio";
       }
     }
+
+    // Screenshare Audio Switcher Button
+    document.getElementById('btnToggleScreenAudioMode').addEventListener('click', async () => {
+      const modeLabel = document.getElementById('audioModeLabel');
+      const btnText = document.getElementById('screenAudioBtnText');
+      const icon = document.getElementById('screenAudioIcon');
+
+      if (screenshareAudioChoice === "system") {
+        screenshareAudioChoice = "mic";
+        const mic = await getMicrophoneTrack();
+        if (mic) {
+          applyAudioTrack(mic);
+          modeLabel.textContent = "Mode: Microphone";
+          btnText.textContent = "Switch Audio to: System Audio";
+          icon.textContent = "🔊";
+        } else {
+          alert("Microphone could not be accessed.");
+        }
+      } else {
+        screenshareAudioChoice = "system";
+        if (systemAudioTrack && systemAudioTrack.readyState === "live") {
+          applyAudioTrack(systemAudioTrack);
+          modeLabel.textContent = "Mode: System Audio (Default)";
+          btnText.textContent = "Switch Audio to: Microphone";
+          icon.textContent = "🎙️";
+        } else {
+          alert("System sound was not shared during screen selection. Re-share screen and check 'Share audio' in browser prompt.");
+        }
+      }
+    });
 
     // Smooth Device Preview & Mid-Stream Switcher
     async function activateSourceMode(mode) {
       try {
         currentSourceMode = mode;
-        const newVTrack = await getVideoTrackForMode(mode);
-        const mic = await ensureAudioTrack();
+        const screenshareAudioWrap = document.getElementById('screenshareAudioWrap');
 
         if (mode === "screen") {
+          screenshareAudioWrap.classList.remove('hidden');
+
+          // Capture Display Media with Audio
+          const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+          const newVTrack = screenStream.getVideoTracks()[0];
           newVTrack.onended = () => activateSourceMode("front");
-        }
 
-        if (activeVideoTrack) {
-          activeVideoTrack.stop();
-        }
-        activeVideoTrack = newVTrack;
+          // Extract System Audio from screenshare
+          const screenAudioTracks = screenStream.getAudioTracks();
+          if (screenAudioTracks.length > 0) {
+            systemAudioTrack = screenAudioTracks[0];
+          } else {
+            systemAudioTrack = null;
+          }
 
-        const tracks = [activeVideoTrack];
-        if (mic) tracks.push(mic);
+          // Default: System sound if available, otherwise microphone fallback
+          screenshareAudioChoice = "system";
+          document.getElementById('audioModeLabel').textContent = systemAudioTrack ? "Mode: System Audio (Default)" : "Mode: Mic (No system audio shared)";
+          document.getElementById('screenAudioBtnText').textContent = "Switch Audio to: Microphone";
+          document.getElementById('screenAudioIcon').textContent = "🎙️";
 
-        if (!localStream) {
+          if (activeVideoTrack) activeVideoTrack.stop();
+          activeVideoTrack = newVTrack;
+
+          let chosenAudio = systemAudioTrack || (await getMicrophoneTrack());
+          activeAudioTrack = chosenAudio;
+
+          const tracks = [activeVideoTrack];
+          if (chosenAudio) tracks.push(chosenAudio);
+
           localStream = new MediaStream(tracks);
+
         } else {
-          const oldVTrack = localStream.getVideoTracks()[0];
-          if (oldVTrack) localStream.removeTrack(oldVTrack);
-          localStream.addTrack(activeVideoTrack);
+          screenshareAudioWrap.classList.add('hidden');
+
+          // Camera Capture
+          const camConstraints = (mode === "back") ? { facingMode: { ideal: "environment" } } : { facingMode: "user" };
+          const camStream = await navigator.mediaDevices.getUserMedia({ video: camConstraints });
+          const newVTrack = camStream.getVideoTracks()[0];
+
+          if (activeVideoTrack) activeVideoTrack.stop();
+          activeVideoTrack = newVTrack;
+
+          // Camera always defaults to Microphone
+          const mic = await getMicrophoneTrack();
+          activeAudioTrack = mic;
+
+          const tracks = [activeVideoTrack];
+          if (mic) tracks.push(mic);
+
+          localStream = new MediaStream(tracks);
         }
 
-        // Smoothly replace track for all actively connected viewers
+        // Smoothly replace track for all active student viewers
         activePeerCalls.forEach(call => {
           if (call && call.peerConnection) {
-            const sender = call.peerConnection.getSenders().find(s => s.track && s.track.kind === "video");
-            if (sender && activeVideoTrack) {
-              sender.replaceTrack(activeVideoTrack);
-            }
+            const vSender = call.peerConnection.getSenders().find(s => s.track && s.track.kind === "video");
+            if (vSender && activeVideoTrack) vSender.replaceTrack(activeVideoTrack);
+
+            const aSender = call.peerConnection.getSenders().find(s => s.track && s.track.kind === "audio");
+            if (aSender && activeAudioTrack) aSender.replaceTrack(activeAudioTrack);
           }
         });
 
@@ -963,7 +934,7 @@
       }
     }
 
-    // STEP 1: SAVE & PUBLISH LIVE NOTICE
+    // Step 1: Save & Publish Live Notice
     document.getElementById('btnSaveLiveNotice').addEventListener('click', async () => {
       const topic = document.getElementById('liveTopic').value.trim() || "GEC Munger Live Broadcast";
       const desc = document.getElementById('liveDesc').value.trim() || "Official academic session. Live stream will start shortly.";
@@ -1011,7 +982,7 @@
       }
     });
 
-    // STEP 2 & 3: GO LIVE & START BROADCASTING / RECORDING
+    // Step 2 & 3: Go Live & Start Broadcasting / Recording
     document.getElementById('btnGoLive').addEventListener('click', async () => {
       if (!localStream) {
         return alert("Please select a camera or screen source above first!");
@@ -1049,9 +1020,9 @@
             mediaRecorder = new MediaRecorder(localStream);
           }
           mediaRecorder.ondataavailable = (e) => {
-            if (e.data && e.data.size > 0) recordedChunks.push(e.data);
+            if (e.data && e.data.size > 0) recordedChunks.push(e.data); //
           };
-          mediaRecorder.start(1000);
+          mediaRecorder.start(1000); //
 
           // Update UI
           document.getElementById('liveStatusDot').className = "w-3 h-3 rounded-full bg-rose-500 pulse-dot";
@@ -1063,7 +1034,7 @@
           document.getElementById('btnEndLive').classList.remove('hidden');
           document.getElementById('broadcastHint').textContent = "Broadcasting live to students. Switch cameras or screen share anytime.";
 
-          // Start Live Timer
+          // Live Timer
           liveSecondsElapsed = 0;
           liveTimerInterval = setInterval(() => {
             liveSecondsElapsed++;
@@ -1085,7 +1056,7 @@
       }
     });
 
-    // END LIVE STREAM & ARCHIVE RECORDING
+    // End Live Stream
     document.getElementById('btnEndLive').addEventListener('click', async () => {
       if (!confirm("Are you sure you want to end the live broadcast? The recorded video will be saved to Google Drive.")) return;
 
@@ -1100,16 +1071,14 @@
       document.getElementById('liveStageIndicator').textContent = "Status: Offline";
       document.getElementById('liveStageIndicator').className = "text-xs font-mono font-semibold bg-slate-800 text-slate-300 border border-slate-700 px-3 py-1 rounded-full";
 
-      // Stop recorder and trigger Drive upload
-      if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      if (mediaRecorder && mediaRecorder.state !== "inactive") { //
         mediaRecorder.onstop = () => {
           const blob = new Blob(recordedChunks, { type: 'video/webm' });
           uploadRecordedLiveToDrive(blob);
         };
-        mediaRecorder.stop();
+        mediaRecorder.stop(); //
       }
 
-      // Notify backend to end live
       try {
         await fetch(APPS_SCRIPT_URL, {
           method: 'POST',
@@ -1118,22 +1087,23 @@
         });
       } catch (e) {}
 
-      // Close peer connections
       activePeerCalls.forEach(c => { try { c.close(); } catch(e){} });
       activePeerCalls = [];
 
-      // Stop local media
       if (localStream) {
-        localStream.getTracks().forEach(t => t.stop());
+        localStream.getTracks().forEach(t => t.stop()); //
         localStream = null;
         activeVideoTrack = null;
-        audioTrack = null;
+        activeAudioTrack = null;
+        micAudioTrack = null;
+        systemAudioTrack = null;
       }
 
       const previewVideo = document.getElementById('adminLivePreview');
       if (previewVideo) previewVideo.srcObject = null;
       document.getElementById('previewPlaceholder').classList.remove('hidden');
       document.getElementById('activeSourceLabel').classList.add('hidden');
+      document.getElementById('screenshareAudioWrap').classList.add('hidden');
 
       isBroadcasting = false;
       isPreviewActive = false;
@@ -1231,7 +1201,7 @@
     }
 
     // =========================================================================
-    // 2. CATEGORY, SUBCATEGORY & CARD CRUD
+    // 2. CATEGORIES, CARDS & POPUPS CRUD
     // =========================================================================
     document.getElementById('btnSaveCategory').addEventListener('click', async (e) => {
       e.preventDefault();
@@ -1249,11 +1219,7 @@
         const res = await fetch(APPS_SCRIPT_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify({
-            action: "admin_save_category",
-            key: authPass,
-            category: { id, name, description, icon }
-          })
+          body: JSON.stringify({ action: "admin_save_category", key: authPass, category: { id, name, description, icon } })
         });
         const d = await res.json();
         if (d.status === "success") {
@@ -1331,11 +1297,7 @@
         const res = await fetch(APPS_SCRIPT_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify({
-            action: "admin_save_subcategory",
-            key: authPass,
-            subcategory: { id, categoryId, name, description }
-          })
+          body: JSON.stringify({ action: "admin_save_subcategory", key: authPass, subcategory: { id, categoryId, name, description } })
         });
         const d = await res.json();
         if (d.status === "success") {
@@ -1407,9 +1369,7 @@
     document.getElementById('btnUploadDocToDrive').addEventListener('click', async (e) => {
       e.preventDefault();
       const docInput = document.getElementById('cardDocFile');
-      if (!docInput.files || docInput.files.length === 0) {
-        return alert("Please select a document file first!");
-      }
+      if (!docInput.files || docInput.files.length === 0) return alert("Please select a document file first!");
 
       const file = docInput.files[0];
       const btn = document.getElementById('btnUploadDocToDrive');
@@ -1478,13 +1438,7 @@
           body: JSON.stringify({
             action: "admin_save_card",
             key: authPass,
-            card: {
-              id, subcategoryId, title, description,
-              thumbnailUrl: manualThumb,
-              thumbnailFile: thumbPayload,
-              buttonText, templateHtml: (actionType === "link") ? "" : templateHtml,
-              actionType, targetUrl
-            }
+            card: { id, subcategoryId, title, description, thumbnailUrl: manualThumb, thumbnailFile: thumbPayload, buttonText, templateHtml: (actionType === "link") ? "" : templateHtml, actionType, targetUrl }
           })
         });
 
@@ -1561,9 +1515,7 @@
         tr.innerHTML = `
           <td class="p-3 font-mono text-blue-400">${c.id}</td>
           <td class="p-3 font-mono text-[11px] text-slate-400">${c.createdAt || 'N/A'}</td>
-          <td class="p-3">
-            ${c.thumbnailUrl ? `<img src="${c.thumbnailUrl}" class="w-10 h-10 object-cover rounded border border-slate-700">` : 'N/A'}
-          </td>
+          <td class="p-3">${c.thumbnailUrl ? `<img src="${c.thumbnailUrl}" class="w-10 h-10 object-cover rounded border border-slate-700">` : 'N/A'}</td>
           <td class="p-3 font-semibold text-white">${c.title}</td>
           <td class="p-3 font-mono text-slate-400">${c.subcategoryId}</td>
           <td class="p-3">
@@ -1571,9 +1523,7 @@
               ${c.actionType === 'link' || hasDocLink ? 'Document Link' : 'Canvas Cover'}
             </span>
           </td>
-          <td class="p-3 text-slate-400 max-w-xs truncate">
-            ${hasDocLink ? `<a href="${c.targetUrl}" target="_blank" class="text-blue-400 hover:underline font-mono text-[11px]">${c.targetUrl}</a>` : '<span class="text-slate-500">Canvas Cover</span>'}
-          </td>
+          <td class="p-3 text-slate-400 max-w-xs truncate">${hasDocLink ? `<a href="${c.targetUrl}" target="_blank" class="text-blue-400 hover:underline font-mono text-[11px]">${c.targetUrl}</a>` : '<span class="text-slate-500">Canvas Cover</span>'}</td>
           <td class="p-3 text-right space-x-2">
             <button type="button" class="text-blue-400 hover:underline font-bold" onclick='editCard(${JSON.stringify(c)})'>Edit</button>
             <button type="button" class="text-rose-400 hover:underline font-bold" onclick="deleteItem('Cards', '${c.id}')">Delete</button>
@@ -1583,29 +1533,14 @@
       });
     }
 
-    // =========================================================================
-    // 3. MULTI-POPUP CRUD & REPOSITORY
-    // =========================================================================
+    // Popups CRUD
     let pendingPopupFile = null;
     document.getElementById('popupFileInput').addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (file) {
         const reader = new FileReader();
-        reader.onload = (evt) => {
-          pendingPopupFile = { base64: evt.target.result, name: file.name };
-        };
+        reader.onload = (evt) => { pendingPopupFile = { base64: evt.target.result, name: file.name }; };
         reader.readAsDataURL(file);
-      }
-    });
-
-    ['popupTitle', 'popupBody', 'popupButtonText'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) {
-        el.addEventListener('input', () => {
-          document.getElementById('previewTitleDisplay').textContent = document.getElementById('popupTitle').value || "Title";
-          document.getElementById('previewBodyDisplay').textContent = document.getElementById('popupBody').value || "Body";
-          document.getElementById('previewBtnDisplay').textContent = document.getElementById('popupButtonText').value || "Button";
-        });
       }
     });
 
@@ -1632,16 +1567,7 @@
         const res = await fetch(APPS_SCRIPT_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify({
-            action: "admin_save_popup",
-            key: authPass,
-            popup: {
-              id, active, mediaType, mediaUrl,
-              mediaFile: pendingPopupFile,
-              title, body, buttonText, buttonLink,
-              clickMode, closeMode, timerSeconds, intervalMinutes
-            }
-          })
+          body: JSON.stringify({ action: "admin_save_popup", key: authPass, popup: { id, active, mediaType, mediaUrl, mediaFile: pendingPopupFile, title, body, buttonText, buttonLink, clickMode, closeMode, timerSeconds, intervalMinutes } })
         });
         const d = await res.json();
         if (d.status === "success") {
@@ -1769,9 +1695,7 @@
           <td class="p-3 text-slate-400">${p.closeMode} (${p.timerSeconds}s / ${p.intervalMinutes || 1}m)</td>
           <td class="p-3 text-right space-x-2">
             <button type="button" class="text-blue-400 hover:underline font-bold" onclick='editPopup(${JSON.stringify(p)})'>Edit</button>
-            <button type="button" class="${p.active ? 'text-amber-400' : 'text-emerald-400'} hover:underline font-bold" onclick="togglePopupStatus('${p.id}', ${!p.active})">
-              ${p.active ? 'Deactivate' : 'Activate'}
-            </button>
+            <button type="button" class="${p.active ? 'text-amber-400' : 'text-emerald-400'} hover:underline font-bold" onclick="togglePopupStatus('${p.id}', ${!p.active})">${p.active ? 'Deactivate' : 'Activate'}</button>
             <button type="button" class="text-rose-400 hover:underline font-bold" onclick="deleteItem('Popups', '${p.id}')">Delete</button>
           </td>
         `;
@@ -1779,9 +1703,7 @@
       });
     }
 
-    // =========================================================================
-    // 4. STUDENT TELEMETRY TABLE
-    // =========================================================================
+    // Telemetry Table
     function renderTelemetry(list) {
       const countEl = document.getElementById('telemetryCount');
       if (countEl) countEl.textContent = list.length;
@@ -1797,7 +1719,6 @@
       list.forEach(u => {
         const tr = document.createElement('tr');
         const hasDriveLink = u.pdfLink && typeof u.pdfLink === 'string' && u.pdfLink.startsWith("http");
-        
         let subjectDisplay = u.course || 'N/A';
         if (u.courseCode && u.courseCode !== 'N/A' && u.courseCode.trim().length > 0) {
           const codeFormatted = u.courseCode.startsWith('(') ? u.courseCode : `(${u.courseCode})`;
@@ -1818,9 +1739,7 @@
           <td class="p-3 text-slate-300 whitespace-nowrap">${u.faculty || 'N/A'}</td>
           <td class="p-3 whitespace-nowrap text-right">
             ${hasDriveLink 
-              ? `<a href="${u.pdfLink}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-blue-400 hover:text-blue-300 bg-blue-950/60 hover:bg-blue-900/80 border border-blue-800/80 px-2.5 py-1 rounded text-[11px] font-mono transition">
-                   📁 View in Drive
-                 </a>`
+              ? `<a href="${u.pdfLink}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-blue-400 hover:text-blue-300 bg-blue-950/60 hover:bg-blue-900/80 border border-blue-800/80 px-2.5 py-1 rounded text-[11px] font-mono transition">📁 View in Drive</a>`
               : `<span class="text-slate-500 font-mono text-[11px]">Local Only</span>`}
           </td>
         `;
@@ -1828,70 +1747,19 @@
       });
     }
 
-    // =========================================================================
-    // 5. OMNI-SEARCH ENGINE
-    // =========================================================================
+    // Omni Search
     const omniInput = document.getElementById('omniSearchInput');
     if (omniInput) {
       omniInput.addEventListener('input', (e) => {
         const q = e.target.value.toLowerCase().trim();
-        if (!q) {
-          renderAllAdminViews();
-          return;
-        }
+        if (!q) { renderAllAdminViews(); return; }
 
-        const filteredCats = studioData.categories.filter(c => 
-          (c.name && c.name.toLowerCase().includes(q)) || 
-          (c.description && c.description.toLowerCase().includes(q)) ||
-          (c.id && c.id.toLowerCase().includes(q))
-        );
-        renderCategoriesTable(filteredCats);
-
-        const filteredSubs = studioData.subcategories.filter(s => 
-          (s.name && s.name.toLowerCase().includes(q)) || 
-          (s.description && s.description.toLowerCase().includes(q)) ||
-          (s.categoryId && s.categoryId.toLowerCase().includes(q)) ||
-          (s.id && s.id.toLowerCase().includes(q))
-        );
-        renderSubcategoriesTable(filteredSubs);
-
-        const filteredCards = studioData.cards.filter(c => 
-          (c.title && c.title.toLowerCase().includes(q)) || 
-          (c.description && c.description.toLowerCase().includes(q)) ||
-          (c.id && c.id.toLowerCase().includes(q)) ||
-          (c.subcategoryId && c.subcategoryId.toLowerCase().includes(q))
-        );
-        renderCardsInventory(filteredCards);
-
-        const filteredPopups = studioData.popups.filter(p => 
-          (p.title && p.title.toLowerCase().includes(q)) || 
-          (p.body && p.body.toLowerCase().includes(q)) ||
-          (p.id && p.id.toLowerCase().includes(q))
-        );
-        renderPopupsList(filteredPopups);
-
-        const filteredLive = studioData.liveArchives.filter(l =>
-          (l.topic && l.topic.toLowerCase().includes(q)) ||
-          (l.description && l.description.toLowerCase().includes(q)) ||
-          (l.id && l.id.toLowerCase().includes(q)) ||
-          (l.timestamp && l.timestamp.toLowerCase().includes(q))
-        );
-        renderLiveArchivesTable(filteredLive);
-
-        const filteredTelemetry = studioData.telemetry.filter(u => 
-          (u.name && u.name.toLowerCase().includes(q)) ||
-          (u.roll && u.roll.toLowerCase().includes(q)) ||
-          (u.reg && u.reg.toLowerCase().includes(q)) ||
-          (u.orderId && u.orderId.toLowerCase().includes(q)) ||
-          (u.cardId && u.cardId.toLowerCase().includes(q)) ||
-          (u.course && u.course.toLowerCase().includes(q)) ||
-          (u.courseCode && u.courseCode.toLowerCase().includes(q)) ||
-          (u.branch && u.branch.toLowerCase().includes(q)) ||
-          (u.college && u.college.toLowerCase().includes(q)) ||
-          (u.faculty && u.faculty.toLowerCase().includes(q)) ||
-          (u.semester && u.semester.toLowerCase().includes(q))
-        );
-        renderTelemetry(filteredTelemetry);
+        renderCategoriesTable(studioData.categories.filter(c => (c.name && c.name.toLowerCase().includes(q)) || (c.id && c.id.toLowerCase().includes(q))));
+        renderSubcategoriesTable(studioData.subcategories.filter(s => (s.name && s.name.toLowerCase().includes(q)) || (s.id && s.id.toLowerCase().includes(q))));
+        renderCardsInventory(studioData.cards.filter(c => (c.title && c.title.toLowerCase().includes(q)) || (c.id && c.id.toLowerCase().includes(q))));
+        renderPopupsList(studioData.popups.filter(p => (p.title && p.title.toLowerCase().includes(q)) || (p.id && p.id.toLowerCase().includes(q))));
+        renderLiveArchivesTable(studioData.liveArchives.filter(l => (l.topic && l.topic.toLowerCase().includes(q)) || (l.id && l.id.toLowerCase().includes(q))));
+        renderTelemetry(studioData.telemetry.filter(u => (u.name && u.name.toLowerCase().includes(q)) || (u.roll && u.roll.toLowerCase().includes(q))));
       });
     }
   </script>
