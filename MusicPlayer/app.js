@@ -1,21 +1,18 @@
-// Auto-update Service Worker handler
+// Auto-updating Service Worker for offline capability
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js').then((reg) => {
-      // Force check GitHub for new code every time the site is opened
       reg.update();
-
       reg.addEventListener('updatefound', () => {
-        const newWorker = reg.installing;
-        newWorker.addEventListener('statechange', () => {
-          if (newWorker.state === 'activated' && !navigator.serviceWorker.controller) {
+        const worker = reg.installing;
+        worker.addEventListener('statechange', () => {
+          if (worker.state === 'activated' && !navigator.serviceWorker.controller) {
             window.location.reload();
           }
         });
       });
     }).catch(console.error);
 
-    // Refresh automatically when the new service worker takes over
     let refreshing = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       if (!refreshing) {
@@ -26,8 +23,18 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// IndexedDB Initialization
-const DB_NAME = 'AmarjeetStudioDB';
+// Toast Notification System
+function showToast(msg) {
+  const container = document.getElementById('toast-container');
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  container.appendChild(el);
+  setTimeout(() => el.remove(), 2900);
+}
+
+// IndexedDB Persistence
+const DB_NAME = 'AmarjeetAudioStudioDB';
 const DB_VER = 1;
 let db;
 
@@ -49,7 +56,6 @@ function initDB() {
   });
 }
 
-// Database Helpers
 const dbOps = {
   async getPlaylists() {
     return new Promise((res) => {
@@ -67,8 +73,7 @@ const dbOps = {
   async getTracks(playlistId) {
     return new Promise((res) => {
       const tx = db.transaction('tracks', 'readonly');
-      const store = tx.objectStore('tracks');
-      const idx = store.index('playlistId');
+      const idx = tx.objectStore('tracks').index('playlistId');
       idx.getAll(playlistId).onsuccess = (e) => res(e.target.result || []);
     });
   },
@@ -95,25 +100,31 @@ const dbOps = {
   }
 };
 
-// AUDIO DSP ENGINE (Prevents Clipping, Distortion & Flutter)
+// AUDIO DSP & VOLUME ENGINE
 const audio = document.getElementById('audio-engine');
-let audioCtx, sourceNode, preampGain, compressor, limiter;
+let audioCtx, sourceNode, preampGain, masterGainNode, compressor;
 const bands = [60, 170, 310, 600, 1000, 3000, 6000, 12000, 14000, 16000];
 const defaultGains = [18.2, 11.8, 3.7, -1.7, -7.8, 2.1, 9.8, 14.1, -3.6, 11.6];
 const defaultPreamp = 14.1;
 let filters = [];
+
+// System volume set to 20% by default
+let currentVolumeFraction = 0.20;
 
 function setupAudioDSP() {
   if (audioCtx) return;
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   sourceNode = audioCtx.createMediaElementSource(audio);
 
-  // Preamp Gain Node
+  // Preamp Gain
   preampGain = audioCtx.createGain();
-  // Safe scale to allow high boost without driving input directly into clipping
   preampGain.gain.value = Math.pow(10, defaultPreamp / 20) * 0.45;
 
-  // Dynamics Compressor (Emulates hardware VLC limiter to suppress noise / crackling)
+  // Master Gain Node for guaranteed hardware-level volume control
+  masterGainNode = audioCtx.createGain();
+  masterGainNode.gain.value = currentVolumeFraction;
+
+  // Dynamics Compressor to stop crackle / flutter
   compressor = audioCtx.createDynamicsCompressor();
   compressor.threshold.setValueAtTime(-18, audioCtx.currentTime);
   compressor.knee.setValueAtTime(12, audioCtx.currentTime);
@@ -122,18 +133,12 @@ function setupAudioDSP() {
   compressor.release.setValueAtTime(0.25, audioCtx.currentTime);
 
   let prevNode = preampGain;
-  bands.forEach((freq, i) => {
+  bands.forEach((freq, idx) => {
     const f = audioCtx.createBiquadFilter();
-    if (i === 0) {
-      f.type = 'lowshelf';
-    } else if (i === bands.length - 1) {
-      f.type = 'highshelf';
-    } else {
-      f.type = 'peaking';
-      f.Q.value = 1.4; // Controlled bandwidth prevents harsh phase ringing
-    }
+    f.type = idx === 0 ? 'lowshelf' : idx === bands.length - 1 ? 'highshelf' : 'peaking';
+    if (idx !== 0 && idx !== bands.length - 1) f.Q.value = 1.4;
     f.frequency.value = freq;
-    f.gain.value = defaultGains[i];
+    f.gain.value = defaultGains[idx];
     prevNode.connect(f);
     prevNode = f;
     filters.push(f);
@@ -141,39 +146,53 @@ function setupAudioDSP() {
 
   sourceNode.connect(preampGain);
   prevNode.connect(compressor);
-  compressor.connect(audioCtx.destination);
+  compressor.connect(masterGainNode);
+  masterGainNode.connect(audioCtx.destination);
 }
 
-// Application State
+// Dedicated Volume Setter (HTML5 audio + Web Audio node)
+function applyVolume(percent) {
+  currentVolumeFraction = percent / 100;
+  audio.volume = currentVolumeFraction;
+  if (masterGainNode && audioCtx) {
+    masterGainNode.gain.setValueAtTime(currentVolumeFraction, audioCtx.currentTime);
+  }
+  // Sync all volume inputs & labels
+  document.getElementById('vol-slider').value = percent;
+  document.getElementById('vol-popup-slider').value = percent;
+  document.getElementById('vol-label').textContent = `${percent}%`;
+  document.getElementById('vol-popup-label').textContent = `${percent}%`;
+}
+
+// State
 let activePlaylistId = 'default';
 let currentPlaylistMeta = null;
 let currentTracks = [];
 let currentIndex = -1;
+let newPlaylistBase64Art = null;
 
-const DEFAULT_ART = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 24 24' fill='%232ea043'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z'/%3E%3C/svg%3E";
+const DEFAULT_ART = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 24 24' fill='%232ea043'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z'/%3E%3C/svg%3E";
 
-// Default Initial Volume: 20%
-audio.volume = 0.20;
-
-// UI References
+// UI references
 const playlistTabs = document.getElementById('playlist-tabs');
 const songList = document.getElementById('song-list');
 const reorderList = document.getElementById('reorder-list');
 const viewPlaylistName = document.getElementById('view-playlist-name');
+const trackCountLabel = document.getElementById('track-count-label');
 const filePicker = document.getElementById('file-picker');
-const coverPicker = document.getElementById('cover-picker');
 
-const miniPlayer = document.getElementById('mini-player');
+const miniCover = document.getElementById('mini-cover');
 const miniTitle = document.getElementById('mini-title');
 const miniSub = document.getElementById('mini-sub');
-const miniCover = document.getElementById('mini-cover');
-const btnMiniPlay = document.getElementById('btn-mini-play');
+const barBtnPlay = document.getElementById('bar-btn-play');
 
 const playerModal = document.getElementById('player-modal');
 const queueModal = document.getElementById('queue-modal');
+const eqModal = document.getElementById('eq-modal');
+const volumePopup = document.getElementById('volume-popup');
+const fullCover = document.getElementById('full-cover');
 const modalSongTitle = document.getElementById('modal-song-title');
 const modalPlaylistName = document.getElementById('modal-playlist-name');
-const fullCover = document.getElementById('full-cover');
 
 const btnPlay = document.getElementById('btn-play');
 const btnPrev = document.getElementById('btn-prev');
@@ -181,10 +200,16 @@ const btnNext = document.getElementById('btn-next');
 const seekBar = document.getElementById('seek-bar');
 const currTime = document.getElementById('curr-time');
 const durTime = document.getElementById('dur-time');
-const volSlider = document.getElementById('vol-slider');
-const volLabel = document.getElementById('vol-label');
 
-// Render Playlists
+// Welcome Modal
+document.getElementById('btn-close-welcome').onclick = () => {
+  document.getElementById('welcome-modal').style.display = 'none';
+  setupAudioDSP();
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  showToast('Welcome to Amarjeet Studio!');
+};
+
+// Playlists Loading
 async function loadPlaylists() {
   let pls = await dbOps.getPlaylists();
   if (pls.length === 0) {
@@ -196,7 +221,10 @@ async function loadPlaylists() {
   pls.forEach((p) => {
     const chip = document.createElement('div');
     chip.className = `chip ${p.id === activePlaylistId ? 'active' : ''}`;
-    chip.textContent = p.name;
+    chip.innerHTML = `
+      <img src="${p.cover || DEFAULT_ART}" class="chip-img" alt="art" />
+      <span>${p.name}</span>
+    `;
     chip.onclick = () => switchPlaylist(p.id);
     playlistTabs.appendChild(chip);
   });
@@ -204,72 +232,99 @@ async function loadPlaylists() {
   currentPlaylistMeta = pls.find((p) => p.id === activePlaylistId) || pls[0];
   activePlaylistId = currentPlaylistMeta.id;
   viewPlaylistName.textContent = currentPlaylistMeta.name;
-  updateCoverDisplays(currentPlaylistMeta.cover || DEFAULT_ART);
+  updateCovers(currentPlaylistMeta.cover || DEFAULT_ART);
   loadTracks();
 }
 
-function updateCoverDisplays(url) {
+function updateCovers(url) {
   miniCover.src = url;
   fullCover.src = url;
 }
 
-// Switch Active Playlist
 async function switchPlaylist(id) {
   activePlaylistId = id;
   await loadPlaylists();
+  showToast(`Switched to: ${currentPlaylistMeta.name}`);
 }
 
-// Create New Playlist
-document.getElementById('btn-new-playlist').onclick = async () => {
-  const name = prompt('Enter Playlist Name:');
-  if (!name) return;
-  const newPl = { id: 'pl_' + Date.now(), name, cover: DEFAULT_ART };
-  await dbOps.savePlaylist(newPl);
-  activePlaylistId = newPl.id;
-  loadPlaylists();
+// Create Playlist Modal Handlers
+const createModal = document.getElementById('playlist-create-modal');
+const newPlaylistNameInput = document.getElementById('new-playlist-name');
+const newPlaylistImgInput = document.getElementById('new-playlist-img');
+const previewArtTag = document.getElementById('preview-art-tag');
+
+document.getElementById('btn-open-create-playlist').onclick = () => {
+  newPlaylistNameInput.value = '';
+  newPlaylistBase64Art = DEFAULT_ART;
+  previewArtTag.src = DEFAULT_ART;
+  createModal.style.display = 'flex';
 };
 
-// Upload Custom Cover Art for Active Playlist
-coverPicker.onchange = (e) => {
+document.getElementById('btn-cancel-playlist').onclick = () => {
+  createModal.style.display = 'none';
+};
+
+newPlaylistImgInput.onchange = (e) => {
   const file = e.target.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = async (evt) => {
-    const b64 = evt.target.result;
-    currentPlaylistMeta.cover = b64;
-    await dbOps.savePlaylist(currentPlaylistMeta);
-    updateCoverDisplays(b64);
-    updateMediaSession();
+  reader.onload = (ev) => {
+    newPlaylistBase64Art = ev.target.result;
+    previewArtTag.src = newPlaylistBase64Art;
   };
   reader.readAsDataURL(file);
 };
 
-// Load Tracks
+document.getElementById('btn-confirm-playlist').onclick = async () => {
+  const name = newPlaylistNameInput.value.trim();
+  if (!name) {
+    showToast('Please enter a playlist name!');
+    return;
+  }
+  const newPl = {
+    id: 'pl_' + Date.now(),
+    name,
+    cover: newPlaylistBase64Art || DEFAULT_ART
+  };
+  await dbOps.savePlaylist(newPl);
+  createModal.style.display = 'none';
+  activePlaylistId = newPl.id;
+  await loadPlaylists();
+  showToast(`Playlist "${name}" created!`);
+};
+
+// Tracks Loading
 async function loadTracks() {
   currentTracks = await dbOps.getTracks(activePlaylistId);
   currentTracks.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-  renderUpperSongList();
-  renderReorderList();
+  trackCountLabel.textContent = `${currentTracks.length} song${currentTracks.length === 1 ? '' : 's'}`;
+  renderUpperSongs();
+  renderReorderView();
 }
 
-// Render Upper Songs
-function renderUpperSongList() {
+function renderUpperSongs() {
   songList.innerHTML = '';
+  if (currentTracks.length === 0) {
+    songList.innerHTML = '<li style="color:var(--text-muted);text-align:center;padding:24px 0;">No songs here yet. Click "➕ Add Songs" above.</li>';
+    return;
+  }
   currentTracks.forEach((trk, idx) => {
     const li = document.createElement('li');
     li.className = `song-row ${idx === currentIndex ? 'active' : ''}`;
 
     const info = document.createElement('div');
     info.className = 'song-info';
-    info.innerHTML = `<strong class="song-name">${idx + 1}. ${trk.name}</strong>`;
+    info.innerHTML = `<span class="song-name"><strong>${idx + 1}.</strong> ${trk.name}</span>`;
     info.onclick = () => playTrack(idx);
 
     const btnDel = document.createElement('button');
     btnDel.className = 'btn-del';
-    btnDel.textContent = '✖';
+    btnDel.innerHTML = '🗑';
+    btnDel.title = 'Delete Song';
     btnDel.onclick = async (e) => {
       e.stopPropagation();
       await dbOps.deleteTrack(trk.id);
+      showToast(`Removed "${trk.name}"`);
       loadTracks();
     };
 
@@ -278,17 +333,16 @@ function renderUpperSongList() {
   });
 }
 
-// Render Reorder Modal
-function renderReorderList() {
+function renderReorderView() {
   reorderList.innerHTML = '';
   currentTracks.forEach((trk, idx) => {
     const li = document.createElement('li');
     li.className = 'song-row';
     li.innerHTML = `
-      <span class="song-name" style="width:70%">${idx + 1}. ${trk.name}</span>
+      <span class="song-name" style="max-width:68%">${idx + 1}. ${trk.name}</span>
       <div>
-        <button class="btn-sm" onclick="moveTrack(${idx}, -1)">▲</button>
-        <button class="btn-sm" onclick="moveTrack(${idx}, 1)">▼</button>
+        <button class="btn-action" onclick="moveTrack(${idx}, -1)">▲</button>
+        <button class="btn-action" onclick="moveTrack(${idx}, 1)">▼</button>
       </div>
     `;
     reorderList.appendChild(li);
@@ -309,13 +363,15 @@ window.moveTrack = async function(from, delta) {
   if (currentIndex === from) currentIndex = to;
   else if (currentIndex === to) currentIndex = from;
 
-  renderUpperSongList();
-  renderReorderList();
+  renderUpperSongs();
+  renderReorderView();
+  showToast('Playlist track order updated');
 };
 
-// Add Audio Files
+// Add Songs
 filePicker.onchange = async (e) => {
   const files = Array.from(e.target.files);
+  if (!files.length) return;
   for (let i = 0; i < files.length; i++) {
     await dbOps.saveTrack({
       playlistId: activePlaylistId,
@@ -324,84 +380,112 @@ filePicker.onchange = async (e) => {
       order: currentTracks.length + i
     });
   }
+  showToast(`Added ${files.length} song(s) successfully!`);
   loadTracks();
 };
 
-// Playback Logic
+// Play Track
 function playTrack(idx) {
   if (idx < 0 || idx >= currentTracks.length) return;
   setupAudioDSP();
   if (audioCtx.state === 'suspended') audioCtx.resume();
 
   currentIndex = idx;
-  const track = currentTracks[currentIndex];
-  audio.src = URL.createObjectURL(track.blob);
+  const trk = currentTracks[currentIndex];
+  audio.src = URL.createObjectURL(trk.blob);
   audio.play();
 
-  updatePlaybackUI();
-  updateMediaSession();
-  renderUpperSongList();
-}
-
-function updatePlaybackUI() {
-  const track = currentTracks[currentIndex];
-  if (!track) return;
-  miniTitle.textContent = track.name;
+  miniTitle.textContent = trk.name;
   miniSub.textContent = `Playlist: ${currentPlaylistMeta.name}`;
-  modalSongTitle.textContent = track.name;
+  modalSongTitle.textContent = trk.name;
   modalPlaylistName.textContent = `Playlist: ${currentPlaylistMeta.name}`;
   btnPlay.textContent = '⏸';
-  btnMiniPlay.textContent = '⏸';
+  barBtnPlay.textContent = '⏸';
+
+  updateMediaSession(trk);
+  renderUpperSongs();
+  showToast(`Playing: ${trk.name}`);
 }
 
-// Media Session with Custom Art, Name, and Attribution
-function updateMediaSession() {
-  if (!('mediaSession' in navigator) || currentIndex === -1) return;
-  const track = currentTracks[currentIndex];
+// Media Session (Lock screen notification)
+function updateMediaSession(trk) {
+  if (!('mediaSession' in navigator)) return;
   navigator.mediaSession.metadata = new MediaMetadata({
-    title: track.name,
+    title: trk.name,
     artist: 'Made by & for Amarjeet kumar',
     album: currentPlaylistMeta.name,
     artwork: [{ src: currentPlaylistMeta.cover || DEFAULT_ART, sizes: '512x512', type: 'image/png' }]
   });
 
-  navigator.mediaSession.setActionHandler('play', () => { audio.play(); syncPlayBtns(true); });
-  navigator.mediaSession.setActionHandler('pause', () => { audio.pause(); syncPlayBtns(false); });
+  navigator.mediaSession.setActionHandler('play', () => { audio.play(); syncButtons(true); });
+  navigator.mediaSession.setActionHandler('pause', () => { audio.pause(); syncButtons(false); });
   navigator.mediaSession.setActionHandler('previoustrack', () => playTrack(currentIndex - 1));
-  navigator.mediaSession.setActionHandler('nexttrack', () => playTrack(currentIndex + 1));
+  navigator.mediaSession.setActionHandler('nexttrack', () => playNextWithLoop());
 }
 
-function syncPlayBtns(isPlaying) {
+function syncButtons(isPlaying) {
   btnPlay.textContent = isPlaying ? '⏸' : '▶';
-  btnMiniPlay.textContent = isPlaying ? '⏸' : '▶';
+  barBtnPlay.textContent = isPlaying ? '⏸' : '▶';
 }
 
-// Play / Pause Click Handlers
 function togglePlay() {
   setupAudioDSP();
-  if (audioCtx.state === 'suspended') audioCtx.resume();
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
   if (!audio.src && currentTracks.length > 0) return playTrack(0);
   if (audio.paused) {
     audio.play();
-    syncPlayBtns(true);
+    syncButtons(true);
+    showToast('Resumed playback');
   } else {
     audio.pause();
-    syncPlayBtns(false);
+    syncButtons(false);
+    showToast('Paused');
   }
 }
 
-btnPlay.onclick = togglePlay;
-btnMiniPlay.onclick = (e) => { e.stopPropagation(); togglePlay(); };
-btnPrev.onclick = () => playTrack(currentIndex - 1);
-btnNext.onclick = () => playTrack(currentIndex + 1);
-audio.onended = () => playTrack(currentIndex + 1);
+// Infinite Loop: If last song ends, repeat the playlist from index 0
+function playNextWithLoop() {
+  if (currentTracks.length === 0) return;
+  let nextIdx = currentIndex + 1;
+  if (nextIdx >= currentTracks.length) {
+    nextIdx = 0; // Loop back to the first song
+    showToast('Repeating playlist from start');
+  }
+  playTrack(nextIdx);
+}
 
-// Volume Handler (Default is 20%)
-volSlider.oninput = (e) => {
-  const val = e.target.value;
-  audio.volume = val / 100;
-  volLabel.textContent = `${val}%`;
+barBtnPlay.onclick = (e) => { e.stopPropagation(); togglePlay(); };
+btnPlay.onclick = togglePlay;
+btnPrev.onclick = () => playTrack(currentIndex > 0 ? currentIndex - 1 : currentTracks.length - 1);
+btnNext.onclick = playNextWithLoop;
+audio.onended = playNextWithLoop;
+
+// Open Modals from Bottom Bar Icons
+document.getElementById('open-full-player').onclick = () => { playerModal.style.display = 'flex'; };
+document.getElementById('close-modal-btn').onclick = () => { playerModal.style.display = 'none'; };
+
+document.getElementById('bar-btn-playlist').onclick = () => { queueModal.style.display = 'flex'; };
+document.getElementById('close-queue-btn').onclick = () => { queueModal.style.display = 'none'; };
+document.getElementById('btn-open-queue').onclick = () => { queueModal.style.display = 'flex'; };
+
+document.getElementById('bar-btn-eq').onclick = () => { eqModal.style.display = 'flex'; };
+document.getElementById('close-eq-btn').onclick = () => { eqModal.style.display = 'none'; };
+
+// Volume Popup Toggle
+const btnBarVolume = document.getElementById('bar-btn-volume');
+btnBarVolume.onclick = (e) => {
+  e.stopPropagation();
+  volumePopup.style.display = volumePopup.style.display === 'none' ? 'block' : 'none';
 };
+window.addEventListener('click', (e) => {
+  if (!volumePopup.contains(e.target) && e.target !== btnBarVolume) {
+    volumePopup.style.display = 'none';
+  }
+});
+
+// Dual Volume Slider Synchronization
+document.getElementById('vol-slider').oninput = (e) => applyVolume(e.target.value);
+document.getElementById('vol-popup-slider').oninput = (e) => applyVolume(e.target.value);
 
 // Seek Bar
 audio.ontimeupdate = () => {
@@ -420,13 +504,7 @@ seekBar.oninput = () => {
   if (audio.duration) audio.currentTime = (seekBar.value / 100) * audio.duration;
 };
 
-// Modals UI Toggle
-document.getElementById('open-full-btn').onclick = () => { playerModal.style.display = 'flex'; };
-document.getElementById('close-modal-btn').onclick = () => { playerModal.style.display = 'none'; };
-document.getElementById('btn-open-queue').onclick = () => { queueModal.style.display = 'flex'; };
-document.getElementById('close-queue-btn').onclick = () => { queueModal.style.display = 'none'; };
-
-// Equalizer Sliders
+// Equalizer Inputs
 document.querySelectorAll('[data-band]').forEach((s) => {
   s.oninput = (e) => {
     const b = parseInt(e.target.dataset.band, 10);
@@ -442,12 +520,30 @@ document.getElementById('eq-preamp').oninput = (e) => {
   if (preampGain) preampGain.gain.value = Math.pow(10, val / 20) * 0.45;
 };
 
+document.getElementById('btn-reset-eq').onclick = () => {
+  document.getElementById('eq-preamp').value = 14.1;
+  document.getElementById('val-preamp').textContent = '14.1dB';
+  if (preampGain) preampGain.gain.value = Math.pow(10, 14.1 / 20) * 0.45;
+
+  defaultGains.forEach((g, i) => {
+    const slider = document.querySelector(`[data-band="${i}"]`);
+    slider.value = g;
+    document.getElementById(`val-${bands[i]}`).textContent = `${g}dB`;
+    if (filters[i]) filters[i].gain.value = g;
+  });
+  showToast('Equalizer reset to default preset');
+};
+
 document.getElementById('eq-enable').onchange = (e) => {
   const on = e.target.checked;
   filters.forEach((f, i) => {
-    f.gain.value = on ? parseFloat(document.querySelectorAll('[data-band]')[i].value) : 0;
+    f.gain.value = on ? parseFloat(document.querySelector(`[data-band="${i}"]`).value) : 0;
   });
+  showToast(on ? 'Audio DSP Enabled' : 'DSP Bypassed');
 };
 
-// Bootstrap
-initDB().then(() => loadPlaylists());
+// Initial Bootstrap
+initDB().then(() => {
+  loadPlaylists();
+  applyVolume(20); // 20% Initial default
+});
