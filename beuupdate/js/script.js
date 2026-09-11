@@ -1,5 +1,5 @@
 // ================= CONFIGURATION =================
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby2caGq5MLuVLivuzc0b68NC_M0Ruy40zbeTwJYzEaJM7x-WckoSQ6R2yFYwcuDoP5h2g/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyoY0AwpSTsOQ7ER8_wY-x_zEEnu41K1TRI6jHV4ylIQGVoWcQ_D8ebCfiuoTv4rPgS/exec";
 const CACHE_KEY = "gecm_portal_catalog_cache";
 
 // Global Portal State
