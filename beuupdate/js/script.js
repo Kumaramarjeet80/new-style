@@ -7,7 +7,8 @@ let portalData = {
   categories: [],
   subcategories: [],
   cards: [],
-  popups: []
+  popups: [],
+  activeLive: null
 };
 let currentCategoryId = null;
 let currentSubcategoryId = null;
@@ -46,14 +47,15 @@ function initUserPortal() {
   setupBreadcrumbs();
   setupDocViewerControls();
   setupCelebrationToastControls();
+  setupLiveViewerControls();
   
-  // 1. Instant Cache Hydration or Instant Fallback (Clears the loading spinner immediately)
+  // 1. Instant Cache Hydration or Instant Fallback
   const hasLoadedCache = loadPortalDataFromCache();
   if (!hasLoadedCache) {
     renderFallbackCategories();
   }
   
-  // 2. Background Revalidation (Updates in background without freezing UI)
+  // 2. Background Revalidation
   fetchPortalCatalog();
 }
 
@@ -65,6 +67,7 @@ function loadPortalDataFromCache() {
       if (parsed && Array.isArray(parsed.categories) && parsed.categories.length > 0) {
         portalData = parsed;
         renderCategories();
+        updateLiveBannerUI(portalData.activeLive);
         if (portalData.popups && portalData.popups.length > 0) {
           initSequentialPopupQueue(portalData.popups);
         }
@@ -96,7 +99,8 @@ function fetchPortalCatalog() {
           categories: data.categories || [],
           subcategories: data.subcategories || [],
           cards: data.cards || [],
-          popups: data.popups || (data.popup ? [data.popup] : [])
+          popups: data.popups || (data.popup ? [data.popup] : []),
+          activeLive: data.activeLive || null
         };
 
         const hasChanged = JSON.stringify(freshData) !== JSON.stringify(portalData);
@@ -114,6 +118,8 @@ function fetchPortalCatalog() {
           } else if (currentSubcategoryId) {
             openSubcategory(currentSubcategoryId);
           }
+
+          updateLiveBannerUI(portalData.activeLive);
 
           if (portalData.popups && portalData.popups.length > 0 && !popupCycleTimer) {
             initSequentialPopupQueue(portalData.popups);
@@ -164,8 +170,10 @@ function renderCategories() {
 
   const viewCatalog = document.getElementById('view-catalog');
   const viewGenerator = document.getElementById('view-generator');
+  const viewLive = document.getElementById('view-live');
   if (viewCatalog) viewCatalog.style.display = 'block';
   if (viewGenerator) viewGenerator.style.display = 'none';
+  if (viewLive) viewLive.style.display = 'none';
 
   const stageCat = document.getElementById('stageCategories');
   const stageSub = document.getElementById('stageSubcategories');
@@ -338,9 +346,11 @@ function launchCardAction(cardData) {
   activeCard = cardData;
   const viewCatalog = document.getElementById('view-catalog');
   const viewGenerator = document.getElementById('view-generator');
+  const viewLive = document.getElementById('view-live');
   const activeCardLabel = document.getElementById('activeCardLabel');
 
   if (viewCatalog) viewCatalog.style.display = 'none';
+  if (viewLive) viewLive.style.display = 'none';
   if (viewGenerator) viewGenerator.style.display = 'block';
   if (activeCardLabel) activeCardLabel.textContent = cardData.title;
 
@@ -700,7 +710,241 @@ function logTelemetryAndArchiveToDrive(pdfBase64) {
 }
 
 /* =========================================================
-   4. EMBEDDED DOCUMENT / PDF VIEWER CONTROLS
+   4. LIVE BROADCAST BANNER & WEBRTC VIEWER CONTROLS
+========================================================= */
+let viewerPeerInstance = null;
+let currentLiveCall = null;
+
+function updateLiveBannerUI(activeLive) {
+  const banner = document.getElementById('liveBroadcastBanner');
+  if (!banner) return;
+
+  if (activeLive && (activeLive.isLive === true || String(activeLive.isLive).toUpperCase() === "TRUE")) {
+    const topicEl = document.getElementById('liveBannerTopic');
+    const descEl = document.getElementById('liveBannerDesc');
+    const timeEl = document.getElementById('liveBannerTime');
+    const logoImg = document.getElementById('liveBannerLogo');
+    const placeholder = document.getElementById('liveBannerPlaceholder');
+
+    if (topicEl) topicEl.textContent = activeLive.topic || "GEC Munger Live Broadcast";
+    if (descEl) descEl.textContent = activeLive.description || "Official academic session is now live.";
+    if (timeEl) timeEl.textContent = `Started: ${activeLive.startedAt || activeLive.timestamp || 'Just now'}`;
+
+    if (activeLive.thumbnailUrl && activeLive.thumbnailUrl.trim().length > 5) {
+      if (logoImg) {
+        logoImg.src = activeLive.thumbnailUrl;
+        logoImg.style.display = 'block';
+      }
+      if (placeholder) placeholder.style.display = 'none';
+    } else {
+      if (logoImg) logoImg.style.display = 'none';
+      if (placeholder) placeholder.style.display = 'block';
+    }
+
+    banner.style.display = 'flex';
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+function setupLiveViewerControls() {
+  const btnWatchLive = document.getElementById('btnWatchLive');
+  const btnBackFromLive = document.getElementById('btnBackFromLive');
+  const btnAudioToggle = document.getElementById('btnLiveAudioToggle');
+  const btnFullscreen = document.getElementById('btnLiveFullscreen');
+  const btnExitFullscreen = document.getElementById('btnLiveExitFullscreen');
+  const videoEl = document.getElementById('liveViewerVideo');
+  const videoContainer = document.getElementById('liveVideoContainer');
+
+  // Watch Live Button Click
+  if (btnWatchLive) {
+    btnWatchLive.addEventListener('click', () => {
+      openLiveStreamWatchRoom();
+    });
+  }
+
+  // Back to Catalog Click
+  if (btnBackFromLive) {
+    btnBackFromLive.addEventListener('click', () => {
+      closeLiveStreamWatchRoom();
+    });
+  }
+
+  // Audio Toggle Button
+  if (btnAudioToggle && videoEl) {
+    btnAudioToggle.addEventListener('click', () => {
+      const audioIcon = document.getElementById('liveAudioIcon');
+      const audioLabel = document.getElementById('liveAudioLabel');
+
+      if (videoEl.muted) {
+        videoEl.muted = false;
+        if (audioIcon) audioIcon.textContent = "🔇";
+        if (audioLabel) audioLabel.textContent = "Mute Audio";
+      } else {
+        videoEl.muted = true;
+        if (audioIcon) audioIcon.textContent = "🔊";
+        if (audioLabel) audioLabel.textContent = "Unmute Audio";
+      }
+    });
+  }
+
+  // Fullscreen Buttons
+  if (btnFullscreen && videoContainer) {
+    btnFullscreen.addEventListener('click', () => {
+      if (videoContainer.requestFullscreen) {
+        videoContainer.requestFullscreen();
+      } else if (videoContainer.webkitRequestFullscreen) {
+        videoContainer.webkitRequestFullscreen();
+      }
+    });
+  }
+
+  if (btnExitFullscreen) {
+    btnExitFullscreen.addEventListener('click', () => {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+      }
+    });
+  }
+
+  // Sync Fullscreen Button State on change or ESC key
+  document.addEventListener('fullscreenchange', () => {
+    const isFull = Boolean(document.fullscreenElement);
+    if (btnFullscreen) btnFullscreen.style.display = isFull ? 'none' : 'inline-flex';
+    if (btnExitFullscreen) btnExitFullscreen.style.display = isFull ? 'inline-flex' : 'none';
+  });
+}
+
+function openLiveStreamWatchRoom() {
+  const activeLive = portalData.activeLive;
+  if (!activeLive) {
+    alert("No active live stream found at this time.");
+    return;
+  }
+
+  const viewCatalog = document.getElementById('view-catalog');
+  const viewGenerator = document.getElementById('view-generator');
+  const viewLive = document.getElementById('view-live');
+
+  if (viewCatalog) viewCatalog.style.display = 'none';
+  if (viewGenerator) viewGenerator.style.display = 'none';
+  if (viewLive) viewLive.style.display = 'block';
+
+  // Populate Info
+  const topicEl = document.getElementById('liveWatchTopic');
+  const descEl = document.getElementById('liveWatchDesc');
+  const timeEl = document.getElementById('liveWatchTimestamp');
+
+  if (topicEl) topicEl.textContent = activeLive.topic || "GEC Munger Live Broadcast";
+  if (descEl) descEl.textContent = activeLive.description || "Official academic lecture session.";
+  if (timeEl) timeEl.textContent = `🕒 Stream Started: ${activeLive.startedAt || activeLive.timestamp || 'Today'}`;
+
+  // Start Peer Client & Connect to Broadcast Host
+  connectToLiveBroadcast(activeLive.peerId || "gecm-live-host");
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function connectToLiveBroadcast(hostPeerId) {
+  const connectingOverlay = document.getElementById('liveConnectingOverlay');
+  const connectingText = document.getElementById('liveConnectingText');
+  const videoEl = document.getElementById('liveViewerVideo');
+
+  if (connectingOverlay) connectingOverlay.style.display = 'flex';
+  if (connectingText) connectingText.textContent = "Connecting to live academic broadcast...";
+
+  if (viewerPeerInstance) {
+    try { viewerPeerInstance.destroy(); } catch (e) {}
+  }
+
+  viewerPeerInstance = new Peer();
+
+  viewerPeerInstance.on('open', () => {
+    // Call host peer
+    try {
+      // Create empty stream to establish call handshake
+      const emptyStream = new MediaStream();
+      currentLiveCall = viewerPeerInstance.call(hostPeerId, emptyStream);
+
+      if (!currentLiveCall) {
+        if (connectingText) connectingText.textContent = "Host is offline or unreachable.";
+        return;
+      }
+
+      currentLiveCall.on('stream', (remoteStream) => {
+        if (videoEl) {
+          videoEl.srcObject = remoteStream;
+          videoEl.muted = false; // user clicked watch live, play unmuted
+          const playPromise = videoEl.play();
+          if (playPromise !== undefined) {
+            playPromise.then(() => {
+              if (connectingOverlay) connectingOverlay.style.display = 'none';
+              const audioIcon = document.getElementById('liveAudioIcon');
+              const audioLabel = document.getElementById('liveAudioLabel');
+              if (audioIcon) audioIcon.textContent = "🔇";
+              if (audioLabel) audioLabel.textContent = "Mute Audio";
+            }).catch(() => {
+              // Autoplay policy fallback: mute and play
+              videoEl.muted = true;
+              videoEl.play();
+              if (connectingOverlay) connectingOverlay.style.display = 'none';
+            });
+          }
+        }
+      });
+
+      currentLiveCall.on('close', () => {
+        if (connectingOverlay) {
+          connectingOverlay.style.display = 'flex';
+          if (connectingText) connectingText.textContent = "Live stream has ended.";
+        }
+      });
+
+      currentLiveCall.on('error', (err) => {
+        console.error("Peer call error:", err);
+        if (connectingText) connectingText.textContent = "Unable to connect to host stream.";
+      });
+
+    } catch (err) {
+      console.error("Call initiation error:", err);
+      if (connectingText) connectingText.textContent = "Connection error. Retrying...";
+    }
+  });
+
+  viewerPeerInstance.on('error', (err) => {
+    console.error("Peer client error:", err);
+    if (connectingText) connectingText.textContent = "Connection error. Please refresh.";
+  });
+}
+
+function closeLiveStreamWatchRoom() {
+  const videoEl = document.getElementById('liveViewerVideo');
+  if (videoEl) {
+    videoEl.pause();
+    videoEl.srcObject = null;
+  }
+
+  if (currentLiveCall) {
+    try { currentLiveCall.close(); } catch (e) {}
+    currentLiveCall = null;
+  }
+
+  if (viewerPeerInstance) {
+    try { viewerPeerInstance.destroy(); } catch (e) {}
+    viewerPeerInstance = null;
+  }
+
+  const viewLive = document.getElementById('view-live');
+  const viewCatalog = document.getElementById('view-catalog');
+
+  if (viewLive) viewLive.style.display = 'none';
+  if (viewCatalog) viewCatalog.style.display = 'block';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* =========================================================
+   5. EMBEDDED DOCUMENT / PDF VIEWER CONTROLS
 ========================================================= */
 function setupDocViewerControls() {
   const closeBtn = document.getElementById('docViewerCloseBtn');
@@ -765,7 +1009,9 @@ function setupBreadcrumbs() {
     btnBack.addEventListener('click', () => {
       const viewGen = document.getElementById('view-generator');
       const viewCat = document.getElementById('view-catalog');
+      const viewLive = document.getElementById('view-live');
       if (viewGen) viewGen.style.display = 'none';
+      if (viewLive) viewLive.style.display = 'none';
       if (viewCat) viewCat.style.display = 'block';
     });
   }
@@ -803,7 +1049,7 @@ function updateBreadcrumbs() {
 }
 
 /* =========================================================
-   5. SEQUENTIAL MULTI-POPUP QUEUE (LATEST FIRST)
+   6. SEQUENTIAL MULTI-POPUP QUEUE (LATEST FIRST)
 ========================================================= */
 function formatVideoEmbedUrl(url) {
   if (!url) return "";
@@ -1031,7 +1277,7 @@ function showUserPopup(p, onClosedCallback) {
 }
 
 /* =========================================================
-   6. ANIMATED CELEBRATION DOWNLOAD TOAST
+   7. ANIMATED CELEBRATION DOWNLOAD TOAST
 ========================================================= */
 let toastDismissTimer = null;
 
