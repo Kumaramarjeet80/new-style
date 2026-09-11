@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Academic Portal & Cover Page Generator - GEC Munger</title>
 
-  <!-- Typography: Modern Inter, Serif classics for Academic A4 -->
+  <!-- Typography: Modern Inter, Serif classics for Academic A4[cite: 3] -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=EB+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700;800&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300&family=Montserrat:wght@400;600;700&family=Playfair+Display:ital,wght@0,500;0,700;1,400&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 
-  <!-- Core HTML to PDF Library -->
+  <!-- Core HTML to PDF Library[cite: 3] -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
   <!-- PeerJS for WebRTC Real-Time Live Streaming -->
@@ -21,7 +21,7 @@
 <body class="user-body">
 
   <!-- =========================================================
-       VIEW 1: CATALOG PORTAL (EXPLORER)
+       VIEW 1: CATALOG PORTAL (EXPLORER)[cite: 3]
   ========================================================= -->
   <div id="view-catalog" class="portal-container">
     
@@ -34,7 +34,7 @@
       <p class="portal-subtitle">Access standardized university cover pages, lecture modules, lab records, and Bihar Engineering University curriculum materials.</p>
     </header>
 
-    <!-- LIVE BROADCAST ANNOUNCEMENT BANNER (Positioned directly on top of Categories) -->
+    <!-- LIVE BROADCAST ANNOUNCEMENT BANNER (On top of Categories with Refresh Button) -->
     <div id="liveBroadcastBanner" class="live-banner-box" style="display:none;">
       <div class="live-banner-content">
         <div class="live-banner-media">
@@ -43,9 +43,9 @@
         </div>
         <div class="live-banner-info">
           <div class="live-tag-row">
-            <span class="live-pulse-badge">
+            <span class="live-pulse-badge" id="liveStatusPill">
               <span class="live-pulse-dot"></span>
-              LIVE NOW
+              <span id="liveStatusPillText">LIVE NOW</span>
             </span>
             <span class="live-timestamp-badge" id="liveBannerTime">Started: Just now</span>
           </div>
@@ -54,14 +54,19 @@
         </div>
       </div>
       <div class="live-banner-action">
+        <!-- Reconnect / Refresh Live Card Button -->
+        <button type="button" id="btnRefreshLiveStatus" class="btn-refresh-live" title="Refresh Live Status">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+          <span>Refresh</span>
+        </button>
         <button type="button" id="btnWatchLive" class="btn-watch-live">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-          Watch Live Stream
+          <span>Watch Live Stream</span>
         </button>
       </div>
     </div>
 
-    <!-- Breadcrumb Navigation Bar -->
+    <!-- Breadcrumb Navigation Bar[cite: 3] -->
     <nav class="breadcrumb-bar" id="breadcrumbNav" style="display:none;">
       <span class="breadcrumb-item" id="bcHome">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
@@ -73,7 +78,7 @@
       <span class="breadcrumb-item active" id="bcSub" style="display:none;"></span>
     </nav>
 
-    <!-- Stage A: Categories Grid -->
+    <!-- Stage A: Categories Grid[cite: 3] -->
     <div id="stageCategories">
       <div class="catalog-grid" id="categoryGrid">
         <div class="empty-state-card">
@@ -83,12 +88,12 @@
       </div>
     </div>
 
-    <!-- Stage B: Subcategories Grid -->
+    <!-- Stage B: Subcategories Grid[cite: 3] -->
     <div id="stageSubcategories" style="display:none;">
       <div class="catalog-grid" id="subcategoryGrid"></div>
     </div>
 
-    <!-- Stage C: Cards Grid -->
+    <!-- Stage C: Cards Grid[cite: 3] -->
     <div id="stageCards" style="display:none;">
       <div class="cards-grid" id="cardGrid"></div>
     </div>
@@ -117,26 +122,55 @@
         <!-- 1. Live Topic Title -->
         <div class="live-watch-header">
           <h2 class="live-watch-topic" id="liveWatchTopic">Engineering Mathematics Live Problem Solving</h2>
-          <span class="live-tag-pill">🔴 BROADCAST IN PROGRESS</span>
+          <span class="live-tag-pill" id="livePlayerStatusPill">🔴 BROADCAST IN PROGRESS</span>
         </div>
 
         <!-- 2. Live Video Screen Player -->
         <div class="live-video-wrapper" id="liveVideoContainer">
           <video id="liveViewerVideo" autoplay playsinline></video>
           
-          <!-- Loading status overlay while WebRTC connects -->
+          <!-- Loading / Connecting overlay -->
           <div id="liveConnectingOverlay" class="live-connecting-overlay">
             <div class="spinner"></div>
             <span id="liveConnectingText">Connecting to live stream...</span>
           </div>
+
+          <!-- Waiting Message Overlay (When user clicks card but admin is not live yet) -->
+          <div id="liveWaitingOverlay" class="live-waiting-overlay" style="display:none;">
+            <div class="live-waiting-box">
+              <span class="live-pulse-dot-large"></span>
+              <h3 class="live-waiting-title">Live Session Scheduled</h3>
+              <p class="live-waiting-msg">Wait for a moment, live will start shortly...</p>
+              <button type="button" id="btnPlayerWaitingReconnect" class="btn-live-reconnect">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+                <span>Check / Reconnect Now</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Floating Fullscreen Overlay Controls (Appear during Full Screen Mode) -->
+          <div id="liveFsControlsOverlay" class="live-fs-controls-overlay">
+            <button type="button" id="btnFsLiveAudioToggle" class="btn-fs-control" title="Toggle Audio">
+              <span id="fsLiveAudioIcon">🔊</span>
+              <span id="fsLiveAudioLabel">Unmute Audio</span>
+            </button>
+            <button type="button" id="btnFsLiveExitFullscreen" class="btn-fs-control" title="Exit Fullscreen">
+              <span>✕</span>
+              <span>Exit Full Screen</span>
+            </button>
+          </div>
         </div>
 
-        <!-- 3. Player Video Controls (Unmute/Mute & Fullscreen Buttons) -->
+        <!-- 3. Player Video Controls Below Video -->
         <div class="live-controls-row">
           <div class="live-controls-left">
             <button type="button" id="btnLiveAudioToggle" class="btn-live-control">
               <span id="liveAudioIcon">🔊</span>
               <span id="liveAudioLabel">Unmute Audio</span>
+            </button>
+            <button type="button" id="btnLivePlayerReconnect" class="btn-live-control" title="Reconnect stream">
+              <span>🔄</span>
+              <span>Reconnect Live</span>
             </button>
           </div>
           <div class="live-controls-right">
@@ -170,7 +204,7 @@
   </div>
 
   <!-- =========================================================
-       VIEW 3: GENERATOR WORKSPACE (PDF COVER PAGE CANVAS)
+       VIEW 3: GENERATOR WORKSPACE (PDF COVER PAGE CANVAS)[cite: 3]
   ========================================================= -->
   <div id="view-generator">
     
@@ -191,7 +225,7 @@
 
     <div class="user-body-layout">
       
-      <!-- Controls Sidebar -->
+      <!-- Controls Sidebar[cite: 3] -->
       <aside class="editor-sidebar">
 
         <button class="download-btn" id="btnDirectDownload">
@@ -200,7 +234,7 @@
         </button>
         <p class="download-subtext">Generates standard single-page A4 document</p>
 
-        <!-- Academic Selection -->
+        <!-- Academic Selection[cite: 3] -->
         <section class="sidebar-section">
           <h3>Academic Selection</h3>
           <div class="form-group">
@@ -228,7 +262,7 @@
           </div>
         </section>
 
-        <!-- Border Settings -->
+        <!-- Border Settings[cite: 3] -->
         <section class="sidebar-section">
           <h3>Border Configuration</h3>
           <div class="form-group">
@@ -249,7 +283,7 @@
           </div>
         </section>
 
-        <!-- Typography Controls -->
+        <!-- Typography Controls[cite: 3] -->
         <section class="sidebar-section">
           <h3>Typography & Scaling</h3>
           <div class="form-group">
@@ -273,12 +307,12 @@
           </div>
         </section>
 
-        <!-- Universal Editable Fields Section -->
+        <!-- Universal Editable Fields Section[cite: 3] -->
         <section class="sidebar-section" id="templateEditorSection">
           <h3>Edit Document Details</h3>
           <p style="font-size: 11px; color: #64748b; margin-bottom: 12px;">Modify any text element below to customize your cover page in real time.</p>
 
-          <!-- Standard Pre-Mapped Inputs -->
+          <!-- Standard Pre-Mapped Inputs[cite: 3] -->
           <div id="standardInputsWrap">
             <div class="form-group">
               <label for="inCollege1">College Line 1</label>
@@ -346,13 +380,13 @@
             </div>
           </div>
 
-          <!-- Dynamic Container -->
+          <!-- Dynamic Container[cite: 3] -->
           <div id="dynamicCustomFieldsWrap"></div>
         </section>
 
       </aside>
 
-      <!-- A4 Output Preview Canvas -->
+      <!-- A4 Output Preview Canvas[cite: 3] -->
       <main class="preview-wrapper">
         <div class="page" id="pageDocument">
           <div class="page-border-outer" id="outerBorder">
@@ -423,7 +457,7 @@
   </div>
 
   <!-- =========================================================
-       VIEW 4: EMBEDDED DOCUMENT / PDF VIEWER MODAL
+       VIEW 4: EMBEDDED DOCUMENT / PDF VIEWER MODAL[cite: 3]
   ========================================================= -->
   <div class="doc-viewer-overlay" id="docViewerModal" style="display:none;">
     <div class="doc-viewer-header">
@@ -450,7 +484,7 @@
   </div>
 
   <!-- =========================================================
-       DYNAMIC ADMIN MEDIA POPUP MODAL
+       DYNAMIC ADMIN MEDIA POPUP MODAL[cite: 3]
   ========================================================= -->
   <div class="modal-overlay" id="adminBroadcastModal">
     <div class="modal-box" id="adminModalBox">
@@ -480,7 +514,7 @@
   </div>
 
   <!-- =========================================================
-       ANIMATED CELEBRATION DOWNLOAD TOAST
+       ANIMATED CELEBRATION DOWNLOAD TOAST[cite: 3]
   ========================================================= -->
   <div class="celebration-toast" id="celebrationToast">
     <div class="celebration-toast-body">
