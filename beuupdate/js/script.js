@@ -87,7 +87,6 @@ function fetchPortalCatalog(onCompleteCallback) {
     return;
   }
 
-  // 8-second fetch timeout controller
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 8000);
 
@@ -201,10 +200,7 @@ function renderCategories() {
   portalData.categories.forEach(cat => {
     const card = document.createElement('div');
     card.className = "category-card";
-    
-    const timeHtml = cat.createdAt 
-      ? `<div class="card-timestamp-badge">🕒 Published: ${cat.createdAt}</div>`
-      : ``;
+    const timeHtml = cat.createdAt ? `<div class="card-timestamp-badge">🕒 Published: ${cat.createdAt}</div>` : ``;
 
     card.innerHTML = `
       <div>
@@ -250,10 +246,7 @@ function openCategory(catId) {
   filteredSubs.forEach(sub => {
     const card = document.createElement('div');
     card.className = "category-card";
-    
-    const timeHtml = sub.createdAt 
-      ? `<div class="card-timestamp-badge">🕒 Added: ${sub.createdAt}</div>`
-      : ``;
+    const timeHtml = sub.createdAt ? `<div class="card-timestamp-badge">🕒 Added: ${sub.createdAt}</div>` : ``;
 
     card.innerHTML = `
       <div>
@@ -314,9 +307,7 @@ function openSubcategory(subId) {
       : ``;
 
     cardEl.innerHTML = `
-      <div class="card-thumbnail-wrap">
-        ${thumbHtml}
-      </div>
+      <div class="card-thumbnail-wrap">${thumbHtml}</div>
       <div class="card-body">
         <div class="card-title">${cardData.title}</div>
         <div class="card-desc">${cardData.description || "Academic resource ready for access."}</div>
@@ -449,17 +440,13 @@ function syncAllText() {
   bindings.forEach(b => {
     const inEl = document.getElementById(b.input);
     const outEl = document.getElementById(b.output);
-    if (inEl && outEl) {
-      outEl.textContent = inEl.value;
-    }
+    if (inEl && outEl) outEl.textContent = inEl.value;
   });
 
   customTemplateDynamicBindings.forEach(b => {
     const inEl = document.getElementById(b.input);
     const outEl = document.getElementById(b.output);
-    if (inEl && outEl) {
-      outEl.textContent = inEl.value;
-    }
+    if (inEl && outEl) outEl.textContent = inEl.value;
   });
 }
 
@@ -519,9 +506,7 @@ function initPdfGeneratorEngine() {
 
   bindings.forEach(b => {
     const inEl = document.getElementById(b.input);
-    if (inEl) {
-      inEl.addEventListener('input', syncAllText);
-    }
+    if (inEl) inEl.addEventListener('input', syncAllText);
   });
 
   const semSelect = document.getElementById('inSemester');
@@ -624,14 +609,7 @@ function initPdfGeneratorEngine() {
         margin: 0,
         filename: filename,
         image: { type: 'jpeg', quality: 1.0 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          allowTaint: true,
-          logging: false,
-          scrollX: 0,
-          scrollY: 0
-        },
+        html2canvas: { scale: 2, useCORS: true, allowTaint: true, logging: false, scrollX: 0, scrollY: 0 },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
         pagebreak: { mode: 'avoid-all' }
       };
@@ -715,14 +693,16 @@ function logTelemetryAndArchiveToDrive(pdfBase64) {
 }
 
 /* =========================================================
-   4. LIVE BROADCAST BANNER, WAITING ROOM & WEBRTC CONTROLS
+   4. STABLE WEBRTC VIEWER ENGINE WITH AUTO-RECONNECT & SYNC
 ========================================================= */
 const BROADCAST_HOST_ID = "gecm-live-host";
 let viewerPeerInstance = null;
 let currentLiveCall = null;
 let livePollingInterval = null;
+let autoReconnectInterval = null;
+let isReconnecting = false;
 
-// Extended STUN configuration from reference files
+// Extended STUN configuration from reference file for full NAT traversal
 const ICE_CONFIG = {
   config: {
     iceServers: [
@@ -815,14 +795,8 @@ function setupLiveViewerControls() {
   const btnWaitingReconnect = document.getElementById('btnPlayerWaitingReconnect');
   const videoContainer = document.getElementById('liveVideoContainer');
 
-  // Watch Live Button Click
-  if (btnWatchLive) {
-    btnWatchLive.addEventListener('click', () => {
-      openLiveStreamWatchRoom();
-    });
-  }
+  if (btnWatchLive) btnWatchLive.addEventListener('click', () => openLiveStreamWatchRoom());
 
-  // Live Card Refresh Button Click
   if (btnRefreshLive) {
     btnRefreshLive.addEventListener('click', () => {
       btnRefreshLive.disabled = true;
@@ -834,30 +808,14 @@ function setupLiveViewerControls() {
     });
   }
 
-  // Back to Catalog Click
-  if (btnBackFromLive) {
-    btnBackFromLive.addEventListener('click', () => {
-      closeLiveStreamWatchRoom();
-    });
-  }
+  if (btnBackFromLive) btnBackFromLive.addEventListener('click', () => closeLiveStreamWatchRoom());
 
-  // Audio Toggle Buttons (Standard & Floating Fullscreen)
   if (btnAudioToggle) btnAudioToggle.addEventListener('click', toggleLiveAudio);
   if (btnFsAudioToggle) btnFsAudioToggle.addEventListener('click', toggleLiveAudio);
 
-  // In-Player Reconnect Buttons
-  if (btnPlayerReconnect) {
-    btnPlayerReconnect.addEventListener('click', () => {
-      openLiveStreamWatchRoom();
-    });
-  }
-  if (btnWaitingReconnect) {
-    btnWaitingReconnect.addEventListener('click', () => {
-      openLiveStreamWatchRoom();
-    });
-  }
+  if (btnPlayerReconnect) btnPlayerReconnect.addEventListener('click', () => openLiveStreamWatchRoom());
+  if (btnWaitingReconnect) btnWaitingReconnect.addEventListener('click', () => openLiveStreamWatchRoom());
 
-  // Fullscreen Buttons
   if (btnFullscreen && videoContainer) {
     btnFullscreen.addEventListener('click', () => {
       if (videoContainer.requestFullscreen) {
@@ -879,7 +837,6 @@ function setupLiveViewerControls() {
   if (btnExitFullscreen) btnExitFullscreen.addEventListener('click', exitFullscreenHandler);
   if (btnFsExitFullscreen) btnFsExitFullscreen.addEventListener('click', exitFullscreenHandler);
 
-  // Sync Fullscreen Button State on change or ESC key
   document.addEventListener('fullscreenchange', () => {
     const isFull = Boolean(document.fullscreenElement);
     if (btnFullscreen) btnFullscreen.style.display = isFull ? 'none' : 'inline-flex';
@@ -902,7 +859,6 @@ function openLiveStreamWatchRoom() {
   if (viewGenerator) viewGenerator.style.display = 'none';
   if (viewLive) viewLive.style.display = 'block';
 
-  // Populate Details
   const topicEl = document.getElementById('liveWatchTopic');
   const descEl = document.getElementById('liveWatchDesc');
   const timeEl = document.getElementById('liveWatchTimestamp');
@@ -915,15 +871,12 @@ function openLiveStreamWatchRoom() {
   const waitingOverlay = document.getElementById('liveWaitingOverlay');
   const connectingOverlay = document.getElementById('liveConnectingOverlay');
 
-  // Check if Admin has gone live or is still in scheduled waiting state
   if (!activeLive.isLive) {
-    // Show Waiting Overlay
     if (statusPill) statusPill.textContent = "⏳ SESSION SCHEDULED - NOT LIVE YET";
     if (waitingOverlay) waitingOverlay.style.display = 'flex';
     if (connectingOverlay) connectingOverlay.style.display = 'none';
     startLiveWaitingAutoPoller();
   } else {
-    // Live is active: Connect via reference WebRTC handshake
     if (statusPill) statusPill.textContent = "🔴 BROADCAST IN PROGRESS";
     if (waitingOverlay) waitingOverlay.style.display = 'none';
     if (connectingOverlay) connectingOverlay.style.display = 'flex';
@@ -934,7 +887,6 @@ function openLiveStreamWatchRoom() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// Auto-poller while waiting for Admin to click Go Live
 function startLiveWaitingAutoPoller() {
   stopLiveWaitingAutoPoller();
   livePollingInterval = setInterval(() => {
@@ -966,7 +918,7 @@ function stopLiveWaitingAutoPoller() {
   }
 }
 
-// STABLE WEBRTC CONNECTION ENGINE MIRRORING VISITORPAGE.HTML
+// STABLE WEBRTC CONNECTION ENGINE WITH DATA CHANNEL & AUTO-RECONNECT
 function connectToLiveBroadcast(hostPeerId) {
   const connectingOverlay = document.getElementById('liveConnectingOverlay');
   const connectingText = document.getElementById('liveConnectingText');
@@ -974,48 +926,53 @@ function connectToLiveBroadcast(hostPeerId) {
   const videoEl = document.getElementById('liveViewerVideo');
 
   if (connectingOverlay) connectingOverlay.style.display = 'flex';
-  if (connectingText) connectingText.textContent = "Connecting to signaling server...";
+  if (connectingText) connectingText.textContent = "Connecting to signaling server..."; //
   if (waitingOverlay) waitingOverlay.style.display = 'none';
 
   if (viewerPeerInstance) {
-    try { viewerPeerInstance.destroy(); } catch (e) {}
+    try { viewerPeerInstance.destroy(); } catch (e) {} //
     viewerPeerInstance = null;
   }
 
-  // Initialize viewer peer with the reference multi-STUN configuration
+  // Initialize viewer peer with reference multi-STUN servers
   viewerPeerInstance = new Peer(ICE_CONFIG);
 
   viewerPeerInstance.on('open', (myViewerId) => {
-    if (connectingText) connectingText.textContent = "Connecting to broadcaster...";
+    if (connectingText) connectingText.textContent = "Connecting to broadcaster..."; //
 
     // 1. Establish Data Channel connection to the broadcaster
     const conn = viewerPeerInstance.connect(hostPeerId, { reliable: true });
 
     conn.on('open', () => {
-      if (connectingText) connectingText.textContent = "Broadcaster found! Requesting video feed...";
-      conn.send('REQUEST_STREAM'); // Ping broadcaster to dial this viewer
+      if (connectingText) connectingText.textContent = "Broadcaster found! Requesting video feed..."; //
+      conn.send('REQUEST_STREAM'); //
     });
 
     conn.on('error', () => {
-      showStreamOfflineNotice("❌ Broadcaster is currently offline.");
+      triggerStreamAutoReconnect("❌ Broadcaster is currently offline. Retrying automatically...");
     });
 
-    // 2. Accept incoming media stream from broadcaster (Without calling with an empty MediaStream)
+    // 2. Accept incoming media stream from broadcaster
     viewerPeerInstance.on('call', (call) => {
       currentLiveCall = call;
-      call.answer(); // Directly answer incoming media call
+      call.answer(); //
 
       call.on('stream', (remoteStream) => {
+        if (autoReconnectInterval) {
+          clearInterval(autoReconnectInterval);
+          autoReconnectInterval = null;
+        }
+        isReconnecting = false;
+
         if (videoEl) {
-          videoEl.srcObject = remoteStream;
-          videoEl.muted = false; // User clicked watch live, start unmuted
-          const playPromise = videoEl.play();
+          videoEl.srcObject = remoteStream; //
+          videoEl.muted = false;
+          const playPromise = videoEl.play(); //
           if (playPromise !== undefined) {
             playPromise.then(() => {
               if (connectingOverlay) connectingOverlay.style.display = 'none';
               updateAudioButtonStates(false);
             }).catch(() => {
-              // Browser autoplay policy fallback
               videoEl.muted = true;
               videoEl.play();
               if (connectingOverlay) connectingOverlay.style.display = 'none';
@@ -1025,44 +982,92 @@ function connectToLiveBroadcast(hostPeerId) {
         }
       });
 
+      // Monitor WebRTC ICE connection for drops and auto-reconnect
+      if (call.peerConnection) {
+        call.peerConnection.oniceconnectionstatechange = () => {
+          const state = call.peerConnection.iceConnectionState;
+          if (state === 'disconnected' || state === 'failed') {
+            console.warn("ICE connection disconnected/failed. Auto-reconnecting...");
+            triggerStreamAutoReconnect("Connection lost. Reconnecting live feed...");
+          }
+        };
+      }
+
       call.on('close', () => {
-        showStreamOfflineNotice("Live broadcast session ended.");
+        triggerStreamAutoReconnect("Live stream ended or temporarily interrupted. Re-checking...");
       });
 
       call.on('error', (err) => {
         console.error("Peer call error:", err);
-        showStreamOfflineNotice("Stream error. Click Reconnect Live to retry.");
+        triggerStreamAutoReconnect("Stream network issue. Auto-reconnecting...");
       });
     });
 
-    // Fallback timeout check if broadcaster did not return stream
+    // Fallback timeout check if broadcaster stream doesn't arrive
     setTimeout(() => {
       if (videoEl && !videoEl.srcObject && connectingOverlay && connectingOverlay.style.display !== 'none') {
-        showStreamOfflineNotice("Broadcaster stream offline. Retrying shortly...");
+        triggerStreamAutoReconnect("Re-establishing connection with broadcaster...");
       }
     }, 7000);
   });
 
+  viewerPeerInstance.on('disconnected', () => {
+    try { viewerPeerInstance.reconnect(); } catch (e) {}
+  });
+
   viewerPeerInstance.on('error', (err) => {
     console.error("PeerJS client error:", err);
-    showStreamOfflineNotice("Unable to reach broadcaster. Please retry.");
+    triggerStreamAutoReconnect("Signal error. Reconnecting to live studio...");
   });
 }
 
-function showStreamOfflineNotice(message) {
+// Auto-Reconnect Routine (Runs seamlessly during live interruptions)
+function triggerStreamAutoReconnect(statusMsg) {
   const connectingOverlay = document.getElementById('liveConnectingOverlay');
   const connectingText = document.getElementById('liveConnectingText');
   if (connectingOverlay) connectingOverlay.style.display = 'flex';
-  if (connectingText) connectingText.textContent = message;
+  if (connectingText) connectingText.textContent = statusMsg;
+
+  if (isReconnecting) return;
+  isReconnecting = true;
+
+  if (autoReconnectInterval) clearInterval(autoReconnectInterval);
+  autoReconnectInterval = setInterval(() => {
+    const viewLive = document.getElementById('view-live');
+    if (!viewLive || viewLive.style.display === 'none') {
+      clearInterval(autoReconnectInterval);
+      autoReconnectInterval = null;
+      isReconnecting = false;
+      return;
+    }
+
+    console.log("Auto-reconnect ping triggered...");
+    fetch(`${APPS_SCRIPT_URL}?action=get_portal_data`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.status === "success" && data.activeLive) {
+          portalData.activeLive = data.activeLive;
+          if (data.activeLive.isLive) {
+            connectToLiveBroadcast(data.activeLive.peerId || BROADCAST_HOST_ID);
+          }
+        }
+      })
+      .catch(() => {});
+  }, 3500);
 }
 
 function closeLiveStreamWatchRoom() {
   stopLiveWaitingAutoPoller();
+  if (autoReconnectInterval) {
+    clearInterval(autoReconnectInterval);
+    autoReconnectInterval = null;
+  }
+  isReconnecting = false;
 
   const videoEl = document.getElementById('liveViewerVideo');
   if (videoEl) {
     videoEl.pause();
-    videoEl.srcObject = null;
+    videoEl.srcObject = null; //
   }
 
   if (currentLiveCall) {
@@ -1071,7 +1076,7 @@ function closeLiveStreamWatchRoom() {
   }
 
   if (viewerPeerInstance) {
-    try { viewerPeerInstance.destroy(); } catch (e) {}
+    try { viewerPeerInstance.destroy(); } catch (e) {} //
     viewerPeerInstance = null;
   }
 
@@ -1292,9 +1297,7 @@ function showUserPopup(p, onClosedCallback) {
     if (videoEl) videoEl.pause();
     if (iframeEl) iframeEl.src = "";
     if (countdownInterval) clearInterval(countdownInterval);
-    if (typeof onClosedCallback === "function") {
-      onClosedCallback();
-    }
+    if (typeof onClosedCallback === "function") onClosedCallback();
   }
 
   function startCloseTimer() {
