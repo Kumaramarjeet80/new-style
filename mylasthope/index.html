@@ -8,8 +8,9 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Amarjeet Audio Studio</title>
-  <link rel="manifest" href="./manifest.json" />
-  <link rel="stylesheet" href="./style.css" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" type="image/png" href="icon-192.png" />
 </head>
 <body>
   <!-- Toast Notification Container Above Player Bar -->
@@ -21,7 +22,7 @@
       <div class="welcome-icon">🎵</div>
       <h2>Welcome Back!</h2>
       <p class="credit-highlight">Made by & for <strong>Amarjeet kumar</strong></p>
-      <p class="modal-desc">Offline studio equalizer, lock-screen playback, and clean audio.</p>
+      <p class="modal-desc">Offline studio player with active volume booster, equalizer, and lock-screen playback.</p>
       <button id="btn-close-welcome" class="btn-primary-large">Start Listening</button>
     </div>
   </div>
@@ -48,7 +49,7 @@
         <label for="new-playlist-img">Choose Album Art (Optional)</label>
         <input type="file" id="new-playlist-img" accept="image/*" />
         <div class="preview-row">
-          <img id="preview-art-tag" src="" alt="Preview" />
+          <img id="preview-art-tag" src="icon-192.png" alt="Preview" />
           <span id="preview-status-text">Default art selected</span>
         </div>
       </div>
@@ -59,23 +60,26 @@
     </div>
   </div>
 
-  <!-- Hidden Image Picker for Editing Cover Photo Anytime -->
+  <!-- Hidden Cover Image Picker -->
   <input type="file" id="edit-cover-input" accept="image/*" style="display:none;" />
 
-  <!-- Main App Shell -->
+  <!-- Main Layout -->
   <div class="app-layout">
     <header class="app-top">
       <div>
         <span class="brand-title">Amarjeet Studio</span>
         <span class="badge">Lock-Screen Ready</span>
       </div>
-      <button id="btn-open-create-playlist" class="btn-action">➕ New Playlist</button>
+      <div style="display: flex; gap: 6px;">
+        <button id="btn-install-app" class="btn-action btn-install" style="display: none;">📥 Install App</button>
+        <button id="btn-open-create-playlist" class="btn-action">➕ New</button>
+      </div>
     </header>
 
     <!-- Playlist Category Tabs -->
     <div class="playlist-chips" id="playlist-tabs"></div>
 
-    <!-- UPPER CONTENT: Song List -->
+    <!-- Song List Content -->
     <main class="upper-content">
       <div class="section-title-row">
         <div>
@@ -88,15 +92,15 @@
       <ul id="song-list" class="song-list"></ul>
     </main>
 
-    <!-- Attribution Footer -->
+    <!-- Footer Attribution -->
     <footer class="app-footer">
       Made by & for <strong>Amarjeet kumar</strong>
     </footer>
 
-    <!-- LOWER SECTION: Fixed Bottom Player Bar -->
+    <!-- Fixed Bottom Mini Player Bar -->
     <div class="bottom-player-bar" id="mini-player">
       <div class="player-left-group" id="open-box-trigger">
-        <img id="mini-cover" class="mini-art" src="" alt="Art" />
+        <img id="mini-cover" class="mini-art" src="icon-192.png" alt="Art" />
         <div class="mini-meta">
           <span class="mini-title" id="mini-title">No track playing</span>
           <span class="mini-sub" id="mini-sub">Tap to open full player</span>
@@ -110,7 +114,7 @@
     </div>
   </div>
 
-  <!-- FULLSCREEN PLAYER CARD MODAL -->
+  <!-- FULLSCREEN PLAYER MODAL CARD -->
   <div class="fullscreen-player-card" id="player-box-modal" style="display:none;">
     <div class="card-top-nav">
       <button id="btn-close-box" class="btn-action">▼ Minimize</button>
@@ -119,9 +123,8 @@
     </div>
 
     <div class="card-scroll-body">
-      <!-- Album Cover with Edit Photo Button -->
       <div class="detail-art-container">
-        <img id="box-cover" src="" alt="Album Art" />
+        <img id="box-cover" src="icon-192.png" alt="Album Art" />
         <button id="btn-edit-art" class="btn-edit-cover" title="Change Album Image">📷 Change Image</button>
       </div>
 
@@ -130,28 +133,25 @@
         <p id="box-playlist">Playlist: All</p>
       </div>
 
-      <!-- Song Progress Bar -->
       <div class="progress-bar-box">
         <span id="curr-time">0:00</span>
         <input type="range" id="seek-bar" min="0" max="100" value="0" />
         <span id="dur-time">0:00</span>
       </div>
 
-      <!-- Controls -->
       <div class="box-player-controls">
         <button id="box-btn-prev" class="icon-btn-large">⏮</button>
         <button id="box-btn-play" class="play-btn-huge">▶</button>
         <button id="box-btn-next" class="icon-btn-large">⏭</button>
       </div>
 
-      <!-- Integrated Tool Action Bar -->
       <div class="card-tool-row">
         <button id="card-toggle-playlist" class="card-tool-btn">≡ View Playlist</button>
         <button id="card-toggle-volume" class="card-tool-btn">🔊 Volume</button>
         <button id="card-toggle-eq" class="card-tool-btn">🎛 Equalizer</button>
       </div>
 
-      <!-- 1. Embedded Volume Drawer -->
+      <!-- Embedded Working Volume Drawer -->
       <div id="card-volume-panel" class="embedded-card-panel" style="display:none;">
         <div class="panel-header-row">
           <span>Master Volume</span>
@@ -164,7 +164,7 @@
         </div>
       </div>
 
-      <!-- 2. Embedded Equalizer Drawer -->
+      <!-- Embedded Equalizer Drawer -->
       <div id="card-eq-panel" class="embedded-card-panel" style="display:none;">
         <div class="panel-header-row">
           <label><input type="checkbox" id="card-eq-enable" checked /> DSP Active</label>
@@ -185,7 +185,7 @@
         </div>
       </div>
 
-      <!-- 3. Embedded Playlist Reorder Drawer -->
+      <!-- Embedded Playlist Reorder Drawer -->
       <div id="card-playlist-panel" class="embedded-card-panel" style="display:none;">
         <div class="panel-header-row">
           <span>Playlist Songs (Use ▲ / ▼ to reorder)</span>
@@ -196,6 +196,6 @@
   </div>
 
   <audio id="audio-engine" playsinline preload="auto"></audio>
-  <script src="./app.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
