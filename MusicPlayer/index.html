@@ -2,40 +2,181 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Amarjeet Audio Studio</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="app-layout">
-    <!-- Top Nav / Playlists Manager -->
-    <header class="app-top">
-      <div class="brand">
-        <h2>Amarjeet Studio</h2>
-        <span class="badge">HQ DSP</span>
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Welcome Modal -->
+  <div id="welcome-modal" class="modal-backdrop">
+    <div class="modal-box text-center">
+      <div class="modal-icon">🎵</div>
+      <h2>Welcome Back!</h2>
+      <p class="credit-highlight">Made by & for <strong>Amarjeet kumar</strong></p>
+      <p class="modal-desc">Your offline-ready music player with studio equalizer and custom playlists.</p>
+      <button id="btn-close-welcome" class="btn-primary-large">Start Listening</button>
+    </div>
+  </div>
+
+  <!-- Create Playlist Modal -->
+  <div id="playlist-create-modal" class="modal-backdrop" style="display:none;">
+    <div class="modal-box">
+      <h3>Create New Playlist</h3>
+      <div class="form-group">
+        <label>Playlist Name</label>
+        <input type="text" id="new-playlist-name" placeholder="e.g. My Favorite Hits" class="input-text" />
       </div>
-      <button id="btn-new-playlist" class="btn-sm">➕ New Playlist</button>
+      <div class="form-group">
+        <label>Choose Album Art</label>
+        <input type="file" id="new-playlist-img" accept="image/*" class="input-file" />
+        <div class="img-preview-box">
+          <img id="preview-art-tag" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' fill='%23444'%3E%3Crect width='80' height='80'/%3E%3C/svg%3E" alt="Preview" />
+          <span>Upload an image for this playlist</span>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button id="btn-cancel-playlist" class="btn-secondary">Cancel</button>
+        <button id="btn-confirm-playlist" class="btn-primary">Create Playlist</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main App Layout -->
+  <div class="app-layout">
+    <header class="app-top">
+      <div>
+        <h1 class="brand-title">Amarjeet Studio</h1>
+        <span class="badge">Offline HQ DSP</span>
+      </div>
+      <button id="btn-open-create-playlist" class="btn-action">➕ New Playlist</button>
     </header>
 
-    <!-- Playlist Selector Chips -->
+    <!-- Playlist Horizontal Selector Bar -->
     <div class="playlist-chips" id="playlist-tabs"></div>
 
-    <!-- UPPER SECTION: Song List -->
+    <!-- UPPER SECTION: Current Playlist Song List -->
     <main class="upper-content">
       <div class="section-title-row">
-        <h3 id="view-playlist-name">Tracks</h3>
-        <label class="btn-sm upload-btn" for="file-picker">➕ Add Songs</label>
+        <div>
+          <h2 id="view-playlist-name">Tracks</h2>
+          <small id="track-count-label">0 songs</small>
+        </div>
+        <label class="btn-action upload-btn" for="file-picker">➕ Add Songs</label>
         <input type="file" id="file-picker" accept="audio/*" multiple style="display:none;" />
       </div>
+
       <ul id="song-list" class="song-list"></ul>
     </main>
 
-    <!-- Equalizer Collapse Drawer -->
-    <details class="eq-drawer">
-      <summary>Adjustments & Effects (VLC HQ Mode)</summary>
+    <footer class="app-footer">
+      Made by & for <strong>Amarjeet kumar</strong>
+    </footer>
+
+    <!-- LOWER SECTION: Prominent, Raised Bottom Player Bar -->
+    <div class="bottom-player-bar" id="mini-player">
+      <div class="player-left-group" id="open-full-player">
+        <img id="mini-cover" class="mini-art" src="" alt="Cover" />
+        <div class="mini-meta">
+          <span class="mini-title" id="mini-title">No song playing</span>
+          <span class="mini-sub" id="mini-sub">Select a track</span>
+        </div>
+      </div>
+
+      <!-- Quick Action Icons inside Player Bar -->
+      <div class="player-bar-actions">
+        <button id="bar-btn-playlist" class="icon-btn" title="View & Reorder Songs">📑</button>
+        <button id="bar-btn-volume" class="icon-btn" title="Volume">🔊</button>
+        <button id="bar-btn-eq" class="icon-btn" title="Equalizer">🎛</button>
+        <button id="bar-btn-play" class="play-btn-large" title="Play/Pause">▶</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pop-up Volume Slider Box -->
+  <div id="volume-popup" class="popover-box" style="display: none;">
+    <div class="popover-header">
+      <span>Volume Control</span>
+      <span id="vol-popup-label">20%</span>
+    </div>
+    <div class="vol-slider-row">
+      <span>🔈</span>
+      <input type="range" id="vol-popup-slider" min="0" max="100" value="20" />
+      <span>🔊</span>
+    </div>
+  </div>
+
+  <!-- Fullscreen Player Modal -->
+  <div class="player-overlay" id="player-modal" style="display:none;">
+    <div class="player-overlay-header">
+      <button id="close-modal-btn" class="close-btn">✕</button>
+      <span class="overlay-header-title">Now Playing</span>
+      <span style="width: 32px;"></span>
+    </div>
+
+    <div class="modal-content">
+      <div class="large-cover-wrapper">
+        <img id="full-cover" class="cover-art-large" src="" alt="Album Art" />
+      </div>
+
+      <div class="modal-titles">
+        <h2 id="modal-song-title">Select Track</h2>
+        <p id="modal-playlist-name">Playlist: Default</p>
+      </div>
+
+      <!-- Arrange / Reorder Playlist Button above progress bar -->
+      <div class="arrange-trigger-bar">
+        <button id="btn-open-queue" class="btn-reorder">≡ Reorder Playlist Songs</button>
+      </div>
+
+      <!-- Seek Bar -->
+      <div class="progress-wrap">
+        <span id="curr-time">0:00</span>
+        <input type="range" id="seek-bar" min="0" max="100" value="0" />
+        <span id="dur-time">0:00</span>
+      </div>
+
+      <!-- Main Controls -->
+      <div class="modal-controls">
+        <button id="btn-prev" class="control-btn">⏮</button>
+        <button id="btn-play" class="control-btn-circle">▶</button>
+        <button id="btn-next" class="control-btn">⏭</button>
+      </div>
+
+      <!-- Inline Volume Slider inside Modal -->
+      <div class="vol-inline-wrap">
+        <span>🔈</span>
+        <input type="range" id="vol-slider" min="0" max="100" value="20" />
+        <span id="vol-label">20%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reorder / Playlist Queue Modal -->
+  <div class="queue-overlay" id="queue-modal" style="display:none;">
+    <div class="player-overlay-header">
+      <button id="close-queue-btn" class="close-btn">← Back</button>
+      <span class="overlay-header-title">Arrange Playlist</span>
+      <span style="width:32px"></span>
+    </div>
+    <p class="queue-subtitle">Use ▲ and ▼ to shift tracks order in this playlist</p>
+    <ul id="reorder-list" class="reorder-list"></ul>
+  </div>
+
+  <!-- 10-Band Equalizer Modal -->
+  <div class="queue-overlay" id="eq-modal" style="display:none;">
+    <div class="player-overlay-header">
+      <button id="close-eq-btn" class="close-btn">✕ Done</button>
+      <span class="overlay-header-title">Studio Equalizer (VLC Mode)</span>
+      <span style="width:32px"></span>
+    </div>
+    <div class="eq-inner-modal">
       <div class="eq-controls-top">
-        <label><input type="checkbox" id="eq-enable" checked /> DSP Filter Active</label>
+        <label><input type="checkbox" id="eq-enable" checked /> Enable Audio DSP</label>
+        <button id="btn-reset-eq" class="btn-action">Reset Defaults</button>
       </div>
       <div class="eq-container">
         <div class="eq-col">
@@ -54,75 +195,7 @@
         <div class="eq-col"><span class="eq-val" id="val-14000">-3.6dB</span><input type="range" class="vertical-slider" data-band="8" min="-20" max="20" step="0.1" value="-3.6" /><span class="eq-freq">14kHz</span></div>
         <div class="eq-col"><span class="eq-val" id="val-16000">11.6dB</span><input type="range" class="vertical-slider" data-band="9" min="-20" max="20" step="0.1" value="11.6" /><span class="eq-freq">16kHz</span></div>
       </div>
-    </details>
-
-    <footer class="app-footer">
-      Made by & for <strong>Amarjeet kumar</strong>
-    </footer>
-
-    <!-- LOWER SECTION: Fixed Bottom Mini Player -->
-    <div class="bottom-player-bar" id="mini-player">
-      <img id="mini-cover" class="mini-art" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 24 24' fill='%23555'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z'/%3E%3C/svg%3E" alt="Cover" />
-      <div class="mini-meta" id="open-full-btn">
-        <span class="mini-title" id="mini-title">Select a track</span>
-        <span class="mini-sub" id="mini-sub">Playlist: Default</span>
-      </div>
-      <div class="mini-controls">
-        <button id="btn-mini-play">▶</button>
-      </div>
     </div>
-  </div>
-
-  <!-- Fullscreen Player Modal / Sheet -->
-  <div class="player-overlay" id="player-modal">
-    <div class="player-overlay-header">
-      <button id="close-modal-btn">✕</button>
-      <span>Now Playing</span>
-      <label class="btn-sm" for="cover-picker">Change Art</label>
-      <input type="file" id="cover-picker" accept="image/*" style="display:none;" />
-    </div>
-
-    <div class="modal-content">
-      <img id="full-cover" class="cover-art-large" src="" alt="Album Art" />
-      <h2 id="modal-song-title">Song Title</h2>
-      <p id="modal-playlist-name">Playlist: Default</p>
-
-      <!-- Arrange Playlist Button Above Progress -->
-      <div class="arrange-trigger-bar">
-        <button id="btn-open-queue" class="btn-arrange">≡ View & Reorder Playlist</button>
-      </div>
-
-      <!-- Seek Bar -->
-      <div class="progress-wrap">
-        <span id="curr-time">0:00</span>
-        <input type="range" id="seek-bar" min="0" max="100" value="0" />
-        <span id="dur-time">0:00</span>
-      </div>
-
-      <!-- Main Controls -->
-      <div class="modal-controls">
-        <button id="btn-prev">⏮</button>
-        <button id="btn-play" class="btn-circle">▶</button>
-        <button id="btn-next">⏭</button>
-      </div>
-
-      <!-- Volume -->
-      <div class="vol-wrap">
-        <span>🔈</span>
-        <input type="range" id="vol-slider" min="0" max="100" value="20" />
-        <span id="vol-label">20%</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- Reorder / Queue Modal -->
-  <div class="queue-overlay" id="queue-modal">
-    <div class="player-overlay-header">
-      <button id="close-queue-btn">← Back</button>
-      <span>Reorder Playlist</span>
-      <span style="width:24px"></span>
-    </div>
-    <ul id="reorder-list" class="song-list reorder-view"></ul>
   </div>
 
   <audio id="audio-engine" crossorigin="anonymous" playsinline></audio>
