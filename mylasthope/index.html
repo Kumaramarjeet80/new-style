@@ -3,12 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#171f2d" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Amarjeet Audio Studio</title>
   <link rel="manifest" href="./manifest.json" />
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
-  <!-- Toast Notification Container (Directly Above the Bottom Player Bar) -->
+  <!-- Toast Notification Container Above Player Bar -->
   <div id="toast-container" class="toast-container"></div>
 
   <!-- Welcome Modal -->
@@ -17,7 +21,7 @@
       <div class="welcome-icon">🎵</div>
       <h2>Welcome Back!</h2>
       <p class="credit-highlight">Made by & for <strong>Amarjeet kumar</strong></p>
-      <p class="modal-desc">Clean studio equalizer, custom playlists, and background playback.</p>
+      <p class="modal-desc">Offline studio equalizer, lock-screen playback, and clean audio.</p>
       <button id="btn-close-welcome" class="btn-primary-large">Start Listening</button>
     </div>
   </div>
@@ -63,12 +67,12 @@
     <header class="app-top">
       <div>
         <span class="brand-title">Amarjeet Studio</span>
-        <span class="badge">Pure Audio</span>
+        <span class="badge">Lock-Screen Ready</span>
       </div>
       <button id="btn-open-create-playlist" class="btn-action">➕ New Playlist</button>
     </header>
 
-    <!-- Playlist Tabs (Starting with "All" by default) -->
+    <!-- Playlist Category Tabs -->
     <div class="playlist-chips" id="playlist-tabs"></div>
 
     <!-- UPPER CONTENT: Song List -->
@@ -133,7 +137,7 @@
         <span id="dur-time">0:00</span>
       </div>
 
-      <!-- Main Controls -->
+      <!-- Controls -->
       <div class="box-player-controls">
         <button id="box-btn-prev" class="icon-btn-large">⏮</button>
         <button id="box-btn-play" class="play-btn-huge">▶</button>
@@ -147,7 +151,7 @@
         <button id="card-toggle-eq" class="card-tool-btn">🎛 Equalizer</button>
       </div>
 
-      <!-- 1. Volume Drawer (Inside Card) -->
+      <!-- 1. Embedded Volume Drawer -->
       <div id="card-volume-panel" class="embedded-card-panel" style="display:none;">
         <div class="panel-header-row">
           <span>Master Volume</span>
@@ -160,7 +164,7 @@
         </div>
       </div>
 
-      <!-- 2. Equalizer Drawer (Inside Card) -->
+      <!-- 2. Embedded Equalizer Drawer -->
       <div id="card-eq-panel" class="embedded-card-panel" style="display:none;">
         <div class="panel-header-row">
           <label><input type="checkbox" id="card-eq-enable" checked /> DSP Active</label>
@@ -181,7 +185,7 @@
         </div>
       </div>
 
-      <!-- 3. View Playlist / Reorder Drawer (Inside Card) -->
+      <!-- 3. Embedded Playlist Reorder Drawer -->
       <div id="card-playlist-panel" class="embedded-card-panel" style="display:none;">
         <div class="panel-header-row">
           <span>Playlist Songs (Use ▲ / ▼ to reorder)</span>
