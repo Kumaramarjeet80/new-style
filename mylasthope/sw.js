@@ -1,17 +1,18 @@
-const CACHE_NAME = 'amarjeet-audio-v12';
+const CACHE_NAME = 'amarjeet-audio-v20';
+const ASSETS = [
+  './',
+  './index.html',
+  './style.css',
+  './app.js',
+  './manifest.json',
+  './icon-192.png',
+  './icon-512.png'
+];
 
 self.addEventListener('install', (e) => {
   self.skipWaiting();
   e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll([
-        './',
-        './index.html',
-        './style.css',
-        './app.js',
-        './manifest.json'
-      ]);
-    })
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS).catch(() => {}))
   );
 });
 
@@ -24,19 +25,18 @@ self.addEventListener('activate', (e) => {
   return self.clients.claim();
 });
 
-// Cache First with Network Refresh
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
   e.respondWith(
     caches.match(e.request).then((cached) => {
-      const fetchPromise = fetch(e.request).then((networkRes) => {
-        if (networkRes && networkRes.status === 200) {
-          const clone = networkRes.clone();
+      const netFetch = fetch(e.request).then((res) => {
+        if (res && res.status === 200) {
+          const clone = res.clone();
           caches.open(CACHE_NAME).then((c) => c.put(e.request, clone));
         }
-        return networkRes;
+        return res;
       }).catch(() => cached);
-      return cached || fetchPromise;
+      return cached || netFetch;
     })
   );
 });
