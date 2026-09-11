@@ -1,9 +1,9 @@
-// Service Worker Registration for Instant Offline Execution
+// Instant Service Worker Registration
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').catch(() => {});
 }
 
-// 4-Second Notification with Animated Green Progress Bar
+// 4-Second Notification with Animated Progress Bar (Positioned directly above Player Bar)
 function showNotification(msg) {
   const container = document.getElementById('toast-container');
   const toast = document.createElement('div');
@@ -13,13 +13,21 @@ function showNotification(msg) {
     <div class="toast-progress"></div>
   `;
   container.appendChild(toast);
-  setTimeout(() => {
-    toast.remove();
-  }, 4000);
+  setTimeout(() => toast.remove(), 4000);
 }
 
-// Lightweight IndexedDB Store
-const DB_NAME = 'AmarjeetStudioLiteDB';
+// "Thanks!" Popup Modal Trigger
+function showThanksPopup(msg) {
+  const modal = document.getElementById('thanks-modal');
+  document.getElementById('thanks-msg').textContent = msg;
+  modal.style.display = 'flex';
+}
+document.getElementById('btn-close-thanks').onclick = () => {
+  document.getElementById('thanks-modal').style.display = 'none';
+};
+
+// IndexedDB Storage
+const DB_NAME = 'AmarjeetAudioStudioDB_v2';
 const DB_VER = 1;
 let db;
 
@@ -85,37 +93,35 @@ const dbOps = {
   }
 };
 
-// AUDIO DSP ENGINE (Prevents crackling, distortion & farfarahat sound)
+// PURE AUDIO ENGINE (Noise-free with Hardware Bypass & Auto-Attenuator)
 const audio = document.getElementById('audio-engine');
-let audioCtx, sourceNode, preampGain, masterGainNode, compressor;
+let audioCtx, sourceNode, preampGain, masterGainNode;
 const bands = [60, 170, 310, 600, 1000, 3000, 6000, 12000, 14000, 16000];
 const defaultGains = [18.2, 11.8, 3.7, -1.7, -7.8, 2.1, 9.8, 14.1, -3.6, 11.6];
 const defaultPreamp = 14.1;
 let filters = [];
-let currentVol = 0.20; // Default 20% Volume
+let eqEnabled = true;
+let currentVol = 0.20; // Default 20%
 
-function ensureAudioNodes() {
+function setupAudioNodes() {
   if (audioCtx) return;
   try {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     sourceNode = audioCtx.createMediaElementSource(audio);
 
-    preampGain = audioCtx.createGain();
-    preampGain.gain.value = Math.pow(10, defaultPreamp / 20) * 0.45;
-
+    // Master Volume Node
     masterGainNode = audioCtx.createGain();
     masterGainNode.gain.value = currentVol;
 
-    compressor = audioCtx.createDynamicsCompressor();
-    compressor.threshold.setValueAtTime(-18, audioCtx.currentTime);
-    compressor.knee.setValueAtTime(12, audioCtx.currentTime);
-    compressor.ratio.setValueAtTime(10, audioCtx.currentTime);
+    // Preamp Node: Softened to avoid internal clipping / farfarahat noise
+    preampGain = audioCtx.createGain();
+    preampGain.gain.value = Math.pow(10, defaultPreamp / 20) * 0.35;
 
     let prev = preampGain;
     bands.forEach((freq, i) => {
       const f = audioCtx.createBiquadFilter();
       f.type = i === 0 ? 'lowshelf' : i === bands.length - 1 ? 'highshelf' : 'peaking';
-      if (i !== 0 && i !== bands.length - 1) f.Q.value = 1.4;
+      if (i !== 0 && i !== bands.length - 1) f.Q.value = 1.0; // Musical Q, avoids phase-ringing noise
       f.frequency.value = freq;
       f.gain.value = defaultGains[i];
       prev.connect(f);
@@ -123,12 +129,14 @@ function ensureAudioNodes() {
       filters.push(f);
     });
 
+    // DSP Path
     sourceNode.connect(preampGain);
-    prev.connect(compressor);
-    compressor.connect(masterGainNode);
+    prev.connect(masterGainNode);
+
+    // Output
     masterGainNode.connect(audioCtx.destination);
   } catch (err) {
-    console.error('Audio setup exception', err);
+    console.error('Web Audio Init:', err);
   }
 }
 
@@ -151,33 +159,40 @@ let newBase64Cover = null;
 
 const DEFAULT_ART = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 24 24' fill='%232ea043'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z'/%3E%3C/svg%3E";
 
-// UI References
-const welcomeModal = document.getElementById('welcome-modal');
+// UI references
 const playlistTabs = document.getElementById('playlist-tabs');
 const songList = document.getElementById('song-list');
 const reorderList = document.getElementById('reorder-list');
 const viewPlaylistName = document.getElementById('view-playlist-name');
 const trackCountLabel = document.getElementById('track-count-label');
+
 const miniCover = document.getElementById('mini-cover');
 const miniTitle = document.getElementById('mini-title');
 const miniSub = document.getElementById('mini-sub');
 const barBtnPlay = document.getElementById('bar-btn-play');
+const barBtnLike = document.getElementById('bar-btn-like');
 
-const nowPlayingPanel = document.getElementById('now-playing-panel');
-const panelCover = document.getElementById('panel-cover');
-const panelTitle = document.getElementById('panel-title');
-const panelPlaylist = document.getElementById('panel-playlist');
+// Player Box Modal
+const playerBoxModal = document.getElementById('player-box-modal');
+const boxCover = document.getElementById('box-cover');
+const boxTitle = document.getElementById('box-title');
+const boxPlaylist = document.getElementById('box-playlist');
+const boxBtnPrev = document.getElementById('box-btn-prev');
+const boxBtnPlay = document.getElementById('box-btn-play');
+const boxBtnNext = document.getElementById('box-btn-next');
+const modalBtnLike = document.getElementById('modal-btn-like');
+
 const seekBar = document.getElementById('seek-bar');
 const currTime = document.getElementById('curr-time');
 const durTime = document.getElementById('dur-time');
 
-// 1. Welcome Modal Dismissal (Works reliably on mobile & desktop)
-document.getElementById('btn-close-welcome').addEventListener('click', () => {
-  welcomeModal.style.display = 'none';
-  ensureAudioNodes();
+// Welcome Modal Dismissal
+document.getElementById('btn-close-welcome').onclick = () => {
+  document.getElementById('welcome-modal').style.display = 'none';
+  setupAudioNodes();
   if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
   showNotification('Welcome to Amarjeet Studio!');
-});
+};
 
 // Load Playlists
 async function loadPlaylists() {
@@ -203,7 +218,7 @@ async function loadPlaylists() {
   activePlaylistId = currentPlaylist.id;
   viewPlaylistName.textContent = currentPlaylist.name;
   miniCover.src = currentPlaylist.cover || DEFAULT_ART;
-  panelCover.src = currentPlaylist.cover || DEFAULT_ART;
+  boxCover.src = currentPlaylist.cover || DEFAULT_ART;
   loadTracks();
 }
 
@@ -228,6 +243,19 @@ async function loadTracks() {
     info.innerHTML = `<span class="song-name"><strong>${idx + 1}.</strong> ${trk.name}</span>`;
     info.onclick = () => playTrack(idx);
 
+    const actions = document.createElement('div');
+    actions.className = 'row-actions';
+
+    // Heart Like Button per song
+    const btnLikeRow = document.createElement('button');
+    btnLikeRow.className = 'btn-icon-sm';
+    btnLikeRow.innerHTML = '❤️';
+    btnLikeRow.title = 'Add to Favorites';
+    btnLikeRow.onclick = (e) => {
+      e.stopPropagation();
+      addToFavorites(trk);
+    };
+
     const del = document.createElement('button');
     del.className = 'btn-del';
     del.innerHTML = '🗑';
@@ -239,12 +267,37 @@ async function loadTracks() {
       loadTracks();
     };
 
-    li.append(info, del);
+    actions.append(btnLikeRow, del);
+    li.append(info, actions);
     songList.appendChild(li);
   });
 }
 
-// Dynamic Client-side Image Compression (Keeps storage fast and lightweight)
+// Add Song to Favorites Playlist
+async function addToFavorites(trk) {
+  let pls = await dbOps.getPlaylists();
+  let fav = pls.find((p) => p.name.toLowerCase() === 'favorites') || pls[0];
+
+  await dbOps.saveTrack({
+    playlistId: fav.id,
+    name: trk.name,
+    blob: trk.blob,
+    order: Date.now()
+  });
+
+  syncLikeUI(true);
+  showThanksPopup(`"${trk.name}" was added to your ${fav.name} playlist!`);
+  if (activePlaylistId === fav.id) loadTracks();
+}
+
+function syncLikeUI(isLiked) {
+  barBtnLike.textContent = isLiked ? '❤️' : '🤍';
+  modalBtnLike.textContent = isLiked ? '❤️' : '🤍';
+  barBtnLike.classList.toggle('liked', isLiked);
+  modalBtnLike.classList.toggle('liked', isLiked);
+}
+
+// Image Resizer (Compresses uploaded playlist art for speed)
 function compressImage(file) {
   return new Promise((resolve) => {
     const reader = new FileReader();
@@ -264,7 +317,7 @@ function compressImage(file) {
   });
 }
 
-// Create Playlist Modal Handlers
+// Create Playlist Handlers
 const createModal = document.getElementById('playlist-create-modal');
 const newPlaylistName = document.getElementById('new-playlist-name');
 const newPlaylistImg = document.getElementById('new-playlist-img');
@@ -293,13 +346,14 @@ document.getElementById('btn-confirm-playlist').onclick = async () => {
   createModal.style.display = 'none';
   activePlaylistId = pl.id;
   await loadPlaylists();
-  showNotification(`Playlist created: ${name}`);
+  showThanksPopup(`Playlist "${name}" created successfully!`);
 };
 
-// Add Songs
+// Multiple Songs Added at Once with Thanks Popup
 document.getElementById('file-picker').onchange = async (e) => {
   const files = Array.from(e.target.files);
   if (!files.length) return;
+
   for (let i = 0; i < files.length; i++) {
     await dbOps.saveTrack({
       playlistId: activePlaylistId,
@@ -308,14 +362,15 @@ document.getElementById('file-picker').onchange = async (e) => {
       order: tracks.length + i
     });
   }
-  showNotification(`Added ${files.length} song(s) successfully!`);
+
+  showThanksPopup(`Successfully added ${files.length} song(s) to "${currentPlaylist.name}"!`);
   loadTracks();
 };
 
-// Play Track Logic
+// Playback Logic
 function playTrack(idx) {
   if (idx < 0 || idx >= tracks.length) return;
-  ensureAudioNodes();
+  setupAudioNodes();
   if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
 
   currentIndex = idx;
@@ -325,11 +380,12 @@ function playTrack(idx) {
 
   miniTitle.textContent = trk.name;
   miniSub.textContent = `Playlist: ${currentPlaylist.name}`;
-  panelTitle.textContent = trk.name;
-  panelPlaylist.textContent = `Playlist: ${currentPlaylist.name}`;
-  barBtnPlay.textContent = '⏸';
+  boxTitle.textContent = trk.name;
+  boxPlaylist.textContent = `Playlist: ${currentPlaylist.name}`;
+  syncButtons(true);
+  syncLikeUI(false);
 
-  // Lock Screen Notification with Custom Album Art & "Made by & for Amarjeet kumar"
+  // Lock Screen Notification with Custom Album Art
   if ('mediaSession' in navigator) {
     navigator.mediaSession.metadata = new MediaMetadata({
       title: trk.name,
@@ -337,8 +393,8 @@ function playTrack(idx) {
       album: currentPlaylist.name,
       artwork: [{ src: currentPlaylist.cover || DEFAULT_ART, sizes: '192x192', type: 'image/png' }]
     });
-    navigator.mediaSession.setActionHandler('play', () => { audio.play(); barBtnPlay.textContent = '⏸'; });
-    navigator.mediaSession.setActionHandler('pause', () => { audio.pause(); barBtnPlay.textContent = '▶'; });
+    navigator.mediaSession.setActionHandler('play', () => { audio.play(); syncButtons(true); });
+    navigator.mediaSession.setActionHandler('pause', () => { audio.pause(); syncButtons(false); });
     navigator.mediaSession.setActionHandler('nexttrack', () => loopNext());
     navigator.mediaSession.setActionHandler('previoustrack', () => playTrack(currentIndex > 0 ? currentIndex - 1 : tracks.length - 1));
   }
@@ -346,48 +402,74 @@ function playTrack(idx) {
   loadTracks();
 }
 
+function syncButtons(isPlaying) {
+  barBtnPlay.textContent = isPlaying ? '⏸' : '▶';
+  boxBtnPlay.textContent = isPlaying ? '⏸' : '▶';
+}
+
 function togglePlay() {
-  ensureAudioNodes();
+  setupAudioNodes();
   if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
   if (!audio.src && tracks.length) return playTrack(0);
   if (audio.paused) {
     audio.play();
-    barBtnPlay.textContent = '⏸';
+    syncButtons(true);
   } else {
     audio.pause();
-    barBtnPlay.textContent = '▶';
+    syncButtons(false);
   }
 }
 
-// Automatic Playlist Looping (Last track wraps back to first track)
 function loopNext() {
   if (!tracks.length) return;
   let next = currentIndex + 1;
-  if (next >= tracks.length) next = 0;
+  if (next >= tracks.length) next = 0; // Seamless playlist loop
   playTrack(next);
 }
 
 barBtnPlay.onclick = (e) => { e.stopPropagation(); togglePlay(); };
+boxBtnPlay.onclick = togglePlay;
+boxBtnPrev.onclick = () => playTrack(currentIndex > 0 ? currentIndex - 1 : tracks.length - 1);
+boxBtnNext.onclick = loopNext;
 audio.onended = loopNext;
 
-// Toggle Upper Artwork Panel (Leaves bottom player bar visible and pinned)
-const openPanelTrigger = document.getElementById('open-panel-trigger');
-openPanelTrigger.onclick = () => {
-  nowPlayingPanel.style.display = nowPlayingPanel.style.display === 'flex' ? 'none' : 'flex';
+// Like button clicks
+barBtnLike.onclick = (e) => {
+  e.stopPropagation();
+  if (currentIndex !== -1 && tracks[currentIndex]) addToFavorites(tracks[currentIndex]);
 };
-document.getElementById('btn-close-panel').onclick = () => {
-  nowPlayingPanel.style.display = 'none';
+modalBtnLike.onclick = () => {
+  if (currentIndex !== -1 && tracks[currentIndex]) addToFavorites(tracks[currentIndex]);
 };
 
-// Floating Volume Popover
+// OPEN ALL-IN-ONE PLAYER DETAIL MODAL (Opens when bottom player bar is clicked)
+document.getElementById('open-box-trigger').onclick = () => {
+  playerBoxModal.style.display = 'flex';
+};
+document.getElementById('btn-close-box').onclick = () => {
+  playerBoxModal.style.display = 'none';
+};
+
+// Tool Buttons inside the Player Detail Modal Box
+const queueModal = document.getElementById('queue-modal');
+const eqModal = document.getElementById('eq-modal');
 const volPopup = document.getElementById('volume-popup');
-const btnBarVol = document.getElementById('bar-btn-volume');
-btnBarVol.onclick = (e) => {
+
+document.getElementById('box-btn-view-playlist').onclick = () => {
+  renderReorderList();
+  queueModal.style.display = 'flex';
+};
+document.getElementById('close-queue-btn').onclick = () => queueModal.style.display = 'none';
+
+document.getElementById('box-btn-eq').onclick = () => eqModal.style.display = 'flex';
+document.getElementById('close-eq-btn').onclick = () => eqModal.style.display = 'none';
+
+document.getElementById('box-btn-volume').onclick = (e) => {
   e.stopPropagation();
   volPopup.style.display = volPopup.style.display === 'block' ? 'none' : 'block';
 };
 window.addEventListener('click', (e) => {
-  if (!volPopup.contains(e.target) && e.target !== btnBarVol) {
+  if (!volPopup.contains(e.target) && e.target.id !== 'box-btn-volume') {
     volPopup.style.display = 'none';
   }
 });
@@ -408,14 +490,7 @@ seekBar.oninput = () => {
   if (audio.duration) audio.currentTime = (seekBar.value / 100) * audio.duration;
 };
 
-// Reorder View (Shift Tracks Up / Down)
-const queueModal = document.getElementById('queue-modal');
-document.getElementById('bar-btn-playlist').onclick = () => {
-  renderReorderList();
-  queueModal.style.display = 'flex';
-};
-document.getElementById('close-queue-btn').onclick = () => queueModal.style.display = 'none';
-
+// Reorder View
 function renderReorderList() {
   reorderList.innerHTML = '';
   tracks.forEach((trk, idx) => {
@@ -449,11 +524,7 @@ window.shiftTrack = async (from, delta) => {
   showNotification('Playlist order updated');
 };
 
-// 10-Band Equalizer Modal Handlers
-const eqModal = document.getElementById('eq-modal');
-document.getElementById('bar-btn-eq').onclick = () => eqModal.style.display = 'flex';
-document.getElementById('close-eq-btn').onclick = () => eqModal.style.display = 'none';
-
+// Equalizer & True Hardware Bypass
 document.querySelectorAll('[data-band]').forEach((s) => {
   s.oninput = (e) => {
     const b = parseInt(e.target.dataset.band, 10);
@@ -465,13 +536,24 @@ document.querySelectorAll('[data-band]').forEach((s) => {
 document.getElementById('eq-preamp').oninput = (e) => {
   const val = parseFloat(e.target.value);
   document.getElementById('val-preamp').textContent = `${val}dB`;
-  if (preampGain) preampGain.gain.value = Math.pow(10, val / 20) * 0.45;
+  if (preampGain) preampGain.gain.value = Math.pow(10, val / 20) * 0.35;
 };
+
+document.getElementById('eq-enable').onchange = (e) => {
+  eqEnabled = e.target.checked;
+  filters.forEach((f, i) => {
+    f.gain.value = eqEnabled ? parseFloat(document.querySelectorAll('[data-band]')[i].value) : 0;
+  });
+  if (preampGain) {
+    preampGain.gain.value = eqEnabled ? Math.pow(10, parseFloat(document.getElementById('eq-preamp').value) / 20) * 0.35 : 1;
+  }
+  showNotification(eqEnabled ? 'Equalizer active' : 'Direct hardware bypass (Zero distortion)');
+};
+
 document.getElementById('btn-reset-eq').onclick = () => {
   document.getElementById('eq-preamp').value = 14.1;
   document.getElementById('val-preamp').textContent = '14.1dB';
-  if (preampGain) preampGain.gain.value = Math.pow(10, 14.1 / 20) * 0.45;
-
+  if (preampGain) preampGain.gain.value = Math.pow(10, 14.1 / 20) * 0.35;
   defaultGains.forEach((g, i) => {
     const slider = document.querySelector(`[data-band="${i}"]`);
     slider.value = g;
@@ -481,16 +563,8 @@ document.getElementById('btn-reset-eq').onclick = () => {
   showNotification('Equalizer reset to VLC preset');
 };
 
-document.getElementById('eq-enable').onchange = (e) => {
-  const on = e.target.checked;
-  filters.forEach((f, i) => {
-    f.gain.value = on ? parseFloat(document.querySelectorAll('[data-band]')[i].value) : 0;
-  });
-  showNotification(on ? 'Audio DSP Enabled' : 'DSP Bypassed');
-};
-
-// Initial App Bootstrapping
+// Initial App Boot
 initDB().then(() => {
   loadPlaylists();
-  setVolume(20); // 20% Initial default
+  setVolume(20);
 });
