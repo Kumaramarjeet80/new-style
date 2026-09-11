@@ -5,653 +5,57 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Amarjeet Audio Studio</title>
   <link rel="manifest" href="./manifest.json" />
-  <style>
-    :root {
-      --bg-main: #0a0d14;
-      --bg-card: #151b26;
-      --bg-surface: #1e2638;
-      --accent: #2ea043;
-      --accent-light: #3fb950;
-      --text-primary: #f0f6fc;
-      --text-muted: #8b949e;
-      --border: #30363d;
-      --player-bar-height: 84px;
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      user-select: none;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    html, body {
-      background-color: var(--bg-main);
-      color: var(--text-primary);
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-    }
-
-    body {
-      display: flex;
-      justify-content: center;
-    }
-
-    .app-layout {
-      width: 100%;
-      max-width: 680px;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      position: relative;
-    }
-
-    .app-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 14px 18px;
-      background: var(--bg-card);
-      border-bottom: 1px solid var(--border);
-    }
-
-    .brand-title {
-      font-size: 1.25rem;
-      font-weight: 700;
-    }
-
-    .badge {
-      background: var(--accent);
-      color: #fff;
-      font-size: 0.65rem;
-      padding: 2px 7px;
-      border-radius: 10px;
-      text-transform: uppercase;
-      font-weight: bold;
-    }
-
-    .btn-action {
-      background: var(--bg-surface);
-      color: var(--text-primary);
-      border: 1px solid var(--border);
-      padding: 8px 14px;
-      border-radius: 8px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      cursor: pointer;
-    }
-
-    /* Playlist Chips */
-    .playlist-chips {
-      display: flex;
-      gap: 10px;
-      overflow-x: auto;
-      padding: 10px 18px;
-      background: #0e131d;
-      border-bottom: 1px solid var(--border);
-      scrollbar-width: none;
-    }
-    .playlist-chips::-webkit-scrollbar { display: none; }
-
-    .chip {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 7px 14px;
-      border-radius: 20px;
-      font-size: 0.85rem;
-      background: var(--bg-surface);
-      color: var(--text-muted);
-      white-space: nowrap;
-      cursor: pointer;
-      border: 1px solid transparent;
-    }
-
-    .chip.active {
-      background: var(--accent);
-      color: #fff;
-      font-weight: 600;
-      border-color: var(--accent-light);
-    }
-
-    .chip-img {
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
-      object-fit: cover;
-    }
-
-    /* Upper Songs List */
-    .upper-content {
-      flex: 1;
-      overflow-y: auto;
-      padding: 14px 18px;
-      padding-bottom: 120px; /* leaves room so player bar never covers the last songs */
-    }
-
-    .section-title-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 14px;
-    }
-
-    .song-list {
-      list-style: none;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .song-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: var(--bg-card);
-      padding: 12px 14px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-    }
-
-    .song-row.active {
-      border-color: var(--accent);
-      background: #15261f;
-    }
-
-    .song-info {
-      flex: 1;
-      overflow: hidden;
-      cursor: pointer;
-      padding-right: 10px;
-    }
-
-    .song-name {
-      font-size: 0.95rem;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .btn-del {
-      background: transparent;
-      color: #f85149;
-      border: none;
-      font-size: 1.1rem;
-      padding: 8px;
-      cursor: pointer;
-    }
-
-    /* Floating / Raised Player Bar */
-    .bottom-player-bar {
-      position: absolute;
-      bottom: 12px;
-      left: 12px;
-      right: 12px;
-      height: var(--player-bar-height);
-      background: #1a2232;
-      border: 1px solid #3d475a;
-      border-radius: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 14px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
-      z-index: 100;
-    }
-
-    .player-left-group {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex: 1;
-      overflow: hidden;
-      cursor: pointer;
-    }
-
-    .mini-art {
-      width: 60px;
-      height: 60px;
-      border-radius: 10px;
-      object-fit: cover;
-      background: #000;
-      border: 1px solid var(--border);
-      flex-shrink: 0;
-    }
-
-    .mini-meta {
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-    }
-
-    .mini-title {
-      font-size: 0.95rem;
-      font-weight: 600;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      color: var(--text-primary);
-    }
-
-    .mini-sub {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-    }
-
-    .player-bar-actions {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .icon-btn {
-      background: var(--bg-surface);
-      color: #fff;
-      border: 1px solid var(--border);
-      border-radius: 50%;
-      width: 40px;
-      height: 40px;
-      font-size: 1.1rem;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .play-btn-large {
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: 50%;
-      width: 48px;
-      height: 48px;
-      font-size: 1.3rem;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 4px 14px rgba(46, 160, 67, 0.4);
-    }
-
-    /* Modals & Overlays */
-    .modal-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.85);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 500;
-      padding: 20px;
-    }
-
-    .modal-box {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 24px;
-      width: 100%;
-      max-width: 400px;
-    }
-
-    .text-center { text-align: center; }
-
-    .modal-icon {
-      font-size: 3rem;
-      margin-bottom: 8px;
-    }
-
-    .credit-highlight {
-      color: var(--accent-light);
-      margin: 8px 0;
-      font-size: 0.95rem;
-    }
-
-    .modal-desc {
-      font-size: 0.85rem;
-      color: var(--text-muted);
-      margin-bottom: 20px;
-    }
-
-    .btn-primary-large {
-      background: var(--accent);
-      color: white;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 10px;
-      font-size: 1rem;
-      font-weight: bold;
-      cursor: pointer;
-      width: 100%;
-    }
-
-    .popover-box {
-      position: absolute;
-      bottom: 105px;
-      right: 20px;
-      width: 250px;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 16px;
-      z-index: 150;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.8);
-    }
-
-    .popover-header {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.85rem;
-      font-weight: 600;
-      margin-bottom: 10px;
-    }
-
-    .vol-slider-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .vol-slider-row input { flex: 1; }
-
-    /* Fullscreen Player Modal */
-    .player-overlay, .queue-overlay {
-      position: fixed;
-      inset: 0;
-      background: var(--bg-main);
-      z-index: 300;
-      display: flex;
-      flex-direction: column;
-      padding: 20px;
-      overflow-y: auto;
-    }
-
-    .player-overlay-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 16px;
-    }
-
-    .close-btn {
-      background: var(--bg-surface);
-      color: #fff;
-      border: 1px solid var(--border);
-      padding: 8px 14px;
-      border-radius: 8px;
-      font-size: 0.9rem;
-      cursor: pointer;
-    }
-
-    .modal-content {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 16px;
-      max-width: 480px;
-      margin: 0 auto;
-      width: 100%;
-    }
-
-    .large-cover-wrapper {
-      width: 260px;
-      height: 260px;
-      border-radius: 18px;
-      overflow: hidden;
-      box-shadow: 0 16px 36px rgba(0,0,0,0.8);
-      border: 1px solid var(--border);
-    }
-
-    .cover-art-large {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    .modal-titles {
-      text-align: center;
-      width: 100%;
-    }
-    .modal-titles h2 {
-      font-size: 1.2rem;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .modal-titles p {
-      color: var(--text-muted);
-      font-size: 0.85rem;
-    }
-
-    .btn-reorder {
-      background: var(--bg-surface);
-      color: #fff;
-      border: 1px solid var(--border);
-      padding: 10px 20px;
-      border-radius: 20px;
-      font-size: 0.9rem;
-      font-weight: 600;
-      cursor: pointer;
-    }
-
-    .progress-wrap {
-      width: 100%;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-size: 0.85rem;
-      color: var(--text-muted);
-    }
-    .progress-wrap input[type="range"] { flex: 1; }
-
-    .modal-controls {
-      display: flex;
-      gap: 24px;
-      align-items: center;
-    }
-
-    .control-btn {
-      background: var(--bg-surface);
-      color: #fff;
-      border: 1px solid var(--border);
-      border-radius: 50%;
-      width: 48px;
-      height: 48px;
-      font-size: 1.2rem;
-      cursor: pointer;
-    }
-
-    .control-btn-circle {
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: 50%;
-      width: 64px;
-      height: 64px;
-      font-size: 1.6rem;
-      cursor: pointer;
-      box-shadow: 0 4px 18px rgba(46, 160, 67, 0.4);
-    }
-
-    .vol-inline-wrap {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      width: 80%;
-      margin-top: 4px;
-    }
-    .vol-inline-wrap input { flex: 1; }
-
-    /* Equalizer */
-    .eq-controls-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-    }
-    .eq-container {
-      display: flex;
-      overflow-x: auto;
-      gap: 10px;
-      justify-content: space-between;
-      padding: 14px 4px;
-    }
-    .eq-col {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-width: 44px;
-    }
-    .vertical-slider {
-      appearance: slider-vertical;
-      -webkit-appearance: slider-vertical;
-      width: 24px;
-      height: 130px;
-      margin: 8px 0;
-    }
-    .eq-val { font-size: 0.7rem; color: var(--accent-light); }
-    .eq-freq { font-size: 0.7rem; color: var(--text-muted); }
-
-    /* Forms */
-    .form-group {
-      margin: 14px 0;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-    .form-group label {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-    }
-    .input-text {
-      background: #0f141d;
-      border: 1px solid var(--border);
-      padding: 10px;
-      border-radius: 8px;
-      color: #fff;
-      font-size: 0.95rem;
-    }
-    .img-preview-box {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-top: 6px;
-    }
-    .img-preview-box img {
-      width: 50px;
-      height: 50px;
-      border-radius: 8px;
-      object-fit: cover;
-      border: 1px solid var(--border);
-    }
-    .modal-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-      margin-top: 14px;
-    }
-    .btn-primary {
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    .btn-secondary {
-      background: var(--bg-surface);
-      color: #fff;
-      border: 1px solid var(--border);
-      padding: 8px 14px;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-
-    /* Toast */
-    .toast-container {
-      position: fixed;
-      top: 16px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 9999;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      pointer-events: none;
-    }
-    .toast {
-      background: rgba(26, 34, 50, 0.95);
-      color: #fff;
-      border: 1px solid var(--accent);
-      padding: 10px 18px;
-      border-radius: 30px;
-      font-size: 0.85rem;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
-    }
-
-    .app-footer {
-      text-align: center;
-      font-size: 0.8rem;
-      color: var(--text-muted);
-      padding: 8px;
-      margin-bottom: 96px;
-    }
-  </style>
+  <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
-  <!-- Toast Notification Container -->
+  <!-- Toast Notification Container with 4-Second Animated Progress Bar -->
   <div id="toast-container" class="toast-container"></div>
 
   <!-- Welcome Modal -->
   <div id="welcome-modal" class="modal-backdrop">
     <div class="modal-box text-center">
-      <div class="modal-icon">🎵</div>
+      <div class="welcome-icon">🎵</div>
       <h2>Welcome Back!</h2>
       <p class="credit-highlight">Made by & for <strong>Amarjeet kumar</strong></p>
-      <p class="modal-desc">Your offline-ready music player with studio equalizer and custom playlists.</p>
+      <p class="modal-desc">Your offline studio player with hardware EQ limiter, local playlist storage, and lock-screen controls.</p>
       <button id="btn-close-welcome" class="btn-primary-large">Start Listening</button>
     </div>
   </div>
 
-  <!-- Create Playlist Modal -->
+  <!-- Create Playlist Modal with Direct Album Art Upload -->
   <div id="playlist-create-modal" class="modal-backdrop" style="display:none;">
     <div class="modal-box">
       <h3>Create New Playlist</h3>
       <div class="form-group">
-        <label>Playlist Name</label>
-        <input type="text" id="new-playlist-name" placeholder="e.g. My Favorite Hits" class="input-text" />
+        <label for="new-playlist-name">Playlist Name</label>
+        <input type="text" id="new-playlist-name" placeholder="e.g. Punjabi Hits" class="input-text" />
       </div>
       <div class="form-group">
-        <label>Choose Album Art</label>
+        <label for="new-playlist-img">Choose Album Art</label>
         <input type="file" id="new-playlist-img" accept="image/*" />
-        <div class="img-preview-box">
-          <img id="preview-art-tag" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' fill='%23444'%3E%3Crect width='80' height='80'/%3E%3C/svg%3E" alt="Preview" />
-          <span style="font-size:0.8rem;color:var(--text-muted)">Selected image</span>
+        <div class="preview-row">
+          <img id="preview-art-tag" src="" alt="Preview" />
+          <span>Auto-compressed for fast loading</span>
         </div>
       </div>
       <div class="modal-actions">
-        <button id="btn-cancel-playlist" class="btn-secondary">Cancel</button>
-        <button id="btn-confirm-playlist" class="btn-primary">Create Playlist</button>
+        <button id="btn-cancel-playlist" class="btn-action">Cancel</button>
+        <button id="btn-confirm-playlist" class="btn-primary-large" style="width:auto;padding:8px 16px;">Create</button>
       </div>
     </div>
   </div>
 
-  <!-- Main App Layout -->
+  <!-- Main App Shell -->
   <div class="app-layout">
     <header class="app-top">
       <div>
-        <h1 class="brand-title">Amarjeet Studio</h1>
-        <span class="badge">Offline HQ DSP</span>
+        <span class="brand-title">Amarjeet Studio</span>
+        <span class="badge">HQ DSP</span>
       </div>
       <button id="btn-open-create-playlist" class="btn-action">➕ New Playlist</button>
     </header>
 
-    <!-- Playlist Horizontal Selector Bar -->
+    <!-- Playlist Chips Selector -->
     <div class="playlist-chips" id="playlist-tabs"></div>
 
     <!-- UPPER SECTION: Current Playlist Song List -->
@@ -661,139 +65,103 @@
           <h2 id="view-playlist-name">Tracks</h2>
           <small id="track-count-label">0 songs</small>
         </div>
-        <label class="btn-action upload-btn" for="file-picker">➕ Add Songs</label>
+        <label class="btn-action" for="file-picker">➕ Add Songs</label>
         <input type="file" id="file-picker" accept="audio/*" multiple style="display:none;" />
       </div>
-
       <ul id="song-list" class="song-list"></ul>
     </main>
 
+    <!-- EXPANDABLE PANEL: Opens when clicking Player Bar, keeps Player Bar visible below -->
+    <div class="now-playing-panel" id="now-playing-panel">
+      <button id="btn-close-panel" class="panel-close-btn">✕ Close</button>
+      <div class="large-cover-wrap">
+        <img id="panel-cover" src="" alt="Album Art" />
+      </div>
+      <div class="panel-meta">
+        <h3 id="panel-title">Select a track</h3>
+        <p id="panel-playlist">Playlist: Default</p>
+      </div>
+      <div class="progress-bar-box">
+        <span id="curr-time">0:00</span>
+        <input type="range" id="seek-bar" min="0" max="100" value="0" />
+        <span id="dur-time">0:00</span>
+      </div>
+    </div>
+
+    <!-- Permanent Attribution Footer -->
     <footer class="app-footer">
       Made by & for <strong>Amarjeet kumar</strong>
     </footer>
 
-    <!-- LOWER SECTION: Prominent, Raised Bottom Player Bar -->
+    <!-- LOWER SECTION: Prominent, Raised Bottom Player Bar (Permanently Visible) -->
     <div class="bottom-player-bar" id="mini-player">
-      <div class="player-left-group" id="open-full-player">
-        <img id="mini-cover" class="mini-art" src="" alt="Cover" />
+      <div class="player-left-group" id="open-panel-trigger">
+        <img id="mini-cover" class="mini-art" src="" alt="Art" />
         <div class="mini-meta">
-          <span class="mini-title" id="mini-title">No song playing</span>
-          <span class="mini-sub" id="mini-sub">Select a track</span>
+          <span class="mini-title" id="mini-title">No track playing</span>
+          <span class="mini-sub" id="mini-sub">Tap to view album art</span>
         </div>
       </div>
 
-      <!-- Quick Action Icons inside Player Bar -->
+      <!-- Player Bar Controls -->
       <div class="player-bar-actions">
-        <button id="bar-btn-playlist" class="icon-btn" title="View & Reorder Songs">📑</button>
+        <button id="bar-btn-playlist" class="icon-btn" title="Reorder Playlist">📑</button>
         <button id="bar-btn-volume" class="icon-btn" title="Volume">🔊</button>
         <button id="bar-btn-eq" class="icon-btn" title="Equalizer">🎛</button>
         <button id="bar-btn-play" class="play-btn-large" title="Play/Pause">▶</button>
       </div>
     </div>
-  </div>
 
-  <!-- Pop-up Volume Slider Box -->
-  <div id="volume-popup" class="popover-box" style="display: none;">
-    <div class="popover-header">
-      <span>Volume Control</span>
-      <span id="vol-popup-label">20%</span>
-    </div>
-    <div class="vol-slider-row">
-      <span>🔈</span>
-      <input type="range" id="vol-popup-slider" min="0" max="100" value="20" />
-      <span>🔊</span>
-    </div>
-  </div>
-
-  <!-- Fullscreen Player Modal -->
-  <div class="player-overlay" id="player-modal" style="display:none;">
-    <div class="player-overlay-header">
-      <button id="close-modal-btn" class="close-btn">✕</button>
-      <span style="font-weight:600">Now Playing</span>
-      <span style="width: 32px;"></span>
-    </div>
-
-    <div class="modal-content">
-      <div class="large-cover-wrapper">
-        <img id="full-cover" class="cover-art-large" src="" alt="Album Art" />
+    <!-- Pop-up Volume Slider (Hidden until volume icon clicked) -->
+    <div id="volume-popup" class="popover-box">
+      <div class="popover-header">
+        <span>Volume</span>
+        <span id="vol-popup-label">20%</span>
       </div>
-
-      <div class="modal-titles">
-        <h2 id="modal-song-title">Select Track</h2>
-        <p id="modal-playlist-name">Playlist: Default</p>
-      </div>
-
-      <div style="margin: 6px 0;">
-        <button id="btn-open-queue" class="btn-reorder">≡ Reorder Playlist Songs</button>
-      </div>
-
-      <!-- Seek Bar -->
-      <div class="progress-wrap">
-        <span id="curr-time">0:00</span>
-        <input type="range" id="seek-bar" min="0" max="100" value="0" />
-        <span id="dur-time">0:00</span>
-      </div>
-
-      <!-- Main Controls -->
-      <div class="modal-controls">
-        <button id="btn-prev" class="control-btn">⏮</button>
-        <button id="btn-play" class="control-btn-circle">▶</button>
-        <button id="btn-next" class="control-btn">⏭</button>
-      </div>
-
-      <!-- Volume inside modal -->
-      <div class="vol-inline-wrap">
+      <div class="vol-slider-row">
         <span>🔈</span>
-        <input type="range" id="vol-slider" min="0" max="100" value="20" />
-        <span id="vol-label">20%</span>
+        <input type="range" id="vol-popup-slider" min="0" max="100" value="20" />
+        <span>🔊</span>
       </div>
     </div>
   </div>
 
-  <!-- Reorder / Playlist Queue Modal -->
-  <div class="queue-overlay" id="queue-modal" style="display:none;">
-    <div class="player-overlay-header">
-      <button id="close-queue-btn" class="close-btn">← Back</button>
-      <span style="font-weight:600">Arrange Playlist</span>
-      <span style="width:32px"></span>
+  <!-- Reorder Queue Fullscreen Modal -->
+  <div class="fullscreen-overlay" id="queue-modal">
+    <div class="overlay-head">
+      <button id="close-queue-btn" class="btn-action">← Back</button>
+      <span style="font-weight:600">Reorder Playlist Songs</span>
+      <span style="width:30px;"></span>
     </div>
-    <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:12px;">Use ▲ and ▼ to shift tracks order in this playlist</p>
-    <ul id="reorder-list" class="song-list"></ul>
+    <ul id="reorder-list" class="song-list" style="margin-top:10px;"></ul>
   </div>
 
-  <!-- 10-Band Equalizer Modal -->
-  <div class="queue-overlay" id="eq-modal" style="display:none;">
-    <div class="player-overlay-header">
-      <button id="close-eq-btn" class="close-btn">✕ Done</button>
-      <span style="font-weight:600">Studio Equalizer (VLC Mode)</span>
-      <span style="width:32px"></span>
+  <!-- 10-Band Equalizer Fullscreen Modal -->
+  <div class="fullscreen-overlay" id="eq-modal">
+    <div class="overlay-head">
+      <button id="close-eq-btn" class="btn-action">✕ Done</button>
+      <span style="font-weight:600">Equalizer (VLC Preset)</span>
+      <button id="btn-reset-eq" class="btn-action">Reset</button>
     </div>
-    <div style="padding: 10px 0;">
-      <div class="eq-controls-top">
-        <label><input type="checkbox" id="eq-enable" checked /> Enable Audio DSP</label>
-        <button id="btn-reset-eq" class="btn-action">Reset Defaults</button>
-      </div>
-      <div class="eq-container">
-        <div class="eq-col">
-          <span class="eq-val" id="val-preamp">14.1dB</span>
-          <input type="range" class="vertical-slider" id="eq-preamp" min="-20" max="20" step="0.1" value="14.1" />
-          <span class="eq-freq">Preamp</span>
-        </div>
-        <div class="eq-col"><span class="eq-val" id="val-60">18.2dB</span><input type="range" class="vertical-slider" data-band="0" min="-20" max="20" step="0.1" value="18.2" /><span class="eq-freq">60Hz</span></div>
-        <div class="eq-col"><span class="eq-val" id="val-170">11.8dB</span><input type="range" class="vertical-slider" data-band="1" min="-20" max="20" step="0.1" value="11.8" /><span class="eq-freq">170Hz</span></div>
-        <div class="eq-col"><span class="eq-val" id="val-310">3.7dB</span><input type="range" class="vertical-slider" data-band="2" min="-20" max="20" step="0.1" value="3.7" /><span class="eq-freq">310Hz</span></div>
-        <div class="eq-col"><span class="eq-val" id="val-600">-1.7dB</span><input type="range" class="vertical-slider" data-band="3" min="-20" max="20" step="0.1" value="-1.7" /><span class="eq-freq">600Hz</span></div>
-        <div class="eq-col"><span class="eq-val" id="val-1000">-7.8dB</span><input type="range" class="vertical-slider" data-band="4" min="-20" max="20" step="0.1" value="-7.8" /><span class="eq-freq">1kHz</span></div>
-        <div class="eq-col"><span class="eq-val" id="val-3000">2.1dB</span><input type="range" class="vertical-slider" data-band="5" min="-20" max="20" step="0.1" value="2.1" /><span class="eq-freq">3kHz</span></div>
-        <div class="eq-col"><span class="eq-val" id="val-6000">9.8dB</span><input type="range" class="vertical-slider" data-band="6" min="-20" max="20" step="0.1" value="9.8" /><span class="eq-freq">6kHz</span></div>
-        <div class="eq-col"><span class="eq-val" id="val-12000">14.1dB</span><input type="range" class="vertical-slider" data-band="7" min="-20" max="20" step="0.1" value="14.1" /><span class="eq-freq">12kHz</span></div>
-        <div class="eq-col"><span class="eq-val" id="val-14000">-3.6dB</span><input type="range" class="vertical-slider" data-band="8" min="-20" max="20" step="0.1" value="-3.6" /><span class="eq-freq">14kHz</span></div>
-        <div class="eq-col"><span class="eq-val" id="val-16000">11.6dB</span><input type="range" class="vertical-slider" data-band="9" min="-20" max="20" step="0.1" value="11.6" /><span class="eq-freq">16kHz</span></div>
-      </div>
+    <div class="eq-controls-top">
+      <label><input type="checkbox" id="eq-enable" checked /> Enable Audio DSP</label>
+    </div>
+    <div class="eq-container">
+      <div class="eq-col"><span class="eq-val" id="val-preamp">14.1dB</span><input type="range" class="vertical-slider" id="eq-preamp" min="-20" max="20" step="0.1" value="14.1" /><span class="eq-freq">Pre</span></div>
+      <div class="eq-col"><span class="eq-val" id="val-60">18.2dB</span><input type="range" class="vertical-slider" data-band="0" min="-20" max="20" step="0.1" value="18.2" /><span class="eq-freq">60</span></div>
+      <div class="eq-col"><span class="eq-val" id="val-170">11.8dB</span><input type="range" class="vertical-slider" data-band="1" min="-20" max="20" step="0.1" value="11.8" /><span class="eq-freq">170</span></div>
+      <div class="eq-col"><span class="eq-val" id="val-310">3.7dB</span><input type="range" class="vertical-slider" data-band="2" min="-20" max="20" step="0.1" value="3.7" /><span class="eq-freq">310</span></div>
+      <div class="eq-col"><span class="eq-val" id="val-600">-1.7dB</span><input type="range" class="vertical-slider" data-band="3" min="-20" max="20" step="0.1" value="-1.7" /><span class="eq-freq">600</span></div>
+      <div class="eq-col"><span class="eq-val" id="val-1000">-7.8dB</span><input type="range" class="vertical-slider" data-band="4" min="-20" max="20" step="0.1" value="-7.8" /><span class="eq-freq">1k</span></div>
+      <div class="eq-col"><span class="eq-val" id="val-3000">2.1dB</span><input type="range" class="vertical-slider" data-band="5" min="-20" max="20" step="0.1" value="2.1" /><span class="eq-freq">3k</span></div>
+      <div class="eq-col"><span class="eq-val" id="val-6000">9.8dB</span><input type="range" class="vertical-slider" data-band="6" min="-20" max="20" step="0.1" value="9.8" /><span class="eq-freq">6k</span></div>
+      <div class="eq-col"><span class="eq-val" id="val-12000">14.1dB</span><input type="range" class="vertical-slider" data-band="7" min="-20" max="20" step="0.1" value="14.1" /><span class="eq-freq">12k</span></div>
+      <div class="eq-col"><span class="eq-val" id="val-14000">-3.6dB</span><input type="range" class="vertical-slider" data-band="8" min="-20" max="20" step="0.1" value="-3.6" /><span class="eq-freq">14k</span></div>
+      <div class="eq-col"><span class="eq-val" id="val-16000">11.6dB</span><input type="range" class="vertical-slider" data-band="9" min="-20" max="20" step="0.1" value="11.6" /><span class="eq-freq">16k</span></div>
     </div>
   </div>
 
-  <audio id="audio-engine" crossorigin="anonymous" playsinline></audio>
+  <audio id="audio-engine" playsinline preload="auto"></audio>
   <script src="./app.js"></script>
 </body>
 </html>
