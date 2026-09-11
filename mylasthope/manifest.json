@@ -1,0 +1,46 @@
+{
+  "name": "Amarjeet Audio Studio",
+  "short_name": "AmarjeetAudio",
+  "description": "Offline Studio Audio Player with 10-Band Equalizer and Custom Playlists. Made by & for Amarjeet kumar.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0d14",
+  "theme_color": "#171f2d",
+  "categories": ["music", "audio", "entertainment"],
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='110' fill='%23171f2d'/%3E%3Ccircle cx='256' cy='256' r='180' fill='%230a0d14' stroke='%232ea043' stroke-width='16'/%3E%3Cpath d='M210 160v192l150-96z' fill='%233fb950'/%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='110' fill='%23171f2d'/%3E%3Ccircle cx='256' cy='256' r='180' fill='%230a0d14' stroke='%232ea043' stroke-width='16'/%3E%3Cpath d='M210 160v192l150-96z' fill='%233fb950'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3844/3844724.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Favorites",
+      "short_name": "Favorites",
+      "description": "Quickly view your favorite tracks",
+      "url": "./index.html#favorites",
+      "icons": [
+        {
+          "src": "https://cdn-icons-png.flaticon.com/512/3844/3844724.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
+}
