@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GECM Portal - Unified Admin Studio</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- PeerJS for WebRTC Peer-to-Peer Live Streaming -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <style>
     * {
       box-sizing: border-box;
@@ -20,20 +22,27 @@
     .tab-pane.hidden {
       display: none !important;
     }
+    .pulse-dot {
+      animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(1.15); }
+    }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen">
 
-  <!-- Top Header Navigation with Omni-Search Bar[cite: 4] -->
+  <!-- Top Header Navigation with Omni-Search Bar -->
   <header class="bg-slate-950 border-b border-slate-800 px-6 py-4 flex flex-wrap justify-between items-center gap-4 sticky top-0 z-50">
     <div class="flex items-center gap-3">
       <span class="text-xl font-extrabold text-blue-400 tracking-tight">GECM Studio</span>
-      <span class="text-xs px-2.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 font-mono">v4.5 Omni CRUD</span>
+      <span class="text-xs px-2.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 font-mono">v5.0 Live Broadcast</span>
     </div>
     
-    <!-- Omni-Search Bar (Searches across categories, subcategories, cards, popups, and telemetry)[cite: 4] -->
+    <!-- Omni-Search Bar (Searches across categories, cards, popups, telemetry, and live streams) -->
     <div class="flex-1 max-w-md hidden md:block">
-      <input type="text" id="omniSearchInput" placeholder="🔍 Omni-Search categories, cards, popups, student logs..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-1.5 text-xs text-white outline-none focus:border-blue-500 placeholder-slate-500">
+      <input type="text" id="omniSearchInput" placeholder="🔍 Omni-Search categories, cards, popups, live, student logs..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-1.5 text-xs text-white outline-none focus:border-blue-500 placeholder-slate-500">
     </div>
 
     <div id="authStatusBadge" class="text-xs text-amber-400 font-semibold flex items-center gap-2">
@@ -41,10 +50,10 @@
     </div>
   </header>
 
-  <!-- Login Overlay[cite: 4] -->
+  <!-- Login Overlay -->
   <div id="loginView" class="max-w-md mx-auto mt-20 p-6 bg-slate-800/90 backdrop-blur rounded-xl shadow-2xl border border-slate-700">
     <h2 class="text-xl font-bold text-center text-white mb-2">Studio Authentication</h2>
-    <p class="text-xs text-slate-400 text-center mb-6">Enter the master administrative key to manage academic categories, cards, popups, and telemetry.</p>
+    <p class="text-xs text-slate-400 text-center mb-6">Enter the master administrative key to manage categories, cards, popups, live broadcasts, and telemetry.</p>
     <input type="password" id="adminPassword" placeholder="Enter admin passkey" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm mb-4 outline-none focus:border-blue-500 text-white placeholder-slate-500">
     <button type="button" id="btnLogin" class="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold py-3 rounded-lg text-sm transition-all shadow-lg shadow-blue-600/30">
       Unlock Master Studio
@@ -52,22 +61,23 @@
     <p id="loginError" class="text-xs text-rose-400 text-center mt-3 hidden font-semibold"></p>
   </div>
 
-  <!-- Master Dashboard Workspace[cite: 4] -->
+  <!-- Master Dashboard Workspace -->
   <main id="dashboardView" class="hidden max-w-7xl mx-auto p-4 sm:p-6 space-y-8">
 
-    <!-- Section Tabs[cite: 4] -->
-    <div class="flex border-b border-slate-800 gap-6 text-sm font-bold">
-      <button type="button" class="pb-3 border-b-2 border-blue-500 text-blue-400 tab-btn" data-tab="tab-taxonomy">Categories & Cards</button>
-      <button type="button" class="pb-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 tab-btn" data-tab="tab-popups">Multi-Popup Studio</button>
-      <button type="button" class="pb-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 tab-btn" data-tab="tab-telemetry">Student Telemetry & Drive Archive</button>
+    <!-- Section Tabs -->
+    <div class="flex border-b border-slate-800 gap-6 text-sm font-bold overflow-x-auto pb-1">
+      <button type="button" class="pb-3 border-b-2 border-blue-500 text-blue-400 whitespace-nowrap tab-btn" data-tab="tab-taxonomy">Categories & Cards</button>
+      <button type="button" class="pb-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 whitespace-nowrap tab-btn" data-tab="tab-popups">Multi-Popup Studio</button>
+      <button type="button" class="pb-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 whitespace-nowrap tab-btn" data-tab="tab-live">🔴 Live Broadcast Studio</button>
+      <button type="button" class="pb-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 whitespace-nowrap tab-btn" data-tab="tab-telemetry">Student Telemetry & Drive Archive</button>
     </div>
 
-    <!-- TAB 1: CATEGORIES, SUBCATEGORIES & CARDS[cite: 4] -->
+    <!-- TAB 1: CATEGORIES, SUBCATEGORIES & CARDS -->
     <section id="tab-taxonomy" class="tab-pane space-y-8">
       
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         
-        <!-- Add / Edit Category Form[cite: 4] -->
+        <!-- Add / Edit Category Form -->
         <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-5 space-y-4">
           <div class="border-b border-slate-700/60 pb-3 flex justify-between items-center">
             <div>
@@ -96,7 +106,7 @@
           </div>
         </div>
 
-        <!-- Add / Edit Subcategory Form[cite: 4] -->
+        <!-- Add / Edit Subcategory Form -->
         <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-5 space-y-4">
           <div class="border-b border-slate-700/60 pb-3 flex justify-between items-center">
             <div>
@@ -127,7 +137,7 @@
 
       </div>
 
-      <!-- Categories & Subcategories Inventory Tables[cite: 4] -->
+      <!-- Categories & Subcategories Inventory Tables -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-4">
           <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-3">Categories Repository</h4>
@@ -158,7 +168,7 @@
         </div>
       </div>
 
-      <!-- Card Creator & Document Publishing Studio[cite: 4] -->
+      <!-- Card Creator & Document Publishing Studio -->
       <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-6 space-y-5">
         <div class="border-b border-slate-700/60 pb-3 flex flex-wrap justify-between items-center gap-2">
           <div>
@@ -248,7 +258,7 @@
         </div>
       </div>
 
-      <!-- Published Inventory Table with IST Timestamps[cite: 4] -->
+      <!-- Published Inventory Table with IST Timestamps -->
       <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-5">
         <h4 class="text-sm font-bold text-white mb-4">Published Cards Inventory</h4>
         <div class="overflow-x-auto">
@@ -274,7 +284,7 @@
 
     </section>
 
-    <!-- TAB 2: MULTI-POPUP MANAGEMENT STUDIO[cite: 4] -->
+    <!-- TAB 2: MULTI-POPUP MANAGEMENT STUDIO -->
     <section id="tab-popups" class="tab-pane hidden space-y-8">
       
       <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-6 space-y-6">
@@ -384,7 +394,7 @@
         </div>
       </div>
 
-      <!-- Permanent Popups Table[cite: 4] -->
+      <!-- Permanent Popups Table -->
       <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-5">
         <div class="border-b border-slate-700/60 pb-3 mb-4 flex justify-between items-center">
           <h4 class="text-sm font-bold text-white">Permanent Popups Repository</h4>
@@ -412,7 +422,137 @@
 
     </section>
 
-    <!-- TAB 3: STUDENT TELEMETRY & DRIVE ARCHIVE[cite: 4] -->
+    <!-- TAB 3: LIVE BROADCAST STUDIO -->
+    <section id="tab-live" class="tab-pane hidden space-y-8">
+      
+      <!-- Live Control Center -->
+      <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-6 space-y-6">
+        
+        <div class="border-b border-slate-700/60 pb-3 flex flex-wrap justify-between items-center gap-3">
+          <div>
+            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+              <span id="liveStatusDot" class="w-3 h-3 rounded-full bg-slate-500"></span>
+              GECM Live Studio
+            </h3>
+            <p class="text-xs text-slate-400">Stream your front/back camera or screen with microphone audio directly to college students</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <span id="liveTimerBadge" class="hidden text-xs font-mono font-bold bg-rose-950 text-rose-300 border border-rose-800 px-3 py-1 rounded-full">
+              🔴 LIVE 00:00
+            </span>
+            <button type="button" id="btnToggleLive" class="bg-rose-600 hover:bg-rose-500 active:bg-rose-700 text-white font-bold px-6 py-2 rounded-lg text-xs transition shadow-lg shadow-rose-600/30 flex items-center gap-2">
+              <span>●</span>
+              <span id="btnToggleLiveText">Go Live & Start Recording</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          
+          <!-- Left: Pre-Live Details & Inputs (5 Cols) -->
+          <div class="lg:col-span-5 space-y-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Live Topic / Title</label>
+              <input type="text" id="liveTopic" placeholder="e.g. Engineering Mathematics Live Problem Solving" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-rose-500">
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Topic Description</label>
+              <textarea id="liveDesc" rows="3" placeholder="Explain the key topics, chapter, or interactive Q&A format..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-rose-500"></textarea>
+            </div>
+
+            <div class="bg-slate-900/70 p-3 rounded-lg border border-slate-700/80 space-y-2">
+              <label class="block text-xs font-bold text-slate-300 uppercase">Live Logo / Thumbnail</label>
+              <input type="file" id="liveThumbFile" accept="image/*" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-xs text-slate-400 file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:bg-slate-800 file:text-white">
+              <input type="url" id="liveThumbUrl" placeholder="Or paste logo URL" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white outline-none focus:border-rose-500">
+            </div>
+
+            <!-- Video Device Controls (Active even while streaming) -->
+            <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-700 space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-white uppercase tracking-wider">Smooth Video Switcher</span>
+                <span class="text-[10px] text-emerald-400 font-mono">Audio Always On</span>
+              </div>
+              <p class="text-[11px] text-slate-400">Switch devices on the fly without dropping student viewer connections or interrupting live recording.</p>
+              
+              <div class="grid grid-cols-3 gap-2 pt-1">
+                <button type="button" id="btnSourceFront" class="bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2 px-2 rounded-lg text-xs border border-slate-600 transition flex flex-col items-center gap-1">
+                  <span>📱</span>
+                  <span>Front Cam</span>
+                </button>
+                <button type="button" id="btnSourceBack" class="bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2 px-2 rounded-lg text-xs border border-slate-600 transition flex flex-col items-center gap-1">
+                  <span>📷</span>
+                  <span>Back Cam</span>
+                </button>
+                <button type="button" id="btnSourceScreen" class="bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2 px-2 rounded-lg text-xs border border-slate-600 transition flex flex-col items-center gap-1">
+                  <span>🖥️</span>
+                  <span>Screen Share</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Live Monitor / Video Viewport (7 Cols) -->
+          <div class="lg:col-span-7 flex flex-col space-y-3">
+            <div class="relative bg-black rounded-xl overflow-hidden aspect-video border border-slate-800 flex items-center justify-center shadow-2xl">
+              <video id="adminLivePreview" autoplay muted playsinline class="w-full h-full object-contain"></video>
+              
+              <div id="previewPlaceholder" class="absolute flex flex-col items-center gap-2 text-slate-500">
+                <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>
+                <span class="text-xs font-semibold">Camera / Screen Preview Offline</span>
+              </div>
+
+              <div id="liveOnAirBadge" class="hidden absolute top-3 left-3 bg-rose-600/90 backdrop-blur text-white text-[11px] font-extrabold uppercase px-2.5 py-0.5 rounded flex items-center gap-1.5 shadow">
+                <span class="w-2 h-2 rounded-full bg-white pulse-dot"></span>
+                ON AIR
+              </div>
+
+              <div id="activeSourceLabel" class="hidden absolute bottom-3 right-3 bg-slate-950/80 backdrop-blur text-slate-300 text-[10px] font-mono px-2 py-0.5 rounded border border-slate-700">
+                Source: None
+              </div>
+            </div>
+
+            <!-- Upload progress notification bar -->
+            <div id="liveUploadStatus" class="hidden bg-indigo-950/80 border border-indigo-800 p-3 rounded-lg text-xs text-indigo-200 flex items-center justify-between">
+              <span id="liveUploadText" class="flex items-center gap-2">
+                <span class="animate-spin">⏳</span> Uploading stream recording to Google Drive...
+              </span>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Live Stream Archives & Video Player Table -->
+      <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-5">
+        <div class="border-b border-slate-700/60 pb-3 mb-4 flex justify-between items-center">
+          <h4 class="text-sm font-bold text-white">Live Recordings & Stream Archives</h4>
+          <span class="text-xs text-slate-400" id="liveArchiveCountBadge">0 Recorded Streams</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead class="bg-slate-900/80 text-slate-400 border-b border-slate-700">
+              <tr>
+                <th class="p-3 whitespace-nowrap">ID</th>
+                <th class="p-3 whitespace-nowrap">Timestamp (IST)</th>
+                <th class="p-3">Logo / Banner</th>
+                <th class="p-3">Topic</th>
+                <th class="p-3">Description</th>
+                <th class="p-3">Video Recording</th>
+                <th class="p-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="liveArchiveTableBody" class="divide-y divide-slate-800 text-slate-300">
+              <tr><td colspan="7" class="p-4 text-center text-slate-500">No live recordings saved yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- TAB 4: STUDENT TELEMETRY & DRIVE ARCHIVE -->
     <section id="tab-telemetry" class="tab-pane hidden space-y-6">
       <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-6">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-700/60">
@@ -463,7 +603,9 @@
       subcategories: [],
       cards: [],
       popups: [],
-      telemetry: []
+      telemetry: [],
+      liveArchives: [],
+      activeLive: null
     };
 
     function clearUserLocalCache() {
@@ -489,7 +631,7 @@
       });
     }
 
-    // Tab Navigation[cite: 4]
+    // Tab Navigation
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
@@ -506,7 +648,7 @@
       });
     });
 
-    // Authentication Login[cite: 4]
+    // Authentication Login
     document.getElementById('btnLogin').addEventListener('click', async (e) => {
       e.preventDefault();
       const passInput = document.getElementById('adminPassword');
@@ -549,6 +691,8 @@
           studioData.categories = Array.isArray(data.categories) ? data.categories : [];
           studioData.subcategories = Array.isArray(data.subcategories) ? data.subcategories : [];
           studioData.cards = Array.isArray(data.cards) ? data.cards : [];
+          studioData.liveArchives = Array.isArray(data.liveArchives) ? data.liveArchives : [];
+          studioData.activeLive = data.activeLive || null;
 
           renderAllAdminViews();
         } else {
@@ -583,9 +727,359 @@
       renderCardsInventory(studioData.cards);
       renderPopupsList(studioData.popups);
       renderTelemetry(studioData.telemetry);
+      renderLiveArchivesTable(studioData.liveArchives);
     }
 
-    // --- CATEGORY CRUD[cite: 4] ---
+    // =========================================================================
+    // 1. LIVE BROADCASTING, SMOOTH SWITCHER & RECORDING ENGINE
+    // =========================================================================
+    let isBroadcasting = false;
+    let localStream = null;
+    let audioTrack = null;
+    let activeVideoTrack = null;
+    let currentSourceMode = "front"; // front | back | screen
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let liveTimerInterval = null;
+    let liveSecondsElapsed = 0;
+    let peerInstance = null;
+    let activePeerCalls = [];
+    let currentLiveStreamId = null;
+
+    // Initialize PeerJS Host for student viewers
+    function initHostPeer() {
+      if (peerInstance) return;
+      const hostId = "gecm-live-host-" + Math.floor(1000 + Math.random() * 9000);
+      peerInstance = new Peer(hostId);
+
+      peerInstance.on('open', (id) => {
+        console.log("Live Broadcast Peer ID registered:", id);
+      });
+
+      // Handle incoming student viewer connections
+      peerInstance.on('call', (call) => {
+        if (localStream) {
+          call.answer(localStream);
+          activePeerCalls.push(call);
+          call.on('close', () => {
+            activePeerCalls = activePeerCalls.filter(c => c !== call);
+          });
+        }
+      });
+    }
+
+    // Acquire persistent microphone audio track
+    async function ensureAudioTrack() {
+      if (!audioTrack || audioTrack.readyState === "ended") {
+        const aStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioTrack = aStream.getAudioTracks()[0];
+      }
+      return audioTrack;
+    }
+
+    // Get video track based on selected source mode
+    async function getVideoTrackForMode(mode) {
+      if (mode === "screen") {
+        const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        return screenStream.getVideoTracks()[0];
+      } else if (mode === "back") {
+        const camStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" } }
+        });
+        return camStream.getVideoTracks()[0];
+      } else {
+        // default front camera
+        const camStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "user" }
+        });
+        return camStream.getVideoTracks()[0];
+      }
+    }
+
+    // Smooth Switcher: Replaces video track in local stream and across peer connections
+    async function switchStreamVideoSource(mode) {
+      try {
+        currentSourceMode = mode;
+        const newVTrack = await getVideoTrackForMode(mode);
+        const mic = await ensureAudioTrack();
+
+        // Listen for screen-share stop button
+        if (mode === "screen") {
+          newVTrack.onended = () => {
+            switchStreamVideoSource("front");
+          };
+        }
+
+        if (activeVideoTrack) {
+          activeVideoTrack.stop();
+        }
+        activeVideoTrack = newVTrack;
+
+        if (!localStream) {
+          localStream = new MediaStream([activeVideoTrack, mic]);
+        } else {
+          // Replace track in existing local stream
+          const oldVTrack = localStream.getVideoTracks()[0];
+          if (oldVTrack) localStream.removeTrack(oldVTrack);
+          localStream.addTrack(activeVideoTrack);
+        }
+
+        // Smoothly replace track across all active viewer peer calls
+        activePeerCalls.forEach(call => {
+          if (call.peerConnection) {
+            const sender = call.peerConnection.getSenders().find(s => s.track && s.track.kind === "video");
+            if (sender) {
+              sender.replaceTrack(activeVideoTrack);
+            }
+          }
+        });
+
+        // Update admin preview video
+        const videoEl = document.getElementById('adminLivePreview');
+        if (videoEl) {
+          videoEl.srcObject = localStream;
+          videoEl.play();
+        }
+
+        document.getElementById('previewPlaceholder').classList.add('hidden');
+        const sourceLabel = document.getElementById('activeSourceLabel');
+        sourceLabel.textContent = `Source: ${mode.toUpperCase()}`;
+        sourceLabel.classList.remove('hidden');
+
+      } catch (err) {
+        console.error("Camera/Screen switch error:", err);
+        alert("Device switch error: " + err.message);
+      }
+    }
+
+    // Device Switcher Buttons
+    document.getElementById('btnSourceFront').addEventListener('click', () => switchStreamVideoSource("front"));
+    document.getElementById('btnSourceBack').addEventListener('click', () => switchStreamVideoSource("back"));
+    document.getElementById('btnSourceScreen').addEventListener('click', () => switchStreamVideoSource("screen"));
+
+    // Toggle Go Live & Recording
+    document.getElementById('btnToggleLive').addEventListener('click', async () => {
+      if (!isBroadcasting) {
+        // --- START LIVE BROADCAST ---
+        const topic = document.getElementById('liveTopic').value.trim() || "GEC Munger Live Broadcast";
+        const desc = document.getElementById('liveDesc').value.trim() || "Official live academic lecture & interactive session.";
+        const thumbUrl = document.getElementById('liveThumbUrl').value.trim();
+        const thumbInput = document.getElementById('liveThumbFile');
+
+        const btn = document.getElementById('btnToggleLive');
+        btn.disabled = true;
+        btn.innerHTML = `<span class="animate-spin">⏳</span> Preparing Stream...`;
+
+        try {
+          initHostPeer();
+          await switchStreamVideoSource(currentSourceMode);
+
+          let thumbPayload = null;
+          if (thumbInput.files && thumbInput.files.length > 0) {
+            thumbPayload = await readFileAsBase64(thumbInput.files[0]);
+          }
+
+          // Register live state on backend
+          const res = await fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({
+              action: "admin_set_live_status",
+              key: authPass,
+              isLive: true,
+              topic: topic,
+              description: desc,
+              thumbnailUrl: thumbUrl,
+              thumbnailFile: thumbPayload,
+              peerId: peerInstance ? peerInstance.id : "gecm-live-host"
+            })
+          });
+
+          const d = await res.json();
+          if (d && d.status === "success") {
+            currentLiveStreamId = d.id;
+            isBroadcasting = true;
+
+            // Start Live Recording
+            recordedChunks = [];
+            try {
+              mediaRecorder = new MediaRecorder(localStream, { mimeType: 'video/webm;codecs=vp8,opus' });
+            } catch (e) {
+              mediaRecorder = new MediaRecorder(localStream);
+            }
+            mediaRecorder.ondataavailable = (e) => {
+              if (e.data && e.data.size > 0) recordedChunks.push(e.data);
+            };
+            mediaRecorder.start(1000); // 1-second chunks
+
+            // Update UI
+            document.getElementById('liveStatusDot').className = "w-3 h-3 rounded-full bg-rose-500 pulse-dot";
+            document.getElementById('liveOnAirBadge').classList.remove('hidden');
+            document.getElementById('liveTimerBadge').classList.remove('hidden');
+            document.getElementById('btnToggleLiveText').textContent = "End Live Stream & Save Video";
+            btn.className = "bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-white font-bold px-6 py-2 rounded-lg text-xs transition border border-rose-500 shadow flex items-center gap-2";
+
+            // Timer
+            liveSecondsElapsed = 0;
+            liveTimerInterval = setInterval(() => {
+              liveSecondsElapsed++;
+              const mins = String(Math.floor(liveSecondsElapsed / 60)).padStart(2, '0');
+              const secs = String(liveSecondsElapsed % 60).padStart(2, '0');
+              document.getElementById('liveTimerBadge').textContent = `🔴 LIVE ${mins}:${secs}`;
+            }, 1000);
+
+            clearUserLocalCache();
+            alert("Live Broadcast Started! Recording is running.");
+          } else {
+            alert("Could not start live broadcast: " + (d ? d.message : "Error"));
+          }
+        } catch (err) {
+          alert("Broadcast startup error: " + err.message);
+        } finally {
+          btn.disabled = false;
+        }
+
+      } else {
+        // --- END LIVE BROADCAST & UPLOAD RECORDING ---
+        if (!confirm("Are you sure you want to end the live broadcast? The recorded video will be saved to Google Drive.")) return;
+
+        const btn = document.getElementById('btnToggleLive');
+        btn.disabled = true;
+        btn.innerHTML = `<span class="animate-spin">⏳</span> Ending & Archiving...`;
+
+        // Stop timer
+        if (liveTimerInterval) clearInterval(liveTimerInterval);
+        document.getElementById('liveTimerBadge').classList.add('hidden');
+        document.getElementById('liveOnAirBadge').classList.add('hidden');
+        document.getElementById('liveStatusDot').className = "w-3 h-3 rounded-full bg-slate-500";
+
+        // Stop MediaRecorder and trigger upload
+        if (mediaRecorder && mediaRecorder.state !== "inactive") {
+          mediaRecorder.onstop = async () => {
+            const blob = new Blob(recordedChunks, { type: 'video/webm' });
+            uploadRecordedLiveToDrive(blob);
+          };
+          mediaRecorder.stop();
+        }
+
+        // Notify backend live is ended
+        try {
+          await fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({
+              action: "admin_set_live_status",
+              key: authPass,
+              isLive: false
+            })
+          });
+        } catch (e) {}
+
+        // Stop local media tracks
+        if (localStream) {
+          localStream.getTracks().forEach(t => t.stop());
+          localStream = null;
+          activeVideoTrack = null;
+          audioTrack = null;
+        }
+
+        const previewVideo = document.getElementById('adminLivePreview');
+        if (previewVideo) previewVideo.srcObject = null;
+        document.getElementById('previewPlaceholder').classList.remove('hidden');
+        document.getElementById('activeSourceLabel').classList.add('hidden');
+
+        isBroadcasting = false;
+        document.getElementById('btnToggleLiveText').textContent = "Go Live & Start Recording";
+        btn.className = "bg-rose-600 hover:bg-rose-500 active:bg-rose-700 text-white font-bold px-6 py-2 rounded-lg text-xs transition shadow-lg shadow-rose-600/30 flex items-center gap-2";
+        btn.disabled = false;
+        clearUserLocalCache();
+      }
+    });
+
+    // Upload recorded webm blob to Google Drive backend
+    async function uploadRecordedLiveToDrive(blob) {
+      const uploadStatus = document.getElementById('liveUploadStatus');
+      const uploadText = document.getElementById('liveUploadText');
+      uploadStatus.classList.remove('hidden');
+      uploadText.innerHTML = `<span class="animate-spin">⏳</span> Encoding & Archiving Live Video to Google Drive...`;
+
+      try {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const base64Data = e.target.result;
+          const topic = document.getElementById('liveTopic').value.trim() || "Live Session";
+
+          const res = await fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({
+              action: "admin_save_live_recording",
+              key: authPass,
+              streamId: currentLiveStreamId,
+              topic: topic,
+              videoBase64: base64Data
+            })
+          });
+
+          const d = await res.json();
+          if (d && d.status === "success") {
+            uploadText.innerHTML = `✓ Live Recording successfully uploaded to Google Drive!`;
+            setTimeout(() => uploadStatus.classList.add('hidden'), 5000);
+            await reloadStudioData();
+          } else {
+            uploadText.innerHTML = `✕ Upload to Drive failed.`;
+          }
+        };
+        reader.readAsDataURL(blob);
+      } catch (err) {
+        uploadText.innerHTML = `✕ Error uploading video: ${err.message}`;
+      }
+    }
+
+    // Render Live Archives Table
+    function renderLiveArchivesTable(list) {
+      const badge = document.getElementById('liveArchiveCountBadge');
+      if (badge) badge.textContent = `${list.length} Recorded Streams`;
+      const tbody = document.getElementById('liveArchiveTableBody');
+      if (!tbody) return;
+      tbody.innerHTML = "";
+
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-500">No live recordings saved yet.</td></tr>`;
+        return;
+      }
+
+      list.forEach(item => {
+        const tr = document.createElement('tr');
+        const hasVideo = Boolean(item.driveVideoUrl && item.driveVideoUrl.trim().length > 5);
+
+        tr.innerHTML = `
+          <td class="p-3 font-mono text-blue-400 whitespace-nowrap">${item.id}</td>
+          <td class="p-3 font-mono text-[11px] text-slate-400 whitespace-nowrap">${item.startedAt || item.timestamp || 'N/A'}</td>
+          <td class="p-3">
+            ${item.thumbnailUrl ? `<img src="${item.thumbnailUrl}" class="w-12 h-12 object-cover rounded border border-slate-700">` : '<span class="text-slate-500">None</span>'}
+          </td>
+          <td class="p-3 font-semibold text-white max-w-xs">${item.topic || 'Live Session'}</td>
+          <td class="p-3 text-slate-400 max-w-sm truncate">${item.description || 'N/A'}</td>
+          <td class="p-3">
+            ${hasVideo 
+              ? `<div class="w-48 bg-black rounded overflow-hidden border border-slate-700">
+                   <iframe src="${item.driveVideoUrl}" class="w-full h-28 border-0" allow="autoplay"></iframe>
+                 </div>`
+              : `<span class="text-amber-400 font-mono text-[11px]">${item.isLive ? '🔴 Currently Live' : 'Processing / No Video'}</span>`}
+          </td>
+          <td class="p-3 text-right">
+            <button type="button" class="text-rose-400 hover:text-rose-300 font-bold" onclick="deleteItem('LiveStreams', '${item.id}')">Delete</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // =========================================================================
+    // 2. CATEGORY, SUBCATEGORY & CARD CRUD
+    // =========================================================================
+    // Save Category
     document.getElementById('btnSaveCategory').addEventListener('click', async (e) => {
       e.preventDefault();
       const id = document.getElementById('editingCatId').value;
@@ -668,7 +1162,7 @@
       });
     }
 
-    // --- SUBCATEGORY CRUD[cite: 4] ---
+    // Save Subcategory
     document.getElementById('btnSaveSubcategory').addEventListener('click', async (e) => {
       e.preventDefault();
       const id = document.getElementById('editingSubId').value;
@@ -750,7 +1244,7 @@
       });
     }
 
-    // --- CARD CRUD[cite: 4] ---
+    // Card Action Type & Drive Document Uploader
     const actionSelect = document.getElementById('cardActionType');
     if (actionSelect) {
       actionSelect.addEventListener('change', (e) => {
@@ -938,7 +1432,9 @@
       });
     }
 
-    // --- POPUP CRUD[cite: 4] ---
+    // =========================================================================
+    // 3. MULTI-POPUP CRUD & REPOSITORY
+    // =========================================================================
     let pendingPopupFile = null;
     document.getElementById('popupFileInput').addEventListener('change', (e) => {
       const file = e.target.files[0];
@@ -1087,6 +1583,8 @@
           studioData.categories = data.categories || [];
           studioData.subcategories = data.subcategories || [];
           studioData.cards = data.cards || [];
+          studioData.liveArchives = data.liveArchives || [];
+          studioData.activeLive = data.activeLive || null;
           renderAllAdminViews();
         }
       } catch (e) {
@@ -1129,6 +1627,9 @@
       });
     }
 
+    // =========================================================================
+    // 4. STUDENT TELEMETRY TABLE
+    // =========================================================================
     function renderTelemetry(list) {
       const countEl = document.getElementById('telemetryCount');
       if (countEl) countEl.textContent = list.length;
@@ -1175,7 +1676,9 @@
       });
     }
 
-    // --- OMNI-SEARCH ENGINE (Searches Categories, Subcategories, Cards, Popups, and Telemetry)[cite: 4] ---
+    // =========================================================================
+    // 5. OMNI-SEARCH ENGINE (Filters Categories, Cards, Popups, Live, Telemetry)
+    // =========================================================================
     const omniInput = document.getElementById('omniSearchInput');
     if (omniInput) {
       omniInput.addEventListener('input', (e) => {
@@ -1215,6 +1718,14 @@
         );
         renderPopupsList(filteredPopups);
 
+        const filteredLive = studioData.liveArchives.filter(l =>
+          (l.topic && l.topic.toLowerCase().includes(q)) ||
+          (l.description && l.description.toLowerCase().includes(q)) ||
+          (l.id && l.id.toLowerCase().includes(q)) ||
+          (l.timestamp && l.timestamp.toLowerCase().includes(q))
+        );
+        renderLiveArchivesTable(filteredLive);
+
         const filteredTelemetry = studioData.telemetry.filter(u => 
           (u.name && u.name.toLowerCase().includes(q)) ||
           (u.roll && u.roll.toLowerCase().includes(q)) ||
@@ -1234,6 +1745,3 @@
   </script>
 </body>
 </html>
-```[cite: 4]
-
-Let me know if you would like me to send the final file (`code.gs`) or if you have any questions!
