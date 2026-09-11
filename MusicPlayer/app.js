@@ -482,9 +482,14 @@ async function playTrack(idx) {
   if ('mediaSession' in navigator) {
     navigator.mediaSession.metadata = new MediaMetadata({
       title: trk.name,
-      artist: 'Made by & for Amarjeet kumar',
-      album: currentPlaylist.name,
-      artwork: [{ src: currentPlaylist.cover || DEFAULT_ART, sizes: '192x192', type: 'image/png' }]
+      // Displays Playlist Name + Credit together so it is visible on all phone lock screens
+      artist: `Playlist: ${currentPlaylist.name} • Made by & for Amarjeet kumar`,
+      album: `Playlist: ${currentPlaylist.name}`,
+      artwork: [
+        { src: currentPlaylist.cover || DEFAULT_ART, sizes: '96x96', type: 'image/png' },
+        { src: currentPlaylist.cover || DEFAULT_ART, sizes: '192x192', type: 'image/png' },
+        { src: currentPlaylist.cover || DEFAULT_ART, sizes: '512x512', type: 'image/png' }
+      ]
     });
     navigator.mediaSession.setActionHandler('play', () => { audio.play(); syncButtons(true); });
     navigator.mediaSession.setActionHandler('pause', () => { audio.pause(); syncButtons(false); });
