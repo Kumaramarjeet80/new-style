@@ -1,7 +1,5 @@
-// Change this version name whenever you update your code on GitHub
-const CACHE_NAME = 'amarjeet-music-cache-v2';
-
-const ASSETS = [
+const CACHE_NAME = 'amarjeet-audio-v6';
+const STATIC_ASSETS = [
   './',
   './index.html',
   './style.css',
@@ -9,50 +7,37 @@ const ASSETS = [
   './manifest.json'
 ];
 
-// Install: Download fresh assets
 self.addEventListener('install', (e) => {
-  // Forces the waiting service worker to become the active service worker immediately
   self.skipWaiting();
   e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
   );
 });
 
-// Activate: Delete old caches from previous versions immediately
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(
-        keys.map((k) => {
-          if (k !== CACHE_NAME) {
-            return caches.delete(k);
-          }
-        })
-      )
+      Promise.all(keys.map((k) => (k !== CACHE_NAME ? caches.delete(k) : null)))
     )
   );
-  // Claim all open tabs right away
   return self.clients.claim();
 });
 
-// Network-First for files with fallback to Cache when offline
+// Stale-While-Revalidate: Instant offline startup + fresh updates downloaded in background
 self.addEventListener('fetch', (e) => {
-  // Only intercept GET requests
   if (e.request.method !== 'GET') return;
-
   e.respondWith(
-    fetch(e.request)
-      .then((networkResponse) => {
-        // If online, update cache in background with the new copy
-        if (networkResponse && networkResponse.status === 200) {
-          const resClone = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(e.request, resClone));
-        }
-        return networkResponse;
-      })
-      .catch(() => {
-        // If completely offline, serve from local cache
-        return caches.match(e.request);
-      })
+    caches.match(e.request).then((cached) => {
+      const networkFetch = fetch(e.request)
+        .then((res) => {
+          if (res && res.status === 200) {
+            const copy = res.clone();
+            caches.open(CACHE_NAME).then((c) => c.put(e.request, copy));
+          }
+          return res;
+        })
+        .catch(() => cached);
+      return cached || networkFetch;
+    })
   );
 });
