@@ -7,10 +7,10 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>Amarjeet Audio Studio</title>
+  <title id="html-title">Amarjeet Audio Studio</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="stylesheet" href="style.css" />
-  <link rel="icon" type="image/png" href="icon-192.png" />
+  <link id="app-favicon" rel="icon" type="image/png" href="icon-192.png" />
 </head>
 <body>
   <!-- Toast Notification Container Above Player Bar -->
@@ -22,8 +22,31 @@
       <div class="welcome-icon">🎵</div>
       <h2>Welcome Back!</h2>
       <p class="credit-highlight">Made by & for <strong>Amarjeet kumar</strong></p>
-      <p class="modal-desc">Offline studio player with active volume booster, equalizer, and lock-screen playback.</p>
+      <p class="modal-desc">Offline studio player with custom app branding, equalizer, and background playback.</p>
       <button id="btn-close-welcome" class="btn-primary-large">Start Listening</button>
+    </div>
+  </div>
+
+  <!-- App Customization Settings Modal (Edit App Name & Logo) -->
+  <div id="settings-modal" class="modal-backdrop" style="display:none;">
+    <div class="modal-box">
+      <h3>⚙️ App Customization</h3>
+      <div class="form-group">
+        <label for="custom-app-name">App Name</label>
+        <input type="text" id="custom-app-name" class="input-text" placeholder="e.g. My Music Player" />
+      </div>
+      <div class="form-group">
+        <label for="custom-app-logo">App Logo Image</label>
+        <input type="file" id="custom-app-logo" accept="image/*" />
+        <div class="preview-row">
+          <img id="settings-logo-preview" src="icon-192.png" alt="Logo Preview" />
+          <span>Tap to upload a custom logo</span>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" id="btn-cancel-settings" class="btn-action">Cancel</button>
+        <button type="button" id="btn-save-settings" class="btn-primary-large btn-touch-target" style="width:auto;padding:10px 20px;">Save Branding</button>
+      </div>
     </div>
   </div>
 
@@ -66,11 +89,15 @@
   <!-- Main Layout -->
   <div class="app-layout">
     <header class="app-top">
-      <div>
-        <span class="brand-title">Amarjeet Studio</span>
-        <span class="badge">Lock-Screen Ready</span>
+      <div class="brand-container" id="brand-edit-trigger" title="Tap to customize app name & logo">
+        <img id="header-app-logo" class="app-logo-badge" src="icon-192.png" alt="Logo" />
+        <div>
+          <span class="brand-title" id="display-app-name">Amarjeet Studio</span>
+          <span class="badge">Pure Audio</span>
+        </div>
       </div>
       <div style="display: flex; gap: 6px;">
+        <button id="btn-open-settings" class="btn-action" title="Settings">⚙️</button>
         <button id="btn-install-app" class="btn-action btn-install" style="display: none;">📥 Install App</button>
         <button id="btn-open-create-playlist" class="btn-action">➕ New</button>
       </div>
@@ -151,7 +178,7 @@
         <button id="card-toggle-eq" class="card-tool-btn">🎛 Equalizer</button>
       </div>
 
-      <!-- Embedded Working Volume Drawer -->
+      <!-- Embedded Volume Drawer -->
       <div id="card-volume-panel" class="embedded-card-panel" style="display:none;">
         <div class="panel-header-row">
           <span>Master Volume</span>
