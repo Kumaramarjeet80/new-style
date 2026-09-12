@@ -1,4 +1,4 @@
-const CACHE_NAME = 'amarjeet-audio-v20';
+const CACHE_NAME = 'amarjeet-audio-v26';
 const ASSETS = [
   './',
   './index.html',
