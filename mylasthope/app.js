@@ -5,6 +5,44 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+// Prevent App Exit On Android System Back Button in Installed PWA Mode
+window.history.pushState({ page: 'home' }, '');
+window.addEventListener('popstate', (e) => {
+  const playerBoxModal = document.getElementById('player-box-modal');
+  const createModal = document.getElementById('playlist-create-modal');
+  const settingsModal = document.getElementById('settings-modal');
+  const thanksModal = document.getElementById('thanks-modal');
+  const welcomeModal = document.getElementById('welcome-modal');
+
+  if (playerBoxModal && playerBoxModal.style.display === 'flex') {
+    playerBoxModal.style.display = 'none';
+    window.history.pushState({ page: 'home' }, '');
+    return;
+  }
+  if (settingsModal && settingsModal.style.display === 'flex') {
+    settingsModal.style.display = 'none';
+    window.history.pushState({ page: 'home' }, '');
+    return;
+  }
+  if (createModal && createModal.style.display === 'flex') {
+    createModal.style.display = 'none';
+    window.history.pushState({ page: 'home' }, '');
+    return;
+  }
+  if (thanksModal && thanksModal.style.display === 'flex') {
+    thanksModal.style.display = 'none';
+    window.history.pushState({ page: 'home' }, '');
+    return;
+  }
+  if (welcomeModal && welcomeModal.style.display === 'flex') {
+    welcomeModal.style.display = 'none';
+    window.history.pushState({ page: 'home' }, '');
+    return;
+  }
+
+  window.history.pushState({ page: 'home' }, '');
+});
+
 // PWA Install Prompt Handler
 let deferredPrompt = null;
 const btnInstallApp = document.getElementById('btn-install-app');
@@ -51,8 +89,8 @@ document.getElementById('btn-close-thanks').onclick = () => {
   document.getElementById('thanks-modal').style.display = 'none';
 };
 
-// IndexedDB Persistence
-const DB_NAME = 'AmarjeetAudioStudioDB_v8';
+// IndexedDB Persistence (Upgraded store with 'config' for App Branding)
+const DB_NAME = 'AmarjeetAudioStudioDB_v11';
 const DB_VER = 1;
 let db;
 
@@ -70,6 +108,9 @@ function initDB() {
       }
       if (!d.objectStoreNames.contains('favorites')) {
         d.createObjectStore('favorites', { keyPath: 'songKey' });
+      }
+      if (!d.objectStoreNames.contains('config')) {
+        d.createObjectStore('config', { keyPath: 'key' });
       }
     };
     req.onsuccess = () => { db = req.result; resolve(); };
@@ -102,8 +143,9 @@ const dbOps = {
       const all = await this.getAllTracks();
       const uniqueMap = new Map();
       all.forEach((trk) => {
-        if (!uniqueMap.has(trk.name)) {
-          uniqueMap.set(trk.name, trk);
+        const cleanKey = trk.name.trim().toLowerCase();
+        if (!uniqueMap.has(cleanKey)) {
+          uniqueMap.set(cleanKey, trk);
         }
       });
       return Array.from(uniqueMap.values());
@@ -138,21 +180,35 @@ const dbOps = {
   async isFavorite(songKey) {
     return new Promise((res) => {
       const tx = db.transaction('favorites', 'readonly');
-      const req = tx.objectStore('favorites').get(songKey);
+      const req = tx.objectStore('favorites').get(songKey.trim().toLowerCase());
       req.onsuccess = () => res(!!req.result);
     });
   },
   async setFavorite(songKey, trackData) {
     return new Promise((res) => {
       const tx = db.transaction('favorites', 'readwrite');
-      tx.objectStore('favorites').put({ songKey, trackData });
+      tx.objectStore('favorites').put({ songKey: songKey.trim().toLowerCase(), trackData });
       tx.oncomplete = () => res();
     });
   },
   async removeFavorite(songKey) {
     return new Promise((res) => {
       const tx = db.transaction('favorites', 'readwrite');
-      tx.objectStore('favorites').delete(songKey);
+      tx.objectStore('favorites').delete(songKey.trim().toLowerCase());
+      tx.oncomplete = () => res();
+    });
+  },
+  async getConfig(key) {
+    return new Promise((res) => {
+      const tx = db.transaction('config', 'readonly');
+      const req = tx.objectStore('config').get(key);
+      req.onsuccess = () => res(req.result ? req.result.val : null);
+    });
+  },
+  async setConfig(key, val) {
+    return new Promise((res) => {
+      const tx = db.transaction('config', 'readwrite');
+      tx.objectStore('config').put({ key, val });
       tx.oncomplete = () => res();
     });
   }
@@ -173,7 +229,7 @@ let filters = [];
 let eqEnabled = true;
 
 // Default 20% Volume Initialized
-let currentVol = 0.20; 
+let currentVol = 0.20;
 
 function ensureAudioPipeline() {
   if (audioCtx) {
@@ -185,7 +241,7 @@ function ensureAudioPipeline() {
     audioCtx = new AudioContextClass();
     sourceNode = audioCtx.createMediaElementSource(audio);
 
-    // Master Software Volume Node (Works on all mobile and desktop devices)
+    // Master Software Volume Node
     masterGainNode = audioCtx.createGain();
     masterGainNode.gain.setValueAtTime(currentVol, audioCtx.currentTime);
 
@@ -216,9 +272,8 @@ function ensureAudioPipeline() {
 // Active Working Volume Function
 function setVolume(pct) {
   currentVol = pct / 100;
-  audio.volume = currentVol; // Set native element
+  audio.volume = currentVol;
 
-  // Actively set WebAudio GainNode value
   if (masterGainNode && audioCtx) {
     masterGainNode.gain.setValueAtTime(currentVol, audioCtx.currentTime);
   }
@@ -235,8 +290,8 @@ let currentPlaylist = { id: 'all', name: 'All', cover: '' };
 let tracks = [];
 let currentIndex = -1;
 let newBase64Cover = null;
-
-const DEFAULT_ART = 'icon-192.png';
+let currentAppLogo = 'icon-192.png';
+let currentAppName = 'Amarjeet Studio';
 
 // UI references
 const playlistTabs = document.getElementById('playlist-tabs');
@@ -268,26 +323,95 @@ const durTime = document.getElementById('dur-time');
 document.getElementById('btn-close-welcome').onclick = () => {
   document.getElementById('welcome-modal').style.display = 'none';
   ensureAudioPipeline();
-  showNotification('Welcome to Amarjeet Studio!');
+  showNotification('Welcome to ' + currentAppName + '!');
+};
+
+// ==========================================
+// APP BRANDING & LOGO CUSTOMIZATION (ANYTIME)
+// ==========================================
+const settingsModal = document.getElementById('settings-modal');
+const customAppNameInput = document.getElementById('custom-app-name');
+const customAppLogoInput = document.getElementById('custom-app-logo');
+const settingsLogoPreview = document.getElementById('settings-logo-preview');
+const headerAppLogo = document.getElementById('header-app-logo');
+const displayAppName = document.getElementById('display-app-name');
+const htmlTitle = document.getElementById('html-title');
+const appFavicon = document.getElementById('app-favicon');
+let tempNewLogoBase64 = null;
+
+async function loadAppBranding() {
+  const savedName = await dbOps.getConfig('app_name');
+  const savedLogo = await dbOps.getConfig('app_logo');
+
+  if (savedName) currentAppName = savedName;
+  if (savedLogo) currentAppLogo = savedLogo;
+
+  applyBrandingUI();
+}
+
+function applyBrandingUI() {
+  displayAppName.textContent = currentAppName;
+  htmlTitle.textContent = currentAppName;
+  headerAppLogo.src = currentAppLogo;
+  appFavicon.href = currentAppLogo;
+  settingsLogoPreview.src = currentAppLogo;
+}
+
+function openSettingsModal() {
+  customAppNameInput.value = currentAppName;
+  settingsLogoPreview.src = currentAppLogo;
+  tempNewLogoBase64 = currentAppLogo;
+  settingsModal.style.display = 'flex';
+}
+
+document.getElementById('btn-open-settings').onclick = openSettingsModal;
+document.getElementById('brand-edit-trigger').onclick = openSettingsModal;
+document.getElementById('btn-cancel-settings').onclick = () => {
+  settingsModal.style.display = 'none';
+};
+
+customAppLogoInput.onchange = async (e) => {
+  if (e.target.files && e.target.files[0]) {
+    tempNewLogoBase64 = await compressImageSafe(e.target.files[0]);
+    settingsLogoPreview.src = tempNewLogoBase64;
+  }
+};
+
+document.getElementById('btn-save-settings').onclick = async () => {
+  const newName = customAppNameInput.value.trim();
+  if (!newName) {
+    showNotification('Please enter an app name!');
+    return;
+  }
+  currentAppName = newName;
+  if (tempNewLogoBase64) currentAppLogo = tempNewLogoBase64;
+
+  await dbOps.setConfig('app_name', currentAppName);
+  await dbOps.setConfig('app_logo', currentAppLogo);
+
+  applyBrandingUI();
+  settingsModal.style.display = 'none';
+  showThanksPopup(`Branding saved! App name updated to "${currentAppName}".`);
+  updateMediaSession();
 };
 
 // Load Playlists
 async function loadPlaylists() {
   let list = await dbOps.getPlaylists();
   if (!list.length) {
-    const def = { id: 'favorites', name: 'Favorites', cover: DEFAULT_ART };
+    const def = { id: 'favorites', name: 'Favorites', cover: currentAppLogo };
     await dbOps.savePlaylist(def);
     list = [def];
   }
 
-  const allCategory = { id: 'all', name: 'All', cover: DEFAULT_ART };
+  const allCategory = { id: 'all', name: 'All', cover: currentAppLogo };
   const combined = [allCategory, ...list];
 
   playlistTabs.innerHTML = '';
   combined.forEach((p) => {
     const chip = document.createElement('div');
     chip.className = `chip ${p.id === activePlaylistId ? 'active' : ''}`;
-    chip.innerHTML = `<img src="${p.cover || DEFAULT_ART}" class="chip-img" /><span>${p.name}</span>`;
+    chip.innerHTML = `<img src="${p.cover || currentAppLogo}" class="chip-img" /><span>${p.name}</span>`;
     chip.onclick = () => {
       activePlaylistId = p.id;
       loadPlaylists();
@@ -297,8 +421,8 @@ async function loadPlaylists() {
 
   currentPlaylist = combined.find((p) => p.id === activePlaylistId) || allCategory;
   viewPlaylistName.textContent = currentPlaylist.name;
-  miniCover.src = currentPlaylist.cover || DEFAULT_ART;
-  boxCover.src = currentPlaylist.cover || DEFAULT_ART;
+  miniCover.src = currentPlaylist.cover || currentAppLogo;
+  boxCover.src = currentPlaylist.cover || currentAppLogo;
   loadTracks();
 }
 
@@ -330,7 +454,6 @@ async function loadTracks() {
     const actions = document.createElement('div');
     actions.className = 'row-actions';
 
-    // Favorite Button (❤️ if favorite, 💛 if not)
     const btnLikeRow = document.createElement('button');
     btnLikeRow.className = 'btn-icon-sm song-heart-btn';
     btnLikeRow.innerHTML = isFav ? '❤️' : '💛';
@@ -373,7 +496,7 @@ async function toggleFavorite(trk) {
   if (isFav) {
     await dbOps.removeFavorite(songKey);
     const favTracks = await dbOps.getTracks(favPlaylist.id);
-    const existing = favTracks.find((t) => t.name === trk.name);
+    const existing = favTracks.find((t) => t.name.trim().toLowerCase() === trk.name.trim().toLowerCase());
     if (existing) {
       await dbOps.deleteTrack(existing.id);
     }
@@ -391,9 +514,7 @@ async function toggleFavorite(trk) {
     syncHeartsEverywhere(songKey, true);
   }
 
-  if (activePlaylistId === favPlaylist.id) {
-    loadTracks();
-  }
+  loadTracks();
 }
 
 function syncHeartsEverywhere(songName, isLiked) {
@@ -414,10 +535,10 @@ function updateLikeButtonsUI(isLiked) {
   modalBtnLike.textContent = heart;
 }
 
-// Image Compression
+// Safe Image Compression
 function compressImageSafe(file) {
   return new Promise((resolve) => {
-    if (!file) return resolve(DEFAULT_ART);
+    if (!file) return resolve(currentAppLogo);
     const reader = new FileReader();
     reader.onload = (e) => {
       const img = new Image();
@@ -440,13 +561,13 @@ function compressImageSafe(file) {
           ctx.drawImage(img, 0, 0, w, h);
           resolve(canvas.toDataURL('image/jpeg', 0.8));
         } catch {
-          resolve(e.target.result || DEFAULT_ART);
+          resolve(e.target.result || currentAppLogo);
         }
       };
-      img.onerror = () => resolve(DEFAULT_ART);
+      img.onerror = () => resolve(currentAppLogo);
       img.src = e.target.result;
     };
-    reader.onerror = () => resolve(DEFAULT_ART);
+    reader.onerror = () => resolve(currentAppLogo);
     reader.readAsDataURL(file);
   });
 }
@@ -465,7 +586,7 @@ editCoverInput.onchange = async (e) => {
       currentPlaylist.cover = newArt;
       await dbOps.savePlaylist(currentPlaylist);
     }
-    showNotification('Album cover updated!');
+    showNotification('Cover image updated!');
     updateMediaSession();
   }
 };
@@ -481,8 +602,8 @@ const btnConfirmPlaylist = document.getElementById('btn-confirm-playlist');
 document.getElementById('btn-open-create-playlist').onclick = () => {
   newPlaylistName.value = '';
   newPlaylistImg.value = '';
-  newBase64Cover = DEFAULT_ART;
-  previewArt.src = DEFAULT_ART;
+  newBase64Cover = currentAppLogo;
+  previewArt.src = currentAppLogo;
   previewStatus.textContent = 'Default art selected';
   createModal.style.display = 'flex';
 };
@@ -516,7 +637,7 @@ btnConfirmPlaylist.addEventListener('click', async (e) => {
     const pl = {
       id: 'pl_' + Date.now(),
       name,
-      cover: newBase64Cover || DEFAULT_ART
+      cover: newBase64Cover || currentAppLogo
     };
     await dbOps.savePlaylist(pl);
     createModal.style.display = 'none';
@@ -557,7 +678,6 @@ async function playTrack(idx) {
 
   ensureAudioPipeline();
 
-  // Prevent restarting the currently playing song
   if (currentIndex === idx && audio.src) {
     if (audio.paused) {
       audio.play();
@@ -595,10 +715,10 @@ function updateMediaSession() {
   navigator.mediaSession.metadata = new MediaMetadata({
     title: trk.name,
     artist: `Playlist: ${currentPlaylist.name} • Made by & for Amarjeet kumar`,
-    album: `Playlist: ${currentPlaylist.name}`,
+    album: currentAppName,
     artwork: [
-      { src: currentPlaylist.cover || DEFAULT_ART, sizes: '192x192', type: 'image/png' },
-      { src: currentPlaylist.cover || DEFAULT_ART, sizes: '512x512', type: 'image/png' }
+      { src: currentPlaylist.cover || currentAppLogo, sizes: '192x192', type: 'image/png' },
+      { src: currentPlaylist.cover || currentAppLogo, sizes: '512x512', type: 'image/png' }
     ]
   });
 
@@ -694,7 +814,6 @@ btnTogglePlaylist.onclick = () => {
   if (isHidden) renderCardReorderList();
 };
 
-// Volume Slider Event Listener
 document.getElementById('card-vol-slider').addEventListener('input', (e) => {
   setVolume(e.target.value);
 });
@@ -787,8 +906,9 @@ document.getElementById('btn-reset-eq-card').onclick = () => {
   showNotification('Equalizer reset to VLC preset');
 };
 
-// Initial Boot: Set 20% volume on launch
-initDB().then(() => {
-  loadPlaylists();
+// Initial Boot: Load Custom App Branding & Set Volume
+initDB().then(async () => {
+  await loadAppBranding();
+  await loadPlaylists();
   setVolume(20);
 });
